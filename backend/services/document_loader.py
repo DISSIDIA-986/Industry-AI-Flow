@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Union, Optional
 import fitz  # PyMuPDF
+from backend.config import settings
 
 # Phase 2 Step 4: OCR 支持（可选）
 try:
@@ -18,14 +19,18 @@ except ImportError:
 class EnhancedDocumentLoader:
     """增强文档加载器：支持 PDF、TXT、图片 (带OCR)"""
 
-    def __init__(self, use_ocr: bool = True, ocr_lang: str = "ch"):
+    def __init__(self, use_ocr: bool = True, ocr_lang: Optional[str] = None):
         """
         初始化增强文档加载器
 
         Args:
             use_ocr: 是否启用 OCR 功能
-            ocr_lang: OCR 语言 ('ch' 中文, 'en' 英文)
+            ocr_lang: OCR 语言 ('en' 英文, 'ch' 中文, 'en+ch' 混合)
+                     默认从配置读取 (settings.ocr_lang，默认为 'en')
         """
+        # Phase 2 优化: 默认使用英文OCR，适配主要文档语言
+        if ocr_lang is None:
+            ocr_lang = settings.ocr_lang
         self.use_ocr = use_ocr and OCR_AVAILABLE
 
         # Phase 2 Step 4: 初始化 PaddleOCR

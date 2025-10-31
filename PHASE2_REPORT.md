@@ -186,6 +186,12 @@ class EnhancedDocumentLoader:
 - ⚠️ 当前测试集为纯文本，OCR优势未体现
 - 💡 实际应用中可处理扫描件、图片文档，扩展RAG能力
 
+**语言优化** (针对英文文档):
+- ✅ 默认语言从 "ch" 调整为 "en" (适配主要文档语言)
+- ✅ 支持配置切换 (OCR_LANG 环境变量)
+- ✅ 预期英文识别准确率: 30-40% → 80-90%
+- 💡 详见 `OCR_OPTIMIZATION.md`
+
 ---
 
 ## 🎯 Phase 2 vs Phase 1 对比

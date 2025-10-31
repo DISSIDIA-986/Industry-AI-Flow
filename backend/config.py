@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # RAG
     top_k: int = int(os.getenv("TOP_K", "5"))
 
+    # OCR (Phase 2: PaddleOCR配置)
+    ocr_lang: str = os.getenv("OCR_LANG", "en")  # 'en' 英文, 'ch' 中文, 'en+ch' 混合
+
     @property
     def database_url(self) -> str:
         # 本地PostgreSQL: postgresql://localhost:5432/ai_workflow
