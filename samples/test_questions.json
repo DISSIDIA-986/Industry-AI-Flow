@@ -1,0 +1,102 @@
+[
+  {
+    "question": "什么是RAG系统?",
+    "expected_keywords": ["检索", "增强", "生成"],
+    "category": "basic"
+  },
+  {
+    "question": "pgvector的主要功能是什么?",
+    "expected_keywords": ["向量", "相似度", "搜索"],
+    "category": "technical"
+  },
+  {
+    "question": "PostgreSQL是什么类型的数据库?",
+    "expected_keywords": ["关系", "数据库", "SQL"],
+    "category": "basic"
+  },
+  {
+    "question": "Ollama是用来做什么的?",
+    "expected_keywords": ["模型", "本地", "运行"],
+    "category": "technical"
+  },
+  {
+    "question": "FastAPI的主要特点是什么?",
+    "expected_keywords": ["快速", "异步", "API"],
+    "category": "technical"
+  },
+  {
+    "question": "文档分块的目的是什么?",
+    "expected_keywords": ["分割", "处理", "检索"],
+    "category": "basic"
+  },
+  {
+    "question": "向量嵌入模型的作用是什么?",
+    "expected_keywords": ["文本", "向量", "表示"],
+    "category": "technical"
+  },
+  {
+    "question": "sentence-transformers是什么?",
+    "expected_keywords": ["模型", "嵌入", "文本"],
+    "category": "technical"
+  },
+  {
+    "question": "为什么需要向量索引?",
+    "expected_keywords": ["加速", "搜索", "查询"],
+    "category": "basic"
+  },
+  {
+    "question": "余弦相似度用于什么?",
+    "expected_keywords": ["相似", "距离", "向量"],
+    "category": "technical"
+  },
+  {
+    "question": "LLM在RAG中的作用是什么?",
+    "expected_keywords": ["生成", "答案", "语言"],
+    "category": "basic"
+  },
+  {
+    "question": "context window是什么?",
+    "expected_keywords": ["上下文", "长度", "限制"],
+    "category": "technical"
+  },
+  {
+    "question": "为什么选择本地部署而不是云服务?",
+    "expected_keywords": ["成本", "隐私", "控制"],
+    "category": "basic"
+  },
+  {
+    "question": "Python在这个项目中的作用?",
+    "expected_keywords": ["后端", "处理", "开发"],
+    "category": "basic"
+  },
+  {
+    "question": "Mac M1/M2芯片对AI模型有什么优势?",
+    "expected_keywords": ["性能", "效率", "Metal"],
+    "category": "technical"
+  },
+  {
+    "question": "数据库连接池的作用是什么?",
+    "expected_keywords": ["连接", "复用", "性能"],
+    "category": "technical"
+  },
+  {
+    "question": "为什么要分批处理文档?",
+    "expected_keywords": ["内存", "效率", "管理"],
+    "category": "basic"
+  },
+  {
+    "question": "API接口设计应该注意什么?",
+    "expected_keywords": ["RESTful", "规范", "清晰"],
+    "category": "technical"
+  },
+  {
+    "question": "错误处理在生产环境中为什么重要?",
+    "expected_keywords": ["稳定", "调试", "用户体验"],
+    "category": "basic"
+  },
+  {
+    "question": "性能监控应该关注哪些指标?",
+    "expected_keywords": ["响应时间", "内存", "吞吐量"],
+    "category": "technical"
+  }
+]
