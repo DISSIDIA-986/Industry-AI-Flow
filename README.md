@@ -1,10 +1,10 @@
-# AI Workflow Platform - 本地可行性验证
+# AI 工作流平台 - 本地可行性验证
 
-> Week 1-2: Mac 本地 RAG 技术可行性验证项目
+**项目用途**: 一个基于本地 Mac 环境的 RAG (检索增强生成) 系统，用于从私人文档中智能问答，支持 PDF/TXT/图片等多种格式。
 
 ## 项目目标
 
-在 2 周内验证 Mac 本地技术可行性，回答"是否继续投入"的决策问题。
+在 2 周内验证 Mac 本地 RAG 技术可行性，回答"是否继续投入"的决策问题。
 
 ### 验收标准
 
@@ -13,13 +13,42 @@
 - [x] 准确率：简单问答准确率>70%（基于20个测试问题）
 - [x] 稳定性：连续运行30分钟无崩溃，内存占用<80%
 
+## 项目运行流程
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant API as FastAPI服务
+    participant Loader as 文档加载器
+    participant Embedder as 嵌入模型
+    participant VectorStore as pgvector数据库
+    participant RAG as RAG引擎
+    participant LLM as Ollama模型
+    
+    User->>API: 上传文档
+    API->>Loader: 解析文档内容
+    Loader->>Embedder: 向量化
+    Embedder->>VectorStore: 存储embedding
+    VectorStore-->>API: 存储完成
+    
+    User->>API: 提问
+    API->>RAG: 检索相关文档
+    RAG->>VectorStore: 查询相似chunk
+    VectorStore-->>RAG: 返回相关chunks
+    RAG->>LLM: 生成答案
+    LLM-->>API: 返回答案
+    API-->>User: 显示答案和引用
+```
+
 ## 技术栈
 
 - **LLM**: Ollama + Qwen2.5:7b（本地运行）
 - **向量库**: PostgreSQL + pgvector（本地 homebrew）
-- **嵌入模型**: sentence-transformers/all-MiniLM-L6-v2（384维）
+- **嵌入模型**: nomic-embed-text-v1.5（768维）
 - **后端**: FastAPI
-- **前端**: 命令行脚本（Week 1-2）
+- **OCR**: PaddleOCR（支持图片文档）
+- **检索**: 混合检索（BM25 + 向量 + RRF融合）
+- **重排序**: bge-reranker-base
 
 ## 环境要求
 
@@ -97,9 +126,9 @@ make test
 **预期输出**：
 ```
 📊 评估结果
-准确率: 75.0% (15/20)
-平均延迟: 6.2秒
-P95延迟: 8.7秒
+准确率: 80.0% (16/20)
+平均延迟: 4.44秒
+P95延迟: 5.82秒
 
 ✅ 验收标准检查
 准确率>70%: ✅ 通过
@@ -123,10 +152,13 @@ Industry-AI-Flow/
 │   ├── main.py                # FastAPI 应用
 │   ├── requirements.txt       # Python 依赖
 │   └── services/              # 业务逻辑
-│       ├── document_loader.py # 文档加载
+│       ├── document_loader.py # 文档加载 (OCR支持)
 │       ├── chunker.py         # 文档分块
 │       ├── embedder.py        # 向量嵌入
 │       ├── vectorstore.py     # 向量存储
+│       ├── retrieval/         # 检索服务
+│       │   ├── hybrid_search.py # 混合检索
+│       │   └── reranker.py    # 重排序
 │       ├── ollama_client.py   # LLM 客户端
 │       └── rag_engine.py      # RAG 引擎
 ├── scripts/                   # 工具脚本
@@ -158,12 +190,15 @@ POSTGRES_DB=ai_workflow
 # Ollama 配置
 OLLAMA_MODEL=qwen2.5:7b
 
+# OCR 配置 (默认英文)
+OCR_LANG=en  # 'en'=英文, 'ch'=中文, 'en+ch'=混合
+
 # 文档处理配置
-CHUNK_SIZE=500
+CHUNK_SIZE=300
 CHUNK_OVERLAP=50
 
 # RAG 配置
-TOP_K=3
+TOP_K=5
 ```
 
 ## API 接口
@@ -204,47 +239,6 @@ Content-Type: application/json
 }
 ```
 
-## 常见问题
-
-### Q: PostgreSQL 连接失败？
-
-```bash
-# 检查服务状态
-brew services list
-
-# 启动服务
-brew services start postgresql
-```
-
-### Q: Ollama 模型未下载？
-
-```bash
-# 下载模型（约5GB，需5-10分钟）
-ollama pull qwen2.5:7b
-
-# 验证
-ollama list
-```
-
-### Q: 内存不足？
-
-```bash
-# 减少批处理大小
-# 修改 .env 文件
-MAX_BATCH_SIZE=20
-CHUNK_SIZE=300
-```
-
-### Q: Python 依赖安装失败？
-
-```bash
-# 使用 conda 安装
-conda install -c conda-forge sentence-transformers psycopg2
-
-# 或使用 pip
-pip install -r backend/requirements.txt
-```
-
 ## 资源优化
 
 本项目优先使用 homebrew 本地服务，相比 Docker 方案：
@@ -252,6 +246,13 @@ pip install -r backend/requirements.txt
 - **内存节省**: 约 2-3GB（无 Docker 容器开销）
 - **磁盘节省**: 无需 Docker 镜像和卷存储
 - **性能提升**: 减少虚拟化层开销
+
+## Phase 2 升级亮点
+
+- **准确率提升**: 从 20% → 80% (4倍提升!)
+- **混合检索**: BM25 + 向量 + RRF融合
+- **文档扩展**: 支持图片/扫描件 OCR
+- **重排序**: bge-reranker 精排优化
 
 ## 开发进度
 
@@ -292,5 +293,6 @@ MIT License
 ## 参考文档
 
 - [本地开发可行性方案](research/local-development-feasibility.md)
+- [Phase 2 技术总结](research/local-development-phase2-summary.md)
 - [实施 Prompt v2.2](research/local-development-feasibility.prompt.v2.md)
 - [综合架构方案](research/best-ai-workflow.plan.md)
