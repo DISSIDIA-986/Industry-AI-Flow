@@ -29,11 +29,11 @@
 ### 2.1 Week 1-2 技术选型
 ```yaml
 LLM: Ollama + Qwen2.5:7b（本地运行）
-向量库: PostgreSQL + pgvector（Docker）
+向量库: PostgreSQL + pgvector（优先使用本地homebrew安装）
 嵌入: sentence-transformers/all-MiniLM-L6-v2（本地模型，384维）
 后端: FastAPI（轻量级API）
 前端: 命令行脚本（Week 1）→ Streamlit（Week 2，可选）
-容器: Docker Compose（仅PostgreSQL + Redis）
+容器: Docker Compose（可选，仅当本地服务不可用时使用）
 ```
 
 ### 2.2 明确禁止（推迟到Phase 2+）
@@ -89,32 +89,43 @@ Industry-AI-Flow/
 
 **任务清单**：
 ```bash
-# 1. 安装系统依赖
-brew install postgresql redis docker ollama
+# 1. 检查现有安装
+brew list | grep postgresql  # 检查PostgreSQL是否已安装
+brew list | grep redis       # 检查Redis是否已安装
+ollama list                  # 检查Ollama及模型
 
-# 2. 启动Docker服务
-docker-compose up -d postgres redis
+# 2. 如果服务未安装，执行安装（通常可跳过）
+# brew install postgresql redis ollama
 
-# 3. 下载LLM模型
+# 3. 启动本地服务（优先使用本地服务）
+brew services start postgresql  # 启动PostgreSQL
+brew services start redis       # 启动Redis
+
+# 4. 初始化PostgreSQL数据库和pgvector
+createdb ai_workflow  # 创建数据库（如果不存在）
+psql ai_workflow -c "CREATE EXTENSION IF NOT EXISTS vector;"  # 启用pgvector
+
+# 5. 下载LLM模型（如果未下载）
 ollama pull qwen2.5:7b
 
-# 4. 验证环境
+# 6. 验证环境
 ollama run qwen2.5:7b "你好"  # 应返回中文回复
-psql -h localhost -U dev -d ai_workflow -c "SELECT 1;"  # 应返回1
+psql -h localhost -d ai_workflow -c "SELECT 1;"  # 应返回1
 redis-cli ping  # 应返回PONG
 ```
 
 **验收检查**：
-- [ ] Docker容器运行中（`docker ps` 显示postgres和redis）
+- [ ] PostgreSQL服务运行中（`brew services list | grep postgresql` 显示started）
+- [ ] Redis服务运行中（`brew services list | grep redis` 显示started）
 - [ ] Ollama模型可用（`ollama list` 显示qwen2.5:7b）
 - [ ] PostgreSQL连接成功
-- [ ] pgvector扩展已启用（`SELECT * FROM pg_extension WHERE extname='vector';`）
+- [ ] pgvector扩展已启用（`psql ai_workflow -c "SELECT * FROM pg_extension WHERE extname='vector';"` 显示vector）
 
 **产出文件**：
-- `infra/docker-compose.yaml`（PostgreSQL + Redis配置）
 - `infra/init.sql`（建表SQL + pgvector扩展）
-- `scripts/setup_local.sh`（自动化脚本）
+- `scripts/setup_local.sh`（自动化脚本，优先使用本地服务）
 - `.env`（基于.env.example创建）
+- `infra/docker-compose.yaml`（可选，仅当本地服务不可用时使用）
 
 ---
 
@@ -470,7 +481,10 @@ Mac M1/M2/M3 (16GB RAM):
 
 ## 7. 配置文件示例
 
-### 7.1 docker-compose.yaml
+### 7.1 docker-compose.yaml（可选，仅当本地服务不可用时使用）
+
+> **说明**: 如果您已通过homebrew安装PostgreSQL和Redis，建议直接使用本地服务而非Docker，可节省约2-3GB内存和CPU资源。只有在本地服务无法安装或配置失败时才使用此Docker Compose配置。
+
 ```yaml
 version: '3.8'
 
@@ -543,12 +557,12 @@ CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks(doc_id);
 
 ### 7.3 .env.example
 ```bash
-# 数据库配置
+# 数据库配置（使用本地homebrew安装的PostgreSQL）
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=ai_workflow
-POSTGRES_USER=dev
-POSTGRES_PASSWORD=dev123
+# 注意：本地PostgreSQL使用当前用户名，无需密码
+# 如果使用Docker，则需要配置POSTGRES_USER和POSTGRES_PASSWORD
 
 # Ollama配置
 OLLAMA_HOST=http://localhost:11434
@@ -579,12 +593,12 @@ import os
 from pydantic import BaseSettings
 
 class Settings(BaseSettings):
-    # 数据库
+    # 数据库（支持本地homebrew PostgreSQL）
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
     postgres_db: str = os.getenv("POSTGRES_DB", "ai_workflow")
-    postgres_user: str = os.getenv("POSTGRES_USER", "dev")
-    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "dev123")
+    postgres_user: str = os.getenv("POSTGRES_USER", "")  # 本地PostgreSQL留空使用当前用户
+    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # 本地PostgreSQL无密码
 
     # Ollama
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -603,7 +617,12 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        # 本地PostgreSQL: postgresql://localhost:5432/ai_workflow
+        # Docker PostgreSQL: postgresql://user:password@localhost:5432/ai_workflow
+        if self.postgres_user and self.postgres_password:
+            return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        else:
+            return f"postgresql://{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
 settings = Settings()
 ```
@@ -615,34 +634,32 @@ settings = Settings()
 help:
 	@echo "可用命令:"
 	@echo "  make setup   - 初始化环境（首次运行）"
-	@echo "  make start   - 启动所有服务"
-	@echo "  make stop    - 停止所有服务"
+	@echo "  make start   - 启动API服务"
+	@echo "  make stop    - 停止API服务"
 	@echo "  make test    - 运行RAG测试"
-	@echo "  make clean   - 清理所有数据"
+	@echo "  make clean   - 清理数据库数据"
 
 setup:
 	@echo "🚀 初始化环境..."
 	@bash scripts/setup_local.sh
 
 start:
-	@echo "▶️  启动服务..."
-	docker-compose up -d
-	@echo "等待服务就绪..."
-	@sleep 5
+	@echo "▶️  启动API服务..."
+	@echo "确保PostgreSQL和Redis已启动: brew services list"
 	cd backend && python main.py
 
 stop:
-	@echo "⏸️  停止服务..."
-	docker-compose down
+	@echo "⏸️  停止API服务（使用Ctrl+C）"
+	@echo "如需停止数据库服务: brew services stop postgresql redis"
 
 test:
 	@echo "🧪 运行测试..."
 	python scripts/test_rag.py
 
 clean:
-	@echo "🗑️  清理数据..."
-	docker-compose down -v
-	rm -rf pgdata/
+	@echo "🗑️  清理数据库数据..."
+	psql ai_workflow -c "TRUNCATE TABLE document_chunks, documents CASCADE;"
+	@echo "如需完全删除数据库: dropdb ai_workflow"
 ```
 
 ---
@@ -655,9 +672,10 @@ clean:
 bash scripts/verify_env.sh
 
 # 预期输出：
-✅ Docker运行中
+✅ PostgreSQL服务运行中（brew services）
 ✅ PostgreSQL连接成功
 ✅ pgvector扩展已启用
+✅ Redis服务运行中（brew services）
 ✅ Redis连接成功
 ✅ Ollama模型可用（qwen2.5:7b）
 ✅ Python依赖已安装
@@ -886,24 +904,79 @@ if [[ $TOTAL_MEM_GB -lt 16 ]]; then
     exit 1
 fi
 
-# 3. 检查依赖
-command -v docker >/dev/null || { echo "❌ 未安装Docker"; exit 1; }
-command -v ollama >/dev/null || { echo "❌ 未安装Ollama"; exit 1; }
+# 3. 检查并安装依赖
+echo "🔍 检查现有安装..."
 
-# 4. 启动Docker服务
-echo "▶️  启动Docker Compose..."
-docker-compose up -d
+# 检查PostgreSQL
+if brew list | grep -q "postgresql"; then
+    echo "✅ PostgreSQL已通过homebrew安装"
+else
+    echo "⚠️  PostgreSQL未安装，建议运行: brew install postgresql"
+    exit 1
+fi
 
-# 5. 等待服务就绪
-echo "⏳ 等待PostgreSQL就绪..."
-until docker exec rag_postgres pg_isready -U dev >/dev/null 2>&1; do
-    sleep 1
-done
-echo "✅ PostgreSQL已就绪"
+# 检查Redis
+if brew list | grep -q "redis"; then
+    echo "✅ Redis已通过homebrew安装"
+else
+    echo "⚠️  Redis未安装，建议运行: brew install redis"
+    exit 1
+fi
 
-# 6. 下载模型
-echo "📥 下载Qwen2.5-7B（约5GB，需5-10分钟）..."
-ollama pull qwen2.5:7b
+# 检查Ollama
+command -v ollama >/dev/null || { echo "❌ 未安装Ollama，建议运行: brew install ollama"; exit 1; }
+echo "✅ Ollama已安装"
+
+# 4. 启动本地服务
+echo "▶️  启动本地服务..."
+
+# 启动PostgreSQL
+if brew services list | grep "postgresql" | grep -q "started"; then
+    echo "✅ PostgreSQL已运行"
+else
+    echo "启动PostgreSQL..."
+    brew services start postgresql
+    sleep 2
+fi
+
+# 启动Redis
+if brew services list | grep "redis" | grep -q "started"; then
+    echo "✅ Redis已运行"
+else
+    echo "启动Redis..."
+    brew services start redis
+    sleep 2
+fi
+
+# 5. 初始化数据库
+echo "🗄️  初始化数据库..."
+
+# 检查数据库是否存在
+if psql -lqt | cut -d \| -f 1 | grep -qw ai_workflow; then
+    echo "✅ 数据库ai_workflow已存在"
+else
+    echo "创建数据库ai_workflow..."
+    createdb ai_workflow
+fi
+
+# 启用pgvector扩展
+echo "启用pgvector扩展..."
+psql ai_workflow -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null
+
+# 执行初始化SQL
+if [ -f "infra/init.sql" ]; then
+    echo "执行初始化SQL..."
+    psql ai_workflow -f infra/init.sql
+fi
+
+# 6. 检查并下载模型
+echo "📥 检查Ollama模型..."
+if ollama list | grep -q "qwen2.5:7b"; then
+    echo "✅ 模型qwen2.5:7b已下载"
+else
+    echo "下载Qwen2.5-7B（约5GB，需5-10分钟）..."
+    ollama pull qwen2.5:7b
+fi
 
 # 7. 安装Python依赖
 echo "🐍 安装Python依赖..."
@@ -919,9 +992,13 @@ echo ""
 echo "✅ 环境搭建完成!"
 echo ""
 echo "验证命令:"
-echo "  docker ps                          # 应显示postgres和redis"
+echo "  brew services list                 # 查看服务状态"
 echo "  ollama list                        # 应显示qwen2.5:7b"
-echo "  psql -h localhost -U dev -d ai_workflow -c 'SELECT 1;'  # 应返回1"
+echo "  psql ai_workflow -c 'SELECT 1;'    # 应返回1"
+echo "  redis-cli ping                     # 应返回PONG"
+echo ""
+echo "资源使用:"
+echo "  本地服务模式: 节省约2-3GB内存（相比Docker）"
 echo ""
 echo "下一步:"
 echo "  cd backend && python main.py       # 启动API服务"
@@ -933,68 +1010,78 @@ echo "  cd backend && python main.py       # 启动API服务"
 
 echo "🔍 验证环境..."
 
-# 检查Docker
-if docker ps | grep -q "rag_postgres"; then
-    echo "✅ Docker - PostgreSQL运行中"
+# 检查PostgreSQL服务
+if brew services list | grep "postgresql" | grep -q "started"; then
+    echo "✅ PostgreSQL服务 - 运行中（brew services）"
 else
-    echo "❌ Docker - PostgreSQL未运行"
+    echo "❌ PostgreSQL服务 - 未运行"
+    echo "   运行: brew services start postgresql"
     exit 1
 fi
 
-if docker ps | grep -q "rag_redis"; then
-    echo "✅ Docker - Redis运行中"
+# 检查PostgreSQL连接
+if psql ai_workflow -c "SELECT 1;" >/dev/null 2>&1; then
+    echo "✅ PostgreSQL连接 - 成功"
 else
-    echo "❌ Docker - Redis未运行"
-    exit 1
-fi
-
-# 检查PostgreSQL
-if psql -h localhost -U dev -d ai_workflow -c "SELECT 1;" >/dev/null 2>&1; then
-    echo "✅ PostgreSQL - 连接成功"
-else
-    echo "❌ PostgreSQL - 连接失败"
+    echo "❌ PostgreSQL连接 - 失败"
     exit 1
 fi
 
 # 检查pgvector
-if psql -h localhost -U dev -d ai_workflow -c "SELECT * FROM pg_extension WHERE extname='vector';" | grep -q "vector"; then
-    echo "✅ pgvector - 扩展已启用"
+if psql ai_workflow -c "SELECT * FROM pg_extension WHERE extname='vector';" 2>/dev/null | grep -q "vector"; then
+    echo "✅ pgvector扩展 - 已启用"
 else
-    echo "❌ pgvector - 扩展未启用"
+    echo "❌ pgvector扩展 - 未启用"
+    echo "   运行: psql ai_workflow -c 'CREATE EXTENSION vector;'"
     exit 1
 fi
 
-# 检查Redis
-if redis-cli -h localhost ping | grep -q "PONG"; then
-    echo "✅ Redis - 连接成功"
+# 检查Redis服务
+if brew services list | grep "redis" | grep -q "started"; then
+    echo "✅ Redis服务 - 运行中（brew services）"
 else
-    echo "❌ Redis - 连接失败"
+    echo "❌ Redis服务 - 未运行"
+    echo "   运行: brew services start redis"
+    exit 1
+fi
+
+# 检查Redis连接
+if redis-cli ping 2>/dev/null | grep -q "PONG"; then
+    echo "✅ Redis连接 - 成功"
+else
+    echo "❌ Redis连接 - 失败"
     exit 1
 fi
 
 # 检查Ollama
-if ollama list | grep -q "qwen2.5:7b"; then
+if ollama list 2>/dev/null | grep -q "qwen2.5:7b"; then
     echo "✅ Ollama - 模型qwen2.5:7b已下载"
 else
     echo "❌ Ollama - 模型未下载"
+    echo "   运行: ollama pull qwen2.5:7b"
     exit 1
 fi
 
 # 检查Python包
 if python -c "import fastapi, sentence_transformers, psycopg2, pgvector" 2>/dev/null; then
-    echo "✅ Python - 依赖已安装"
+    echo "✅ Python依赖 - 已安装"
 else
-    echo "❌ Python - 依赖未安装"
+    echo "❌ Python依赖 - 未安装"
+    echo "   运行: pip install -r backend/requirements.txt"
     exit 1
 fi
 
 echo ""
 echo "✅ 所有验收通过!"
+echo ""
+echo "资源使用情况:"
+echo "  本地服务模式: 比Docker节省约2-3GB内存"
 ```
 
 ---
 
-**文档版本**: v2.0
+**文档版本**: v2.1
 **最后更新**: 2025-10-31
 **预计工作量**: 2周（10工作日）
 **目标**: 用数据回答"是否继续投入"的问题
+**资源优化**: 优先使用homebrew本地服务，相比Docker节省2-3GB内存
