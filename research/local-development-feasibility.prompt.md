@@ -249,30 +249,496 @@ python scripts/benchmark_latency.py --queries ./samples/queries.jsonl
 
 请严格按照本Prompt逐批实现、提交，并在每批结束后更新相关 README 与脚本的使用说明，确保任何具备基础环境的开发者均可复现运行。
 
-# Local Development Feasibility Implementation Prompt
+# 本地开发可行性方案 — 实施型高质量Prompt（用于Vibe Coding）
 
-## Role Definition
-You are an expert AI systems developer with deep experience in building enterprise RAG (Retrieval-Augmented Generation) systems, multi-modal AI applications, and secure, scalable backend systems. You will implement the Local Development Feasibility project based on the comprehensive plan defined in `best-ai-workflow.plan.md` and the feasibility assessment in `local-development-feasibility.md`.
+> 目的：用此Prompt指导智能编程助手，在本仓库逐步产出可运行的代码与配置，实现 `research/local-development-feasibility.md` 中的阶段性目标（优先完成“阶段1：Mac本地极简验证”与“阶段2：云GPU完整MVP验证”的落地代码）。
 
-## Project Overview
-Build an enterprise-grade AI workflow platform with the following core capabilities, starting with a local development feasibility approach as outlined in the assessment document:
-1. Document ingestion with multi-format support (PDF, DOCX, XLS, PPT, TXT, URLs)
-2. RAG system with hybrid search (vector + keyword) and re-ranking
-3. AI agent framework with tool orchestration capabilities
-4. Secure code execution environment with sandboxing
-5. Enterprise-grade security (RBAC, encryption, audit logs)
+---
 
-## Implementation Constraints & Feasibility Considerations
-- Use Python 3.11+ with type hints throughout
-- Follow PEP 8 style guidelines with black for formatting and isort for import sorting
-- Implement comprehensive error handling and logging
-- Use async/await for I/O-bound operations
-- Ensure all code is well-documented with docstrings
-- Write unit tests for all core functionality (target 80%+ coverage)
-- **CRITICAL**: Design the system to work on local Mac development initially, with easy migration to cloud GPU when needed
-- **CONFIGURABILITY**: All hardware-accelerated components must have fallback implementations for CPU-only environments
+## 角色与总体要求
 
-## Technical Architecture (Adapted for Local Feasibility)
+- 你的角色：一名注重工程质量的全栈工程师，负责端到端实现、文档、可运行示例与自动化脚本。
+- 输出标准：
+  - 代码可直接运行；提供一键命令或最少步骤运行说明。
+  - 目录结构清晰、模块边界清楚、命名语义化、注释只写必要非显然信息。
+  - 严格遵循本Prompt中的文件路径与接口约定，避免随意更改。
+  - 优先实现“阶段1（Mac本地）”可用性；随后实现“阶段2（云GPU）”的可切换配置。
+  - 默认使用中文注释和中文README（必要处可兼容英文）。
+
+---
+
+## 仓库上下文与技术路线
+
+- 文档依据：
+  - `research/best-ai-workflow.plan.md`（总体最佳方案基线）
+  - `research/local-development-feasibility.md`（本地/云GPU分阶段实施细化）
+- 阶段性技术选型（必须对齐）：
+  - 阶段1（本地Mac验证，成本$0）：
+    - LLM：Ollama + `qwen2.5:7b`
+    - 向量库：PostgreSQL + pgvector（Docker Compose）
+    - 前端：Streamlit（原型）
+    - 目标：文档入库→向量化→RAG问答→基础评测
+  - 阶段2（云GPU 验证）：
+    - LLM：vLLM + Qwen2.5-14B（或Ollama 14B作过渡）
+    - 向量库：Qdrant（Docker部署或Compose独立服务）
+    - 前端：React + TypeScript（可先保留Streamlit Demo）
+    - 目标：10万文档、性能基准、并发验证与切换配置
+
+---
+
+## 目标功能与验收（对齐 feasibility 文档）
+
+1) 阶段1（Week 1-2）验收：
+   - [ ] 文档上传/导入1000份以内测试文档
+   - [ ] 向量化流程<10分钟（1000份）
+   - [ ] RAG问答响应<10秒
+   - [ ] 准确率>70%（提供简单评测脚本与样例集）
+
+2) 阶段2（Week 3-4）验收：
+   - [ ] 10万文档向量化<4小时（批处理脚本与监控日志）
+   - [ ] 查询P95<3秒
+   - [ ] 准确率>80%
+   - [ ] 并发10用户稳定（基础压测脚本）
+
+---
+
+## 顶层目录与文件规划（必须按此生成）
+
+```
+.
+├── research/
+│   ├── best-ai-workflow.plan.md
+│   ├── local-development-feasibility.md
+│   └── local-development-feasibility.prompt.md  ← 本文件
+├── apps/
+│   ├── streamlit_app/
+│   │   ├── app.py
+│   │   ├── requirements.txt
+│   │   └── README.md
+│   └── web/  （阶段2：React + TS；阶段1可占位）
+├── backend/
+│   ├── api/
+│   │   └── main.py              # FastAPI应用入口（阶段1必需）
+│   │   └── v1/
+│   │       └── routers/
+│   │           ├── rag.py       # RAG查询路由
+│   │           └── documents.py # 文档管理路由
+│   ├── services/
+│   │   ├── ingestion/            # 文档采集/解析/清洗
+│   │   │   ├── __init__.py
+│   │   │   ├── loaders.py        # PDF/Docx/Markdown/目录批量等
+│   │   │   ├── cleaners.py
+│   │   │   └── chunkers.py       # 语义+结构分块（预留策略）
+│   │   ├── vectorstore/
+│   │   │   ├── __init__.py
+│   │   │   ├── pgvector_client.py # 阶段1
+│   │   │   └── qdrant_client.py   # 阶段2
+│   │   ├── embedding/
+│   │   │   ├── __init__.py
+│   │   │   └── nomic_embed.py    # 默认：nomic-embed-text-v1.5
+│   │   ├── retrieval/
+│   │   │   ├── __init__.py
+│   │   │   ├── bm25.py           # Week2: 混合检索
+│   │   │   └── hybrid.py         # RRF融合与重排序预留
+│   │   └── llm/
+│   │       ├── __init__.py
+│   │       ├── ollama_client.py  # 阶段1
+│   │       └── vllm_client.py    # 阶段2
+│   └── tests/
+│       ├── unit/
+│       │   ├── test_ingestion.py
+│       │   └── test_vectorstore.py
+│       ├── integration/
+│       │   └── test_api.py
+│       └── conftest.py
+├── infra/
+│   ├── compose/
+│   │   ├── docker-compose.dev.yaml  # Postgres+pgvector、Redis、（可选）Qdrant
+│   │   └── docker-compose.prod.yaml # 阶段2：vLLM、Qdrant、API、前端
+│   ├── postgres/
+│   │   ├── init.sql                 # CREATE EXTENSION vector; 表结构
+│   │   └── README.md
+│   └── qdrant/ (阶段2)
+├── scripts/
+│   ├── dev_bootstrap.sh       # 本地一键启动（非交互）
+│   ├── import_docs.py         # 批量导入与向量化
+│   ├── evaluate_rag.py        # 简单准确率评测
+│   ├── benchmark_latency.py   # 延迟与并发压测
+│   └── migrate_pg_to_qdrant.py# 阶段2：迁移脚本
+├── configs/
+│   ├── app.example.env
+│   └── app.env                # 本地私有，不纳入git（.gitignore）
+├── .gitignore
+├── Makefile
+└── README.md                  # 根README：分阶段运行指南
+```
+
+---
+
+## 实施步骤（按批次提交，确保可运行）
+
+### 批次A: 核心管道验证 (Week 1) - 极简MVP
+- **目标**: 证明"文档 -> 向量化 -> 存储 -> 检索 -> LLM生成"这个核心管道在 Mac 上能跑通。
+- **产出**:
+  - 后端服务（pgvector_client, nomic_embed, ollama_client）。
+  - 一个命令行脚本 `scripts/query.py`，接收一个问题，直接调用服务，打印出答案和引用。
+  - FastAPI 应用，封装核心服务。
+  - 无需 Streamlit 或完整前端。
+- **验收**: python scripts/query.py "我的问题" 能在15秒内返回结果。
+
+1. 基础Infra与环境
+   - 新增 `infra/compose/docker-compose.dev.yaml`：PostgreSQL 15 + pgvector、Redis。默认端口映射、健康检查、持久化卷。
+   - 新增 `infra/postgres/init.sql`：启用 `vector` 扩展、建库/建表（documents, embeddings, metadata）。
+   - 新增 `configs/app.example.env`（变量：DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, EMBED_MODEL, OLLAMA_BASE_URL 等）。
+   - 新增 `scripts/dev_bootstrap.sh`：
+     - 校验 Docker Desktop/Compose 存在
+     - 启动 compose.dev
+     - 初始化 pgvector（执行 init.sql）
+     - 以"非交互"方式打印后续步骤命令
+
+2. 后端服务与API (API-First)
+   - `backend/api/main.py`：创建 FastAPI 入口
+   - `backend/api/v1/routers/rag.py`：创建 /api/v1/rag 路由，用于接收查询请求
+   - `backend/api/v1/routers/documents.py`：创建 /api/v1/documents 路由，用于文档上传
+   - backend/services/* 中的所有逻辑，都通过这个 API 暴露，而不是被前端直接调用
+
+3. 核心服务层
+   - `backend/services/vectorstore/pgvector_client.py`：提供建表、插入、相似度查询API。
+   - `backend/services/embedding/nomic_embed.py`：封装开源嵌入（若需HTTP/本地模型，预留切换）。
+   - `backend/services/ingestion/*`：实现PDF/Docx/Markdown加载、清洗、分块（简单规则先行）。
+   - `backend/services/llm/ollama_client.py`：Ollama API封装
+
+4. 测试与质量保障
+   - 创建 `backend/tests/` 目录结构
+   - `backend/tests/unit/test_ingestion.py`：测试文档解析功能
+   - `backend/tests/unit/test_vectorstore.py`：测试向量存储功能
+   - `backend/tests/integration/test_api.py`：测试API端到端功能
+   - 在 Makefile 中加入测试命令
+
+### 批次B: API 与前端集成 (Week 2) - 原型可用
+- **目标**: 在已验证的核心管道之上，封装 API 并提供一个简单的 UI。
+- **产出**:
+  - 完善的 FastAPI 应用，封装批次A中的服务。
+  - Streamlit 应用，调用 FastAPI 接口。
+- **验收**: Streamlit 界面功能可用，RAG 问答响应 < 10秒。
+
+5. 原型前端（Streamlit）
+   - `apps/streamlit_app/app.py`：
+     - 上传或选择已导入文档
+     - 查询输入框
+     - 后端：必须通过 requests 或 httpx 调用本地的 FastAPI 接口，严禁直接 import backend.services
+     - 展示引用片段与分数
+   - `apps/streamlit_app/requirements.txt`：最小依赖列表
+   - `apps/streamlit_app/README.md`：本地运行说明
+
+6. 顶层文档与自动化
+   - 根 `README.md`：提供阶段1一键运行步骤与常见问题（含 Mac 环境说明）。
+   - `Makefile`：
+     - `make up-dev`（启动本地依赖）
+     - `make import DOCS=./samples`（批量导入）
+     - `make app`（运行Streamlit）
+     - `make eval`（评测）
+     - `make test`（运行测试）
+     - `make test-coverage`（测试覆盖率）
+     - `make lint`（代码检查）
+     - `make format`（代码格式化）
+
+### 批次C（阶段2：云GPU与Qdrant切换）：
+7. 云侧LLM与向量库
+   - `backend/services/llm/vllm_client.py`：vLLM推理接口（URL/模型名可配）
+   - `backend/services/vectorstore/qdrant_client.py`：Qdrant CRUD、相似度检索
+   - `scripts/migrate_pg_to_qdrant.py`：数据迁移工具
+   - `infra/compose/docker-compose.prod.yaml`：vLLM、Qdrant、（可选）FastAPI与前端容器
+
+8. 基准与并发
+   - `scripts/benchmark_latency.py`：批量查询、统计P50/P95
+   - 在根 README 中新增"阶段2部署到云GPU"的操作步骤与成本提示
+
+---
+
+## 关键接口与约定（摘要）
+
+- 向量表结构：
+  - `documents(id UUID, path TEXT, checksum TEXT, created_at TIMESTAMP, metadata JSONB)`
+  - `embeddings(doc_id UUID, chunk_id INT, text TEXT, embedding VECTOR(1536), meta JSONB)`
+- 检索API（示意）：
+  - `pgvector_client.similarity_search(query_text: str, top_k: int) -> List[Chunk]`
+  - `hybrid.search(query_text: str, top_k: int, weights: Tuple[float,float]) -> List[Chunk]`
+- LLM生成：
+  - `ollama_client.generate(prompt: str, stream: bool=False) -> str`
+
+---
+
+## 非功能性要求
+
+- 可配置：所有服务地址与模型名来源于 `configs/app.env`（使用 `.env` 加载）。
+- 日志：使用标准输出，包含时戳与模块名；长任务显示进度条。
+- 健壮性：批处理支持断点续跑；失败重试与跳过无效文件。
+- 安全：对外部命令与文件路径做校验；避免任意代码执行。
+- **错误处理**: 所有对外服务（API路由）和与外部系统（数据库、Ollama）的交互点，都必须有明确的 try...except 块，并记录有意义的错误日志。
+- **优雅降级**: 在外部服务（如Ollama）不可用时，API应返回一个明确的错误信息（如 HTTP 503），而不是直接崩溃。
+- **输入校验**: 所有 API 的输入都必须使用 Pydantic 模型进行严格的类型和格式校验。
+
+---
+
+## 运行与验证（命令示例，需在 README/脚本中实现）
+
+```bash
+# 一键启动本地依赖（Postgres+pgvector、Redis）
+make up-dev
+
+# 导入示例文档（自带 samples/ 目录或用户指定）
+make import DOCS=./samples
+
+# 运行Streamlit原型
+make app
+
+# 运行测试
+make test
+
+# 运行测试并查看覆盖率
+make test-coverage
+
+# 代码格式化
+make format
+
+# 代码检查
+make lint
+
+# 评测（准确率、Top-k召回）
+make eval
+
+#（阶段2）迁移到Qdrant
+python scripts/migrate_pg_to_qdrant.py --from pg --to qdrant
+
+#（阶段2）基准测试
+python scripts/benchmark_latency.py --queries ./samples/queries.jsonl
+```
+
+---
+
+## 交付要求（每批次提交需满足）
+
+- 代码：按本Prompt路径落地，确保可运行。
+- 文档：在对应目录下补充 README，包含用途说明、环境变量清单、运行步骤、常见问题。
+- 质量门槛：跑通到"阶段1验收"四项勾选；随后提交"阶段2"能力与指标报告。
+
+---
+
+## 禁止与约束
+
+- 禁止引入与方案不符的重型依赖（除非必要并说明理由）。
+- 禁止将 `.env` 明文机密写入版本库；用 `app.example.env` 提供模板。
+- 优先遵循现有文档结论与技术路线；若需偏离，先在 README 给出对比与理由。
+- 严禁 Streamlit 直接调用 backend.services - 必须通过 FastAPI 接口调用
+
+## 完成定义（Definition of Done）
+
+- 阶段1：
+  - `docker-compose.dev.yaml` 可启动并初始化 pgvector
+  - `import_docs.py` 可将本地样例批量入库并完成嵌入
+  - API 可检索并调用 Ollama 7B 进行回答，展示引用
+  - `evaluate_rag.py` 输出准确率≥70%
+  - 根 `README.md` 指南完整、按步骤可复现
+  - 所有核心模块有单元测试，测试覆盖率 > 60%
+  - 代码通过 flake8、mypy、black 检查
+- 阶段2：
+  - 可切换到 vLLM + Qdrant，完成10万文档验证
+  - `benchmark_latency.py` 显示 P95 < 3s（样例规模下）
+  - 提交成本与效果简报（README附录）
+
+---
+
+## 软件工程质量标准与测试要求
+
+### 测试驱动开发 (Test-Driven Development)
+- **测试优先**: 核心业务逻辑（如文档解析、混合检索）的开发应遵循测试优先的原则。
+- **单元测试**: backend/services/下的所有模块都必须有对应的单元测试。使用 pytest 作为测试框架，并利用 pytest-mock 模拟外部依赖（如数据库和Ollama API）。
+- **测试覆盖率**:
+  - 阶段1完成时: 核心逻辑覆盖率 > 60%
+  - 阶段2完成时: 整体覆盖率 > 80%
+- **自动化测试**: Makefile 中必须包含 make test 和 make test-coverage 命令。
+
+### 代码规范与静态检查
+- **代码风格**: 所有 Python 代码必须使用 black 进行格式化，使用 isort 进行 import 排序。
+- **静态检查**: 提交前必须通过 flake8 和 mypy 的检查，确保代码风格统一且类型安全。
+- **自动化检查**: Makefile 中应包含 make lint 和 make format 命令。
+
+### API-First 与模块化设计
+- **API优先**: 所有服务必须封装在 FastAPI 接口中，不允许前端直接调用服务层代码。
+- **模块化边界**: 每个服务模块（ingestion, vectorstore, embedding, retrieval, llm）都应有清晰的接口定义和实现分离。
+- **依赖注入**: 使用 FastAPI 的依赖注入机制来管理服务之间的依赖关系。
+
+---
+
+请严格按照本Prompt逐批实现、提交，并在每批结束后更新相关 README 与脚本的使用说明，确保任何具备基础环境的开发者均可复现运行。
+
+## 附：配置与脚本示例（整合自英文部分，已中文化并归档到对应章节）
+
+### docker-compose.local.yml（本地环境）
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: ai_workflow_local
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d ai_workflow_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+```
+
+### .env.example（本地/云通用）
+
+```bash
+RUN_MODE=local
+MAX_MEMORY_MB=8192
+USE_GPU=false
+VECTOR_STORE=pgvector
+PGVECTOR_HOST=localhost
+PGVECTOR_PORT=5432
+PGVECTOR_DB=ai_workflow_local
+PGVECTOR_USER=dev
+PGVECTOR_PASSWORD=dev123
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:7b
+MAX_DOCS_PER_BATCH=50
+CHUNK_SIZE=500
+MAX_RETRIEVAL_RESULTS=5
+MEMORY_WARNING_THRESHOLD=80
+SUPPORTED_FORMATS=pdf,txt,md
+MAX_FILE_SIZE_MB=10
+ENABLE_OCR=false
+```
+
+### 配置类示例（backend/app/core/config.py）
+
+```python
+import os
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    run_mode: str = os.getenv("RUN_MODE", "local")
+    vector_store: str = os.getenv("VECTOR_STORE", "pgvector")
+    pgvector_host: str = os.getenv("PGVECTOR_HOST", "localhost")
+    pgvector_port: int = int(os.getenv("PGVECTOR_PORT", "5432"))
+    pgvector_db: str = os.getenv("PGVECTOR_DB", "ai_workflow_local")
+    pgvector_user: str = os.getenv("PGVECTOR_USER", "dev")
+    pgvector_password: str = os.getenv("PGVECTOR_PASSWORD", "dev123")
+    ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+    max_docs_per_batch: int = int(os.getenv("MAX_DOCS_PER_BATCH", "50"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE", "500"))
+    max_retrieval_results: int = int(os.getenv("MAX_RETRIEVAL_RESULTS", "5"))
+    memory_warning_threshold: int = int(os.getenv("MEMORY_WARNING_THRESHOLD", "80"))
+
+settings = Settings()
+```
+
+### 本地环境脚本（scripts/setup_local.sh）
+
+```bash
+#!/bin/bash
+set -e
+brew install ollama || true
+docker-compose -f docker-compose.local.yml up -d
+sleep 10
+ollama pull qwen2.5:7b
+```
+
+### 云环境脚本（scripts/setup_cloud.sh）
+
+```bash
+#!/bin/bash
+set -e
+sudo apt update && sudo apt install -y docker.io docker-compose postgresql-client
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull qwen2.5:14b
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### 迁移脚本（pgvector → Qdrant）
+
+```python
+# scripts/migration/pgvector_to_qdrant.py
+import asyncio, asyncpg, json
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+
+async def migrate_pgvector_to_qdrant():
+    pg = await asyncpg.connect(host="localhost", port=5432, database="ai_workflow_local", user="dev", password="dev123")
+    q = QdrantClient(host="localhost", port=6333)
+    q.recreate_collection("documents", vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
+    rows = await pg.fetch("SELECT id, content, metadata, embedding FROM document_chunks ORDER BY id LIMIT 1000")
+    points = [models.PointStruct(id=r['id'], vector=r['embedding'], payload={"content": r['content'], "metadata": json.loads(r['metadata']) if r['metadata'] else {}}) for r in rows]
+    q.upsert(collection_name="documents", points=points)
+    await pg.close()
+
+if __name__ == "__main__":
+    asyncio.run(migrate_pgvector_to_qdrant())
+```
+
+### RAG 评测框架（scripts/evaluation/rag_evaluation.py）
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class EvaluationResult:
+    query: str
+    response: str
+    expected_answer: str
+    faithfulness: float
+    relevance: float
+    answer_correctness: float
+    context_precision: float
+    overall_score: float
+```
+
+### 本地性能监控（backend/app/core/utils/performance_utils.py）
+
+```python
+import psutil, time
+from dataclasses import dataclass
+
+@dataclass
+class LocalPerformanceMetrics:
+    memory_usage_mb: float
+    memory_percent: float
+    cpu_percent: float
+    disk_usage_gb: float
+    timestamp: float
+```
+
+### Makefile（常用命令）
+
+```makefile
+.PHONY: env-up env-down setup backend-up frontend-up test
+env-up:
+	docker-compose -f docker-compose.local.yml up -d
+install-model:
+	ollama pull qwen2.5:7b
+setup: env-up install-model
+```
 
 ### Phase 1: Local Mac Development (Perplexity-style minimal implementation)
 You will implement a 3-layer architecture first, suitable for local development:
