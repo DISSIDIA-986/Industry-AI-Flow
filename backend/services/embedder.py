@@ -9,7 +9,8 @@ def get_model():
     """获取或初始化嵌入模型"""
     global _model
     if _model is None:
-        _model = SentenceTransformer(settings.embedding_model)
+        # Phase 2: nomic-embed 需要 trust_remote_code=True
+        _model = SentenceTransformer(settings.embedding_model, trust_remote_code=True)
     return _model
 
 

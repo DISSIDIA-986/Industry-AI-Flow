@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
-    # 向量化
-    embedding_model: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-    embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "384"))
+    # 向量化 (Phase 2: 升级到 nomic-embed-text-v1.5)
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "nomic-ai/nomic-embed-text-v1.5")
+    embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "768"))
 
     # 文档处理
     chunk_size: int = int(os.getenv("CHUNK_SIZE", "300"))
