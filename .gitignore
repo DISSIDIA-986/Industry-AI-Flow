@@ -1,0 +1,9 @@
+# Ignore local samples and artifacts
+samples/
+*.pdf
+*.docx
+*.json
+__pycache__/
+*.pyc
+.env
+.env.*
