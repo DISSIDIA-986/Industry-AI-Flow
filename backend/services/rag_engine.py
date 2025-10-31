@@ -23,15 +23,26 @@ class SimpleRAG:
         )
 
         # 3. 构建提示词
-        context = "\n---\n".join([chunk['content'] for chunk in similar_chunks])
-        prompt = f"""基于以下上下文回答问题。如果无法从上下文中找到答案，请说"我不知道"。
+        # 为每个文档块添加编号，提高可读性
+        context_parts = []
+        for i, chunk in enumerate(similar_chunks, 1):
+            context_parts.append(f"[文档{i}]\n{chunk['content']}")
+        context = "\n\n".join(context_parts)
 
-上下文：
+        prompt = f"""你是一个专业的技术问答助手。请基于以下参考文档回答用户问题。
+
+**重要指示**：
+1. 仔细阅读所有参考文档
+2. 只使用文档中的信息回答
+3. 如果文档中没有相关信息，明确说"我不知道"
+4. 回答要准确、简洁、专业
+
+**参考文档**：
 {context}
 
-问题：{question}
+**用户问题**：{question}
 
-答案："""
+**你的回答**："""
 
         # 4. LLM生成答案
         answer = self.llm_client.generate(prompt)

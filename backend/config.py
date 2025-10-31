@@ -1,5 +1,5 @@
 import os
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "384"))
 
     # 文档处理
-    chunk_size: int = int(os.getenv("CHUNK_SIZE", "500"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE", "300"))
     chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "50"))
 
     # RAG
-    top_k: int = int(os.getenv("TOP_K", "3"))
+    top_k: int = int(os.getenv("TOP_K", "5"))
 
     @property
     def database_url(self) -> str:
