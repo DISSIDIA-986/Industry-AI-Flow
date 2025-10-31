@@ -67,19 +67,21 @@ class VectorStore:
 
         try:
             # 使用余弦相似度搜索
+            # 将 query_embedding 转换为字符串格式，让 PostgreSQL 自动转换为 vector 类型
+            embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
             cur.execute(
                 """
                 SELECT
                     dc.doc_id,
                     dc.content,
-                    dc.embedding <=> %s AS distance,
+                    dc.embedding <=> %s::vector AS distance,
                     d.filename
                 FROM document_chunks dc
                 JOIN documents d ON dc.doc_id = d.id
                 ORDER BY distance
                 LIMIT %s
                 """,
-                (query_embedding, top_k)
+                (embedding_str, top_k)
             )
 
             results = []
