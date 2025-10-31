@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from backend.services.document_loader import EnhancedDocumentLoader
+from backend.config import settings
 
 
 def test_ocr():
@@ -16,10 +17,11 @@ def test_ocr():
     print("="*60)
     print()
 
-    # 测试1: 初始化 OCR
+    # 测试1: 初始化 OCR (使用配置的默认语言)
     print("测试1: 初始化 EnhancedDocumentLoader...")
+    print(f"   配置语言: {settings.ocr_lang}")
     try:
-        loader = EnhancedDocumentLoader(use_ocr=True, ocr_lang="ch")
+        loader = EnhancedDocumentLoader(use_ocr=True)  # 使用配置的默认语言
         print("✅ OCR 初始化成功")
         print()
     except Exception as e:
@@ -45,7 +47,7 @@ def test_ocr():
     print("测试3: 功能检查...")
     print(f"✅ OCR 支持图片格式: .jpg, .jpeg, .png, .bmp, .tiff")
     print(f"✅ OCR 支持扫描 PDF 自动识别")
-    print(f"✅ OCR 语言: 中文 (ch)")
+    print(f"✅ OCR 当前语言: {settings.ocr_lang} ('en'=英文, 'ch'=中文, 'en+ch'=混合)")
     print()
 
     print("="*60)
@@ -54,11 +56,16 @@ def test_ocr():
     print("✅ EnhancedDocumentLoader 已就绪")
     print("✅ 支持文本、PDF、图片文档")
     print("✅ 自动检测扫描内容并使用 OCR")
+    print(f"✅ 默认使用 {settings.ocr_lang} 语言模型 (可通过 .env 配置)")
     print()
     print("💡 使用方法:")
+    print("   # 使用默认配置")
     print("   loader = EnhancedDocumentLoader(use_ocr=True)")
     print("   text = loader.load_document('your_file.pdf')")
-    print("   # 或图片: loader.load_document('image.png')")
+    print()
+    print("   # 或指定语言")
+    print("   loader = EnhancedDocumentLoader(use_ocr=True, ocr_lang='ch')")
+    print("   text = loader.load_document('chinese_doc.pdf')")
 
 
 if __name__ == "__main__":
