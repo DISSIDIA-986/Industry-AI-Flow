@@ -87,7 +87,9 @@ Industry-AI-Flow/
 
 ### Day 1-2: 环境搭建
 
-**任务清单**：
+**核心任务**：创建自动化脚本 `scripts/setup_local.sh`，该脚本包含以下所有环境搭建和验证步骤。最终开发者只需运行 `bash scripts/setup_local.sh` 即可完成环境准备。
+
+**脚本应包含的步骤**：
 ```bash
 # 1. 检查现有安装
 brew list | grep postgresql  # 检查PostgreSQL是否已安装
@@ -144,6 +146,13 @@ async def health():
     """健康检查"""
     return {"status": "ok", "memory_usage_mb": get_memory_usage()}
 
+def get_memory_usage() -> float:
+    """获取当前进程内存使用(MB)"""
+    import psutil
+    import os
+    process = psutil.Process(os.getpid())
+    return round(process.memory_info().rss / 1024 / 1024, 2)
+
 @app.post("/documents/upload")
 async def upload_document(file: UploadFile):
     """上传单个文档（仅PDF和TXT）"""
@@ -163,7 +172,21 @@ if __name__ == "__main__":
 **产出文件**：
 - `backend/main.py`（FastAPI核心）
 - `backend/config.py`（环境变量加载）
-- `backend/requirements.txt`（依赖列表）
+- `backend/requirements.txt`（依赖列表，见下方示例）
+
+**backend/requirements.txt 示例**：
+```txt
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+psycopg2-binary==2.9.9
+pgvector==0.2.5
+sentence-transformers==2.2.2
+PyMuPDF==1.23.8
+requests==2.31.0
+pydantic==1.10.13
+psutil==5.9.6
+python-multipart==0.0.6
+```
 
 ---
 
@@ -281,16 +304,18 @@ class SimpleRAG:
 
 # backend/services/ollama_client.py
 import requests
+from backend.config import settings
 
 class OllamaClient:
-    def __init__(self, base_url: str = "http://localhost:11434"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None, model: str = None):
+        self.base_url = base_url or settings.ollama_host
+        self.model = model or settings.ollama_model
 
     def generate(self, prompt: str) -> str:
         """调用Ollama生成文本"""
         response = requests.post(
             f"{self.base_url}/api/generate",
-            json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False}
+            json={"model": self.model, "prompt": prompt, "stream": False}
         )
         return response.json()["response"]
 ```
@@ -301,8 +326,16 @@ class OllamaClient:
 @app.post("/rag/query")
 async def rag_query(question: str):
     """RAG查询接口"""
-    result = rag_engine.query(question)
-    return result
+    try:
+        result = rag_engine.query(question)
+        return result
+    except Exception as e:
+        # Week 1-2阶段：简单错误处理即可
+        return {
+            "error": str(e),
+            "question": question,
+            "answer": "系统错误，请查看日志"
+        }
 ```
 
 **验收检查**：
@@ -328,12 +361,10 @@ import json
 import time
 from backend.services.rag_engine import SimpleRAG
 
-# 测试问题集（用户需提供20个问题+答案）
-test_cases = [
-    {"question": "什么是RAG?", "expected": "检索增强生成"},
-    {"question": "pgvector是什么?", "expected": "PostgreSQL向量扩展"},
-    # ... 共20个
-]
+def load_test_cases(file_path: str = "samples/test_questions.json"):
+    """加载测试问题集"""
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def evaluate_accuracy(test_cases):
     """评估准确率"""
@@ -347,14 +378,20 @@ def evaluate_accuracy(test_cases):
         latency = time.time() - start
         latencies.append(latency)
 
-        # 简单判断：答案中包含期望关键词
-        if case["expected"].lower() in result["answer"].lower():
+        # 判断：答案中包含所有期望关键词
+        answer_lower = result["answer"].lower()
+        keywords_matched = all(
+            keyword.lower() in answer_lower
+            for keyword in case.get("expected_keywords", [])
+        )
+
+        if keywords_matched:
             correct += 1
             print(f"✅ {case['question']}")
         else:
             print(f"❌ {case['question']}")
-            print(f"   期望: {case['expected']}")
-            print(f"   实际: {result['answer'][:100]}...")
+            print(f"   期望关键词: {case.get('expected_keywords', [])}")
+            print(f"   实际答案: {result['answer'][:100]}...")
 
     accuracy = correct / total
     avg_latency = sum(latencies) / len(latencies)
@@ -368,15 +405,21 @@ def evaluate_accuracy(test_cases):
     return {
         "accuracy": accuracy,
         "avg_latency": avg_latency,
-        "p95_latency": p95_latency
+        "p95_latency": p95_latency,
+        "correct": correct,
+        "total": total
     }
 
 if __name__ == "__main__":
+    # 加载测试问题集
+    test_cases = load_test_cases()
+
+    # 执行评估
     results = evaluate_accuracy(test_cases)
 
     # 保存结果
-    with open("evaluation_results.json", "w") as f:
-        json.dump(results, f, indent=2)
+    with open("evaluation_results.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
 ```
 
 **验收检查**：
@@ -388,7 +431,23 @@ if __name__ == "__main__":
 **产出文件**：
 - `scripts/test_rag.py`（评估脚本）
 - `evaluation_results.json`（测试结果）
-- `samples/test_questions.json`（测试问题集）
+- `samples/test_questions.json`（测试问题集，格式见下方）
+
+**测试问题集格式**（`samples/test_questions.json`）：
+```json
+[
+  {
+    "question": "什么是RAG系统?",
+    "expected_keywords": ["检索", "增强", "生成"],
+    "category": "basic"
+  },
+  {
+    "question": "pgvector的主要功能是什么?",
+    "expected_keywords": ["向量", "相似度", "搜索"],
+    "category": "technical"
+  }
+]
+```
 
 ---
 
@@ -1080,8 +1139,16 @@ echo "  本地服务模式: 比Docker节省约2-3GB内存"
 
 ---
 
-**文档版本**: v2.1
+**文档版本**: v2.2
 **最后更新**: 2025-10-31
 **预计工作量**: 2周（10工作日）
 **目标**: 用数据回答"是否继续投入"的问题
-**资源优化**: 优先使用homebrew本地服务，相比Docker节省2-3GB内存
+
+**v2.2 更新内容**（基于 Qwen3 和 Gemini 反馈）：
+- ✅ 修复 OllamaClient 硬编码模型名称问题
+- ✅ 添加完整 requirements.txt 依赖列表
+- ✅ 添加内存监控函数实现（get_memory_usage）
+- ✅ 添加测试问题集格式定义
+- ✅ 添加基础错误处理示例
+- ✅ 澄清 setup_local.sh 的自动化脚本角色
+- ✅ 资源优化：优先使用homebrew本地服务，节省2-3GB内存
