@@ -3,14 +3,16 @@
 生成包含中英文文本的测试图片
 """
 
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
+
 
 def create_test_image():
     """创建测试图片"""
     # 创建白色背景图片
     width, height = 800, 400
-    image = Image.new('RGB', (width, height), 'white')
+    image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
 
     # 测试文本（中英文混合）
@@ -19,7 +21,7 @@ def create_test_image():
         "你好世界",
         "PaddleOCR 3.3.1 Test",
         "Industry AI Flow",
-        "图文识别测试 OCR Recognition"
+        "图文识别测试 OCR Recognition",
     ]
 
     # 使用系统默认字体绘制文本
@@ -33,7 +35,7 @@ def create_test_image():
             font = ImageFont.load_default()
 
         # 绘制文本
-        draw.text((50, y_offset), text, fill='black', font=font)
+        draw.text((50, y_offset), text, fill="black", font=font)
         y_offset += 70
 
     # 保存图片

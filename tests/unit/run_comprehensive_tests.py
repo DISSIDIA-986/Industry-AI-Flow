@@ -7,35 +7,38 @@ Comprehensive Test Framework for Industry AI Flow
 包括核心功能、接口、性能、安全性和用户体验等全方位测试
 """
 
-import pytest
-import asyncio
-import time
-import json
-import os
-import sys
-import subprocess
 import argparse
-from typing import Dict, List, Any, Optional, Tuple
+import asyncio
+import json
+import logging
+import os
+import subprocess
+import sys
+import time
+import unittest
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from datetime import datetime
-import unittest
-import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+import pytest
+from test_answer_generation import AnswerGenerationTester
+from test_data_analysis_code_execution import DataAnalysisCodeExecutionTester
+from test_frontend_chat_interface import FrontendChatTester
+from test_ocr_integration import OCRIntegrationTester
 
 # 导入所有测试模块
 from test_question_classification import QuestionClassificationTester
-from test_vector_retrieval import VectorRetrievalTester
-from test_answer_generation import AnswerGenerationTester
-from test_ocr_integration import OCRIntegrationTester
-from test_data_analysis_code_execution import DataAnalysisCodeExecutionTester
 from test_streamlit_interface import StreamlitInterfaceTester
-from test_frontend_chat_interface import FrontendChatTester
 from test_user_feedback_rag_impact import UserFeedbackRAGTester
+
+from test_vector_retrieval import VectorRetrievalTester
 
 
 class TestCategory(Enum):
     """测试类别"""
+
     CORE_FUNCTIONALITY = "core_functionality"
     INTERFACE_TESTING = "interface_testing"
     PERFORMANCE_TESTING = "performance_testing"
@@ -46,6 +49,7 @@ class TestCategory(Enum):
 
 class TestPriority(Enum):
     """测试优先级"""
+
     CRITICAL = 1
     HIGH = 2
     MEDIUM = 3
@@ -55,6 +59,7 @@ class TestPriority(Enum):
 @dataclass
 class TestSuite:
     """测试套件"""
+
     name: str
     category: TestCategory
     priority: TestPriority
@@ -68,6 +73,7 @@ class TestSuite:
 @dataclass
 class TestExecutionResult:
     """测试执行结果"""
+
     suite_name: str
     category: str
     success: bool
@@ -108,7 +114,7 @@ class ComprehensiveTestRunner:
 
         # 创建格式化器
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
@@ -127,7 +133,7 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.CRITICAL,
                 description="测试问题分类器的准确性，包括简单问答、复杂推理、多轮对话",
                 tester_class=QuestionClassificationTester,
-                timeout=180
+                timeout=180,
             ),
             TestSuite(
                 name="向量检索测试",
@@ -135,7 +141,7 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.CRITICAL,
                 description="测试向量检索系统的召回率和精确率",
                 tester_class=VectorRetrievalTester,
-                timeout=240
+                timeout=240,
             ),
             TestSuite(
                 name="回答生成测试",
@@ -143,7 +149,7 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.HIGH,
                 description="测试AI回答生成质量，包括正确性、流畅性、相关性",
                 tester_class=AnswerGenerationTester,
-                timeout=300
+                timeout=300,
             ),
             TestSuite(
                 name="OCR集成测试",
@@ -152,7 +158,7 @@ class ComprehensiveTestRunner:
                 description="测试PaddleOCR文本提取与RAG系统的集成效果",
                 tester_class=OCRIntegrationTester,
                 timeout=240,
-                dependencies=["paddleocr"]
+                dependencies=["paddleocr"],
             ),
             TestSuite(
                 name="数据分析与代码执行测试",
@@ -160,7 +166,7 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.HIGH,
                 description="测试系统的数据分析和代码执行能力",
                 tester_class=DataAnalysisCodeExecutionTester,
-                timeout=360
+                timeout=360,
             ),
             TestSuite(
                 name="Streamlit接口测试",
@@ -169,7 +175,7 @@ class ComprehensiveTestRunner:
                 description="测试Streamlit界面的交互完整性和用户体验",
                 tester_class=StreamlitInterfaceTester,
                 timeout=300,
-                dependencies=["streamlit"]
+                dependencies=["streamlit"],
             ),
             TestSuite(
                 name="前端聊天界面测试",
@@ -177,7 +183,7 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.MEDIUM,
                 description="测试聊天界面的功能稳定性和响应速度",
                 tester_class=FrontendChatTester,
-                timeout=240
+                timeout=240,
             ),
             TestSuite(
                 name="用户反馈对RAG系统影响测试",
@@ -185,8 +191,8 @@ class ComprehensiveTestRunner:
                 priority=TestPriority.MEDIUM,
                 description="测试用户反馈对RAG系统改进的效果",
                 tester_class=UserFeedbackRAGTester,
-                timeout=420
-            )
+                timeout=420,
+            ),
         ]
 
     async def run_single_suite(self, suite: TestSuite) -> TestExecutionResult:
@@ -204,17 +210,17 @@ class ComprehensiveTestRunner:
                         category=suite.category.value,
                         success=False,
                         execution_time=0,
-                        error_message=f"缺少依赖: {', '.join(missing_deps)}"
+                        error_message=f"缺少依赖: {', '.join(missing_deps)}",
                     )
 
             # 创建测试实例
             tester = suite.tester_class()
 
             # 执行测试
-            if hasattr(tester, 'run_comprehensive_tests'):
+            if hasattr(tester, "run_comprehensive_tests"):
                 # 异步测试
                 result = await tester.run_comprehensive_tests()
-            elif hasattr(tester, 'run_comprehensive_test'):
+            elif hasattr(tester, "run_comprehensive_test"):
                 # 同步测试
                 result = tester.run_comprehensive_test()
             else:
@@ -233,7 +239,7 @@ class ComprehensiveTestRunner:
                 execution_time=execution_time,
                 test_results=[result],
                 summary=summary,
-                coverage_metrics=self._calculate_coverage_metrics(result)
+                coverage_metrics=self._calculate_coverage_metrics(result),
             )
 
             self.logger.info(f"✅ 测试套件 {suite.name} 完成，耗时: {execution_time:.2f}秒")
@@ -247,7 +253,7 @@ class ComprehensiveTestRunner:
                 category=suite.category.value,
                 success=False,
                 execution_time=execution_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     def _check_dependencies(self, dependencies: List[str]) -> List[str]:
@@ -266,7 +272,7 @@ class ComprehensiveTestRunner:
             "test_coverage": 0.0,
             "function_coverage": 0.0,
             "scenario_coverage": 0.0,
-            "edge_case_coverage": 0.0
+            "edge_case_coverage": 0.0,
         }
 
         if isinstance(test_result, dict):
@@ -287,8 +293,11 @@ class ComprehensiveTestRunner:
 
         return metrics
 
-    async def run_all_tests(self, categories: List[TestCategory] = None,
-                          priorities: List[TestPriority] = None) -> Dict[str, Any]:
+    async def run_all_tests(
+        self,
+        categories: List[TestCategory] = None,
+        priorities: List[TestPriority] = None,
+    ) -> Dict[str, Any]:
         """运行所有测试"""
         self.start_time = time.time()
         self.logger.info("🎯 开始执行综合测试套件")
@@ -328,18 +337,21 @@ class ComprehensiveTestRunner:
 
         # 找出可以并行运行的测试套件（无依赖关系的）
         independent_suites = [
-            suite for suite in self.test_suites
-            if suite.enabled and not suite.dependencies and
-            suite.category in [TestCategory.CORE_FUNCTIONALITY, TestCategory.USER_EXPERIENCE]
+            suite
+            for suite in self.test_suites
+            if suite.enabled
+            and not suite.dependencies
+            and suite.category
+            in [TestCategory.CORE_FUNCTIONALITY, TestCategory.USER_EXPERIENCE]
         ]
 
         # 分批并行执行
         self.results = []
         for i in range(0, len(independent_suites), max_workers):
-            batch = independent_suites[i:i + max_workers]
+            batch = independent_suites[i : i + max_workers]
             batch_results = await asyncio.gather(
                 *[self.run_single_suite(suite) for suite in batch],
-                return_exceptions=True
+                return_exceptions=True,
             )
 
             for result in batch_results:
@@ -350,9 +362,14 @@ class ComprehensiveTestRunner:
 
         # 串行执行有依赖关系的测试
         dependent_suites = [
-            suite for suite in self.test_suites
-            if suite.enabled and (suite.dependencies or
-            suite.category not in [TestCategory.CORE_FUNCTIONALITY, TestCategory.USER_EXPERIENCE])
+            suite
+            for suite in self.test_suites
+            if suite.enabled
+            and (
+                suite.dependencies
+                or suite.category
+                not in [TestCategory.CORE_FUNCTIONALITY, TestCategory.USER_EXPERIENCE]
+            )
         ]
 
         for suite in dependent_suites:
@@ -407,17 +424,26 @@ class ComprehensiveTestRunner:
             {
                 "suite": result.suite_name,
                 "error": result.error_message,
-                "time": result.execution_time
+                "time": result.execution_time,
             }
-            for result in self.results if not result.success
+            for result in self.results
+            if not result.success
         ]
 
         # 性能分析
         performance_stats = {
             "total_execution_time": total_time,
             "average_suite_time": total_time / total_tests if total_tests > 0 else 0,
-            "fastest_suite": min(self.results, key=lambda x: x.execution_time).suite_name if self.results else "",
-            "slowest_suite": max(self.results, key=lambda x: x.execution_time).suite_name if self.results else ""
+            "fastest_suite": min(
+                self.results, key=lambda x: x.execution_time
+            ).suite_name
+            if self.results
+            else "",
+            "slowest_suite": max(
+                self.results, key=lambda x: x.execution_time
+            ).suite_name
+            if self.results
+            else "",
         }
 
         # 质量评分
@@ -433,7 +459,7 @@ class ComprehensiveTestRunner:
                 "failed_tests": failed_tests,
                 "overall_success_rate": overall_success_rate,
                 "total_execution_time": total_time,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             },
             "category_performance": category_stats,
             "category_success_rates": category_success_rates,
@@ -448,11 +474,11 @@ class ComprehensiveTestRunner:
                     "success": result.success,
                     "execution_time": result.execution_time,
                     "summary": result.summary,
-                    "coverage": result.coverage_metrics
+                    "coverage": result.coverage_metrics,
                 }
                 for result in self.results
             ],
-            "recommendations": recommendations
+            "recommendations": recommendations,
         }
 
     def _calculate_quality_score(self) -> float:
@@ -465,17 +491,24 @@ class ComprehensiveTestRunner:
 
         avg_coverage = 0.0
         if self.results:
-            total_coverage = sum(sum(r.coverage_metrics.values()) / len(r.coverage_metrics)
-                               for r in self.results if r.coverage_metrics)
+            total_coverage = sum(
+                sum(r.coverage_metrics.values()) / len(r.coverage_metrics)
+                for r in self.results
+                if r.coverage_metrics
+            )
             avg_coverage = total_coverage / len(self.results)
 
         # 性能评分（基于执行时间）
         total_time = sum(r.execution_time for r in self.results)
         expected_time = len(self.results) * 180  # 预期每个测试3分钟
-        performance_score = min(1.0, expected_time / total_time) if total_time > 0 else 1.0
+        performance_score = (
+            min(1.0, expected_time / total_time) if total_time > 0 else 1.0
+        )
 
         # 综合评分
-        quality_score = (success_rate * 0.5 + avg_coverage * 0.3 + performance_score * 0.2)
+        quality_score = (
+            success_rate * 0.5 + avg_coverage * 0.3 + performance_score * 0.2
+        )
         return round(quality_score, 3)
 
     def _generate_recommendations(self) -> List[str]:
@@ -483,7 +516,11 @@ class ComprehensiveTestRunner:
         recommendations = []
 
         # 基于成功率的建议
-        success_rate = sum(1 for r in self.results if r.success) / len(self.results) if self.results else 0
+        success_rate = (
+            sum(1 for r in self.results if r.success) / len(self.results)
+            if self.results
+            else 0
+        )
         if success_rate < 0.8:
             recommendations.append(f"整体成功率偏低({success_rate:.1%})，建议优先修复失败的测试用例")
         elif success_rate < 0.95:
@@ -504,7 +541,9 @@ class ComprehensiveTestRunner:
 
         # 基于覆盖率的建议
         if self.results:
-            avg_test_coverage = sum(r.coverage_metrics.get("test_coverage", 0) for r in self.results) / len(self.results)
+            avg_test_coverage = sum(
+                r.coverage_metrics.get("test_coverage", 0) for r in self.results
+            ) / len(self.results)
             if avg_test_coverage < 0.8:
                 recommendations.append("测试覆盖率偏低，建议增加更多测试用例和场景")
 
@@ -512,17 +551,27 @@ class ComprehensiveTestRunner:
         if self.results:
             slow_tests = [r for r in self.results if r.execution_time > 300]  # 超过5分钟的测试
             if slow_tests:
-                recommendations.append(f"以下测试执行时间过长，需要优化: {', '.join(r.suite_name for r in slow_tests)}")
+                recommendations.append(
+                    f"以下测试执行时间过长，需要优化: {', '.join(r.suite_name for r in slow_tests)}"
+                )
 
         # 基于失败模式的建议
         failed_results = [r for r in self.results if not r.success]
         if failed_results:
             error_patterns = {}
             for result in failed_results:
-                error_type = result.error_message.split(':')[0] if ':' in result.error_message else result.error_message
+                error_type = (
+                    result.error_message.split(":")[0]
+                    if ":" in result.error_message
+                    else result.error_message
+                )
                 error_patterns[error_type] = error_patterns.get(error_type, 0) + 1
 
-            common_error = max(error_patterns.items(), key=lambda x: x[1])[0] if error_patterns else ""
+            common_error = (
+                max(error_patterns.items(), key=lambda x: x[1])[0]
+                if error_patterns
+                else ""
+            )
             if common_error:
                 recommendations.append(f"最常见的错误类型是: {common_error}，建议系统性解决此类问题")
 
@@ -539,7 +588,7 @@ class ComprehensiveTestRunner:
             output_dir.mkdir(exist_ok=True)
             output_path = output_dir / f"comprehensive_test_report_{timestamp}.json"
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2, default=str)
 
         self.logger.info(f"📄 测试报告已保存到: {output_path}")
@@ -547,9 +596,9 @@ class ComprehensiveTestRunner:
 
     def print_summary(self, report: Dict[str, Any]):
         """打印测试摘要"""
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("🏭 Industry AI Flow - 综合测试报告")
-        print("="*80)
+        print("=" * 80)
 
         summary = report["execution_summary"]
         print(f"📊 测试概览:")
@@ -562,9 +611,15 @@ class ComprehensiveTestRunner:
 
         print(f"\n📈 分类表现:")
         for category, stats in report["category_performance"].items():
-            success_rate = stats["success"] / stats["total"] if stats["total"] > 0 else 0
-            status = "✅" if success_rate >= 0.9 else "⚠️" if success_rate >= 0.7 else "❌"
-            print(f"  {category}: {stats['success']}/{stats['total']} ({success_rate:.1%}) {status}")
+            success_rate = (
+                stats["success"] / stats["total"] if stats["total"] > 0 else 0
+            )
+            status = (
+                "✅" if success_rate >= 0.9 else "⚠️" if success_rate >= 0.7 else "❌"
+            )
+            print(
+                f"  {category}: {stats['success']}/{stats['total']} ({success_rate:.1%}) {status}"
+            )
 
         print(f"\n📊 覆盖率分析:")
         for metric, value in report["coverage_analysis"].items():
@@ -579,16 +634,24 @@ class ComprehensiveTestRunner:
         for i, rec in enumerate(report["recommendations"], 1):
             print(f"  {i}. {rec}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
 
 
 # 命令行接口
 async def main():
     parser = argparse.ArgumentParser(description="Industry AI Flow 综合测试框架")
-    parser.add_argument("--categories", nargs="+", choices=[cat.value for cat in TestCategory],
-                       help="指定要运行的测试类别")
-    parser.add_argument("--priorities", nargs="+", choices=[str(p.value) for p in TestPriority],
-                       help="指定要运行的测试优先级")
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        choices=[cat.value for cat in TestCategory],
+        help="指定要运行的测试类别",
+    )
+    parser.add_argument(
+        "--priorities",
+        nargs="+",
+        choices=[str(p.value) for p in TestPriority],
+        help="指定要运行的测试优先级",
+    )
     parser.add_argument("--parallel", action="store_true", help="并行运行测试")
     parser.add_argument("--max-workers", type=int, default=3, help="并行运行的最大工作线程数")
     parser.add_argument("--output", help="报告输出路径")
@@ -602,7 +665,9 @@ async def main():
         print("可用的测试套件:")
         for suite in runner.test_suites:
             status = "✅" if suite.enabled else "❌"
-            print(f"  {status} {suite.name} ({suite.category.value}, 优先级: {suite.priority.name})")
+            print(
+                f"  {status} {suite.name} ({suite.category.value}, 优先级: {suite.priority.name})"
+            )
             print(f"    {suite.description}")
         return
 
@@ -610,8 +675,12 @@ async def main():
     runner = ComprehensiveTestRunner()
 
     # 转换参数
-    categories = [TestCategory(cat) for cat in args.categories] if args.categories else None
-    priorities = [TestPriority(int(p)) for p in args.priorities] if args.priorities else None
+    categories = (
+        [TestCategory(cat) for cat in args.categories] if args.categories else None
+    )
+    priorities = (
+        [TestPriority(int(p)) for p in args.priorities] if args.priorities else None
+    )
 
     # 运行测试
     if args.parallel:

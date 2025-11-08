@@ -7,31 +7,37 @@
 3. 多轮对话测试
 4. 分类器准确性验证
 """
-import sys
-import os
 import json
+import os
+import sys
 import time
-from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Tuple
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
+backend_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"
+)
 sys.path.insert(0, backend_path)
+
 
 class QuestionType(Enum):
     """问题类型枚举"""
-    SIMPLE_QA = "simple_qa"           # 简单问答
+
+    SIMPLE_QA = "simple_qa"  # 简单问答
     COMPLEX_REASONING = "complex_reasoning"  # 复杂推理
-    MULTI_TURN = "multi_turn"         # 多轮对话
-    DATA_ANALYSIS = "data_analysis"   # 数据分析
+    MULTI_TURN = "multi_turn"  # 多轮对话
+    DATA_ANALYSIS = "data_analysis"  # 数据分析
     CODE_EXECUTION = "code_execution"  # 代码执行
-    DOCUMENT_QA = "document_qa"       # 文档问答
+    DOCUMENT_QA = "document_qa"  # 文档问答
+
 
 @dataclass
 class TestCase:
     """测试用例数据结构"""
+
     question_id: str
     question_type: QuestionType
     question: str
@@ -40,6 +46,7 @@ class TestCase:
     context_required: bool = False
     follow_up_questions: List[str] = None
     difficulty: str = "medium"  # easy, medium, hard
+
 
 class QuestionClassificationTester:
     """问题分类测试器"""
@@ -58,7 +65,7 @@ class QuestionClassificationTester:
                 question="什么是人工智能？",
                 expected_keywords=["人工智能", "AI", "计算机", "智能"],
                 expected_answer_type="definition",
-                difficulty="easy"
+                difficulty="easy",
             ),
             TestCase(
                 question_id="simple_002",
@@ -66,7 +73,7 @@ class QuestionClassificationTester:
                 question="Python是什么编程语言？",
                 expected_keywords=["Python", "编程语言", "解释型", "高级语言"],
                 expected_answer_type="description",
-                difficulty="easy"
+                difficulty="easy",
             ),
             TestCase(
                 question_id="simple_003",
@@ -74,9 +81,8 @@ class QuestionClassificationTester:
                 question="机器学习的主要类型有哪些？",
                 expected_keywords=["监督学习", "无监督学习", "强化学习"],
                 expected_answer_type="classification",
-                difficulty="medium"
+                difficulty="medium",
             ),
-
             # 复杂推理测试
             TestCase(
                 question_id="complex_001",
@@ -84,7 +90,7 @@ class QuestionClassificationTester:
                 question="如果一家公司的年收入增长了20%，但是成本增长了30%，这对公司的利润有什么影响？请详细分析。",
                 expected_keywords=["利润", "收入", "成本", "影响", "分析"],
                 expected_answer_type="analysis",
-                difficulty="hard"
+                difficulty="hard",
             ),
             TestCase(
                 question_id="complex_002",
@@ -92,7 +98,7 @@ class QuestionClassificationTester:
                 question="在设计和实现一个大规模分布式系统时，需要考虑哪些关键因素？请从性能、可靠性、可扩展性三个方面进行分析。",
                 expected_keywords=["分布式系统", "性能", "可靠性", "可扩展性", "因素"],
                 expected_answer_type="comprehensive_analysis",
-                difficulty="hard"
+                difficulty="hard",
             ),
             TestCase(
                 question_id="complex_003",
@@ -100,9 +106,8 @@ class QuestionClassificationTester:
                 question="解释深度学习中的梯度消失问题，并提出至少三种解决方案。",
                 expected_keywords=["梯度消失", "深度学习", "解决方案", "ReLU", "BatchNorm"],
                 expected_answer_type="problem_solution",
-                difficulty="hard"
+                difficulty="hard",
             ),
-
             # 多轮对话测试
             TestCase(
                 question_id="multi_001",
@@ -113,9 +118,9 @@ class QuestionClassificationTester:
                 follow_up_questions=[
                     "能具体解释一下监督学习吗？",
                     "监督学习和无监督学习有什么区别？",
-                    "在实际应用中，我应该如何选择合适的机器学习方法？"
+                    "在实际应用中，我应该如何选择合适的机器学习方法？",
                 ],
-                difficulty="medium"
+                difficulty="medium",
             ),
             TestCase(
                 question_id="multi_002",
@@ -126,11 +131,10 @@ class QuestionClassificationTester:
                 follow_up_questions=[
                     "有哪些具体的优化技巧？",
                     "如何使用性能分析工具来识别瓶颈？",
-                    "异步编程对性能提升有帮助吗？"
+                    "异步编程对性能提升有帮助吗？",
                 ],
-                difficulty="medium"
+                difficulty="medium",
             ),
-
             # 数据分析测试
             TestCase(
                 question_id="data_001",
@@ -138,7 +142,7 @@ class QuestionClassificationTester:
                 question="如何分析一个销售数据集来识别销售趋势和季节性模式？",
                 expected_keywords=["销售数据", "趋势", "季节性", "分析", "模式"],
                 expected_answer_type="methodology",
-                difficulty="medium"
+                difficulty="medium",
             ),
             TestCase(
                 question_id="data_002",
@@ -146,9 +150,8 @@ class QuestionClassificationTester:
                 question="给定用户行为数据，如何构建用户画像并进行个性化推荐？",
                 expected_keywords=["用户画像", "个性化推荐", "用户行为", "数据分析"],
                 expected_answer_type="methodology",
-                difficulty="hard"
+                difficulty="hard",
             ),
-
             # 代码执行测试
             TestCase(
                 question_id="code_001",
@@ -156,7 +159,7 @@ class QuestionClassificationTester:
                 question="写一个Python函数来计算斐波那契数列的第n项。",
                 expected_keywords=["斐波那契", "Python", "函数", "递归"],
                 expected_answer_type="code",
-                difficulty="medium"
+                difficulty="medium",
             ),
             TestCase(
                 question_id="code_002",
@@ -164,9 +167,8 @@ class QuestionClassificationTester:
                 question="如何使用pandas读取CSV文件并进行基本的数据清洗？",
                 expected_keywords=["pandas", "CSV", "数据清洗", "Python"],
                 expected_answer_type="code_tutorial",
-                difficulty="medium"
+                difficulty="medium",
             ),
-
             # 文档问答测试
             TestCase(
                 question_id="doc_001",
@@ -175,7 +177,7 @@ class QuestionClassificationTester:
                 expected_keywords=["功能", "系统", "文档"],
                 expected_answer_type="extraction",
                 context_required=True,
-                difficulty="easy"
+                difficulty="easy",
             ),
             TestCase(
                 question_id="doc_002",
@@ -184,8 +186,8 @@ class QuestionClassificationTester:
                 expected_keywords=["部署", "步骤", "文档"],
                 expected_answer_type="procedural",
                 context_required=True,
-                difficulty="medium"
-            )
+                difficulty="medium",
+            ),
         ]
 
         return test_cases
@@ -199,13 +201,19 @@ class QuestionClassificationTester:
 
         # 简单关键词匹配分类
         if any(keyword in question_lower for keyword in ["什么是", "什么", "如何", "为什么"]):
-            if any(keyword in question_lower for keyword in ["分析", "影响", "因素", "方案", "问题"]):
+            if any(
+                keyword in question_lower for keyword in ["分析", "影响", "因素", "方案", "问题"]
+            ):
                 return QuestionType.COMPLEX_REASONING
             else:
                 return QuestionType.SIMPLE_QA
-        elif any(keyword in question_lower for keyword in ["写代码", "函数", "python", "实现", "编程"]):
+        elif any(
+            keyword in question_lower for keyword in ["写代码", "函数", "python", "实现", "编程"]
+        ):
             return QuestionType.CODE_EXECUTION
-        elif any(keyword in question_lower for keyword in ["数据", "分析", "趋势", "模式", "统计"]):
+        elif any(
+            keyword in question_lower for keyword in ["数据", "分析", "趋势", "模式", "统计"]
+        ):
             return QuestionType.DATA_ANALYSIS
         elif any(keyword in question_lower for keyword in ["文档", "根据", "上传"]):
             return QuestionType.DOCUMENT_QA
@@ -231,7 +239,7 @@ class QuestionClassificationTester:
                 "question": test_case.question,
                 "expected_type": test_case.question_type.value,
                 "predicted_type": predicted_type.value,
-                "is_correct": is_correct
+                "is_correct": is_correct,
             }
 
             classification_results.append(result)
@@ -240,7 +248,9 @@ class QuestionClassificationTester:
                 correct_classifications += 1
                 print(f"✅ {test_case.question_id}: {predicted_type.value}")
             else:
-                print(f"❌ {test_case.question_id}: 期望 {test_case.question_type.value}, 预测 {predicted_type.value}")
+                print(
+                    f"❌ {test_case.question_id}: 期望 {test_case.question_type.value}, 预测 {predicted_type.value}"
+                )
 
         accuracy = correct_classifications / total_tests if total_tests > 0 else 0
 
@@ -248,14 +258,16 @@ class QuestionClassificationTester:
             "total_tests": total_tests,
             "correct_classifications": correct_classifications,
             "accuracy": accuracy,
-            "results": classification_results
+            "results": classification_results,
         }
 
     def test_simple_qa(self) -> Dict[str, Any]:
         """测试简单问答能力"""
         print("\n🔍 测试简单问答能力...")
 
-        simple_tests = [tc for tc in self.test_cases if tc.question_type == QuestionType.SIMPLE_QA]
+        simple_tests = [
+            tc for tc in self.test_cases if tc.question_type == QuestionType.SIMPLE_QA
+        ]
         results = []
 
         for test_case in simple_tests:
@@ -270,8 +282,12 @@ class QuestionClassificationTester:
                 "question": test_case.question,
                 "mock_answer": mock_answer,
                 "quality_score": quality_score,
-                "keyword_coverage": self._check_keyword_coverage(mock_answer, test_case.expected_keywords),
-                "answer_type_match": self._check_answer_type(mock_answer, test_case.expected_answer_type)
+                "keyword_coverage": self._check_keyword_coverage(
+                    mock_answer, test_case.expected_keywords
+                ),
+                "answer_type_match": self._check_answer_type(
+                    mock_answer, test_case.expected_answer_type
+                ),
             }
 
             results.append(result)
@@ -279,15 +295,21 @@ class QuestionClassificationTester:
 
         return {
             "test_count": len(simple_tests),
-            "average_quality": sum(r["quality_score"] for r in results) / len(results) if results else 0,
-            "results": results
+            "average_quality": sum(r["quality_score"] for r in results) / len(results)
+            if results
+            else 0,
+            "results": results,
         }
 
     def test_complex_reasoning(self) -> Dict[str, Any]:
         """测试复杂推理能力"""
         print("\n🔍 测试复杂推理能力...")
 
-        complex_tests = [tc for tc in self.test_cases if tc.question_type == QuestionType.COMPLEX_REASONING]
+        complex_tests = [
+            tc
+            for tc in self.test_cases
+            if tc.question_type == QuestionType.COMPLEX_REASONING
+        ]
         results = []
 
         for test_case in complex_tests:
@@ -296,7 +318,9 @@ class QuestionClassificationTester:
             mock_answer = self._generate_complex_answer(test_case, reasoning_steps)
 
             # 评估推理质量
-            reasoning_score = self._evaluate_reasoning_quality(reasoning_steps, mock_answer, test_case)
+            reasoning_score = self._evaluate_reasoning_quality(
+                reasoning_steps, mock_answer, test_case
+            )
 
             result = {
                 "question_id": test_case.question_id,
@@ -305,7 +329,7 @@ class QuestionClassificationTester:
                 "answer": mock_answer,
                 "reasoning_score": reasoning_score,
                 "logical_coherence": self._check_logical_coherence(reasoning_steps),
-                "completeness": self._check_answer_completeness(mock_answer, test_case)
+                "completeness": self._check_answer_completeness(mock_answer, test_case),
             }
 
             results.append(result)
@@ -313,15 +337,20 @@ class QuestionClassificationTester:
 
         return {
             "test_count": len(complex_tests),
-            "average_reasoning_score": sum(r["reasoning_score"] for r in results) / len(results) if results else 0,
-            "results": results
+            "average_reasoning_score": sum(r["reasoning_score"] for r in results)
+            / len(results)
+            if results
+            else 0,
+            "results": results,
         }
 
     def test_multi_turn_conversation(self) -> Dict[str, Any]:
         """测试多轮对话能力"""
         print("\n🔍 测试多轮对话能力...")
 
-        multi_turn_tests = [tc for tc in self.test_cases if tc.question_type == QuestionType.MULTI_TURN]
+        multi_turn_tests = [
+            tc for tc in self.test_cases if tc.question_type == QuestionType.MULTI_TURN
+        ]
         results = []
 
         for test_case in multi_turn_tests:
@@ -330,33 +359,33 @@ class QuestionClassificationTester:
 
             # 初始问题
             initial_answer = self._generate_mock_answer(test_case)
-            conversation_history.append({
-                "role": "user",
-                "content": test_case.question
-            })
-            conversation_history.append({
-                "role": "assistant",
-                "content": initial_answer
-            })
+            conversation_history.append({"role": "user", "content": test_case.question})
+            conversation_history.append(
+                {"role": "assistant", "content": initial_answer}
+            )
 
             # 处理后续问题
             for i, follow_up in enumerate(test_case.follow_up_questions):
-                follow_up_answer = self._generate_follow_up_answer(follow_up, conversation_history)
+                follow_up_answer = self._generate_follow_up_answer(
+                    follow_up, conversation_history
+                )
 
                 # 评估上下文保持能力
-                context_score = self._evaluate_context_retention(conversation_history, follow_up_answer)
+                context_score = self._evaluate_context_retention(
+                    conversation_history, follow_up_answer
+                )
                 context_retention_scores.append(context_score)
 
-                conversation_history.append({
-                    "role": "user",
-                    "content": follow_up
-                })
-                conversation_history.append({
-                    "role": "assistant",
-                    "content": follow_up_answer
-                })
+                conversation_history.append({"role": "user", "content": follow_up})
+                conversation_history.append(
+                    {"role": "assistant", "content": follow_up_answer}
+                )
 
-            avg_context_retention = sum(context_retention_scores) / len(context_retention_scores) if context_retention_scores else 0
+            avg_context_retention = (
+                sum(context_retention_scores) / len(context_retention_scores)
+                if context_retention_scores
+                else 0
+            )
 
             result = {
                 "question_id": test_case.question_id,
@@ -364,7 +393,9 @@ class QuestionClassificationTester:
                 "conversation_turns": len(test_case.follow_up_questions) + 1,
                 "context_retention_scores": context_retention_scores,
                 "average_context_retention": avg_context_retention,
-                "conversation_coherence": self._evaluate_conversation_coherence(conversation_history)
+                "conversation_coherence": self._evaluate_conversation_coherence(
+                    conversation_history
+                ),
             }
 
             results.append(result)
@@ -372,8 +403,13 @@ class QuestionClassificationTester:
 
         return {
             "test_count": len(multi_turn_tests),
-            "average_context_retention": sum(r["average_context_retention"] for r in results) / len(results) if results else 0,
-            "results": results
+            "average_context_retention": sum(
+                r["average_context_retention"] for r in results
+            )
+            / len(results)
+            if results
+            else 0,
+            "results": results,
         }
 
     def _generate_mock_answer(self, test_case: TestCase) -> str:
@@ -387,7 +423,9 @@ class QuestionClassificationTester:
         else:
             return "这是一个模拟回答，用于测试系统功能。"
 
-    def _generate_complex_answer(self, test_case: TestCase, reasoning_steps: List[str]) -> str:
+    def _generate_complex_answer(
+        self, test_case: TestCase, reasoning_steps: List[str]
+    ) -> str:
         """生成复杂推理回答"""
         return "基于分析，" + "，".join(reasoning_steps) + "，因此得出这个结论。"
 
@@ -398,19 +436,9 @@ class QuestionClassificationTester:
     def _simulate_reasoning_process(self, test_case: TestCase) -> List[str]:
         """模拟推理过程"""
         if "收入" in test_case.question and "成本" in test_case.question:
-            return [
-                "分析收入增长20%的影响",
-                "分析成本增长30%的影响",
-                "计算利润变化",
-                "评估整体财务影响"
-            ]
+            return ["分析收入增长20%的影响", "分析成本增长30%的影响", "计算利润变化", "评估整体财务影响"]
         elif "分布式系统" in test_case.question:
-            return [
-                "分析性能因素",
-                "考虑可靠性要求",
-                "评估可扩展性需求",
-                "综合权衡各个方面"
-            ]
+            return ["分析性能因素", "考虑可靠性要求", "评估可扩展性需求", "综合权衡各个方面"]
         else:
             return ["分析问题", "考虑解决方案", "得出结论"]
 
@@ -419,7 +447,9 @@ class QuestionClassificationTester:
         score = 0.0
 
         # 关键词覆盖 (40%)
-        keyword_coverage = self._check_keyword_coverage(answer, test_case.expected_keywords)
+        keyword_coverage = self._check_keyword_coverage(
+            answer, test_case.expected_keywords
+        )
         score += keyword_coverage * 0.4
 
         # 回答长度适中 (20%)
@@ -434,7 +464,9 @@ class QuestionClassificationTester:
 
         return min(score, 1.0)
 
-    def _evaluate_reasoning_quality(self, reasoning_steps: List[str], answer: str, test_case: TestCase) -> float:
+    def _evaluate_reasoning_quality(
+        self, reasoning_steps: List[str], answer: str, test_case: TestCase
+    ) -> float:
         """评估推理质量"""
         score = 0.0
 
@@ -460,7 +492,9 @@ class QuestionClassificationTester:
             return 1.0
 
         answer_lower = answer.lower()
-        covered_keywords = sum(1 for keyword in keywords if keyword.lower() in answer_lower)
+        covered_keywords = sum(
+            1 for keyword in keywords if keyword.lower() in answer_lower
+        )
         return covered_keywords / len(keywords)
 
     def _check_answer_type(self, answer: str, expected_type: str) -> float:
@@ -476,7 +510,7 @@ class QuestionClassificationTester:
             "explanation": ["解释", "说明", "因为"],
             "methodology": ["方法", "步骤", "流程"],
             "code": ["函数", "def", "代码", "import"],
-            "extraction": ["根据", "文档", "提到"]
+            "extraction": ["根据", "文档", "提到"],
         }
 
         indicators = type_indicators.get(expected_type, [])
@@ -499,10 +533,14 @@ class QuestionClassificationTester:
         """检查回答完整性"""
         # 基于回答长度和关键词覆盖评估完整性
         length_score = min(len(answer) / 200, 1.0)  # 200字符为满分
-        keyword_score = self._check_keyword_coverage(answer, test_case.expected_keywords)
+        keyword_score = self._check_keyword_coverage(
+            answer, test_case.expected_keywords
+        )
         return (length_score + keyword_score) / 2
 
-    def _evaluate_context_retention(self, history: List[Dict], current_answer: str) -> float:
+    def _evaluate_context_retention(
+        self, history: List[Dict], current_answer: str
+    ) -> float:
         """评估上下文保持能力"""
         # 检查当前回答是否引用了之前的对话内容
         context_score = 0.7  # 模拟评分
@@ -540,20 +578,24 @@ class QuestionClassificationTester:
             "test_execution_time": total_time,
             "classification_accuracy": classification_results["accuracy"],
             "simple_qa_average_quality": simple_qa_results["average_quality"],
-            "complex_reasoning_average_score": complex_reasoning_results["average_reasoning_score"],
-            "multi_turn_average_context_retention": multi_turn_results["average_context_retention"],
+            "complex_reasoning_average_score": complex_reasoning_results[
+                "average_reasoning_score"
+            ],
+            "multi_turn_average_context_retention": multi_turn_results[
+                "average_context_retention"
+            ],
             "overall_score": (
-                classification_results["accuracy"] * 0.25 +
-                simple_qa_results["average_quality"] * 0.25 +
-                complex_reasoning_results["average_reasoning_score"] * 0.25 +
-                multi_turn_results["average_context_retention"] * 0.25
+                classification_results["accuracy"] * 0.25
+                + simple_qa_results["average_quality"] * 0.25
+                + complex_reasoning_results["average_reasoning_score"] * 0.25
+                + multi_turn_results["average_context_retention"] * 0.25
             ),
             "detailed_results": {
                 "classification": classification_results,
                 "simple_qa": simple_qa_results,
                 "complex_reasoning": complex_reasoning_results,
-                "multi_turn": multi_turn_results
-            }
+                "multi_turn": multi_turn_results,
+            },
         }
 
         return summary
@@ -586,9 +628,9 @@ class QuestionClassificationTester:
 ## 测试结论
 """
 
-        if results['overall_score'] >= 0.8:
+        if results["overall_score"] >= 0.8:
             report += "✅ **优秀**: 系统在问题分类和回答生成方面表现良好\n"
-        elif results['overall_score'] >= 0.6:
+        elif results["overall_score"] >= 0.6:
             report += "⚠️ **良好**: 系统基本功能正常，但仍有改进空间\n"
         else:
             report += "❌ **需要改进**: 系统在多个方面存在不足\n"
@@ -609,6 +651,7 @@ class QuestionClassificationTester:
 
         return report
 
+
 def main():
     """主函数"""
     tester = QuestionClassificationTester()
@@ -623,11 +666,19 @@ def main():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
 
     # 保存JSON结果
-    with open(f"test_results/question_classification_results_{timestamp}.json", "w", encoding="utf-8") as f:
+    with open(
+        f"test_results/question_classification_results_{timestamp}.json",
+        "w",
+        encoding="utf-8",
+    ) as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     # 保存报告
-    with open(f"test_results/question_classification_report_{timestamp}.md", "w", encoding="utf-8") as f:
+    with open(
+        f"test_results/question_classification_report_{timestamp}.md",
+        "w",
+        encoding="utf-8",
+    ) as f:
         f.write(report)
 
     # 输出摘要
@@ -641,7 +692,8 @@ def main():
     print(f"🔄 多轮对话连贯: {results['multi_turn_average_context_retention']:.2f}")
     print(f"\n📄 详细报告已保存到: test_results/question_classification_report_{timestamp}.md")
 
-    return results['overall_score'] >= 0.6
+    return results["overall_score"] >= 0.6
+
 
 if __name__ == "__main__":
     success = main()

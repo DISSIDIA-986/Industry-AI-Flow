@@ -7,22 +7,24 @@ Frontend Chat Interface Testing Suite
 包括聊天功能、消息处理、历史记录、实时通信等
 """
 
-import pytest
 import asyncio
-import time
 import json
-import websockets
-import aiohttp
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from unittest.mock import Mock, patch, AsyncMock
+import time
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+from unittest.mock import AsyncMock, Mock, patch
+
+import aiohttp
+import pytest
+import websockets
 
 
 class MessageType(Enum):
     """消息类型"""
+
     USER_MESSAGE = "user_message"
     AI_RESPONSE = "ai_response"
     SYSTEM_MESSAGE = "system_message"
@@ -32,6 +34,7 @@ class MessageType(Enum):
 
 class ConnectionState(Enum):
     """连接状态"""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -41,6 +44,7 @@ class ConnectionState(Enum):
 
 class ChatFeature(Enum):
     """聊天功能特性"""
+
     MESSAGE_SENDING = "message_sending"
     MESSAGE_RECEIVING = "message_receiving"
     TYPING_INDICATORS = "typing_indicators"
@@ -56,6 +60,7 @@ class ChatFeature(Enum):
 @dataclass
 class ChatMessage:
     """聊天消息"""
+
     id: str
     content: str
     message_type: MessageType
@@ -70,6 +75,7 @@ class ChatMessage:
 @dataclass
 class ChatTestCase:
     """聊天测试用例"""
+
     name: str
     description: str
     feature: ChatFeature
@@ -83,6 +89,7 @@ class ChatTestCase:
 @dataclass
 class ChatTestResult:
     """聊天测试结果"""
+
     test_case: str
     feature: str
     success: bool
@@ -130,16 +137,17 @@ class MockWebSocketServer:
                 timestamp=datetime.now(),
                 sender="ai_assistant",
                 session_id=message.session_id,
-                metadata={"response_to": message.id}
+                metadata={"response_to": message.id},
             )
             return ai_response
         return message
 
     async def simulate_connection_issues(self, drop_rate: float = 0.1):
         """模拟连接问题"""
-        if drop_rate > 0 and hasattr(self, '_random_drop'):
+        if drop_rate > 0 and hasattr(self, "_random_drop"):
             # 随机丢包模拟
             import random
+
             if random.random() < drop_rate:
                 raise ConnectionError("模拟连接断开")
 
@@ -206,7 +214,9 @@ class FrontendChatTester:
         except Exception as e:
             print(f"❌ 断开连接时出错: {e}")
 
-    async def send_message(self, content: str, message_type: MessageType = MessageType.USER_MESSAGE) -> Optional[ChatMessage]:
+    async def send_message(
+        self, content: str, message_type: MessageType = MessageType.USER_MESSAGE
+    ) -> Optional[ChatMessage]:
         """发送消息"""
         if self.connection_state != ConnectionState.CONNECTED:
             raise ConnectionError("未连接到服务器")
@@ -218,7 +228,7 @@ class FrontendChatTester:
                 message_type=message_type,
                 timestamp=datetime.now(),
                 sender="user",
-                session_id=self.session_id
+                session_id=self.session_id,
             )
 
             # 模拟发送消息
@@ -270,15 +280,21 @@ class FrontendChatTester:
                 connection_stability=1.0,
                 message_integrity=1.0,
                 performance_metrics={
-                    "messages_per_second": sent_count / response_time if response_time > 0 else 0,
-                    "success_rate": response_count / expected_responses if expected_responses > 0 else 0,
-                    "average_latency": response_time / sent_count if sent_count > 0 else 0
+                    "messages_per_second": sent_count / response_time
+                    if response_time > 0
+                    else 0,
+                    "success_rate": response_count / expected_responses
+                    if expected_responses > 0
+                    else 0,
+                    "average_latency": response_time / sent_count
+                    if sent_count > 0
+                    else 0,
                 },
                 actual_result={
                     "sent_messages": sent_count,
                     "received_responses": response_count,
-                    "expected_responses": expected_responses
-                }
+                    "expected_responses": expected_responses,
+                },
             )
 
         except Exception as e:
@@ -288,7 +304,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def test_real_time_sync(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -319,11 +335,13 @@ class FrontendChatTester:
 
                 session_time = time.time() - session_start
                 total_sync_time += session_time
-                sync_results.append({
-                    "session_id": session_idx + 1,
-                    "messages": len(session_messages),
-                    "session_time": session_time
-                })
+                sync_results.append(
+                    {
+                        "session_id": session_idx + 1,
+                        "messages": len(session_messages),
+                        "session_time": session_time,
+                    }
+                )
 
             response_time = time.time() - start_time
             total_messages = sum(result["messages"] for result in sync_results)
@@ -344,13 +362,15 @@ class FrontendChatTester:
                     "concurrent_sessions": concurrent_sessions,
                     "avg_session_time": avg_sync_time,
                     "sync_quality": sync_quality,
-                    "throughput": total_messages / response_time if response_time > 0 else 0
+                    "throughput": total_messages / response_time
+                    if response_time > 0
+                    else 0,
                 },
                 actual_result={
                     "sync_results": sync_results,
                     "total_messages": total_messages,
-                    "avg_sync_time": avg_sync_time
-                }
+                    "avg_sync_time": avg_sync_time,
+                },
             )
 
         except Exception as e:
@@ -360,7 +380,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def test_error_handling(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -368,12 +388,15 @@ class FrontendChatTester:
         start_time = time.time()
 
         try:
-            error_scenarios = test_case.test_data.get("error_scenarios", [
-                "network_timeout",
-                "invalid_message",
-                "server_error",
-                "connection_lost"
-            ])
+            error_scenarios = test_case.test_data.get(
+                "error_scenarios",
+                [
+                    "network_timeout",
+                    "invalid_message",
+                    "server_error",
+                    "connection_lost",
+                ],
+            )
 
             handled_errors = 0
             total_errors = len(error_scenarios)
@@ -407,7 +430,9 @@ class FrontendChatTester:
                 await asyncio.sleep(0.1)
 
             response_time = time.time() - start_time
-            error_handling_rate = handled_errors / total_errors if total_errors > 0 else 0
+            error_handling_rate = (
+                handled_errors / total_errors if total_errors > 0 else 0
+            )
             success = error_handling_rate >= 0.8  # 至少80%的错误被正确处理
 
             return ChatTestResult(
@@ -419,13 +444,13 @@ class FrontendChatTester:
                 performance_metrics={
                     "error_handling_rate": error_handling_rate,
                     "total_errors_tested": total_errors,
-                    "handled_errors": handled_errors
+                    "handled_errors": handled_errors,
                 },
                 actual_result={
                     "error_scenarios": error_scenarios,
                     "handled_errors": handled_errors,
-                    "error_handling_rate": error_handling_rate
-                }
+                    "error_handling_rate": error_handling_rate,
+                },
             )
 
         except Exception as e:
@@ -435,7 +460,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def test_reconnection(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -444,7 +469,9 @@ class FrontendChatTester:
 
         try:
             reconnection_attempts = test_case.test_data.get("reconnection_attempts", 3)
-            reconnection_delays = test_case.test_data.get("reconnection_delays", [1, 2, 3])
+            reconnection_delays = test_case.test_data.get(
+                "reconnection_delays", [1, 2, 3]
+            )
 
             successful_reconnections = 0
             total_attempts = 0
@@ -471,7 +498,9 @@ class FrontendChatTester:
                         successful_reconnections -= 0.5  # 部分失败
 
             response_time = time.time() - start_time
-            reconnection_rate = successful_reconnections / total_attempts if total_attempts > 0 else 0
+            reconnection_rate = (
+                successful_reconnections / total_attempts if total_attempts > 0 else 0
+            )
             success = reconnection_rate >= 0.8  # 至少80%的重连成功
 
             return ChatTestResult(
@@ -484,13 +513,15 @@ class FrontendChatTester:
                     "reconnection_rate": reconnection_rate,
                     "total_attempts": total_attempts,
                     "successful_reconnections": successful_reconnections,
-                    "avg_reconnection_time": response_time / total_attempts if total_attempts > 0 else 0
+                    "avg_reconnection_time": response_time / total_attempts
+                    if total_attempts > 0
+                    else 0,
                 },
                 actual_result={
                     "reconnection_attempts": reconnection_attempts,
                     "successful_reconnections": successful_reconnections,
-                    "reconnection_rate": reconnection_rate
-                }
+                    "reconnection_rate": reconnection_rate,
+                },
             )
 
         except Exception as e:
@@ -500,7 +531,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def test_message_history(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -524,11 +555,15 @@ class FrontendChatTester:
             # 验证历史记录完整性
             expected_count = history_messages * 2  # 用户消息 + AI回复
             actual_count = len(self.message_history)
-            history_integrity = actual_count / expected_count if expected_count > 0 else 0
+            history_integrity = (
+                actual_count / expected_count if expected_count > 0 else 0
+            )
 
             # 测试历史记录排序
             timestamps = [msg.timestamp for msg in self.message_history]
-            is_sorted = all(timestamps[i] <= timestamps[i+1] for i in range(len(timestamps)-1))
+            is_sorted = all(
+                timestamps[i] <= timestamps[i + 1] for i in range(len(timestamps) - 1)
+            )
             sorting_score = 1.0 if is_sorted else 0.5
 
             response_time = time.time() - start_time
@@ -545,14 +580,14 @@ class FrontendChatTester:
                     "history_integrity": history_integrity,
                     "sorting_score": sorting_score,
                     "total_messages": actual_count,
-                    "expected_messages": expected_count
+                    "expected_messages": expected_count,
                 },
                 actual_result={
                     "sent_messages": len(sent_messages),
                     "total_history": actual_count,
                     "history_integrity": history_integrity,
-                    "is_sorted": is_sorted
-                }
+                    "is_sorted": is_sorted,
+                },
             )
 
         except Exception as e:
@@ -562,7 +597,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def test_typing_indicators(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -581,7 +616,7 @@ class FrontendChatTester:
                 start_indicator = {
                     "type": "typing_start",
                     "user": f"user_{session}",
-                    "timestamp": datetime.now()
+                    "timestamp": datetime.now(),
                 }
                 indicator_events.append(start_indicator)
 
@@ -592,14 +627,16 @@ class FrontendChatTester:
                 stop_indicator = {
                     "type": "typing_stop",
                     "user": f"user_{session}",
-                    "timestamp": datetime.now()
+                    "timestamp": datetime.now(),
                 }
                 indicator_events.append(stop_indicator)
 
                 successful_indicators += 1
 
             response_time = time.time() - start_time
-            indicator_rate = successful_indicators / typing_sessions if typing_sessions > 0 else 0
+            indicator_rate = (
+                successful_indicators / typing_sessions if typing_sessions > 0 else 0
+            )
             success = indicator_rate >= 0.9
 
             return ChatTestResult(
@@ -612,13 +649,13 @@ class FrontendChatTester:
                     "typing_sessions": typing_sessions,
                     "successful_indicators": successful_indicators,
                     "indicator_rate": indicator_rate,
-                    "avg_typing_duration": typing_duration
+                    "avg_typing_duration": typing_duration,
                 },
                 actual_result={
                     "indicator_events": len(indicator_events),
                     "successful_indicators": successful_indicators,
-                    "indicator_rate": indicator_rate
-                }
+                    "indicator_rate": indicator_rate,
+                },
             )
 
         except Exception as e:
@@ -628,7 +665,7 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def run_stress_test(self, test_case: ChatTestCase) -> ChatTestResult:
@@ -662,7 +699,9 @@ class FrontendChatTester:
                     total_messages += result.get("messages_sent", 0)
 
             response_time = time.time() - start_time
-            session_success_rate = successful_sessions / concurrent_users if concurrent_users > 0 else 0
+            session_success_rate = (
+                successful_sessions / concurrent_users if concurrent_users > 0 else 0
+            )
             throughput = total_messages / response_time if response_time > 0 else 0
 
             success = session_success_rate >= 0.8 and throughput >= 1.0
@@ -681,14 +720,14 @@ class FrontendChatTester:
                     "failed_sessions": failed_sessions,
                     "session_success_rate": session_success_rate,
                     "throughput": throughput,
-                    "messages_per_second": throughput
+                    "messages_per_second": throughput,
                 },
                 actual_result={
                     "total_messages": total_messages,
                     "successful_sessions": successful_sessions,
                     "failed_sessions": failed_sessions,
-                    "throughput": throughput
-                }
+                    "throughput": throughput,
+                },
             )
 
         except Exception as e:
@@ -698,10 +737,12 @@ class FrontendChatTester:
                 feature=test_case.feature.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def _simulate_user_session(self, user_id: int, messages_count: int) -> Dict[str, Any]:
+    async def _simulate_user_session(
+        self, user_id: int, messages_count: int
+    ) -> Dict[str, Any]:
         """模拟用户会话"""
         try:
             messages_sent = 0
@@ -721,7 +762,7 @@ class FrontendChatTester:
             return {
                 "user_id": user_id,
                 "messages_sent": messages_sent,
-                "session_id": user_session_id
+                "session_id": user_session_id,
             }
 
         except Exception as e:
@@ -791,7 +832,7 @@ class FrontendChatTester:
                 "summary": report,
                 "basic_results": basic_results,
                 "advanced_results": advanced_results,
-                "stress_result": stress_result
+                "stress_result": stress_result,
             }
 
         finally:
@@ -806,36 +847,36 @@ class FrontendChatTester:
                 description="测试单个消息的发送和接收",
                 feature=ChatFeature.MESSAGE_SENDING,
                 test_data={"messages": ["你好，我想了解一下AI"]},
-                expected_result={"responses": 1}
+                expected_result={"responses": 1},
             ),
             ChatTestCase(
                 name="多消息发送测试",
                 description="测试多个消息的连续发送",
                 feature=ChatFeature.MESSAGE_SENDING,
                 test_data={"messages": ["消息1", "消息2", "消息3", "消息4", "消息5"]},
-                expected_result={"responses": 5}
+                expected_result={"responses": 5},
             ),
             ChatTestCase(
                 name="长消息发送测试",
                 description="测试长消息的处理能力",
                 feature=ChatFeature.MESSAGE_SENDING,
                 test_data={"messages": ["这是一个很长的消息内容" * 20]},
-                expected_result={"responses": 1}
+                expected_result={"responses": 1},
             ),
             ChatTestCase(
                 name="消息历史记录测试",
                 description="测试消息历史记录功能",
                 feature=ChatFeature.MESSAGE_HISTORY,
                 test_data={"history_messages": 10},
-                expected_result={"integrity": 0.9}
+                expected_result={"integrity": 0.9},
             ),
             ChatTestCase(
                 name="输入指示器测试",
                 description="测试输入指示器功能",
                 feature=ChatFeature.TYPING_INDICATORS,
                 test_data={"typing_sessions": 5, "typing_duration": 1.5},
-                expected_result={"indicator_rate": 0.9}
-            )
+                expected_result={"indicator_rate": 0.9},
+            ),
         ]
 
     def _get_advanced_test_cases(self) -> List[ChatTestCase]:
@@ -846,22 +887,31 @@ class FrontendChatTester:
                 description="测试多用户实时消息同步",
                 feature=ChatFeature.REAL_TIME_SYNC,
                 test_data={"concurrent_sessions": 3, "messages_per_session": 5},
-                timeout=30
+                timeout=30,
             ),
             ChatTestCase(
                 name="错误处理测试",
                 description="测试各种错误场景的处理",
                 feature=ChatFeature.ERROR_HANDLING,
-                test_data={"error_scenarios": ["network_timeout", "invalid_message", "server_error"]},
-                timeout=20
+                test_data={
+                    "error_scenarios": [
+                        "network_timeout",
+                        "invalid_message",
+                        "server_error",
+                    ]
+                },
+                timeout=20,
             ),
             ChatTestCase(
                 name="重连机制测试",
                 description="测试连接断开后的重连机制",
                 feature=ChatFeature.RECONNECTION,
-                test_data={"reconnection_attempts": 3, "reconnection_delays": [1, 2, 3]},
-                timeout=30
-            )
+                test_data={
+                    "reconnection_attempts": 3,
+                    "reconnection_delays": [1, 2, 3],
+                },
+                timeout=30,
+            ),
         ]
 
     def _get_stress_test_case(self) -> ChatTestCase:
@@ -875,9 +925,9 @@ class FrontendChatTester:
             test_data={
                 "concurrent_users": 20,
                 "messages_per_user": 10,
-                "test_duration": 30
+                "test_duration": 30,
             },
-            timeout=60
+            timeout=60,
         )
 
     def _generate_chat_test_report(self) -> Dict[str, Any]:
@@ -887,13 +937,26 @@ class FrontendChatTester:
         failed_tests = total_tests - successful_tests
 
         # 计算平均响应时间
-        avg_response_time = sum(result.response_time for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_response_time = (
+            sum(result.response_time for result in self.test_results) / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 计算平均连接稳定性
-        avg_connection_stability = sum(result.connection_stability for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_connection_stability = (
+            sum(result.connection_stability for result in self.test_results)
+            / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 计算平均消息完整性
-        avg_message_integrity = sum(result.message_integrity for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_message_integrity = (
+            sum(result.message_integrity for result in self.test_results) / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 计算总处理消息数
         total_messages = sum(result.messages_processed for result in self.test_results)
@@ -925,16 +988,31 @@ class FrontendChatTester:
             "average_message_integrity": avg_message_integrity,
             "total_messages_processed": total_messages,
             "feature_statistics": feature_stats,
-            "recommendations": self._generate_chat_recommendations()
+            "recommendations": self._generate_chat_recommendations(),
         }
 
     def _generate_chat_recommendations(self) -> List[str]:
         """生成聊天功能改进建议"""
         recommendations = []
 
-        avg_response_time = sum(result.response_time for result in self.test_results) / len(self.test_results) if self.test_results else 0
-        avg_stability = sum(result.connection_stability for result in self.test_results) / len(self.test_results) if self.test_results else 0
-        avg_integrity = sum(result.message_integrity for result in self.test_results) / len(self.test_results) if self.test_results else 0
+        avg_response_time = (
+            sum(result.response_time for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
+        avg_stability = (
+            sum(result.connection_stability for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
+        avg_integrity = (
+            sum(result.message_integrity for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
 
         if avg_response_time > 2.0:
             recommendations.append("优化消息处理速度，当前平均响应时间超过2秒")
@@ -946,7 +1024,9 @@ class FrontendChatTester:
             recommendations.append("加强消息完整性验证，确保消息不丢失或损坏")
 
         # 检查失败的功能测试
-        failed_features = set(result.feature for result in self.test_results if not result.success)
+        failed_features = set(
+            result.feature for result in self.test_results if not result.success
+        )
         if failed_features:
             recommendations.append(f"优先修复以下功能的问题: {', '.join(failed_features)}")
 
@@ -986,7 +1066,7 @@ async def test_message_sending_receiving():
             name="消息发送测试",
             description="测试消息发送功能",
             feature=ChatFeature.MESSAGE_SENDING,
-            test_data={"messages": ["测试消息1", "测试消息2", "测试消息3"]}
+            test_data={"messages": ["测试消息1", "测试消息2", "测试消息3"]},
         )
 
         result = await tester.test_message_sending(test_case)
@@ -1011,7 +1091,7 @@ async def test_real_time_synchronization():
             name="实时同步测试",
             description="测试多用户实时同步",
             feature=ChatFeature.REAL_TIME_SYNC,
-            test_data={"concurrent_sessions": 3, "messages_per_session": 5}
+            test_data={"concurrent_sessions": 3, "messages_per_session": 5},
         )
 
         result = await tester.test_real_time_sync(test_case)
@@ -1036,7 +1116,13 @@ async def test_error_handling_mechanisms():
             name="错误处理测试",
             description="测试各种错误场景",
             feature=ChatFeature.ERROR_HANDLING,
-            test_data={"error_scenarios": ["network_timeout", "invalid_message", "server_error"]}
+            test_data={
+                "error_scenarios": [
+                    "network_timeout",
+                    "invalid_message",
+                    "server_error",
+                ]
+            },
         )
 
         result = await tester.test_error_handling(test_case)
@@ -1060,7 +1146,7 @@ async def test_reconnection_functionality():
             name="重连功能测试",
             description="测试断线重连机制",
             feature=ChatFeature.RECONNECTION,
-            test_data={"reconnection_attempts": 3, "reconnection_delays": [1, 2, 3]}
+            test_data={"reconnection_attempts": 3, "reconnection_delays": [1, 2, 3]},
         )
 
         result = await tester.test_reconnection(test_case)
@@ -1085,7 +1171,7 @@ async def test_chat_stress_testing():
             description="测试高并发聊天场景",
             feature=ChatFeature.MESSAGE_SENDING,
             stress_test=True,
-            test_data={"concurrent_users": 10, "messages_per_user": 5}
+            test_data={"concurrent_users": 10, "messages_per_user": 5},
         )
 
         result = await tester.run_stress_test(test_case)
@@ -1104,9 +1190,9 @@ if __name__ == "__main__":
         tester = FrontendChatTester()
         results = await tester.run_comprehensive_chat_tests()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("💬 前端聊天界面测试完成")
-        print("="*60)
+        print("=" * 60)
 
         if results["success"]:
             summary = results["summary"]
@@ -1120,12 +1206,14 @@ if __name__ == "__main__":
             print(f"💬 处理消息总数: {summary['total_messages_processed']}")
 
             print("\n📈 功能统计:")
-            for feature, stats in summary['feature_statistics'].items():
-                print(f"  {feature}: {stats['success']}/{stats['tests']} 通过 "
-                      f"({stats['success_rate']:.1%}) - 平均响应: {stats['avg_response']:.2f}s")
+            for feature, stats in summary["feature_statistics"].items():
+                print(
+                    f"  {feature}: {stats['success']}/{stats['tests']} 通过 "
+                    f"({stats['success_rate']:.1%}) - 平均响应: {stats['avg_response']:.2f}s"
+                )
 
             print("\n💡 改进建议:")
-            for i, rec in enumerate(summary['recommendations'], 1):
+            for i, rec in enumerate(summary["recommendations"], 1):
                 print(f"  {i}. {rec}")
         else:
             print(f"❌ 测试失败: {results.get('error', '未知错误')}")

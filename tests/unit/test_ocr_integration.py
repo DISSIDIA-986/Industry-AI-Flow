@@ -8,24 +8,28 @@ OCR集成测试
 4. 不同文档类型的OCR性能
 5. OCR结果与RAG检索效果评估
 """
-import sys
-import os
 import json
-import time
 import math
+import os
 import random
-from typing import Dict, List, Any, Tuple
-from dataclasses import dataclass
+import sys
+import time
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend')
+backend_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"
+)
 sys.path.insert(0, backend_path)
+
 
 @dataclass
 class OCRTestCase:
     """OCR测试用例"""
+
     test_id: str
     document_path: str
     document_type: str  # image, pdf, scanned_pdf, text_pdf
@@ -34,15 +38,18 @@ class OCRTestCase:
     quality_requirements: Dict[str, Any]
     difficulty: str  # easy, medium, hard
 
+
 @dataclass
 class OCRResult:
     """OCR测试结果"""
+
     test_id: str
     extracted_text: str
     extraction_time: float
     character_count: int
     quality_score: float
     rag_integration_score: float
+
 
 class OCRIntegrationTester:
     """OCR集成测试器"""
@@ -64,9 +71,9 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.8,
                     "min_character_count": 10,
-                    "max_noise_level": 0.2
+                    "max_noise_level": 0.2,
                 },
-                difficulty="easy"
+                difficulty="easy",
             ),
             OCRTestCase(
                 test_id="ocr_img_002",
@@ -77,11 +84,10 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.95,
                     "min_character_count": 5,
-                    "max_noise_level": 0.1
+                    "max_noise_level": 0.1,
                 },
-                difficulty="easy"
+                difficulty="easy",
             ),
-
             # PDF文档测试
             OCRTestCase(
                 test_id="ocr_pdf_001",
@@ -92,11 +98,10 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.75,
                     "min_character_count": 20,
-                    "max_noise_level": 0.3
+                    "max_noise_level": 0.3,
                 },
-                difficulty="medium"
+                difficulty="medium",
             ),
-
             # 复杂文档测试
             OCRTestCase(
                 test_id="ocr_complex_001",
@@ -107,11 +112,10 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.7,
                     "min_character_count": 30,
-                    "max_noise_level": 0.4
+                    "max_noise_level": 0.4,
                 },
-                difficulty="hard"
+                difficulty="hard",
             ),
-
             # 中英文混合测试
             OCRTestCase(
                 test_id="ocr_mixed_001",
@@ -122,11 +126,10 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.7,
                     "min_character_count": 25,
-                    "max_noise_level": 0.35
+                    "max_noise_level": 0.35,
                 },
-                difficulty="medium"
+                difficulty="medium",
             ),
-
             # 代码文档测试
             OCRTestCase(
                 test_id="ocr_code_001",
@@ -137,22 +140,24 @@ class OCRIntegrationTester:
                 quality_requirements={
                     "min_accuracy": 0.8,
                     "min_character_count": 10,
-                    "max_noise_level": 0.25
+                    "max_noise_level": 0.25,
                 },
-                difficulty="medium"
-            )
+                difficulty="medium",
+            ),
         ]
 
         return test_cases
 
-    def _mock_ocr_extraction(self, document_path: str, language: str = "ch") -> Tuple[str, float]:
+    def _mock_ocr_extraction(
+        self, document_path: str, language: str = "ch"
+    ) -> Tuple[str, float]:
         """模拟OCR提取过程"""
         start_time = time.time()
 
         # 如果文件存在，读取内容作为基准
         if os.path.exists(document_path):
             try:
-                with open(document_path, 'r', encoding='utf-8') as f:
+                with open(document_path, "r", encoding="utf-8") as f:
                     content = f.read()
             except Exception as e:
                 content = f"读取文件失败: {str(e)}"
@@ -164,24 +169,26 @@ class OCRIntegrationTester:
                 "samples/test_document_1.txt": "这是第一份测试文档，包含技术文档的基本信息和详细说明。",
                 "samples/test_document_2.txt": "技术规范文档第二版，包含系统架构设计、数据库设计、接口规范等详细内容。",
                 "samples/test_document_3.txt": "混合语言文档 Mixed Language Document 包含中文和English内容。",
-                "samples/test_code.txt": "function example() { return 'Hello, World!'; }"
+                "samples/test_code.txt": "function example() { return 'Hello, World!'; }",
             }
             content = base_texts.get(document_path, "默认OCR提取文本内容。")
 
         # 模拟OCR噪声
-        noise_chars = ['~', '`', "'", '"', '|', '¦', '¡', '¿']
+        noise_chars = ["~", "`", "'", '"', "|", "¦", "¡", "¿"]
         if random.random() < 0.3:  # 30%概率添加噪声
             noise_count = random.randint(1, 3)
             for _ in range(noise_count):
                 noise_pos = random.randint(0, len(content))
                 noise_char = random.choice(noise_chars)
-                content = content[:noise_pos] + noise_char + content[noise_pos + 1:]
+                content = content[:noise_pos] + noise_char + content[noise_pos + 1 :]
 
         extraction_time = time.time() - start_time
 
         return content, extraction_time
 
-    def _mock_paddleocr_extraction(self, image_path: str, lang: str = "ch") -> Tuple[str, float, Dict[str, Any]]:
+    def _mock_paddleocr_extraction(
+        self, image_path: str, lang: str = "ch"
+    ) -> Tuple[str, float, Dict[str, Any]]:
         """模拟PaddleOCR提取过程"""
         start_time = time.time()
 
@@ -191,25 +198,33 @@ class OCRIntegrationTester:
         # 模拟PaddleOCR特有的结果格式
         ocr_result = {
             "text": base_text,
-            "confidence_scores": [random.uniform(0.8, 0.95) for _ in range(len(base_text.split()))],
+            "confidence_scores": [
+                random.uniform(0.8, 0.95) for _ in range(len(base_text.split()))
+            ],
             "bbox": [[0, 0, 100, 20] for _ in range(1)],  # 模拟边界框
             "recognition_time": base_time,
             "preprocessing_time": random.uniform(0.1, 0.3),
-            "model_inference_time": random.uniform(0.2, 0.5)
+            "model_inference_time": random.uniform(0.2, 0.5),
         }
 
         extraction_time = time.time() - start_time
 
         return ocr_result["text"], extraction_time, ocr_result
 
-    def evaluate_ocr_accuracy(self, extracted_text: str, expected_text: str, test_case: OCRTestCase) -> float:
+    def evaluate_ocr_accuracy(
+        self, extracted_text: str, expected_text: str, test_case: OCRTestCase
+    ) -> float:
         """评估OCR提取准确性"""
         if not expected_text:
             return 0.0
 
         # 简单的字符匹配度计算
-        expected_chars = set(expected_text.replace(" ", "").replace("\n", "").replace("\t", ""))
-        extracted_chars = set(extracted_text.replace(" ", "").replace("\n", "").replace("\t", ""))
+        expected_chars = set(
+            expected_text.replace(" ", "").replace("\n", "").replace("\t", "")
+        )
+        extracted_chars = set(
+            extracted_text.replace(" ", "").replace("\n", "").replace("\t", "")
+        )
 
         if not expected_chars:
             return 1.0  # 如果没有期望文本，给满分
@@ -226,7 +241,7 @@ class OCRIntegrationTester:
         edit_accuracy = 1 - (edit_distance / max_length) if max_length > 0 else 1.0
 
         # 综合评分
-        accuracy = (char_accuracy * 0.6 + edit_accuracy * 0.4)
+        accuracy = char_accuracy * 0.6 + edit_accuracy * 0.4
 
         return accuracy
 
@@ -248,10 +263,10 @@ class OCRIntegrationTester:
 
         for i in range(1, m + 1):
             for j in range(1, n + 1):
-                if text1[i-1] == text2[j-1]:
-                    dp[i][j] = dp[i-1][j-1]
+                if text1[i - 1] == text2[j - 1]:
+                    dp[i][j] = dp[i - 1][j - 1]
                 else:
-                    dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i][j-1])
+                    dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i][j - 1])
 
         return dp[m][n]
 
@@ -269,7 +284,7 @@ class OCRIntegrationTester:
         score += char_score * 0.25
 
         # 2. 噪声水平检查 (25%)
-        noise_chars = ['~', '`', "'", '"', '|', '¦', '¡', '¿', '·', '•']
+        noise_chars = ["~", "`", "'", '"', "|", "¦", "¡", "¿", "·", "•"]
         noise_count = sum(1 for char in text if char in noise_chars)
         noise_ratio = noise_count / len(text) if text else 0
         max_noise = test_case.quality_requirements["max_noise_level"]
@@ -290,7 +305,7 @@ class OCRIntegrationTester:
         """检查语言一致性"""
         if expected_lang == "ch":
             # 检查中文字符比例
-            chinese_chars = len([c for c in text if '\u4e00' <= c <= '\u9fff'])
+            chinese_chars = len([c for c in text if "\u4e00" <= c <= "\u9fff"])
             total_chars = len(text)
             if total_chars == 0:
                 return 0.5
@@ -308,7 +323,7 @@ class OCRIntegrationTester:
 
         elif expected_lang == "mixed":
             # 检查中英文混合
-            chinese_chars = len([c for c in text if '\u4e00' <= c <= '\u9fff'])
+            chinese_chars = len([c for c in text if "\u4e00" <= c <= "\u9fff"])
             english_chars = len([c for c in text if c.isalpha() and ord(c) < 128])
             total_chars = len(text)
             if total_chars == 0:
@@ -324,8 +339,8 @@ class OCRIntegrationTester:
             return 0.0
 
         # 检查是否有合理的段落结构
-        paragraphs = text.split('\n\n')
-        sentences = [s.strip() for s in text.split('。') if s.strip()]
+        paragraphs = text.split("\n\n")
+        sentences = [s.strip() for s in text.split("。") if s.strip()]
 
         structure_score = 0.0
 
@@ -352,15 +367,12 @@ class OCRIntegrationTester:
 
             # 模拟OCR提取
             extracted_text, extraction_time = self._mock_ocr_extraction(
-                test_case.document_path,
-                test_case.language
+                test_case.document_path, test_case.language
             )
 
             # 评估准确性
             accuracy_score = self.evaluate_ocr_accuracy(
-                extracted_text,
-                test_case.expected_text,
-                test_case
+                extracted_text, test_case.expected_text, test_case
             )
 
             # 评估质量
@@ -376,18 +388,19 @@ class OCRIntegrationTester:
                 extraction_time=extraction_time,
                 character_count=len(extracted_text),
                 quality_score=quality_score,
-                rag_integration_score=0.0  # 将在后续测试中评估
+                rag_integration_score=0.0,  # 将在后续测试中评估
             )
 
             results.append(result)
 
-            print(f"    ✅ 准确性: {accuracy_score:.3f}, 质量: {quality_score:.3f}, 时间: {extraction_time:.4f}s")
-            print(f"    {'✅' if meets_requirements else '❌'} 是否满足要求: {meets_requirements}")
+            print(
+                f"    ✅ 准确性: {accuracy_score:.3f}, 质量: {quality_score:.3f}, 时间: {extraction_time:.4f}s"
+            )
+            print(
+                f"    {'✅' if meets_requirements else '❌'} 是否满足要求: {meets_requirements}"
+            )
 
-        return {
-            "total_tests": len(results),
-            "results": results
-        }
+        return {"total_tests": len(results), "results": results}
 
     def test_paddleocr_integration(self) -> Dict[str, Any]:
         """测试PaddleOCR集成"""
@@ -402,7 +415,9 @@ class OCRIntegrationTester:
             if not os.path.exists(test_case.document_path):
                 print(f"  ⚠️  文件不存在: {test_case.document_path}")
                 # Try alternative path in test_resources
-                alt_path = test_case.document_path.replace("samples/", "test_resources/")
+                alt_path = test_case.document_path.replace(
+                    "samples/", "test_resources/"
+                )
                 if os.path.exists(alt_path):
                     test_case.document_path = alt_path
                     print(f"  ✅ Found at alternative path: {alt_path}")
@@ -412,36 +427,51 @@ class OCRIntegrationTester:
             print(f"  🔍 处理图片: {os.path.basename(test_case.document_path)}")
 
             # 模拟PaddleOCR处理
-            extracted_text, extraction_time, ocr_details = self._mock_paddleocr_extraction(
-                test_case.document_path,
-                test_case.language
+            (
+                extracted_text,
+                extraction_time,
+                ocr_details,
+            ) = self._mock_paddleocr_extraction(
+                test_case.document_path, test_case.language
             )
 
             # 评估PaddleOCR特有的性能指标
             confidence_scores = ocr_details.get("confidence_scores", [])
-            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-
-            paddleocr_score = (
-                avg_confidence * 0.4 +
-                min(1.0, 1.0 / extraction_time) * 0.3 +  # 处理时间越短越好
-                self.evaluate_text_quality(extracted_text, test_case) * 0.3
+            avg_confidence = (
+                sum(confidence_scores) / len(confidence_scores)
+                if confidence_scores
+                else 0
             )
 
-            paddleocr_results.append({
-                "test_id": test_case.test_id,
-                "extracted_text": extracted_text,
-                "extraction_time": extraction_time,
-                "avg_confidence": avg_confidence,
-                "paddleocr_score": paddleocr_score,
-                "details": ocr_details
-            })
+            paddleocr_score = (
+                avg_confidence * 0.4
+                + min(1.0, 1.0 / extraction_time) * 0.3
+                + self.evaluate_text_quality(extracted_text, test_case)  # 处理时间越短越好
+                * 0.3
+            )
 
-            print(f"    ✅ PaddleOCR评分: {paddleocr_score:.3f}, 置信度: {avg_confidence:.3f}")
+            paddleocr_results.append(
+                {
+                    "test_id": test_case.test_id,
+                    "extracted_text": extracted_text,
+                    "extraction_time": extraction_time,
+                    "avg_confidence": avg_confidence,
+                    "paddleocr_score": paddleocr_score,
+                    "details": ocr_details,
+                }
+            )
+
+            print(
+                f"    ✅ PaddleOCR评分: {paddleocr_score:.3f}, 置信度: {avg_confidence:.3f}"
+            )
 
         return {
             "total_tests": len(paddleocr_results),
             "results": paddleocr_results,
-            "average_score": sum(r["paddleocr_score"] for r in paddleocr_results) / len(paddleocr_results) if paddleocr_results else 0
+            "average_score": sum(r["paddleocr_score"] for r in paddleocr_results)
+            / len(paddleocr_results)
+            if paddleocr_results
+            else 0,
         }
 
     def test_ocr_to_rag_integration(self) -> Dict[str, Any]:
@@ -455,8 +485,7 @@ class OCRIntegrationTester:
 
             # 步骤1: OCR提取
             extracted_text, ocr_time = self._mock_ocr_extraction(
-                test_case.document_path,
-                test_case.language
+                test_case.document_path, test_case.language
             )
 
             # 步骤2: 模拟向量化
@@ -471,7 +500,9 @@ class OCRIntegrationTester:
             generation_time = random.uniform(0.2, 0.8)
             time.sleep(0.01)
 
-            total_processing_time = ocr_time + vectorization_time + retrieval_time + generation_time
+            total_processing_time = (
+                ocr_time + vectorization_time + retrieval_time + generation_time
+            )
 
             # 评估集成效果
             # OCR质量对RAG的影响
@@ -481,25 +512,38 @@ class OCRIntegrationTester:
             text_length_score = min(1.0, len(extracted_text) / 100)  # 100字符为满分
 
             # 综合集成评分
-            integration_score = (ocr_quality * 0.4 + text_length_score * 0.3 + min(1.0, 5.0 / total_processing_time) * 0.3)
+            integration_score = (
+                ocr_quality * 0.4
+                + text_length_score * 0.3
+                + min(1.0, 5.0 / total_processing_time) * 0.3
+            )
 
-            integration_results.append({
-                "test_id": test_case.test_id,
-                "ocr_time": ocr_time,
-                "vectorization_time": vectorization_time,
-                "retrieval_time": retrieval_time,
-                "generation_time": generation_time,
-                "total_time": total_processing_time,
-                "ocr_quality": ocr_quality,
-                "integration_score": integration_score
-            })
+            integration_results.append(
+                {
+                    "test_id": test_case.test_id,
+                    "ocr_time": ocr_time,
+                    "vectorization_time": vectorization_time,
+                    "retrieval_time": retrieval_time,
+                    "generation_time": generation_time,
+                    "total_time": total_processing_time,
+                    "ocr_quality": ocr_quality,
+                    "integration_score": integration_score,
+                }
+            )
 
-            print(f"    ✅ 集成评分: {integration_score:.3f}, 总时间: {total_processing_time:.3f}s")
+            print(
+                f"    ✅ 集成评分: {integration_score:.3f}, 总时间: {total_processing_time:.3f}s"
+            )
 
         return {
             "total_tests": len(integration_results),
             "results": integration_results,
-            "average_integration_score": sum(r["integration_score"] for r in integration_results) / len(integration_results) if integration_results else 0
+            "average_integration_score": sum(
+                r["integration_score"] for r in integration_results
+            )
+            / len(integration_results)
+            if integration_results
+            else 0,
         }
 
     def test_different_document_types(self) -> Dict[str, Any]:
@@ -510,23 +554,24 @@ class OCRIntegrationTester:
 
         for test_case in self.test_cases:
             extracted_text, extraction_time = self._mock_ocr_extraction(
-                test_case.document_path,
-                test_case.language
+                test_case.document_path, test_case.language
             )
 
             accuracy_score = self.evaluate_ocr_accuracy(
-                extracted_text,
-                test_case.expected_text,
-                test_case
+                extracted_text, test_case.expected_text, test_case
             )
 
-            type_results[test_case.document_type].append({
-                "test_id": test_case.test_id,
-                "accuracy": accuracy_score,
-                "extraction_time": extraction_time,
-                "text_length": len(extracted_text),
-                "quality_score": self.evaluate_text_quality(extracted_text, test_case)
-            })
+            type_results[test_case.document_type].append(
+                {
+                    "test_id": test_case.test_id,
+                    "accuracy": accuracy_score,
+                    "extraction_time": extraction_time,
+                    "text_length": len(extracted_text),
+                    "quality_score": self.evaluate_text_quality(
+                        extracted_text, test_case
+                    ),
+                }
+            )
 
         # 计算各类型的统计指标
         type_stats = {}
@@ -537,13 +582,18 @@ class OCRIntegrationTester:
             stats = {
                 "count": len(results),
                 "avg_accuracy": sum(r["accuracy"] for r in results) / len(results),
-                "avg_extraction_time": sum(r["extraction_time"] for r in results) / len(results),
-                "avg_text_length": sum(r["text_length"] for r in results) / len(results),
-                "avg_quality_score": sum(r["quality_score"] for r in results) / len(results)
+                "avg_extraction_time": sum(r["extraction_time"] for r in results)
+                / len(results),
+                "avg_text_length": sum(r["text_length"] for r in results)
+                / len(results),
+                "avg_quality_score": sum(r["quality_score"] for r in results)
+                / len(results),
             }
 
             type_stats[doc_type] = stats
-            print(f"  📄 {doc_type}: 平均准确率 {stats['avg_accuracy']:.3f}, 平均时间 {stats['avg_extraction_time']:.4f}s")
+            print(
+                f"  📄 {doc_type}: 平均准确率 {stats['avg_accuracy']:.3f}, 平均时间 {stats['avg_extraction_time']:.4f}s"
+            )
 
         return dict(type_stats)
 
@@ -571,7 +621,9 @@ class OCRIntegrationTester:
 
         # 计算总体指标
         total_tests = len(self.test_cases)
-        avg_accuracy = sum(r.quality_score for r in extraction_results["results"]) / len(extraction_results["results"])
+        avg_accuracy = sum(
+            r.quality_score for r in extraction_results["results"]
+        ) / len(extraction_results["results"])
         avg_integration_score = integration_results["average_integration_score"]
 
         summary = {
@@ -579,12 +631,12 @@ class OCRIntegrationTester:
             "total_tests": total_tests,
             "extraction_quality": {
                 "average_score": avg_accuracy,
-                "results": extraction_results["results"]
+                "results": extraction_results["results"],
             },
             "paddleocr_integration": paddleocr_results,
             "rag_integration": integration_results,
             "document_type_performance": document_type_results,
-            "overall_score": (avg_accuracy * 0.5 + avg_integration_score * 0.5)
+            "overall_score": (avg_accuracy * 0.5 + avg_integration_score * 0.5),
         }
 
         return summary
@@ -627,7 +679,9 @@ class OCRIntegrationTester:
 """
 
         # 添加部分详细结果
-        for i, result in enumerate(results["extraction_quality"]["results"][:3]):  # 只显示前3个
+        for i, result in enumerate(
+            results["extraction_quality"]["results"][:3]
+        ):  # 只显示前3个
             report += f"""
 ### {result.test_id}
 - **提取文本长度**: {result.character_count} 字符
@@ -645,9 +699,9 @@ class OCRIntegrationTester:
 ## 测试结论
 """
 
-        if results['overall_score'] >= 0.8:
+        if results["overall_score"] >= 0.8:
             report += "✅ **优秀**: OCR集成表现良好，各项指标均达到预期\n"
-        elif results['overall_score'] >= 0.6:
+        elif results["overall_score"] >= 0.6:
             report += "⚠️ **良好**: OCR集成基本功能正常，但仍有优化空间\n"
         else:
             report += "❌ **需要改进**: OCR集成在多个方面存在不足\n"
@@ -668,6 +722,7 @@ class OCRIntegrationTester:
 
         return report
 
+
 def main():
     """主函数"""
     tester = OCRIntegrationTester()
@@ -682,7 +737,9 @@ def main():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
 
     # 保存JSON结果
-    with open(f"test_results/ocr_integration_results_{timestamp}.json", "w", encoding="utf-8") as f:
+    with open(
+        f"test_results/ocr_integration_results_{timestamp}.json", "w", encoding="utf-8"
+    ) as f:
         # 转换OCRResult对象为可序列化的字典
         serializable_results = {
             "test_execution_time": results["test_execution_time"],
@@ -690,22 +747,26 @@ def main():
             "overall_score": results["overall_score"],
             "extraction_quality_summary": {
                 "average_score": results["extraction_quality"]["average_score"],
-                "total_results": len(results["extraction_quality"]["results"])
+                "total_results": len(results["extraction_quality"]["results"]),
             },
             "paddleocr_summary": {
                 "average_score": results["paddleocr_integration"]["average_score"],
-                "total_results": results["paddleocr_integration"]["total_tests"]
+                "total_results": results["paddleocr_integration"]["total_tests"],
             },
             "rag_integration_summary": {
-                "average_score": results["rag_integration"]["average_integration_score"],
-                "total_results": results["rag_integration"]["total_tests"]
+                "average_score": results["rag_integration"][
+                    "average_integration_score"
+                ],
+                "total_results": results["rag_integration"]["total_tests"],
             },
-            "document_type_performance": results["document_type_performance"]
+            "document_type_performance": results["document_type_performance"],
         }
         json.dump(serializable_results, f, indent=2, ensure_ascii=False)
 
     # 保存报告
-    with open(f"test_results/ocr_integration_report_{timestamp}.md", "w", encoding="utf-8") as f:
+    with open(
+        f"test_results/ocr_integration_report_{timestamp}.md", "w", encoding="utf-8"
+    ) as f:
         f.write(report)
 
     # 输出摘要
@@ -718,7 +779,8 @@ def main():
     print(f"🚀 PaddleOCR评分: {results['paddleocr_integration']['average_score']:.3f}")
     print(f"\n📄 详细报告已保存到: test_results/ocr_integration_report_{timestamp}.md")
 
-    return results['overall_score'] >= 0.6
+    return results["overall_score"] >= 0.6
+
 
 if __name__ == "__main__":
     success = main()

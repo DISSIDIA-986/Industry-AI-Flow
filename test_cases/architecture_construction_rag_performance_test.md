@@ -6,7 +6,7 @@ This test evaluates the RAG system's specific capabilities when handling archite
 ## Test Setup
 
 ### Test Environment
-- **Dataset Sources**: 
+- **Dataset Sources**:
   - `/test_resources/datasets/architecture_building_projects.csv`
   - `/test_resources/datasets/construction_materials_properties.csv`
   - `/test_resources/datasets/architecture_construction_test_dataset.json`
@@ -22,7 +22,7 @@ This test evaluates the RAG system's specific capabilities when handling archite
 ### Test 1.1: International Building Code Queries
 **Test Query**: "According to IBC 2021, what are the minimum ceiling heights for residential units?"
 
-**Expected Response**: 
+**Expected Response**:
 - Section 1208.1: Minimum habitable room ceiling height of 7 feet 6 inches
 - Exceptions for sloped ceilings and beams
 - Reference to specific building code section
@@ -209,7 +209,7 @@ This test evaluates the RAG system's specific capabilities when handling archite
 ### Test 7.1: Multi-Source Query Processing
 **Test Query**: "Based on historical projects and material properties, recommend the best structural system for a 10-story office building"
 
-**Required Data**: 
+**Required Data**:
 - `/test_resources/datasets/architecture_building_projects.csv`
 - `/test_resources/datasets/construction_materials_properties.csv`
 **Expected Response**:

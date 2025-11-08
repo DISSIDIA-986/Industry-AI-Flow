@@ -17,7 +17,7 @@ This document provides extended test cases for the problem classification system
 **Domain**: Healthcare
 **Confidence Threshold**: >0.80
 
-#### Test Set 1.2: Finance Domain  
+#### Test Set 1.2: Finance Domain
 **Test ID: PC-ED-FD-001 to 003**
 - "Calculate the ROI for this investment portfolio"
 - "Analyze the risk factors in our current financial model"
@@ -43,7 +43,7 @@ This document provides extended test cases for the problem classification system
 **Test ID: PC-ED-CI-001**
 **Turn 1**: "I have sales data from last quarter. Can you analyze it?"
 **Expected Intent**: Data Analysis
-**Turn 2**: "Show me a comparison with the previous quarter" 
+**Turn 2**: "Show me a comparison with the previous quarter"
 **Expected Intent**: Data Analysis (with context from Turn 1)
 **Turn 3**: "Visualize the trends you found"
 **Expected Intent**: Data Analysis with Visualization (with context from Turns 1-2)
@@ -52,7 +52,7 @@ This document provides extended test cases for the problem classification system
 **Test ID: PC-ED-TD-001**
 **Turn 1**: "Explain how neural networks work" (Knowledge Retrieval)
 **Expected Intent**: Knowledge Retrieval
-**Turn 2**: "Now show me the Python code for a simple neural network" (Code Execution) 
+**Turn 2**: "Now show me the Python code for a simple neural network" (Code Execution)
 **Expected Intent**: Code Execution
 **Turn 3**: "Run this code with sample data" (Code Execution)
 **Expected Intent**: Code Execution
@@ -74,7 +74,7 @@ This document provides extended test cases for the problem classification system
 #### Test Set 4.1: Very Short Queries
 **Test ID: PC-ED-VS-001 to 003**
 - "Why?" (requires context from conversation)
-- "How?" (requires context from conversation) 
+- "How?" (requires context from conversation)
 - "When?" (requires context from conversation)
 
 #### Test Set 4.2: Very Long Queries

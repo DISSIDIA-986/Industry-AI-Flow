@@ -3,25 +3,27 @@
 简化测试脚本 - 直接测试数据分析和代码执行功能
 """
 
-import sys
-import os
 import asyncio
+import os
+import sys
 from pathlib import Path
-import pandas as pd
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 
 # 设置matplotlib
-plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['savefig.dpi'] = 300
-plt.rcParams['figure.dpi'] = 100
+plt.rcParams["figure.figsize"] = (12, 8)
+plt.rcParams["savefig.dpi"] = 300
+plt.rcParams["figure.dpi"] = 100
+
 
 def test_data_loading():
     """测试数据加载功能"""
-    print("="*60)
+    print("=" * 60)
     print("📊 测试数据加载功能")
-    print("="*60)
+    print("=" * 60)
 
     data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
 
@@ -55,11 +57,12 @@ def test_data_loading():
         print(f"❌ 数据加载失败: {e}")
         return None
 
+
 def test_basic_eda(df):
     """测试基础EDA功能"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🔬 测试基础 EDA 功能")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # 创建输出目录
@@ -69,27 +72,34 @@ def test_basic_eda(df):
         print("📊 1. 特征分布分析...")
 
         # 数值特征分布
-        numeric_features = ['price', 'area', 'bedrooms', 'bathrooms', 'stories', 'parking']
+        numeric_features = [
+            "price",
+            "area",
+            "bedrooms",
+            "bathrooms",
+            "stories",
+            "parking",
+        ]
 
         for feature in numeric_features[:3]:  # 只显示前3个
             plt.figure(figsize=(12, 4))
 
             # 直方图
             plt.subplot(1, 2, 1)
-            plt.hist(df[feature].dropna(), bins=30, alpha=0.7, edgecolor='black')
-            plt.title(f'{feature} 分布直方图')
+            plt.hist(df[feature].dropna(), bins=30, alpha=0.7, edgecolor="black")
+            plt.title(f"{feature} 分布直方图")
             plt.xlabel(feature)
-            plt.ylabel('频次')
+            plt.ylabel("频次")
 
             # 箱线图
             plt.subplot(1, 2, 2)
             plt.boxplot(df[feature].dropna())
-            plt.title(f'{feature} 箱线图')
+            plt.title(f"{feature} 箱线图")
             plt.ylabel(feature)
 
             plt.tight_layout()
             output_file = output_dir / f"{feature}_distribution.png"
-            plt.savefig(output_file, bbox_inches='tight', facecolor='white')
+            plt.savefig(output_file, bbox_inches="tight", facecolor="white")
             plt.close()
             print(f"   ✅ {feature} 分布图已保存: {output_file}")
 
@@ -100,19 +110,31 @@ def test_basic_eda(df):
         correlation_matrix = numeric_df.corr()
 
         plt.figure(figsize=(10, 8))
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
-                   square=True, linewidths=0.5)
-        plt.title('特征相关性热力图')
+        sns.heatmap(
+            correlation_matrix,
+            annot=True,
+            cmap="coolwarm",
+            center=0,
+            square=True,
+            linewidths=0.5,
+        )
+        plt.title("特征相关性热力图")
         plt.tight_layout()
         output_file = output_dir / "correlation_heatmap.png"
-        plt.savefig(output_file, bbox_inches='tight', facecolor='white')
+        plt.savefig(output_file, bbox_inches="tight", facecolor="white")
         plt.close()
         print(f"   ✅ 相关性热力图已保存: {output_file}")
 
         print("📊 3. 分类特征分析...")
 
         # 分类特征分布
-        categorical_features = ['mainroad', 'guestroom', 'basement', 'airconditioning', 'prefarea']
+        categorical_features = [
+            "mainroad",
+            "guestroom",
+            "basement",
+            "airconditioning",
+            "prefarea",
+        ]
 
         for feature in categorical_features[:3]:  # 只显示前3个
             plt.figure(figsize=(10, 6))
@@ -122,17 +144,17 @@ def test_basic_eda(df):
 
             plt.bar(range(len(value_counts)), value_counts.values, color=colors)
             plt.xticks(range(len(value_counts)), value_counts.index)
-            plt.title(f'{feature} 分布')
+            plt.title(f"{feature} 分布")
             plt.xlabel(feature)
-            plt.ylabel('频次')
+            plt.ylabel("频次")
 
             # 添加数值标签
             for i, v in enumerate(value_counts.values):
-                plt.text(i, v + max(value_counts) * 0.01, str(v), ha='center')
+                plt.text(i, v + max(value_counts) * 0.01, str(v), ha="center")
 
             plt.tight_layout()
             output_file = output_dir / f"{feature}_distribution.png"
-            plt.savefig(output_file, bbox_inches='tight', facecolor='white')
+            plt.savefig(output_file, bbox_inches="tight", facecolor="white")
             plt.close()
             print(f"   ✅ {feature} 分布图已保存: {output_file}")
 
@@ -142,39 +164,48 @@ def test_basic_eda(df):
         plt.figure(figsize=(12, 8))
 
         plt.subplot(2, 2, 1)
-        plt.scatter(df['area'], df['price'], alpha=0.6, edgecolors='black', linewidth=0.5)
-        plt.xlabel('面积 (sq.ft)')
-        plt.ylabel('价格')
-        plt.title('价格 vs 面积')
+        plt.scatter(
+            df["area"], df["price"], alpha=0.6, edgecolors="black", linewidth=0.5
+        )
+        plt.xlabel("面积 (sq.ft)")
+        plt.ylabel("价格")
+        plt.title("价格 vs 面积")
 
         # 价格与卧室数的关系
         plt.subplot(2, 2, 2)
-        bedroom_price = df.groupby('bedrooms')['price'].mean()
-        plt.bar(bedroom_price.index, bedroom_price.values, color='skyblue', edgecolor='black')
-        plt.xlabel('卧室数')
-        plt.ylabel('平均价格')
-        plt.title('平均价格 vs 卧室数')
+        bedroom_price = df.groupby("bedrooms")["price"].mean()
+        plt.bar(
+            bedroom_price.index,
+            bedroom_price.values,
+            color="skyblue",
+            edgecolor="black",
+        )
+        plt.xlabel("卧室数")
+        plt.ylabel("平均价格")
+        plt.title("平均价格 vs 卧室数")
 
         # 价格分布
         plt.subplot(2, 2, 3)
-        plt.hist(df['price'], bins=30, alpha=0.7, color='lightgreen', edgecolor='black')
-        plt.xlabel('价格')
-        plt.ylabel('频次')
-        plt.title('价格分布')
+        plt.hist(df["price"], bins=30, alpha=0.7, color="lightgreen", edgecolor="black")
+        plt.xlabel("价格")
+        plt.ylabel("频次")
+        plt.title("价格分布")
 
         # 装修状态与价格
         plt.subplot(2, 2, 4)
-        furnish_price = df.groupby('furnishingstatus')['price'].mean()
+        furnish_price = df.groupby("furnishingstatus")["price"].mean()
         colors = plt.cm.Set2(np.linspace(0, 1, len(furnish_price)))
-        plt.bar(furnish_price.index, furnish_price.values, color=colors, edgecolor='black')
-        plt.xlabel('装修状态')
-        plt.ylabel('平均价格')
-        plt.title('平均价格 vs 装修状态')
+        plt.bar(
+            furnish_price.index, furnish_price.values, color=colors, edgecolor="black"
+        )
+        plt.xlabel("装修状态")
+        plt.ylabel("平均价格")
+        plt.title("平均价格 vs 装修状态")
         plt.xticks(rotation=45)
 
         plt.tight_layout()
         output_file = output_dir / "price_analysis.png"
-        plt.savefig(output_file, bbox_inches='tight', facecolor='white')
+        plt.savefig(output_file, bbox_inches="tight", facecolor="white")
         plt.close()
         print(f"   ✅ 价格分析图表已保存: {output_file}")
 
@@ -186,14 +217,16 @@ def test_basic_eda(df):
     except Exception as e:
         print(f"❌ EDA 分析失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
+
 def test_code_generation():
     """测试代码生成功能"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🤖 测试代码生成功能")
-    print("="*60)
+    print("=" * 60)
 
     # 模拟LLM生成的代码
     generated_code = '''
@@ -254,14 +287,15 @@ if __name__ == "__main__":
     print("✅ 模拟 LLM 代码生成:")
     print("   生成的代码类型: 数据分析脚本")
     print("   包含功能: 价格分析、特征相关性、性价比分析")
-    print("   代码行数:", len(generated_code.split('\n')))
+    print("   代码行数:", len(generated_code.split("\n")))
 
     # 尝试执行生成的代码（简化版）
     try:
         print("\n🔄 测试代码执行...")
 
         # 创建一个简化的测试函数
-        exec('''
+        exec(
+            '''
 def test_generated_analysis():
     """测试生成的分析功能"""
 
@@ -287,7 +321,8 @@ def test_generated_analysis():
     return results
 
 test_generated_analysis()
-''')
+'''
+        )
 
         return True
 
@@ -295,15 +330,16 @@ test_generated_analysis()
         print(f"❌ 代码执行失败: {e}")
         return False
 
+
 def main():
     """主测试函数"""
     print("🚀 开始简化测试 - RAG 数据分析节点")
     print("🎯 测试目标: 验证基础数据分析功能")
 
     # 测试1: 数据加载
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 1/3: 数据加载功能")
-    print("="*60)
+    print("=" * 60)
     df = test_data_loading()
 
     if df is None:
@@ -311,27 +347,23 @@ def main():
         return False
 
     # 测试2: 基础EDA
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 2/3: 基础 EDA 功能")
-    print("="*60)
+    print("=" * 60)
     eda_success = test_basic_eda(df)
 
     # 测试3: 代码生成
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 3/3: 代码生成功能")
-    print("="*60)
+    print("=" * 60)
     code_success = test_code_generation()
 
     # 测试总结
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("📊 测试总结")
-    print("="*60)
+    print("=" * 60)
 
-    tests = [
-        ("数据加载", df is not None),
-        ("基础EDA", eda_success),
-        ("代码生成", code_success)
-    ]
+    tests = [("数据加载", df is not None), ("基础EDA", eda_success), ("代码生成", code_success)]
 
     for test_name, success in tests:
         status = "✅ 成功" if success else "❌ 失败"
@@ -355,6 +387,7 @@ def main():
         print("- 图表生成配置")
 
     return overall_success
+
 
 if __name__ == "__main__":
     success = main()

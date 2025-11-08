@@ -6,21 +6,26 @@
 3. 智能文档路由 - 结构化数据使用CodeExecutor而非RAG
 """
 
-import sys
 import os
+import sys
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 import pandas as pd
 
-# 导入新组件
-from backend.services.simple_intent_classifier import simple_intent_classifier, IntentType
 from backend.services.data_analysis_agent import data_analysis_agent
+
+# 导入新组件
+from backend.services.simple_intent_classifier import (
+    IntentType,
+    simple_intent_classifier,
+)
 from backend.services.smart_document_router import smart_document_router
 
 
@@ -68,69 +73,66 @@ class ImprovedSystemTester:
             {
                 "query": "What is a RAG system?",
                 "expected": IntentType.KNOWLEDGE_RETRIEVAL,
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
             {
                 "query": "解释什么是向量数据库",
                 "expected": IntentType.KNOWLEDGE_RETRIEVAL,
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
             {
                 "query": "How does BM25 algorithm work?",
                 "expected": IntentType.KNOWLEDGE_RETRIEVAL,
-                "difficulty": "medium"
+                "difficulty": "medium",
             },
-
             # 数据分析类
             {
                 "query": "What is the average price in the housing dataset?",
                 "expected": IntentType.DATA_ANALYSIS,
-                "difficulty": "medium"
+                "difficulty": "medium",
             },
             {
                 "query": "分析失业率的趋势",
                 "expected": IntentType.DATA_ANALYSIS,
-                "difficulty": "medium"
+                "difficulty": "medium",
             },
             {
                 "query": "Compare the statistics between two datasets",
                 "expected": IntentType.DATA_ANALYSIS,
-                "difficulty": "hard"
+                "difficulty": "hard",
             },
             {
                 "query": "Calculate the correlation between area and price",
                 "expected": IntentType.DATA_ANALYSIS,
-                "difficulty": "hard"
+                "difficulty": "hard",
             },
             {
                 "query": "哪个省份的失业率最高?",
                 "expected": IntentType.DATA_ANALYSIS,
-                "difficulty": "medium"
+                "difficulty": "medium",
             },
-
             # 文档处理类
             {
                 "query": "Extract text from this PDF document",
                 "expected": IntentType.DOCUMENT_PROCESSING,
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
             {
                 "query": "对这张图片进行OCR识别",
                 "expected": IntentType.DOCUMENT_PROCESSING,
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
-
             # 代码执行类
             {
                 "query": "Run this Python script",
                 "expected": IntentType.CODE_EXECUTION,
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
             {
                 "query": "执行数据处理代码",
                 "expected": IntentType.CODE_EXECUTION,
-                "difficulty": "simple"
-            }
+                "difficulty": "simple",
+            },
         ]
 
         results = {
@@ -138,7 +140,7 @@ class ImprovedSystemTester:
             "correct": 0,
             "by_type": {},
             "by_difficulty": {},
-            "details": []
+            "details": [],
         }
 
         print(f"运行 {len(test_cases)} 个意图分类测试...\n")
@@ -183,15 +185,17 @@ class ImprovedSystemTester:
                 "confidence": result.confidence,
                 "correct": is_correct,
                 "difficulty": difficulty,
-                "execution_time_ms": round(execution_time, 2)
+                "execution_time_ms": round(execution_time, 2),
             }
             results["details"].append(detail)
 
             # 打印结果
             status = "✅" if is_correct else "❌"
             print(f"{status} [{i}/{len(test_cases)}] {query[:50]}...")
-            print(f"   预期: {expected_value} | 实际: {result.intent.value} | "
-                  f"置信度: {result.confidence:.2f} | {execution_time:.0f}ms")
+            print(
+                f"   预期: {expected_value} | 实际: {result.intent.value} | "
+                f"置信度: {result.confidence:.2f} | {execution_time:.0f}ms"
+            )
 
             if not is_correct:
                 print(f"   ⚠️  分类错误! 原因: {result.reasoning}")
@@ -202,11 +206,15 @@ class ImprovedSystemTester:
         results["accuracy"] = results["correct"] / results["total"]
 
         print("\n" + "-" * 80)
-        print(f"总体准确率: {results['accuracy']*100:.1f}% ({results['correct']}/{results['total']})")
+        print(
+            f"总体准确率: {results['accuracy']*100:.1f}% ({results['correct']}/{results['total']})"
+        )
         print("\n按意图类型:")
         for intent_type, stats in results["by_type"].items():
             acc = stats["correct"] / stats["total"]
-            print(f"  {intent_type}: {acc*100:.1f}% ({stats['correct']}/{stats['total']})")
+            print(
+                f"  {intent_type}: {acc*100:.1f}% ({stats['correct']}/{stats['total']})"
+            )
 
         print("\n按难度:")
         for diff, stats in results["by_difficulty"].items():
@@ -218,18 +226,29 @@ class ImprovedSystemTester:
     def test_document_router(self) -> Dict[str, Any]:
         """测试文档路由器"""
         test_files = [
-            {"path": "test_resources/datasets/Housing.csv", "expected_strategy": "data_analysis"},
-            {"path": "test_resources/datasets/Thyroid_Diff.csv", "expected_strategy": "data_analysis"},
-            {"path": "test_resources/datasets/Unemployment_Canada_1976_present.csv", "expected_strategy": "data_analysis"},
-            {"path": "samples/test_document_1.txt", "expected_strategy": "rag_retrieval"},
-            {"path": "samples/test_document_2.txt", "expected_strategy": "rag_retrieval"},
+            {
+                "path": "test_resources/datasets/Housing.csv",
+                "expected_strategy": "data_analysis",
+            },
+            {
+                "path": "test_resources/datasets/Thyroid_Diff.csv",
+                "expected_strategy": "data_analysis",
+            },
+            {
+                "path": "test_resources/datasets/Unemployment_Canada_1976_present.csv",
+                "expected_strategy": "data_analysis",
+            },
+            {
+                "path": "samples/test_document_1.txt",
+                "expected_strategy": "rag_retrieval",
+            },
+            {
+                "path": "samples/test_document_2.txt",
+                "expected_strategy": "rag_retrieval",
+            },
         ]
 
-        results = {
-            "total": 0,
-            "correct": 0,
-            "details": []
-        }
+        results = {"total": 0, "correct": 0, "details": []}
 
         print(f"测试 {len(test_files)} 个文档路由决策...\n")
 
@@ -261,14 +280,16 @@ class ImprovedSystemTester:
                 "predicted": routing["processing_strategy"],
                 "correct": is_correct,
                 "document_type": routing["document_type"],
-                "agent": routing["recommended_agent"]
+                "agent": routing["recommended_agent"],
             }
             results["details"].append(detail)
 
             # 打印结果
             status = "✅" if is_correct else "❌"
             print(f"{status} {full_path.name}")
-            print(f"   类型: {routing['document_type']} → 策略: {routing['processing_strategy']}")
+            print(
+                f"   类型: {routing['document_type']} → 策略: {routing['processing_strategy']}"
+            )
             print(f"   Agent: {routing['recommended_agent']}")
             print(f"   原因: {routing['rationale'][:80]}...")
             print()
@@ -280,7 +301,9 @@ class ImprovedSystemTester:
             results["accuracy"] = 0.0
 
         print("-" * 80)
-        print(f"路由准确率: {results['accuracy']*100:.1f}% ({results['correct']}/{results['total']})")
+        print(
+            f"路由准确率: {results['accuracy']*100:.1f}% ({results['correct']}/{results['total']})"
+        )
 
         return results
 
@@ -298,25 +321,25 @@ class ImprovedSystemTester:
             {
                 "question": "How many records are in the dataset?",
                 "expected_keywords": ["record", "row", "545"],
-                "difficulty": "simple"
+                "difficulty": "simple",
             },
             {
                 "question": "What is the average price?",
                 "expected_keywords": ["average", "price", "mean"],
-                "difficulty": "medium"
+                "difficulty": "medium",
             },
             {
                 "question": "What percentage of houses have air conditioning?",
                 "expected_keywords": ["percentage", "air", "%"],
-                "difficulty": "medium"
-            }
+                "difficulty": "medium",
+            },
         ]
 
         results = {
             "total": len(test_queries),
             "successful": 0,
             "failed": 0,
-            "details": []
+            "details": [],
         }
 
         print(f"运行 {len(test_queries)} 个数据分析查询...\n")
@@ -332,8 +355,7 @@ class ImprovedSystemTester:
             start_time = time.time()
             try:
                 result = self.data_agent.analyze_query(
-                    question=question,
-                    data_file_path=test_dataset
+                    question=question, data_file_path=test_dataset
                 )
                 execution_time = (time.time() - start_time) * 1000  # ms
 
@@ -341,8 +363,12 @@ class ImprovedSystemTester:
 
                 # 检查答案是否包含期望关键词
                 answer = result.get("answer", "").lower()
-                keyword_matches = sum(1 for kw in expected_keywords if kw.lower() in answer)
-                match_rate = keyword_matches / len(expected_keywords) if expected_keywords else 0
+                keyword_matches = sum(
+                    1 for kw in expected_keywords if kw.lower() in answer
+                )
+                match_rate = (
+                    keyword_matches / len(expected_keywords) if expected_keywords else 0
+                )
 
                 if success:
                     results["successful"] += 1
@@ -356,7 +382,7 @@ class ImprovedSystemTester:
                     "answer": result.get("answer", "N/A"),
                     "keyword_match_rate": match_rate,
                     "execution_time_ms": round(execution_time, 2),
-                    "difficulty": difficulty
+                    "difficulty": difficulty,
                 }
 
                 if "code" in result:
@@ -376,37 +402,44 @@ class ImprovedSystemTester:
             except Exception as e:
                 results["failed"] += 1
                 print(f"❌ 执行异常: {e}")
-                results["details"].append({
-                    "question": question,
-                    "success": False,
-                    "error": str(e),
-                    "difficulty": difficulty
-                })
+                results["details"].append(
+                    {
+                        "question": question,
+                        "success": False,
+                        "error": str(e),
+                        "difficulty": difficulty,
+                    }
+                )
 
             print()
 
         # 计算成功率
-        results["success_rate"] = results["successful"] / results["total"] if results["total"] > 0 else 0
+        results["success_rate"] = (
+            results["successful"] / results["total"] if results["total"] > 0 else 0
+        )
 
         print("-" * 80)
-        print(f"成功率: {results['success_rate']*100:.1f}% ({results['successful']}/{results['total']})")
+        print(
+            f"成功率: {results['success_rate']*100:.1f}% ({results['successful']}/{results['total']})"
+        )
 
         return results
 
     def generate_report(
-        self,
-        intent_results: Dict,
-        routing_results: Dict,
-        analysis_results: Dict
+        self, intent_results: Dict, routing_results: Dict, analysis_results: Dict
     ):
         """生成测试报告"""
         print("\n📊 关键指标:")
-        print(f"  • 意图分类准确率: {intent_results['accuracy']*100:.1f}% "
-              f"(目标: 70-80%, {'✅达标' if intent_results['accuracy'] >= 0.7 else '❌未达标'})")
+        print(
+            f"  • 意图分类准确率: {intent_results['accuracy']*100:.1f}% "
+            f"(目标: 70-80%, {'✅达标' if intent_results['accuracy'] >= 0.7 else '❌未达标'})"
+        )
 
         if "accuracy" in routing_results:
-            print(f"  • 文档路由准确率: {routing_results['accuracy']*100:.1f}% "
-                  f"({'✅完美' if routing_results['accuracy'] == 1.0 else '⚠️有误'})")
+            print(
+                f"  • 文档路由准确率: {routing_results['accuracy']*100:.1f}% "
+                f"({'✅完美' if routing_results['accuracy'] == 1.0 else '⚠️有误'})"
+            )
 
         if not analysis_results.get("skipped"):
             print(f"  • 数据分析成功率: {analysis_results.get('success_rate', 0)*100:.1f}%")
@@ -415,14 +448,19 @@ class ImprovedSystemTester:
         print("\n🎯 核心改进验证:")
 
         # 1. 意图分类器修复
-        if intent_results['accuracy'] >= 0.7:
-            print("  ✅ 意图分类器已修复: 从0%提升至{:.1f}%".format(intent_results['accuracy']*100))
+        if intent_results["accuracy"] >= 0.7:
+            print(
+                "  ✅ 意图分类器已修复: 从0%提升至{:.1f}%".format(intent_results["accuracy"] * 100)
+            )
         else:
-            print("  ⚠️  意图分类器需要进一步优化: 当前{:.1f}%".format(intent_results['accuracy']*100))
+            print(
+                "  ⚠️  意图分类器需要进一步优化: 当前{:.1f}%".format(intent_results["accuracy"] * 100)
+            )
 
         # 2. 结构化数据路由
         csv_routing_correct = all(
-            d["correct"] for d in routing_results.get("details", [])
+            d["correct"]
+            for d in routing_results.get("details", [])
             if ".csv" in d["file"]
         )
         if csv_routing_correct:
@@ -445,10 +483,10 @@ class ImprovedSystemTester:
             "test_time": time.strftime("%Y-%m-%d %H:%M:%S"),
             "intent_classification": intent_results,
             "document_routing": routing_results,
-            "data_analysis": analysis_results
+            "data_analysis": analysis_results,
         }
 
-        with open(report_file, 'w', encoding='utf-8') as f:
+        with open(report_file, "w", encoding="utf-8") as f:
             json.dump(full_report, f, indent=2, ensure_ascii=False)
 
         print(f"\n📄 详细报告已保存至: {report_file}")

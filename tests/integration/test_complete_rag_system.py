@@ -6,6 +6,7 @@ LangChain 1.0 RAG 系统完整功能测试
 """
 
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,9 +14,10 @@ load_dotenv()
 # 设置使用智谱 API
 os.environ["LLM_PROVIDER"] = "zhipu"
 
-from backend.config import settings
-from backend.agents.rag_agent import rag_agent
 from langchain_core.messages import HumanMessage
+
+from backend.agents.rag_agent import rag_agent
+from backend.config import settings
 
 
 def test_rag_with_retrieval():
@@ -33,21 +35,19 @@ def test_rag_with_retrieval():
     test_questions = [
         "什么是 LangChain 1.0 的主要改进？",
         "LangChain 1.0 的 Middleware 机制有什么作用？",
-        "人工智能和机器学习有什么关系？"
+        "人工智能和机器学习有什么关系？",
     ]
 
     for i, question in enumerate(test_questions, 1):
         print(f"\n{'=' * 70}")
         print(f"问题 {i}: {question}")
-        print('=' * 70)
+        print("=" * 70)
 
         try:
-            result = rag_agent.invoke({
-                "messages": [HumanMessage(content=question)]
-            })
+            result = rag_agent.invoke({"messages": [HumanMessage(content=question)]})
 
             # 提取响应
-            final_message = result['messages'][-1]
+            final_message = result["messages"][-1]
 
             print(f"\n💬 Agent 回答:")
             print(f"{final_message.content}")
@@ -57,6 +57,7 @@ def test_rag_with_retrieval():
         except Exception as e:
             print(f"\n❌ 测试 {i} 失败: {e}")
             import traceback
+
             traceback.print_exc()
 
 
@@ -72,9 +73,7 @@ def test_tool_usage_verification():
     print("📊 预期行为: Agent 应调用 hybrid_retrieval_tool")
 
     try:
-        result = rag_agent.invoke({
-            "messages": [HumanMessage(content=question)]
-        })
+        result = rag_agent.invoke({"messages": [HumanMessage(content=question)]})
 
         print("\n✅ 工具调用成功!")
         print(f"💬 Agent 响应: {result['messages'][-1].content[:300]}...")
@@ -89,10 +88,7 @@ def test_multi_turn_conversation():
     print("💬 测试: 多轮对话")
     print("=" * 70)
 
-    conversation = [
-        "什么是人工智能？",
-        "它的主要应用有哪些？"
-    ]
+    conversation = ["什么是人工智能？", "它的主要应用有哪些？"]
 
     messages = []
 
@@ -106,7 +102,7 @@ def test_multi_turn_conversation():
             result = rag_agent.invoke({"messages": messages})
 
             # 更新消息历史
-            messages = result['messages']
+            messages = result["messages"]
 
             print(f"🤖 Agent: {messages[-1].content[:200]}...")
 
@@ -130,9 +126,7 @@ def analyze_performance():
     try:
         start_time = time.time()
 
-        result = rag_agent.invoke({
-            "messages": [HumanMessage(content=question)]
-        })
+        result = rag_agent.invoke({"messages": [HumanMessage(content=question)]})
 
         elapsed = time.time() - start_time
 
@@ -202,7 +196,8 @@ def main():
     print("\n" + "=" * 70)
     print("💡 关于 LangChain 1.0 的优势:")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. 统一 Agent API：create_agent 简化了 Agent 创建流程
 2. 工具化检索：LLM 自主决策何时检索、检索多少
 3. 自动状态管理：TypedDict + operator.add 自动累加消息
@@ -213,7 +208,8 @@ def main():
 - 减少 50%+ 的胶水代码
 - 提升 Agent 决策灵活性
 - 更好的可观测性和调试能力
-    """)
+    """
+    )
 
 
 if __name__ == "__main__":

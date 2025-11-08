@@ -18,7 +18,7 @@
       {
         "id": "acc_003",
         "query": "What are the accessibility requirements for commercial buildings under ADA?",
-        "expected_intent": "Knowledge Retrieval", 
+        "expected_intent": "Knowledge Retrieval",
         "domain": "Building Codes",
         "complexity": "Medium"
       }
@@ -36,7 +36,7 @@
         "id": "sa_002",
         "query": "Calculate the wind load on a 50-meter tall building in a hurricane-prone area",
         "expected_intent": "Data Analysis and Code Execution",
-        "domain": "Structural Engineering", 
+        "domain": "Structural Engineering",
         "complexity": "High"
       },
       {

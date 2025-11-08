@@ -3,16 +3,16 @@ PaddleOCR集成测试
 测试PaddleOCR 3.3.1在macOS ARM64 + Python 3.13环境下的功能
 """
 
-import sys
-import os
 import logging
+import os
+import sys
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from paddleocr import PaddleOCR
 from pathlib import Path
 
+from paddleocr import PaddleOCR
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,8 +31,7 @@ def test_paddleocr_initialization():
         # use_textline_orientation=True 启用文本行方向分类
         # lang='ch' 支持中英文混合识别
         ocr = PaddleOCR(
-            use_textline_orientation=True,  # 使用文本行方向分类
-            lang='ch'  # 支持中英文混合
+            use_textline_orientation=True, lang="ch"  # 使用文本行方向分类  # 支持中英文混合
         )
         print("✅ PaddleOCR初始化成功")
         print(f"   模型配置: 中英文混合识别, 支持方向分类")
@@ -55,7 +54,11 @@ def test_ocr_on_sample_image(ocr):
     # 用户可以放置PDF/图片到 samples/ 目录进行测试
     samples_dir = Path("samples")
 
-    if not samples_dir.exists() or not list(samples_dir.glob("*.jpg")) and not list(samples_dir.glob("*.png")):
+    if (
+        not samples_dir.exists()
+        or not list(samples_dir.glob("*.jpg"))
+        and not list(samples_dir.glob("*.png"))
+    ):
         print("⚠️  没有找到测试图片")
         print(f"   请将测试图片(JPG/PNG)放到 {samples_dir.absolute()} 目录")
         print("   跳过OCR识别测试")
@@ -87,14 +90,14 @@ def test_ocr_on_sample_image(ocr):
             page_result = result[0]
 
             # 检查是否有识别的文本行
-            if 'rec_texts' in page_result:
+            if "rec_texts" in page_result:
                 # rec_texts包含识别出的所有文本
-                texts = page_result['rec_texts']
-                scores = page_result.get('rec_scores', [])
+                texts = page_result["rec_texts"]
+                scores = page_result.get("rec_scores", [])
 
                 if isinstance(texts, list):
                     for idx, text in enumerate(texts, 1):
-                        score = scores[idx-1] if idx-1 < len(scores) else 0.0
+                        score = scores[idx - 1] if idx - 1 < len(scores) else 0.0
                         print(f"   [{idx}] {text} (置信度: {score:.2f})")
                 else:
                     print(f"   文本: {texts}")
@@ -109,6 +112,7 @@ def test_ocr_on_sample_image(ocr):
     except Exception as e:
         print(f"❌ OCR识别失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -152,7 +156,9 @@ def main():
     print("测试总结")
     print("=" * 80)
     print(f"  ✅ PaddleOCR初始化: 成功")
-    print(f"  {'✅' if ocr_success else '⚠️ '} OCR文字识别: {'成功' if ocr_success else '跳过(无测试图片)'}")
+    print(
+        f"  {'✅' if ocr_success else '⚠️ '} OCR文字识别: {'成功' if ocr_success else '跳过(无测试图片)'}"
+    )
     print()
 
     if not ocr_success:
