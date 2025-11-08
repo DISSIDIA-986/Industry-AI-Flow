@@ -1,0 +1,107 @@
+# 数据分析专用 Docker 镜像
+# 基于 Python 3.11 Slim 版本，专为 Luncheon AI Flow 项目定制
+FROM python:3.11-slim
+
+# 设置维护者信息
+LABEL maintainer="Luncheon AI Flow Team"
+LABEL description="Advanced Data Analysis and Code Execution Environment for RAG Systems"
+LABEL version="1.0"
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    MPLBACKEND=Agg \
+    WORKSPACE_DIR=/workspace \
+    DATA_DIR=/workspace/data \
+    OUTPUT_DIR=/workspace/output
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    # 编译依赖
+    gcc g++ make libffi-dev libssl-dev \
+    # 数值计算依赖
+    libopenblas-dev liblapack-dev gfortran \
+    # 可视化依赖
+    libjpeg-dev libpng-dev libfreetype6-dev libxft-dev \
+    # 网络和工具
+    wget curl git unzip \
+    # 中文字体支持
+    fonts-wqy-zenhei fonts-wqy-microhei \
+    fonts-arphic-ukai fonts-arphic-uming \
+    # 字体配置工具
+    fontconfig \
+    # 清理
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建非root用户
+RUN groupadd -r analyst && useradd -r -g analyst -u 1000 analyst
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 复制 requirements 文件
+COPY requirements-data-analysis.txt /tmp/
+
+# 安装 Python 依赖
+RUN pip install --no-cache-dir -r /tmp/requirements-data-analysis.txt
+
+# 创建中文字体支持模块
+RUN mkdir -p /app/utils && \
+    echo '#!/usr/bin/env python3' > /app/utils/matplotlib_chinese_support.py && \
+    echo '"""Docker环境中文字体支持"""' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import os' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import matplotlib' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import matplotlib.font_manager as fm' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'def setup_chinese_matplotlib():' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    """设置matplotlib支持中文显示"""' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    try:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # Docker环境中文字体路径' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        font_paths = [' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ]' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        for font_path in font_paths:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            if os.path.exists(font_path):' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                font_prop = fm.FontProperties(fname=font_path)' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                matplotlib.rcParams[\"font.family\"] = font_prop.get_name()' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                print(f\"✓ 已设置中文字体: {font_prop.get_name()}\")' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                break' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # 备用方案' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        chinese_fonts = [\"WenQuanYi Zen Hei\", \"WenQuanYi Micro Hei\", \"SimHei\"]' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams[\"font.sans-serif\"] = chinese_fonts' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams[\"font.family\"] = \"sans-serif\"' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # 解决负号显示问题' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams[\"axes.unicode_minus\"] = False' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        return True' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    except Exception as e:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        print(f\"⚠ 设置中文支持时出错: {e}\")' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        return False' >> /app/utils/matplotlib_chinese_support.py
+
+# 创建数据目录
+RUN mkdir -p /workspace/data /workspace/output && \
+    chown -R analyst:analyst /workspace
+
+# 切换到非root用户
+USER analyst
+
+# 设置 Python 路径
+ENV PATH="/home/analyst/.local/bin:$PATH"
+
+# 创建默认的 matplotlib 配置
+RUN mkdir -p /home/analyst/.config/matplotlib && \
+    echo "backend: Agg" > /home/analyst/.config/matplotlib/matplotlibrc
+
+# 验证安装
+RUN python -c "import pandas, numpy, matplotlib, seaborn, sklearn, xgboost, lightgbm, plotly; print('All packages imported successfully')"
+
+# 设置默认命令
+CMD ["python", "--version"]
