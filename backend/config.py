@@ -34,6 +34,20 @@ class Settings(BaseSettings):
     # RAG
     top_k: int = int(os.getenv("TOP_K", "5"))
 
+    # LLM Parameters
+    default_temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
+    default_max_tokens: int = int(os.getenv("DEFAULT_MAX_TOKENS", "2000"))
+    default_top_p: float = float(os.getenv("DEFAULT_TOP_P", "0.9"))
+
+    # Feedback System
+    enable_feedback_system: bool = os.getenv("ENABLE_FEEDBACK_SYSTEM", "true").lower() == "true"
+    feedback_weight_threshold: float = float(os.getenv("FEEDBACK_WEIGHT_THRESHOLD", "0.5"))
+    min_feedback_for_optimization: int = int(os.getenv("MIN_FEEDBACK_FOR_OPTIMIZATION", "5"))
+
+    # Document Management
+    enable_document_update: bool = os.getenv("ENABLE_DOCUMENT_UPDATE", "true").lower() == "true"
+    enable_document_deletion: bool = os.getenv("ENABLE_DOCUMENT_DELETION", "true").lower() == "true"
+
     # OCR (Phase 2: PaddleOCR配置)
     ocr_lang: str = os.getenv("OCR_LANG", "en")  # 'en' 英文, 'ch' 中文, 'en+ch' 混合
 
