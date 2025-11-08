@@ -15,3 +15,7 @@
 ## llama.cpp 配合 LangChain 1.0 使用的正确方法总结
 
 **LangChain 1.0 与 llama.cpp 的集成主要通过两种方式：一是使用 llama-cpp-python 库直接调用本地模型，二是通过 llama-server 启动 OpenAI 兼容的 API 服务**。**推荐方式是安装 `langchain-community` 和 `llama-cpp-python` 包，然后使用 `ChatLlamaCpp` 类初始化本地模型**，指定模型路径、GPU 层数（`n_gpu_layers`）、批处理大小（`n_batch`）和线程数等参数以优化推理性能。**对于生产环境，可启动 llama-server 的 OpenAI 兼容 API（端口 8080），然后在 LangChain 中配置本地 API 端点和虚拟密钥来调用本地模型**，这样可充分利用多并发请求和高级特性如语法约束、工具绑定等。**LangChain 1.0 推荐使用 Python 3.11-3.13、uv 包管理器以及最新的 langchain-core 和 langchain 包，确保与最新的 LLM 集成接口兼容**。
+
+## Ollama 迁移到 llama.cpp 的正确方法总结
+
+**Ollama 模型迁移到 llama.cpp 的关键是理解两者的关系——Ollama 本质上是构建在 llama.cpp 之上的包装层，Ollama 下载的模型以 GGUF 格式存储在 `~/.ollama/models/blobs/` 目录中，可以直接在 llama.cpp 中使用**。**最简便的迁移方式是定位 Ollama 下载的模型文件：运行 `ollama show <model_name>` 查看 FROM 字段找到实际模型路径，然后直接用 llama-cpp 或 llama-server 指向该 GGUF 文件即可，无需格式转换**。**对于未预装的新模型，建议从 HuggingFace 直接下载 GGUF 格式模型，或使用 llama.cpp 附带的 `convert_hf_to_gguf.py` 脚本将 HuggingFace 模型转换为 GGUF 格式**。**迁移后使用 `llama-server -m <model_path> --port 8080` 启动 OpenAI 兼容 API 服务器，既可获得性能提升（13%-80% 更快），又可与 LangChain 1.0 等框架无缝集成**。**关键优势是 llama.cpp 原生支持更多后端加速（Vulkan、CUDA、Metal 等）、更小的磁盘占用、更快的推理速度，适合生产环境部署**。

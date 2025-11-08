@@ -45,3 +45,7 @@ python -c "import paddle; print(paddle.device.get_all_custom_device_type())"
 - 注意 NumPy 兼容性（建议 NumPy < 2.0）。
 - 首次运行需预留模型下载时间。
 - 在生产或 CI 环境测试时验证硬件与后端兼容性及稳定性。
+
+## PaddleOCR 最新版配合 LangChain 1.0 使用的正确方法总结
+
+**PaddleOCR 3.x 与 LangChain 1.0 的集成主要用于构建 RAG 系统，先用 PaddleOCR 的文档解析能力（PP-StructureV3 或 PaddleOCR-VL）提取结构化文本、表格、公式等信息，然后通过 LangChain 的文本分割、向量存储和检索链条进行处理**。**推荐流程是：使用 `PaddleOCR()` 或 `PPStructureV3()` 从 PDF/图像中提取文本并转换为 Markdown/JSON，然后将提取结果转换为 LangChain 的 `Document` 对象，并用 `RecursiveCharacterTextSplitter` 进行分块处理**。**最后使用 LangChain 1.0 的向量存储（如 FAISS）+ 嵌入模型（HuggingFace BGE 或其他）+ LLM（如 ChatOpenAI 或本地 llama.cpp）构建 `RetrievalQA` 链进行问答**。**对于复杂文档结构识别，建议优先使用 PaddleOCR-VL（0.9B 参数的视觉语言模型，支持 109 语言）而非纯 OCR，以获得更精准的布局理解和元素识别**。**关键是确保 Python 环境支持 PaddleOCR 的依赖（paddlepaddle、paddleocr）以及 LangChain 1.0 的核心包和社区集成包（langchain、langchain-community）的兼容性**。
