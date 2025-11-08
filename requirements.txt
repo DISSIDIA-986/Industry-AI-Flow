@@ -66,7 +66,11 @@ aiofiles>=23.2.0              # Async file operations
 PyPDF2>=3.0.1                 # PDF processing
 python-docx>=1.1.0            # Word document processing
 pillow>=10.1.0                # Image processing
-pytesseract>=0.3.10           # OCR functionality
+pytesseract>=0.3.10           # OCR functionality (Tesseract backend)
+paddlepaddle>=2.6.0           # PaddlePaddle deep learning framework (>=2.6.0 for MPS support)
+paddleocr>=3.3.0              # PaddleOCR 3.3.1 with PP-OCRv5
+numpy>=1.26.4,<2.0            # NumPy (PaddleOCR compatibility: <2.0)
+baidu-aip>=4.16.0             # Baidu AI SDK (OCR API fallback)
 openpyxl>=3.1.2               # Excel file support
 xlrd>=2.0.1                   # Legacy Excel support
 
