@@ -10,7 +10,7 @@ import tempfile
 import logging
 
 from backend.services.document_manager import DocumentManager, DocumentOperation
-from backend.services.vectorstore import VectorStore
+from backend.services.core.vectorstore import VectorStore
 from backend.config import settings
 
 logger = logging.getLogger(__name__)

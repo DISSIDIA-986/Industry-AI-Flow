@@ -23,7 +23,7 @@ def test_data_loading():
     print("📊 测试数据加载功能")
     print("="*60)
 
-    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/datasets/Housing.csv"
+    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
 
     try:
         # 读取数据

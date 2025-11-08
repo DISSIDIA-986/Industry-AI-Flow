@@ -1,6 +1,6 @@
 from rank_bm25 import BM25Okapi
-from backend.services.embedder import embed_single_text
-from backend.services.vectorstore import VectorStore
+from backend.services.core.embedder import embed_single_text
+from backend.services.core.vectorstore import VectorStore
 import jieba
 
 

@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 from backend.services.session_manager import SessionManager
-from backend.services.vectorstore import VectorStore
-from backend.services.feedback_manager import FeedbackManager
+from backend.services.core.vectorstore import VectorStore
+from backend.services.feedback_system.feedback_manager import FeedbackManager
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
