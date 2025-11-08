@@ -1,20 +1,33 @@
-from backend.services.core.embedder import embed_single_text
-from backend.services.core.vectorstore import VectorStore
-from backend.services.llm_integration.llm_client import get_llm_client, get_backend_status
-from backend.services.retrieval.hybrid_search import HybridRetriever
-from backend.services.retrieval.reranker import Reranker
-from backend.services.feedback_system.feedback_manager import FeedbackManager, UserFeedback, FeedbackType
-from backend.config import settings
-import uuid
 import datetime
 import logging
 import time
+import uuid
+
+from backend.config import settings
+from backend.services.core.embedder import embed_single_text
+from backend.services.core.vectorstore import VectorStore
+from backend.services.feedback_system.feedback_manager import (
+    FeedbackManager,
+    FeedbackType,
+    UserFeedback,
+)
+from backend.services.llm_integration.llm_client import (
+    get_backend_status,
+    get_llm_client,
+)
+from backend.services.retrieval.hybrid_search import HybridRetriever
+from backend.services.retrieval.reranker import Reranker
 
 logger = logging.getLogger(__name__)
 
 
 class SimpleRAG:
-    def __init__(self, use_hybrid_search: bool = True, use_reranker: bool = True, enable_feedback: bool = True):
+    def __init__(
+        self,
+        use_hybrid_search: bool = True,
+        use_reranker: bool = True,
+        enable_feedback: bool = True,
+    ):
         """
         初始化 RAG 系统
 
@@ -51,7 +64,13 @@ class SimpleRAG:
         else:
             self.feedback_manager = None
 
-    def query(self, question: str, top_k: int = None, temperature: float = None, max_tokens: int = None) -> dict:
+    def query(
+        self,
+        question: str,
+        top_k: int = None,
+        temperature: float = None,
+        max_tokens: int = None,
+    ) -> dict:
         """RAG查询流程"""
         if top_k is None:
             top_k = settings.top_k
@@ -67,13 +86,18 @@ class SimpleRAG:
             # 混合检索（BM25 + 向量），先获取更多候选（top_k * 2）
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             similar_chunks = self.hybrid_retriever.search(
-                query=question, top_k=retrieve_k, vector_weight=vector_weight, bm25_weight=bm25_weight
+                query=question,
+                top_k=retrieve_k,
+                vector_weight=vector_weight,
+                bm25_weight=bm25_weight,
             )
         else:
             # 纯向量检索（Phase 1 方法）
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             query_embedding = embed_single_text(question)
-            similar_chunks = self.vectorstore.similarity_search(query_embedding, top_k=retrieve_k)
+            similar_chunks = self.vectorstore.similarity_search(
+                query_embedding, top_k=retrieve_k
+            )
 
         # Phase 2 Step 3: 使用重排序器精排
         if self.use_reranker and self.reranker and similar_chunks:
@@ -91,16 +115,21 @@ class SimpleRAG:
         prompt = self._build_prompt(question, context)
 
         # 4. LLM生成答案
-        answer = self.llm_client.generate(prompt, temperature=temperature, max_tokens=max_tokens)
+        answer = self.llm_client.generate(
+            prompt, temperature=temperature, max_tokens=max_tokens
+        )
 
         # 5. 返回结果
         return {
             "query_id": query_id,
             "question": question,
             "answer": answer,
-            "sources": [chunk['doc_id'] for chunk in similar_chunks],
+            "sources": [chunk["doc_id"] for chunk in similar_chunks],
             "retrieved_chunks": similar_chunks,
-            "search_weights": {"vector_weight": vector_weight, "bm25_weight": bm25_weight}
+            "search_weights": {
+                "vector_weight": vector_weight,
+                "bm25_weight": bm25_weight,
+            },
         }
 
     def _get_adaptive_search_weights(self) -> tuple:
@@ -140,8 +169,16 @@ class SimpleRAG:
 
 **你的回答**："""
 
-    def submit_feedback(self, query_id: str, question: str, answer: str, feedback_type: str,
-                       user_comment: str = None, retrieved_chunks: list = None, feedback_weight: float = 1.0) -> bool:
+    def submit_feedback(
+        self,
+        query_id: str,
+        question: str,
+        answer: str,
+        feedback_type: str,
+        user_comment: str = None,
+        retrieved_chunks: list = None,
+        feedback_weight: float = 1.0,
+    ) -> bool:
         """提交用户反馈"""
         if not self.feedback_manager:
             logger.warning("Feedback system is not enabled")
@@ -156,7 +193,7 @@ class SimpleRAG:
                 feedback_type=feedback_enum,
                 user_comment=user_comment,
                 retrieved_chunks=retrieved_chunks or [],
-                feedback_weight=feedback_weight
+                feedback_weight=feedback_weight,
             )
             return self.feedback_manager.record_feedback(feedback)
         except ValueError:
@@ -179,13 +216,15 @@ class SimpleRAG:
                 "not_helpful_count": stats.not_helpful_count,
                 "partially_helpful_count": stats.partially_helpful_count,
                 "success_rate": stats.success_rate,
-                "avg_feedback_weight": stats.avg_feedback_weight
+                "avg_feedback_weight": stats.avg_feedback_weight,
             }
         except Exception as e:
             logger.error(f"Failed to get feedback statistics: {e}")
             return {"error": str(e)}
 
-    def get_high_quality_documents(self, min_score: float = 0.5, limit: int = 100) -> list:
+    def get_high_quality_documents(
+        self, min_score: float = 0.5, limit: int = 100
+    ) -> list:
         """获取高质量文档列表"""
         if not self.feedback_manager:
             return []
@@ -214,52 +253,65 @@ class SimpleRAG:
             all_chunks = []
 
             for doc in documents:
-                content = doc.get('content', '')
-                metadata = doc.get('metadata', {})
-                doc_id = metadata.get('doc_id', str(uuid.uuid4()))
+                content = doc.get("content", "")
+                metadata = doc.get("metadata", {})
+                doc_id = metadata.get("doc_id", str(uuid.uuid4()))
 
                 # Use the standalone chunk_text function
-                chunk_dicts = chunk_text(content, chunk_size=settings.chunk_size, chunk_overlap=settings.chunk_overlap)
+                chunk_dicts = chunk_text(
+                    content,
+                    chunk_size=settings.chunk_size,
+                    chunk_overlap=settings.chunk_overlap,
+                )
                 for i, chunk_dict in enumerate(chunk_dicts):
-                    all_chunks.append({
-                        'doc_id': doc_id,
-                        'chunk_id': f"{doc_id}_chunk_{i}",
-                        'content': chunk_dict['content'],
-                        'metadata': metadata
-                    })
+                    all_chunks.append(
+                        {
+                            "doc_id": doc_id,
+                            "chunk_id": f"{doc_id}_chunk_{i}",
+                            "content": chunk_dict["content"],
+                            "metadata": metadata,
+                        }
+                    )
 
             # 向量化并存储
-            texts = [chunk['content'] for chunk in all_chunks]
+            texts = [chunk["content"] for chunk in all_chunks]
             embeddings = embed_texts(texts)
 
             # Store documents using store_document_with_chunks
             # Group by doc_id for proper storage
             doc_groups = {}
             for chunk, embedding in zip(all_chunks, embeddings):
-                doc_id = chunk['doc_id']
+                doc_id = chunk["doc_id"]
                 if doc_id not in doc_groups:
-                    doc_groups[doc_id] = {'chunks': [], 'embeddings': [], 'metadata': chunk['metadata']}
-                doc_groups[doc_id]['chunks'].append(chunk['content'])
-                doc_groups[doc_id]['embeddings'].append(embedding)
+                    doc_groups[doc_id] = {
+                        "chunks": [],
+                        "embeddings": [],
+                        "metadata": chunk["metadata"],
+                    }
+                doc_groups[doc_id]["chunks"].append(chunk["content"])
+                doc_groups[doc_id]["embeddings"].append(embedding)
 
             # Store each document
             for doc_id, data in doc_groups.items():
-                metadata = data['metadata']
-                filename = metadata.get('source', doc_id)
-                filepath = metadata.get('source', doc_id)
+                metadata = data["metadata"]
+                filename = metadata.get("source", doc_id)
+                filepath = metadata.get("source", doc_id)
                 self.vectorstore.store_document_with_chunks(
                     filename=filename,
                     filepath=filepath,
-                    chunks=data['chunks'],
-                    embeddings=data['embeddings']
+                    chunks=data["chunks"],
+                    embeddings=data["embeddings"],
                 )
 
-            logger.info(f"Successfully added {len(documents)} documents with {len(all_chunks)} chunks")
+            logger.info(
+                f"Successfully added {len(documents)} documents with {len(all_chunks)} chunks"
+            )
             return True
 
         except Exception as e:
             logger.error(f"Failed to add documents: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 

@@ -1,0 +1,47 @@
+#!/bin/bash
+# 文档规范强制检查脚本
+
+set -e
+
+echo "🔍 执行文档规范检查..."
+
+# 1. 检查新增的Markdown文件
+STAGED_MD_FILES=$(git diff --cached --diff-filter=A --name-only "*.md")
+
+if [ -z "$STAGED_MD_FILES" ]; then
+    echo "✅ 没有Markdown文件需要检查"
+    exit 0
+fi
+
+# 2. 检查文件路径
+for file in $STAGED_MD_FILES; do
+    # 跳过 .github 目录下的文件（标准文档本身）
+    if [[ "$file" == .github/* ]]; then
+        continue
+    fi
+
+    # 检查是否在允许的目录中
+    if [[ ! "$file" =~ ^(docs/architecture/|docs/implementation/|docs/user-guide/|docs/api/|docs/deployment/|docs/testing/|docs/maintenance/) ]]; then
+        echo "❌ 错误: 文件 '$file' 不在允许的文档目录中"
+        echo "允许的目录: docs/architecture/, docs/implementation/, docs/user-guide/, docs/api/, docs/deployment/, docs/testing/, docs/maintenance/"
+        exit 1
+    fi
+
+    # 检查文件命名格式
+    filename=$(basename "$file")
+    if [[ ! "$filename" =~ ^[a-zA-Z0-9_-]+-[a-zA-Z0-9_-]+\.md$ ]]; then
+        echo "❌ 错误: 文件 '$filename' 不符合命名格式"
+        echo "正确格式: 功能描述-文档类型.md (例如: user-authentication-api.md)"
+        exit 1
+    fi
+
+    # 检查文档类型是否允许
+    if [[ "$file" =~ ^(设计|架构|计划|概念|草稿|笔记|思考|总结|分析)(.*)\.md$ ]] || [[ "$filename" =~ ^(draft|temp|notes|thoughts|conversation|chat)(.*)\.md$ ]]; then
+        echo "❌ 错误: 禁止生成临时或概念性文档 '$file'"
+        echo "只允许生成: 技术设计文档、API说明、测试报告、实施指南、部署文档、架构文档、用户手册、维护指南"
+        exit 1
+    fi
+done
+
+echo "✅ 文档规范检查通过"
+exit 0

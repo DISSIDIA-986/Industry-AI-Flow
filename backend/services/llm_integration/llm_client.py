@@ -2,9 +2,9 @@
 LLM 客户端抽象层
 支持 Ollama 和 llama.cpp 后端切换
 """
-from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 from backend.config import settings
 
@@ -21,7 +21,7 @@ class BaseLLMClient(ABC):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> str:
         """生成文本"""
         pass
@@ -46,15 +46,17 @@ class LLMClientFactory:
         Returns:
             LLM客户端实例
         """
-        backend = backend or getattr(settings, 'llm_backend', 'llama_cpp')
+        backend = backend or getattr(settings, "llm_backend", "llama_cpp")
 
         try:
             if backend == "ollama":
                 from .ollama_client import OllamaClient
+
                 logger.info("✅ 使用 Ollama 后端")
                 return OllamaClient()
             elif backend == "llama_cpp":
                 from .llama_cpp_client import LlamaCppClient
+
                 logger.info("✅ 使用 llama.cpp 后端")
                 return LlamaCppClient()
             else:
@@ -67,6 +69,7 @@ class LLMClientFactory:
             if backend == "llama_cpp":
                 logger.warning("llama.cpp 不可用，降级到 Ollama")
                 from .ollama_client import OllamaClient
+
                 return OllamaClient()
             else:
                 raise RuntimeError(f"缺少必要的依赖，请检查安装: {e}")
@@ -89,18 +92,18 @@ def get_backend_status() -> Dict[str, Any]:
     """获取当前后端状态信息"""
     try:
         client = get_llm_client()
-        backend = getattr(settings, 'llm_backend', 'unknown')
+        backend = getattr(settings, "llm_backend", "unknown")
 
         return {
             "status": "success",
             "backend": backend,
             "model_info": client.get_model_info(),
-            "is_loaded": client.is_loaded() if hasattr(client, 'is_loaded') else True
+            "is_loaded": client.is_loaded() if hasattr(client, "is_loaded") else True,
         }
     except Exception as e:
         logger.error(f"获取后端状态失败: {e}")
         return {
             "status": "error",
-            "backend": getattr(settings, 'llm_backend', 'unknown'),
-            "error": str(e)
+            "backend": getattr(settings, "llm_backend", "unknown"),
+            "error": str(e),
         }

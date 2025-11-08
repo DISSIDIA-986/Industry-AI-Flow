@@ -7,31 +7,33 @@
 3. 图片/扫描文档 → OCR处理 → RAG向量检索
 """
 
-import os
 import logging
-from typing import Dict, List, Any, Optional, Union
-from pathlib import Path
+import os
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentType(Enum):
     """文档类型枚举"""
-    STRUCTURED_DATA = "structured_data"      # CSV, Excel - 使用数据分析
-    TEXT_DOCUMENT = "text_document"          # PDF, TXT, DOCX - 使用RAG
-    IMAGE_DOCUMENT = "image_document"        # JPG, PNG - 使用OCR
-    CODE_FILE = "code_file"                  # PY, JS - 特殊处理
-    UNKNOWN = "unknown"                      # 未知类型
+
+    STRUCTURED_DATA = "structured_data"  # CSV, Excel - 使用数据分析
+    TEXT_DOCUMENT = "text_document"  # PDF, TXT, DOCX - 使用RAG
+    IMAGE_DOCUMENT = "image_document"  # JPG, PNG - 使用OCR
+    CODE_FILE = "code_file"  # PY, JS - 特殊处理
+    UNKNOWN = "unknown"  # 未知类型
 
 
 class ProcessingStrategy(Enum):
     """处理策略枚举"""
-    DATA_ANALYSIS = "data_analysis"          # 数据分析Agent
-    RAG_RETRIEVAL = "rag_retrieval"          # RAG向量检索
-    OCR_PROCESSING = "ocr_processing"        # OCR文字识别
-    HYBRID = "hybrid"                        # 混合处理
-    UNSUPPORTED = "unsupported"              # 不支持
+
+    DATA_ANALYSIS = "data_analysis"  # 数据分析Agent
+    RAG_RETRIEVAL = "rag_retrieval"  # RAG向量检索
+    OCR_PROCESSING = "ocr_processing"  # OCR文字识别
+    HYBRID = "hybrid"  # 混合处理
+    UNSUPPORTED = "unsupported"  # 不支持
 
 
 class SmartDocumentRouter:
@@ -42,35 +44,32 @@ class SmartDocumentRouter:
         # 文件扩展名到文档类型的映射
         self.extension_mapping = {
             # 结构化数据
-            '.csv': DocumentType.STRUCTURED_DATA,
-            '.xlsx': DocumentType.STRUCTURED_DATA,
-            '.xls': DocumentType.STRUCTURED_DATA,
-            '.tsv': DocumentType.STRUCTURED_DATA,
-            '.parquet': DocumentType.STRUCTURED_DATA,
-            '.json': DocumentType.STRUCTURED_DATA,
-
+            ".csv": DocumentType.STRUCTURED_DATA,
+            ".xlsx": DocumentType.STRUCTURED_DATA,
+            ".xls": DocumentType.STRUCTURED_DATA,
+            ".tsv": DocumentType.STRUCTURED_DATA,
+            ".parquet": DocumentType.STRUCTURED_DATA,
+            ".json": DocumentType.STRUCTURED_DATA,
             # 文本文档
-            '.pdf': DocumentType.TEXT_DOCUMENT,
-            '.txt': DocumentType.TEXT_DOCUMENT,
-            '.md': DocumentType.TEXT_DOCUMENT,
-            '.doc': DocumentType.TEXT_DOCUMENT,
-            '.docx': DocumentType.TEXT_DOCUMENT,
-            '.rtf': DocumentType.TEXT_DOCUMENT,
-
+            ".pdf": DocumentType.TEXT_DOCUMENT,
+            ".txt": DocumentType.TEXT_DOCUMENT,
+            ".md": DocumentType.TEXT_DOCUMENT,
+            ".doc": DocumentType.TEXT_DOCUMENT,
+            ".docx": DocumentType.TEXT_DOCUMENT,
+            ".rtf": DocumentType.TEXT_DOCUMENT,
             # 图片文档
-            '.jpg': DocumentType.IMAGE_DOCUMENT,
-            '.jpeg': DocumentType.IMAGE_DOCUMENT,
-            '.png': DocumentType.IMAGE_DOCUMENT,
-            '.bmp': DocumentType.IMAGE_DOCUMENT,
-            '.tiff': DocumentType.IMAGE_DOCUMENT,
-            '.gif': DocumentType.IMAGE_DOCUMENT,
-
+            ".jpg": DocumentType.IMAGE_DOCUMENT,
+            ".jpeg": DocumentType.IMAGE_DOCUMENT,
+            ".png": DocumentType.IMAGE_DOCUMENT,
+            ".bmp": DocumentType.IMAGE_DOCUMENT,
+            ".tiff": DocumentType.IMAGE_DOCUMENT,
+            ".gif": DocumentType.IMAGE_DOCUMENT,
             # 代码文件
-            '.py': DocumentType.CODE_FILE,
-            '.js': DocumentType.CODE_FILE,
-            '.java': DocumentType.CODE_FILE,
-            '.cpp': DocumentType.CODE_FILE,
-            '.c': DocumentType.CODE_FILE,
+            ".py": DocumentType.CODE_FILE,
+            ".js": DocumentType.CODE_FILE,
+            ".java": DocumentType.CODE_FILE,
+            ".cpp": DocumentType.CODE_FILE,
+            ".c": DocumentType.CODE_FILE,
         }
 
         # 文档类型到处理策略的映射
@@ -79,15 +78,12 @@ class SmartDocumentRouter:
             DocumentType.TEXT_DOCUMENT: ProcessingStrategy.RAG_RETRIEVAL,
             DocumentType.IMAGE_DOCUMENT: ProcessingStrategy.OCR_PROCESSING,
             DocumentType.CODE_FILE: ProcessingStrategy.RAG_RETRIEVAL,  # 代码也使用RAG
-            DocumentType.UNKNOWN: ProcessingStrategy.UNSUPPORTED
+            DocumentType.UNKNOWN: ProcessingStrategy.UNSUPPORTED,
         }
 
         logger.info("智能文档路由器初始化完成")
 
-    def route_document(
-        self,
-        file_path: Union[str, Path]
-    ) -> Dict[str, Any]:
+    def route_document(self, file_path: Union[str, Path]) -> Dict[str, Any]:
         """
         路由文档到合适的处理策略
 
@@ -129,7 +125,7 @@ class SmartDocumentRouter:
             "rationale": rationale,
             "should_use_rag": strategy == ProcessingStrategy.RAG_RETRIEVAL,
             "should_use_data_analysis": strategy == ProcessingStrategy.DATA_ANALYSIS,
-            "should_use_ocr": strategy == ProcessingStrategy.OCR_PROCESSING
+            "should_use_ocr": strategy == ProcessingStrategy.OCR_PROCESSING,
         }
 
         logger.info(
@@ -143,7 +139,7 @@ class SmartDocumentRouter:
         self,
         question: str,
         related_files: Optional[List[str]] = None,
-        intent_result: Optional[Any] = None
+        intent_result: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         路由用户查询到合适的处理流程
@@ -167,16 +163,20 @@ class SmartDocumentRouter:
                     routing = self.route_document(file_path)
                     file_analysis.append(routing)
 
-                    if routing['should_use_data_analysis']:
+                    if routing["should_use_data_analysis"]:
                         has_structured_data = True
-                    if routing['should_use_rag']:
+                    if routing["should_use_rag"]:
                         has_text_documents = True
 
         # 2. 基于意图和文件类型决定策略
         if intent_result:
-            intent_type = getattr(intent_result, 'intent', None)
+            intent_type = getattr(intent_result, "intent", None)
             if intent_type:
-                intent_value = intent_type.value if hasattr(intent_type, 'value') else str(intent_type)
+                intent_value = (
+                    intent_type.value
+                    if hasattr(intent_type, "value")
+                    else str(intent_type)
+                )
 
                 # 数据分析意图
                 if intent_value == "data_analysis":
@@ -234,8 +234,12 @@ class SmartDocumentRouter:
             "has_structured_data": has_structured_data,
             "has_text_documents": has_text_documents,
             "rationale": self._generate_query_rationale(
-                question, strategy, has_structured_data, has_text_documents, intent_result
-            )
+                question,
+                strategy,
+                has_structured_data,
+                has_text_documents,
+                intent_result,
+            ),
         }
 
     def _identify_document_type(self, file_path: Path) -> DocumentType:
@@ -245,30 +249,26 @@ class SmartDocumentRouter:
         return self.extension_mapping.get(ext, DocumentType.UNKNOWN)
 
     def _recommend_agent(
-        self,
-        doc_type: DocumentType,
-        strategy: ProcessingStrategy
+        self, doc_type: DocumentType, strategy: ProcessingStrategy
     ) -> str:
         """推荐处理Agent"""
         agent_mapping = {
             ProcessingStrategy.DATA_ANALYSIS: "DataAnalysisAgent",
             ProcessingStrategy.RAG_RETRIEVAL: "RAGAgent",
             ProcessingStrategy.OCR_PROCESSING: "OCRAgent",
-            ProcessingStrategy.UNSUPPORTED: "None"
+            ProcessingStrategy.UNSUPPORTED: "None",
         }
 
         return agent_mapping.get(strategy, "None")
 
     def _collect_metadata(
-        self,
-        file_path: Path,
-        doc_type: DocumentType
+        self, file_path: Path, doc_type: DocumentType
     ) -> Dict[str, Any]:
         """收集文档元数据"""
         metadata = {
             "extension": file_path.suffix.lower(),
             "size_bytes": 0,
-            "exists": file_path.exists()
+            "exists": file_path.exists(),
         }
 
         if file_path.exists():
@@ -285,7 +285,7 @@ class SmartDocumentRouter:
         self,
         doc_type: DocumentType,
         strategy: ProcessingStrategy,
-        metadata: Dict[str, Any]
+        metadata: Dict[str, Any],
     ) -> str:
         """生成路由决策原因"""
         rationale_templates = {
@@ -308,9 +308,8 @@ class SmartDocumentRouter:
                 "将作为文本文档处理，使用RAG进行代码片段检索。"
             ),
             DocumentType.UNKNOWN: (
-                f"未识别的文件类型({metadata.get('extension', 'unknown')})，"
-                "无法自动选择处理策略。"
-            )
+                f"未识别的文件类型({metadata.get('extension', 'unknown')})，" "无法自动选择处理策略。"
+            ),
         }
 
         return rationale_templates.get(doc_type, "无法确定处理策略")
@@ -321,15 +320,19 @@ class SmartDocumentRouter:
         strategy: ProcessingStrategy,
         has_structured_data: bool,
         has_text_documents: bool,
-        intent_result: Optional[Any]
+        intent_result: Optional[Any],
     ) -> str:
         """生成查询路由原因"""
         parts = []
 
         # 意图部分
-        if intent_result and hasattr(intent_result, 'intent'):
-            intent_value = intent_result.intent.value if hasattr(intent_result.intent, 'value') else str(intent_result.intent)
-            confidence = getattr(intent_result, 'confidence', 0)
+        if intent_result and hasattr(intent_result, "intent"):
+            intent_value = (
+                intent_result.intent.value
+                if hasattr(intent_result.intent, "value")
+                else str(intent_result.intent)
+            )
+            confidence = getattr(intent_result, "confidence", 0)
             parts.append(f"意图分类: {intent_value} (置信度: {confidence:.2f})")
 
         # 文件类型部分

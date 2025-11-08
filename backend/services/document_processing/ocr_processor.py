@@ -15,8 +15,8 @@ Features:
 - NumPy < 2.0 (兼容性)
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
@@ -81,8 +81,8 @@ class OCRProcessor:
     def _init_local_ocr(self, use_gpu: bool):
         """初始化本地PaddleOCR 3.3.1"""
         try:
-            from paddleocr import PaddleOCR
             import paddle
+            from paddleocr import PaddleOCR
 
             # 检测MPS设备 (PaddleCustomDevice)
             device = "cpu"
@@ -92,7 +92,7 @@ class OCRProcessor:
                 try:
                     # 检查MPS自定义设备
                     custom_devices = paddle.device.get_all_custom_device_type()
-                    if 'mps' in custom_devices:
+                    if "mps" in custom_devices:
                         device = "mps"
                         use_gpu_flag = True
                         logger.info("✅ 检测到Apple MPS设备，启用GPU加速 (预期2-5x性能提升)")
@@ -108,17 +108,17 @@ class OCRProcessor:
             # 初始化PaddleOCR 3.3.1
             # PP-OCRv5支持: ch (简繁英日拼音混合), en, chinese_cht, japan, korean
             ocr = PaddleOCR(
-                use_angle_cls=True,      # 文字方向检测
-                lang=self.lang,          # PP-OCRv5单模型支持多语言
-                use_gpu=use_gpu_flag,    # GPU加速
+                use_angle_cls=True,  # 文字方向检测
+                lang=self.lang,  # PP-OCRv5单模型支持多语言
+                use_gpu=use_gpu_flag,  # GPU加速
                 show_log=False,
                 # PP-OCRv5性能优化
-                use_mp=True,             # 多进程
-                total_process_num=2,     # 进程数
+                use_mp=True,  # 多进程
+                total_process_num=2,  # 进程数
                 # 精度设置
-                det_db_thresh=0.3,       # 检测阈值
-                det_db_box_thresh=0.6,   # 框阈值
-                rec_batch_num=6,         # 识别批次大小
+                det_db_thresh=0.3,  # 检测阈值
+                det_db_box_thresh=0.6,  # 框阈值
+                rec_batch_num=6,  # 识别批次大小
             )
 
             logger.info(f"✅ PaddleOCR 3.3.1初始化成功")

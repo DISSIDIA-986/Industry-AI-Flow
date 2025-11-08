@@ -1,12 +1,13 @@
 """RAG Agent - 使用LangChain 1.0 统一create_agent API"""
 
 from langchain.agents import create_agent
-from langchain_ollama import ChatOllama
 from langchain_anthropic import ChatAnthropic
-from backend.tools.retrieval import hybrid_retrieval_tool
-from backend.tools.reranker import rerank_tool
+from langchain_ollama import ChatOllama
+
 from backend.agents.state import RAGAgentState
 from backend.config import settings
+from backend.tools.reranker import rerank_tool
+from backend.tools.retrieval import hybrid_retrieval_tool
 
 
 def _get_llm():
@@ -27,14 +28,12 @@ def _get_llm():
             api_key=settings.zhipu_api_key,
             base_url=settings.zhipu_base_url,
             timeout=settings.api_timeout_ms / 1000,  # 转换为秒
-            temperature=0
+            temperature=0,
         )
     else:
         # 使用本地Ollama（默认）
         return ChatOllama(
-            model=settings.ollama_model,
-            base_url=settings.ollama_host,
-            temperature=0
+            model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
 
 

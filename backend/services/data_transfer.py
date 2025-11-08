@@ -1,14 +1,16 @@
 """数据文件传递服务 - 支持文件映射和数据库中转两种方式"""
 
-import os
-import uuid
-import pandas as pd
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-from sqlalchemy import create_engine, text
-import tempfile
-import shutil
 import logging
+import os
+import shutil
+import tempfile
+import uuid
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import pandas as pd
+from sqlalchemy import create_engine, text
+
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class DataFileTransferError(Exception):
     """数据文件传递异常"""
+
     pass
 
 
@@ -37,9 +40,7 @@ class DataFileTransfer:
             logger.warning(f"数据库连接初始化失败: {e}")
 
     def transfer_file_for_docker(
-        self,
-        file_path: str,
-        transfer_method: str = "auto"
+        self, file_path: str, transfer_method: str = "auto"
     ) -> Dict[str, Any]:
         """
         为 Docker 环境传递数据文件
@@ -60,7 +61,7 @@ class DataFileTransfer:
             return {
                 "success": False,
                 "error": f"文件不存在: {file_path}",
-                "method": transfer_method
+                "method": transfer_method,
             }
 
         try:
@@ -84,7 +85,7 @@ class DataFileTransfer:
                 "success": False,
                 "error": str(e),
                 "method": transfer_method,
-                "file_info": file_info
+                "file_info": file_info,
             }
 
     def _choose_transfer_method(self, file_info: Dict[str, Any]) -> str:
@@ -96,13 +97,15 @@ class DataFileTransfer:
             return "file_mapping"
 
         # 大文件或需要数据库操作的文件使用数据库中转
-        if file_info.get("extension") in ['.csv', '.xlsx', '.xls', '.json', '.parquet']:
+        if file_info.get("extension") in [".csv", ".xlsx", ".xls", ".json", ".parquet"]:
             return "database"
 
         # 默认使用文件映射
         return "file_mapping"
 
-    def _file_mapping_transfer(self, file_path: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _file_mapping_transfer(
+        self, file_path: str, file_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """文件映射传递方式"""
         try:
             # 创建临时文件目录
@@ -128,14 +131,16 @@ class DataFileTransfer:
                 "metadata": {
                     "transfer_type": "file_mapping",
                     "cleanup_required": True,
-                    "container_accessible": True
-                }
+                    "container_accessible": True,
+                },
             }
 
         except Exception as e:
             raise DataFileTransferError(f"文件映射传递失败: {e}")
 
-    def _database_transfer(self, file_path: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _database_transfer(
+        self, file_path: str, file_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """数据库中转传递方式"""
         if not self.db_engine:
             raise DataFileTransferError("数据库连接不可用")
@@ -154,7 +159,7 @@ class DataFileTransfer:
                 if_exists="replace",
                 index=False,
                 method="multi",
-                chunksize=1000
+                chunksize=1000,
             )
 
             # 创建连接配置文件
@@ -162,8 +167,9 @@ class DataFileTransfer:
             config_content = self._create_db_config(table_name, file_info)
 
             config_file = self.temp_dir / f"{config_id}.json"
-            with open(config_file, 'w', encoding='utf-8') as f:
+            with open(config_file, "w", encoding="utf-8") as f:
                 import json
+
                 json.dump(config_content, f, ensure_ascii=False, indent=2)
 
             logger.info(f"数据库中转传递完成: {file_path} -> {table_name}")
@@ -180,8 +186,8 @@ class DataFileTransfer:
                     "table_name": table_name,
                     "rows": len(df),
                     "columns": len(df.columns),
-                    "cleanup_required": True
-                }
+                    "cleanup_required": True,
+                },
             }
 
         except Exception as e:
@@ -199,27 +205,29 @@ class DataFileTransfer:
             "size_mb": round(stat.st_size / (1024 * 1024), 2),
             "extension": path.suffix.lower(),
             "modified_time": stat.st_mtime,
-            "is_readable": os.access(file_path, os.R_OK)
+            "is_readable": os.access(file_path, os.R_OK),
         }
 
-    def _read_file_to_dataframe(self, file_path: str, file_info: Dict[str, Any]) -> pd.DataFrame:
+    def _read_file_to_dataframe(
+        self, file_path: str, file_info: Dict[str, Any]
+    ) -> pd.DataFrame:
         """根据文件类型读取数据到 DataFrame"""
         extension = file_info["extension"]
 
         try:
-            if extension == '.csv':
+            if extension == ".csv":
                 # 自动检测编码和分隔符
-                df = pd.read_csv(file_path, encoding='utf-8-sig')
-            elif extension in ['.xlsx', '.xls']:
+                df = pd.read_csv(file_path, encoding="utf-8-sig")
+            elif extension in [".xlsx", ".xls"]:
                 df = pd.read_excel(file_path)
-            elif extension == '.json':
-                df = pd.read_json(file_path, orient='records')
-            elif extension == '.parquet':
+            elif extension == ".json":
+                df = pd.read_json(file_path, orient="records")
+            elif extension == ".parquet":
                 df = pd.read_parquet(file_path)
             else:
                 # 尝试以 CSV 格式读取
                 logger.warning(f"不支持的文件类型 {extension}，尝试以 CSV 格式读取")
-                df = pd.read_csv(file_path, encoding='utf-8-sig')
+                df = pd.read_csv(file_path, encoding="utf-8-sig")
 
             # 基础数据清洗
             df = self._basic_data_cleaning(df)
@@ -236,7 +244,7 @@ class DataFileTransfer:
 
         # 处理列名（去除前后空格，替换特殊字符）
         df_clean.columns = [
-            str(col).strip().replace(' ', '_').replace('-', '_')
+            str(col).strip().replace(" ", "_").replace("-", "_")
             for col in df_clean.columns
         ]
 
@@ -245,7 +253,9 @@ class DataFileTransfer:
 
         return df_clean
 
-    def _create_db_config(self, table_name: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_db_config(
+        self, table_name: str, file_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """创建数据库连接配置"""
         return {
             "connection": {
@@ -253,13 +263,13 @@ class DataFileTransfer:
                 "port": settings.postgres_port,
                 "database": settings.postgres_db,
                 "user": settings.postgres_user or "current_user",
-                "password": settings.postgres_password or ""
+                "password": settings.postgres_password or "",
             },
             "table_info": {
                 "table_name": table_name,
                 "source_file": file_info["path"],
                 "file_size": file_info["size_mb"],
-                "transfer_timestamp": pd.Timestamp.now().isoformat()
+                "transfer_timestamp": pd.Timestamp.now().isoformat(),
             },
             "access_code_template": f"""
 # 数据库访问代码
@@ -281,14 +291,12 @@ print(df.head())
                 host=settings.postgres_host,
                 port=settings.postgres_port,
                 database=settings.postgres_db,
-                table_name=table_name
-            )
+                table_name=table_name,
+            ),
         }
 
     def create_container_access_script(
-        self,
-        transfer_result: Dict[str, Any],
-        script_name: str = "access_data.py"
+        self, transfer_result: Dict[str, Any], script_name: str = "access_data.py"
     ) -> str:
         """创建容器内数据访问脚本"""
         if transfer_result["method"] == "file_mapping":
@@ -298,7 +306,9 @@ print(df.head())
         else:
             raise DataFileTransferError(f"不支持的传递方式: {transfer_result['method']}")
 
-    def _create_file_access_script(self, transfer_result: Dict[str, Any], script_name: str) -> str:
+    def _create_file_access_script(
+        self, transfer_result: Dict[str, Any], script_name: str
+    ) -> str:
         """创建文件访问脚本"""
         container_path = transfer_result["container_path"]
         file_info = transfer_result["file_info"]
@@ -352,7 +362,9 @@ except Exception as e:
 
         return script_content
 
-    def _create_database_access_script(self, transfer_result: Dict[str, Any], script_name: str) -> str:
+    def _create_database_access_script(
+        self, transfer_result: Dict[str, Any], script_name: str
+    ) -> str:
         """创建数据库访问脚本"""
         config_file = transfer_result["config_file"]
         table_name = transfer_result["transferred_path"]

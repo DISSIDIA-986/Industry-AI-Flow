@@ -7,16 +7,16 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Union, Callable
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langchain_core.runnables import Runnable, RunnablePassthrough, RunnableLambda
-from langchain_core.runnables.config import RunnableConfig
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
+from langchain_core.runnables.config import RunnableConfig
 
-from backend.services.prompt_manager import PromptManager, UsageLog, PromptInfo
+from backend.services.prompt_manager import PromptInfo, PromptManager, UsageLog
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PromptContext:
     """Prompt上下文信息"""
+
     user_request: str
     session_id: str
     user_id: Optional[str] = None
@@ -75,7 +76,7 @@ class PromptManagerMiddleware:
         prompt_manager: PromptManager,
         enable_experiments: bool = True,
         enable_monitoring: bool = True,
-        context_enrichers: Optional[List[Callable]] = None
+        context_enrichers: Optional[List[Callable]] = None,
     ):
         """
         初始化中间件
@@ -97,7 +98,7 @@ class PromptManagerMiddleware:
         self,
         prompt_name: str,
         category: str,
-        context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None
+        context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> Runnable:
         """
         创建带有Prompt管理的执行链
@@ -123,17 +124,19 @@ class PromptManagerMiddleware:
                     category=category,
                     context=prompt_context.metadata,
                     variables=prompt_context.variables,
-                    enable_experiments=self.enable_experiments
+                    enable_experiments=self.enable_experiments,
                 )
 
                 # 注入Prompt到输入
                 enriched_inputs = inputs.copy()
-                enriched_inputs.update({
-                    'system_prompt': rendered_content,
-                    'prompt_info': prompt_info,
-                    'prompt_context': prompt_context,
-                    'usage_start_time': datetime.now()
-                })
+                enriched_inputs.update(
+                    {
+                        "system_prompt": rendered_content,
+                        "prompt_info": prompt_info,
+                        "prompt_context": prompt_context,
+                        "usage_start_time": datetime.now(),
+                    }
+                )
 
                 # 记录使用开始
                 if self.enable_monitoring:
@@ -147,12 +150,14 @@ class PromptManagerMiddleware:
                 # 降级处理：返回原始输入
                 return inputs
 
-        async def process_output(outputs: Dict[str, Any], inputs: Dict[str, Any]) -> Dict[str, Any]:
+        async def process_output(
+            outputs: Dict[str, Any], inputs: Dict[str, Any]
+        ) -> Dict[str, Any]:
             """处理输出，记录使用情况"""
             try:
-                if 'prompt_info' in inputs and 'usage_start_time' in inputs:
-                    prompt_info = inputs['prompt_info']
-                    usage_start_time = inputs['usage_start_time']
+                if "prompt_info" in inputs and "usage_start_time" in inputs:
+                    prompt_info = inputs["prompt_info"]
+                    usage_start_time = inputs["usage_start_time"]
 
                     # 计算执行时间
                     execution_time_ms = int(
@@ -162,30 +167,36 @@ class PromptManagerMiddleware:
                     # 创建使用日志
                     usage_log = UsageLog(
                         prompt_id=prompt_info.id,
-                        session_id=inputs.get('prompt_context', {}).get('session_id'),
-                        context=inputs.get('prompt_context', {}).get('metadata', {}),
-                        variables_used=inputs.get('prompt_context', {}).get('variables', {}),
+                        session_id=inputs.get("prompt_context", {}).get("session_id"),
+                        context=inputs.get("prompt_context", {}).get("metadata", {}),
+                        variables_used=inputs.get("prompt_context", {}).get(
+                            "variables", {}
+                        ),
                         execution_time_ms=execution_time_ms,
-                        success=outputs.get('success', True),
-                        error_message=outputs.get('error'),
-                        user_feedback=outputs.get('user_feedback'),
-                        llm_response={'result': outputs.get('result')} if 'result' in outputs else None,
-                        tokens_used=outputs.get('tokens_used', 0),
-                        model_name=outputs.get('model_name'),
-                        temperature=outputs.get('temperature')
+                        success=outputs.get("success", True),
+                        error_message=outputs.get("error"),
+                        user_feedback=outputs.get("user_feedback"),
+                        llm_response={"result": outputs.get("result")}
+                        if "result" in outputs
+                        else None,
+                        tokens_used=outputs.get("tokens_used", 0),
+                        model_name=outputs.get("model_name"),
+                        temperature=outputs.get("temperature"),
                     )
 
                     # 异步记录使用日志
                     if self.enable_monitoring:
-                        asyncio.create_task(self.prompt_manager.record_usage_log(usage_log))
+                        asyncio.create_task(
+                            self.prompt_manager.record_usage_log(usage_log)
+                        )
 
                     # 添加性能信息到输出
-                    outputs['prompt_performance'] = {
-                        'prompt_id': str(prompt_info.id),
-                        'prompt_name': prompt_info.name,
-                        'prompt_version': prompt_info.version,
-                        'execution_time_ms': execution_time_ms,
-                        'performance_score': prompt_info.performance_score
+                    outputs["prompt_performance"] = {
+                        "prompt_id": str(prompt_info.id),
+                        "prompt_name": prompt_info.name,
+                        "prompt_version": prompt_info.version,
+                        "execution_time_ms": execution_time_ms,
+                        "performance_score": prompt_info.performance_score,
                     }
 
                 return outputs
@@ -207,7 +218,7 @@ class PromptManagerMiddleware:
     def create_adaptive_prompt_chain(
         self,
         prompt_categories: List[str],
-        context_analyzer: Callable[[Dict[str, Any]], str]
+        context_analyzer: Callable[[Dict[str, Any]], str],
     ) -> Runnable:
         """
         创建自适应Prompt链，根据上下文自动选择类别
@@ -235,22 +246,24 @@ class PromptManagerMiddleware:
 
                 # 获取该类别的最佳Prompt
                 prompt_info, rendered_content = await self.prompt_manager.get_prompt(
-                    name=inputs.get('task_name', 'default'),  # 可以从输入中获取任务名称
+                    name=inputs.get("task_name", "default"),  # 可以从输入中获取任务名称
                     category=selected_category,
                     context=prompt_context.metadata,
                     variables=prompt_context.variables,
-                    enable_experiments=self.enable_experiments
+                    enable_experiments=self.enable_experiments,
                 )
 
                 # 注入Prompt
                 enriched_inputs = inputs.copy()
-                enriched_inputs.update({
-                    'system_prompt': rendered_content,
-                    'prompt_info': prompt_info,
-                    'prompt_context': prompt_context,
-                    'selected_category': selected_category,
-                    'usage_start_time': datetime.now()
-                })
+                enriched_inputs.update(
+                    {
+                        "system_prompt": rendered_content,
+                        "prompt_info": prompt_info,
+                        "prompt_context": prompt_context,
+                        "selected_category": selected_category,
+                        "usage_start_time": datetime.now(),
+                    }
+                )
 
                 return enriched_inputs
 
@@ -268,10 +281,7 @@ class PromptManagerMiddleware:
         return chain
 
     def create_experiment_chain(
-        self,
-        experiment_name: str,
-        fallback_prompt_name: str,
-        fallback_category: str
+        self, experiment_name: str, fallback_prompt_name: str, fallback_category: str
     ) -> Runnable:
         """
         创建A/B测试实验链
@@ -294,31 +304,39 @@ class PromptManagerMiddleware:
 
                 # 尝试获取实验Prompt（如果存在）
                 try:
-                    prompt_info, rendered_content = await self.prompt_manager.get_prompt(
+                    (
+                        prompt_info,
+                        rendered_content,
+                    ) = await self.prompt_manager.get_prompt(
                         name=f"{experiment_name}_control",  # 控制组
                         category="experiments",
                         context=prompt_context.metadata,
                         variables=prompt_context.variables,
-                        enable_experiments=True
+                        enable_experiments=True,
                     )
                 except ValueError:
                     # 降级到默认Prompt
-                    prompt_info, rendered_content = await self.prompt_manager.get_prompt(
+                    (
+                        prompt_info,
+                        rendered_content,
+                    ) = await self.prompt_manager.get_prompt(
                         name=fallback_prompt_name,
                         category=fallback_category,
                         context=prompt_context.metadata,
                         variables=prompt_context.variables,
-                        enable_experiments=self.enable_experiments
+                        enable_experiments=self.enable_experiments,
                     )
 
                 enriched_inputs = inputs.copy()
-                enriched_inputs.update({
-                    'system_prompt': rendered_content,
-                    'prompt_info': prompt_info,
-                    'prompt_context': prompt_context,
-                    'experiment_name': experiment_name,
-                    'usage_start_time': datetime.now()
-                })
+                enriched_inputs.update(
+                    {
+                        "system_prompt": rendered_content,
+                        "prompt_info": prompt_info,
+                        "prompt_context": prompt_context,
+                        "experiment_name": experiment_name,
+                        "usage_start_time": datetime.now(),
+                    }
+                )
 
                 return enriched_inputs
 
@@ -337,7 +355,7 @@ class PromptManagerMiddleware:
     def _build_context(
         self,
         inputs: Dict[str, Any],
-        context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None
+        context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> PromptContext:
         """构建Prompt上下文"""
         if context_builder:
@@ -345,18 +363,16 @@ class PromptManagerMiddleware:
 
         # 默认上下文构建
         return PromptContext(
-            user_request=inputs.get('input', ''),
-            session_id=inputs.get('session_id', str(uuid.uuid4())),
-            user_id=inputs.get('user_id'),
-            request_type=inputs.get('request_type'),
-            metadata=inputs.get('metadata', {}),
-            variables=inputs.get('variables', {})
+            user_request=inputs.get("input", ""),
+            session_id=inputs.get("session_id", str(uuid.uuid4())),
+            user_id=inputs.get("user_id"),
+            request_type=inputs.get("request_type"),
+            metadata=inputs.get("metadata", {}),
+            variables=inputs.get("variables", {}),
         )
 
     def _record_usage_start(
-        self,
-        prompt_id: uuid.UUID,
-        prompt_context: PromptContext
+        self, prompt_id: uuid.UUID, prompt_context: PromptContext
     ) -> None:
         """记录使用开始（异步）"""
         # 这里可以实现更详细的记录逻辑
@@ -367,7 +383,7 @@ class PromptManagerMiddleware:
         return self.create_prompt_chain(
             prompt_name="rag_response",
             category="RAG",
-            context_builder=self._rag_context_builder
+            context_builder=self._rag_context_builder,
         )
 
     def create_code_execution_prompt_chain(self) -> Runnable:
@@ -375,7 +391,7 @@ class PromptManagerMiddleware:
         return self.create_prompt_chain(
             prompt_name="code_execution",
             category="Code-Execution",
-            context_builder=self._code_execution_context_builder
+            context_builder=self._code_execution_context_builder,
         )
 
     def create_data_analysis_prompt_chain(self) -> Runnable:
@@ -383,66 +399,66 @@ class PromptManagerMiddleware:
         return self.create_prompt_chain(
             prompt_name="data_analysis",
             category="Data-Analysis",
-            context_builder=self._data_analysis_context_builder
+            context_builder=self._data_analysis_context_builder,
         )
 
     def _rag_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
         """RAG上下文构建器"""
         return PromptContext(
-            user_request=inputs.get('query', ''),
-            session_id=inputs.get('session_id', str(uuid.uuid4())),
+            user_request=inputs.get("query", ""),
+            session_id=inputs.get("session_id", str(uuid.uuid4())),
             request_type="rag",
             metadata={
-                'retrieved_docs': inputs.get('retrieved_docs', []),
-                'query_type': inputs.get('query_type', 'general'),
-                'user_history': inputs.get('user_history', [])
+                "retrieved_docs": inputs.get("retrieved_docs", []),
+                "query_type": inputs.get("query_type", "general"),
+                "user_history": inputs.get("user_history", []),
             },
             variables={
-                'context': '\n\n'.join([
-                    doc.get('content', '') for doc in inputs.get('retrieved_docs', [])
-                ]),
-                'query': inputs.get('query', ''),
-                'language': inputs.get('language', 'zh-CN')
-            }
+                "context": "\n\n".join(
+                    [doc.get("content", "") for doc in inputs.get("retrieved_docs", [])]
+                ),
+                "query": inputs.get("query", ""),
+                "language": inputs.get("language", "zh-CN"),
+            },
         )
 
     def _code_execution_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
         """代码执行上下文构建器"""
         return PromptContext(
-            user_request=inputs.get('request', ''),
-            session_id=inputs.get('session_id', str(uuid.uuid4())),
+            user_request=inputs.get("request", ""),
+            session_id=inputs.get("session_id", str(uuid.uuid4())),
             request_type="code_execution",
             metadata={
-                'language': inputs.get('language', 'python'),
-                'complexity': inputs.get('complexity', 'medium'),
-                'environment': inputs.get('environment', 'docker')
+                "language": inputs.get("language", "python"),
+                "complexity": inputs.get("complexity", "medium"),
+                "environment": inputs.get("environment", "docker"),
             },
             variables={
-                'code': inputs.get('code', ''),
-                'requirements': inputs.get('requirements', ''),
-                'test_cases': inputs.get('test_cases', ''),
-                'description': inputs.get('description', '')
-            }
+                "code": inputs.get("code", ""),
+                "requirements": inputs.get("requirements", ""),
+                "test_cases": inputs.get("test_cases", ""),
+                "description": inputs.get("description", ""),
+            },
         )
 
     def _data_analysis_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
         """数据分析上下文构建器"""
         return PromptContext(
-            user_request=inputs.get('request', ''),
-            session_id=inputs.get('session_id', str(uuid.uuid4())),
+            user_request=inputs.get("request", ""),
+            session_id=inputs.get("session_id", str(uuid.uuid4())),
             request_type="data_analysis",
             metadata={
-                'data_type': inputs.get('data_type', 'tabular'),
-                'analysis_type': inputs.get('analysis_type', 'eda'),
-                'visualization': inputs.get('visualization', True)
+                "data_type": inputs.get("data_type", "tabular"),
+                "analysis_type": inputs.get("analysis_type", "eda"),
+                "visualization": inputs.get("visualization", True),
             },
             variables={
-                'dataset_info': inputs.get('dataset_info', ''),
-                'analysis_goals': inputs.get('analysis_goals', ''),
-                'data_description': inputs.get('data_description', ''),
-                'constraints': inputs.get('constraints', ''),
-                'preferred_charts': inputs.get('preferred_charts', '')
-            }
+                "dataset_info": inputs.get("dataset_info", ""),
+                "analysis_goals": inputs.get("analysis_goals", ""),
+                "data_description": inputs.get("data_description", ""),
+                "constraints": inputs.get("constraints", ""),
+                "preferred_charts": inputs.get("preferred_charts", ""),
+            },
         )
 
 
@@ -451,9 +467,7 @@ class PromptManagerIntegration:
 
     @staticmethod
     def integrate_with_langgraph(
-        workflow,
-        prompt_manager: PromptManager,
-        node_configs: Dict[str, Dict[str, Any]]
+        workflow, prompt_manager: PromptManager, node_configs: Dict[str, Dict[str, Any]]
     ) -> None:
         """
         将Prompt管理器集成到LangGraph工作流中
@@ -475,22 +489,19 @@ class PromptManagerIntegration:
         for node_name, config in node_configs.items():
             # 为每个节点创建Prompt链
             prompt_chain = middleware.create_prompt_chain(
-                prompt_name=config['prompt_name'],
-                category=config['category'],
-                context_builder=config.get('context_builder')
+                prompt_name=config["prompt_name"],
+                category=config["category"],
+                context_builder=config.get("context_builder"),
             )
 
             # 替换节点逻辑
             workflow.add_node(
-                node_name,
-                lambda state, chain=prompt_chain: chain.invoke(state)
+                node_name, lambda state, chain=prompt_chain: chain.invoke(state)
             )
 
     @staticmethod
     def create_prompt_enhanced_agent(
-        llm,
-        prompt_manager: PromptManager,
-        system_prompt_category: str = "System"
+        llm, prompt_manager: PromptManager, system_prompt_category: str = "System"
     ):
         """
         创建Prompt增强的Agent
@@ -511,22 +522,27 @@ class PromptManagerIntegration:
             last_message = messages[-1] if messages else HumanMessage(content="")
 
             inputs = {
-                'input': last_message.content,
-                'messages': messages,
-                'session_id': str(uuid.uuid4())
+                "input": last_message.content,
+                "messages": messages,
+                "session_id": str(uuid.uuid4()),
             }
 
             # 获取系统Prompt
             try:
-                system_prompt_info, system_prompt_content = await prompt_manager.get_prompt(
+                (
+                    system_prompt_info,
+                    system_prompt_content,
+                ) = await prompt_manager.get_prompt(
                     name="agent_system",
                     category=system_prompt_category,
-                    context={'message_count': len(messages)},
-                    variables={'conversation_history': messages}
+                    context={"message_count": len(messages)},
+                    variables={"conversation_history": messages},
                 )
 
                 # 构建增强的消息列表
-                enhanced_messages = [AIMessage(content=system_prompt_content)] + messages
+                enhanced_messages = [
+                    AIMessage(content=system_prompt_content)
+                ] + messages
 
                 # 调用LLM
                 response = await llm.ainvoke(enhanced_messages)
@@ -534,12 +550,14 @@ class PromptManagerIntegration:
                 # 记录使用
                 usage_log = UsageLog(
                     prompt_id=system_prompt_info.id,
-                    session_id=inputs['session_id'],
-                    context={'message_count': len(messages)},
+                    session_id=inputs["session_id"],
+                    context={"message_count": len(messages)},
                     variables_used={},
                     execution_time_ms=0,  # 这里应该实际计算
                     success=True,
-                    tokens_used=response.usage_metadata.get('total_tokens', 0) if hasattr(response, 'usage_metadata') else 0
+                    tokens_used=response.usage_metadata.get("total_tokens", 0)
+                    if hasattr(response, "usage_metadata")
+                    else 0,
                 )
 
                 asyncio.create_task(prompt_manager.record_usage_log(usage_log))

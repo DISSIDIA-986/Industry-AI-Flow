@@ -19,7 +19,6 @@ from backend.services.code_executor.validator import (
     validate_code,
 )
 
-
 # 创建全局执行器实例（延迟初始化）
 _global_executor = None
 
@@ -32,6 +31,7 @@ def get_code_executor() -> DockerExecutor:
             _global_executor = DockerExecutor()
         except Exception as e:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.error(f"无法初始化代码执行器: {e}")
             _global_executor = None
@@ -45,6 +45,7 @@ code_executor = get_code_executor()
 # 自定义异常
 class CodeExecutionError(Exception):
     """代码执行异常"""
+
     pass
 
 

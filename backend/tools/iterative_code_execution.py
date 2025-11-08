@@ -1,9 +1,11 @@
 """可迭代代码执行工具 - 集成自我修复机制的智能代码执行"""
 
-from langchain_core.tools import tool
-from typing import Annotated, List, Dict, Any, Optional
 import asyncio
 import logging
+from typing import Annotated, Any, Dict, List, Optional
+
+from langchain_core.tools import tool
+
 from backend.agents.code_execution_agent import iterative_code_agent
 from backend.services.data_transfer import data_transfer
 
@@ -14,9 +16,13 @@ logger = logging.getLogger(__name__)
 def iterative_code_analysis_tool(
     request: Annotated[str, "数据分析请求描述"],
     data_file: Annotated[Optional[str], "数据文件路径（可选）"] = None,
-    analysis_type: Annotated[str, "分析类型：'eda', 'ml_model', 'visualization', 'statistical'"] = "eda",
+    analysis_type: Annotated[
+        str, "分析类型：'eda', 'ml_model', 'visualization', 'statistical'"
+    ] = "eda",
     max_attempts: Annotated[int, "最大修复尝试次数"] = 5,
-    transfer_method: Annotated[str, "数据传递方式：'auto', 'file_mapping', 'database'"] = "auto"
+    transfer_method: Annotated[
+        str, "数据传递方式：'auto', 'file_mapping', 'database'"
+    ] = "auto",
 ) -> Dict[str, Any]:
     """
     可迭代代码分析工具 - 自动修复的智能数据分析
@@ -61,7 +67,7 @@ def iterative_code_analysis_tool(
         >>> if result["success"]:
         ...     print(f"分析成功，执行了 {result['attempts']} 次尝试")
         ...     print(f"生成了 {len(result['visualizations'])} 个可视化图表")
-        """
+    """
 
     try:
         # 准备数据文件（如果提供）
@@ -81,15 +87,17 @@ def iterative_code_analysis_tool(
                     "success": False,
                     "error": f"数据文件传递失败: {transfer_result.get('error', 'Unknown error')}",
                     "analysis_type": analysis_type,
-                    "attempts": 0
+                    "attempts": 0,
                 }
 
             transferred_data = transfer_result
-            context.update({
-                "data_file_info": transfer_result["file_info"],
-                "transfer_method": transfer_result["method"],
-                "transferred_path": transfer_result["transferred_path"]
-            })
+            context.update(
+                {
+                    "data_file_info": transfer_result["file_info"],
+                    "transfer_method": transfer_result["method"],
+                    "transferred_path": transfer_result["transferred_path"],
+                }
+            )
 
             # 为代码执行准备数据文件路径
             if transfer_result["method"] == "file_mapping":
@@ -99,7 +107,9 @@ def iterative_code_analysis_tool(
                 data_file_for_execution = transfer_result.get("config_file")
 
         # 构建增强的分析请求
-        enhanced_request = _build_enhanced_request(request, analysis_type, transferred_data)
+        enhanced_request = _build_enhanced_request(
+            request, analysis_type, transferred_data
+        )
 
         # 异步执行可迭代分析
         try:
@@ -111,7 +121,7 @@ def iterative_code_analysis_tool(
                 iterative_code_agent.execute_code_iteratively(
                     original_request=enhanced_request,
                     data_file=data_file_for_execution if data_file else None,
-                    context=context
+                    context=context,
                 )
             )
 
@@ -123,7 +133,7 @@ def iterative_code_analysis_tool(
                 "success": False,
                 "error": f"代码执行异常: {str(e)}",
                 "analysis_type": analysis_type,
-                "attempts": 0
+                "attempts": 0,
             }
 
         # 后处理结果
@@ -144,7 +154,7 @@ def iterative_code_analysis_tool(
             "success": False,
             "error": f"工具异常: {str(e)}",
             "analysis_type": analysis_type,
-            "attempts": 0
+            "attempts": 0,
         }
 
 
@@ -154,7 +164,7 @@ def self_healing_code_execution_tool(
     description: Annotated[str, "代码描述和预期结果"],
     data_files: Annotated[Optional[List[str]], "依赖的数据文件列表"] = None,
     max_attempts: Annotated[int, "最大自我修复尝试次数"] = 5,
-    auto_fix_imports: Annotated[bool, "是否自动修复导入错误"] = True
+    auto_fix_imports: Annotated[bool, "是否自动修复导入错误"] = True,
 ) -> Dict[str, Any]:
     """
     自我修复代码执行工具 - 智能修复执行错误的代码运行器
@@ -203,15 +213,12 @@ def self_healing_code_execution_tool(
         ... })
         >>> print(f"修复成功: {result['success']}")
         >>> print(f"应用修复: {result['fixes_applied']}")
-        """
+    """
 
     try:
         # 准备数据文件
         transferred_files = []
-        context = {
-            "description": description,
-            "auto_fix_imports": auto_fix_imports
-        }
+        context = {"description": description, "auto_fix_imports": auto_fix_imports}
 
         if data_files:
             for file_path in data_files:
@@ -250,7 +257,7 @@ def self_healing_code_execution_tool(
                     original_request=execution_request,
                     initial_code=code,
                     data_file=transferred_files[0] if transferred_files else None,
-                    context=context
+                    context=context,
                 )
             )
 
@@ -263,7 +270,7 @@ def self_healing_code_execution_tool(
                 "error": f"执行异常: {str(e)}",
                 "final_code": code,
                 "attempts": 0,
-                "fixes_applied": []
+                "fixes_applied": [],
             }
 
         # 提取修复信息
@@ -274,7 +281,9 @@ def self_healing_code_execution_tool(
                     fixes_applied.extend(attempt.fixes_applied)
 
         # 清理数据文件
-        for transfer_result in [tr for tr in context.values() if isinstance(tr, dict) and "success" in tr]:
+        for transfer_result in [
+            tr for tr in context.values() if isinstance(tr, dict) and "success" in tr
+        ]:
             try:
                 data_transfer.cleanup_transferred_data(transfer_result)
             except:
@@ -289,13 +298,13 @@ def self_healing_code_execution_tool(
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
                 "execution_time": result.get("execution_time", 0.0),
-                "visualizations": result.get("visualizations", [])
+                "visualizations": result.get("visualizations", []),
             },
             "error_history": [
                 {
                     "attempt": attempt.attempt_id,
                     "error": attempt.error_message,
-                    "success": attempt.success
+                    "success": attempt.success,
                 }
                 for attempt in result.get("attempts", [])
                 if not attempt.success
@@ -305,8 +314,9 @@ def self_healing_code_execution_tool(
                     attempt.execution_time for attempt in result.get("attempts", [])
                 ),
                 "success_rate": 1.0 if result.get("success", False) else 0.0,
-                "fixes_per_attempt": len(fixes_applied) / max(1, result.get("attempts", 1) - 1)
-            }
+                "fixes_per_attempt": len(fixes_applied)
+                / max(1, result.get("attempts", 1) - 1),
+            },
         }
 
     except Exception as e:
@@ -316,14 +326,12 @@ def self_healing_code_execution_tool(
             "error": f"工具异常: {str(e)}",
             "final_code": code,
             "attempts": 0,
-            "fixes_applied": []
+            "fixes_applied": [],
         }
 
 
 def _build_enhanced_request(
-    request: str,
-    analysis_type: str,
-    transferred_data: Optional[Dict[str, Any]] = None
+    request: str, analysis_type: str, transferred_data: Optional[Dict[str, Any]] = None
 ) -> str:
     """构建增强的分析请求"""
 
@@ -364,7 +372,7 @@ def _build_enhanced_request(
 4. 方差分析：单因素、多因素方差分析
 5. 回归分析：线性回归、多项式回归
 6. 置信区间：参数估计的置信区间
-"""
+""",
     }
 
     requirements = type_requirements.get(analysis_type, "")
@@ -417,7 +425,7 @@ except ImportError:
 def _process_analysis_result(
     result: Dict[str, Any],
     analysis_type: str,
-    transferred_data: Optional[Dict[str, Any]] = None
+    transferred_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """处理分析结果"""
 
@@ -430,8 +438,8 @@ def _process_analysis_result(
             "stdout": result.get("stdout", ""),
             "stderr": result.get("stderr", ""),
             "execution_time": result.get("execution_time", 0.0),
-            "visualizations": result.get("visualizations", [])
-        }
+            "visualizations": result.get("visualizations", []),
+        },
     }
 
     if result.get("success", False):
@@ -441,7 +449,7 @@ def _process_analysis_result(
             "total_attempts": result.get("attempts", 0),
             "successful_attempt": result.get("successful_attempt"),
             "execution_time": result.get("execution_time", 0.0),
-            "visualizations_generated": len(result.get("visualizations", []))
+            "visualizations_generated": len(result.get("visualizations", [])),
         }
 
         # 数据传递信息
@@ -449,7 +457,7 @@ def _process_analysis_result(
             processed["data_transfer"] = {
                 "method": transferred_data["method"],
                 "original_size": transferred_data["file_info"]["size_mb"],
-                "transfer_success": True
+                "transfer_success": True,
             }
     else:
         # 失败时的错误分析
@@ -457,7 +465,7 @@ def _process_analysis_result(
             "error_message": result.get("error_message", "Unknown error"),
             "failed_attempts": result.get("failed_attempts", []),
             "error_patterns": result.get("summary", {}).get("error_patterns", {}),
-            "suggestions": _generate_error_suggestions(result)
+            "suggestions": _generate_error_suggestions(result),
         }
 
     return processed
@@ -473,7 +481,9 @@ def _generate_error_suggestions(result: Dict[str, Any]) -> List[str]:
         suggestions.append("检查并安装缺失的 Python 库")
         suggestions.append("添加正确的 import 语句")
 
-    if "file" in error_message and ("not found" in error_message or "no such file" in error_message):
+    if "file" in error_message and (
+        "not found" in error_message or "no such file" in error_message
+    ):
         suggestions.append("检查文件路径是否正确")
         suggestions.append("确认文件权限和可访问性")
 

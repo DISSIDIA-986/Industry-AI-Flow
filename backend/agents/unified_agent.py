@@ -1,18 +1,31 @@
 """统一 Agent - 融合 RAG 和代码分析能力"""
 
-from langchain.agents import create_agent
-from langchain_ollama import ChatOllama
-from langchain_anthropic import ChatAnthropic
-from backend.tools.retrieval import hybrid_retrieval_tool
-from backend.tools.reranker import rerank_tool
-from backend.tools.code_execution import code_execution_tool, code_validation_tool, get_execution_environment_info
-from backend.tools.data_analysis import data_analysis_tool, data_preprocessing_tool
-from backend.tools.visualization import visualization_tool, advanced_visualization_tool, dashboard_generation_tool
-from backend.tools.iterative_code_execution import iterative_code_analysis_tool, self_healing_code_execution_tool
-from backend.agents.state import RAGAgentState, CodeAnalysisAgentState
-from backend.config import settings
-from typing import Dict, Any, List
 import logging
+from typing import Any, Dict, List
+
+from langchain.agents import create_agent
+from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
+
+from backend.agents.state import CodeAnalysisAgentState, RAGAgentState
+from backend.config import settings
+from backend.tools.code_execution import (
+    code_execution_tool,
+    code_validation_tool,
+    get_execution_environment_info,
+)
+from backend.tools.data_analysis import data_analysis_tool, data_preprocessing_tool
+from backend.tools.iterative_code_execution import (
+    iterative_code_analysis_tool,
+    self_healing_code_execution_tool,
+)
+from backend.tools.reranker import rerank_tool
+from backend.tools.retrieval import hybrid_retrieval_tool
+from backend.tools.visualization import (
+    advanced_visualization_tool,
+    dashboard_generation_tool,
+    visualization_tool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,52 +43,83 @@ def _get_llm():
             api_key=settings.zhipu_api_key,
             base_url=settings.zhipu_base_url,
             timeout=settings.api_timeout_ms / 1000,
-            temperature=0
+            temperature=0,
         )
     else:
         return ChatOllama(
-            model=settings.ollama_model,
-            base_url=settings.ollama_host,
-            temperature=0
+            model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
 
 
 def _classify_user_intent(question: str) -> str:
     """
     分类用户意图
-    
+
     Args:
         question: 用户问题
-        
+
     Returns:
         意图类型：'knowledge', 'data_analysis', 'mixed'
     """
     question_lower = question.lower()
-    
+
     # 数据分析关键词
     data_analysis_keywords = [
-        '分析', '数据', '图表', '可视化', '统计', '机器学习', '预测',
-        '模型', '训练', '回归', '分类', '聚类', '探索性', 'eda',
-        '相关性', '分布', '趋势', '模式', '异常', '预处理', '清洗'
+        "分析",
+        "数据",
+        "图表",
+        "可视化",
+        "统计",
+        "机器学习",
+        "预测",
+        "模型",
+        "训练",
+        "回归",
+        "分类",
+        "聚类",
+        "探索性",
+        "eda",
+        "相关性",
+        "分布",
+        "趋势",
+        "模式",
+        "异常",
+        "预处理",
+        "清洗",
     ]
-    
+
     # 知识问答关键词
     knowledge_keywords = [
-        '什么是', '如何', '为什么', '解释', '定义', '概念', '原理',
-        '方法', '步骤', '教程', '文档', '说明', '介绍'
+        "什么是",
+        "如何",
+        "为什么",
+        "解释",
+        "定义",
+        "概念",
+        "原理",
+        "方法",
+        "步骤",
+        "教程",
+        "文档",
+        "说明",
+        "介绍",
     ]
-    
-    data_score = sum(1 for keyword in data_analysis_keywords if keyword in question_lower)
-    knowledge_score = sum(1 for keyword in knowledge_keywords if keyword in question_lower)
-    
+
+    data_score = sum(
+        1 for keyword in data_analysis_keywords if keyword in question_lower
+    )
+    knowledge_score = sum(
+        1 for keyword in knowledge_keywords if keyword in question_lower
+    )
+
     if data_score > knowledge_score and data_score > 0:
-        return 'data_analysis'
+        return "data_analysis"
     elif knowledge_score > data_score and knowledge_score > 0:
-        return 'knowledge'
+        return "knowledge"
     elif data_score == knowledge_score and data_score > 0:
-        return 'mixed'
+        return "mixed"
     else:
-        return 'knowledge'  # 默认为知识问答
+        return "knowledge"  # 默认为知识问答
 
 
 def build_unified_agent():
@@ -189,8 +233,10 @@ def build_unified_agent():
 - 禁止危险的系统操作
 - 智能修复仅针对常见错误，不会绕过安全限制
 """.format(
-        code_execution_timeout=getattr(settings, 'code_execution_timeout', 300),
-        code_execution_memory_limit=getattr(settings, 'code_execution_memory_limit', '1G')
+        code_execution_timeout=getattr(settings, "code_execution_timeout", 300),
+        code_execution_memory_limit=getattr(
+            settings, "code_execution_memory_limit", "1G"
+        ),
     )
 
     # 3. 准备工具列表
@@ -198,28 +244,22 @@ def build_unified_agent():
         # RAG 工具
         hybrid_retrieval_tool,
         rerank_tool,
-
         # 基础代码执行工具
         code_execution_tool,
         code_validation_tool,
         get_execution_environment_info,
-
         # 数据分析工具
         data_analysis_tool,
         data_preprocessing_tool,
-
         # 可视化工具
         visualization_tool,
         advanced_visualization_tool,
-        dashboard_generation_tool
+        dashboard_generation_tool,
     ]
 
     # 如果启用可迭代执行，添加高级工具
-    if getattr(settings, 'enable_iterative_execution', True):
-        tools.extend([
-            iterative_code_analysis_tool,
-            self_healing_code_execution_tool
-        ])
+    if getattr(settings, "enable_iterative_execution", True):
+        tools.extend([iterative_code_analysis_tool, self_healing_code_execution_tool])
 
     # 4. 创建统一 Agent
     agent = create_agent(
@@ -227,7 +267,7 @@ def build_unified_agent():
         tools=tools,
         system_prompt=system_prompt,
         # state_schema=RAGAgentState,  # 暂时注释，先测试基础功能
-        max_iterations=getattr(settings, 'max_code_fix_attempts', 5)  # 支持可迭代执行
+        max_iterations=getattr(settings, "max_code_fix_attempts", 5),  # 支持可迭代执行
     )
 
     return agent
@@ -235,20 +275,20 @@ def build_unified_agent():
 
 class UnifiedAgentOrchestrator:
     """统一 Agent 协调器 - 智能路由和结果融合"""
-    
+
     def __init__(self):
         """初始化协调器"""
         self.agent = build_unified_agent()
         self.logger = logging.getLogger(__name__)
-    
+
     def process_request(self, question: str, **kwargs) -> Dict[str, Any]:
         """
         处理用户请求
-        
+
         Args:
             question: 用户问题
             **kwargs: 额外参数（如数据文件路径等）
-            
+
         Returns:
             处理结果字典
         """
@@ -256,64 +296,65 @@ class UnifiedAgentOrchestrator:
             # 1. 意图识别
             intent = _classify_user_intent(question)
             self.logger.info(f"用户意图识别: {intent}")
-            
+
             # 2. 根据意图调整输入
             enhanced_input = self._enhance_input_by_intent(question, intent, **kwargs)
-            
+
             # 3. 执行 Agent
             result = self.agent.invoke(enhanced_input)
-            
+
             # 4. 后处理结果
             processed_result = self._process_result_by_intent(result, intent)
-            
+
             return {
                 "success": True,
                 "intent": intent,
                 "question": question,
                 "result": processed_result,
-                "raw_response": result
+                "raw_response": result,
             }
-            
+
         except Exception as e:
             self.logger.error(f"统一 Agent 处理失败: {e}")
             return {
                 "success": False,
                 "error": str(e),
                 "intent": "unknown",
-                "question": question
+                "question": question,
             }
-    
-    def _enhance_input_by_intent(self, question: str, intent: str, **kwargs) -> Dict[str, Any]:
+
+    def _enhance_input_by_intent(
+        self, question: str, intent: str, **kwargs
+    ) -> Dict[str, Any]:
         """根据意图增强输入"""
-        base_input = {
-            "messages": [],
-            "question": question
-        }
-        
+        base_input = {"messages": [], "question": question}
+
         if intent == "data_analysis":
             # 数据分析任务，添加数据文件信息
             if "data_file" in kwargs:
                 base_input["data_file"] = kwargs["data_file"]
                 base_input["question"] += f"\n\n数据文件: {kwargs['data_file']}"
-            
+
             # 添加分析建议
             base_input["question"] += "\n\n请进行适当的数据分析，包括数据概览、统计分析和可视化。"
-        
+
         elif intent == "knowledge":
             # 知识问答任务，添加检索建议
             base_input["question"] += "\n\n请基于文档库提供准确的答案，并引用相关文档。"
-        
+
         elif intent == "mixed":
             # 混合任务，添加综合建议
             if "data_file" in kwargs:
                 base_input["data_file"] = kwargs["data_file"]
                 base_input["question"] += f"\n\n数据文件: {kwargs['data_file']}"
-            
+
             base_input["question"] += "\n\n请结合相关知识和数据分析，提供全面的答案。"
-        
+
         return base_input
-    
-    def _process_result_by_intent(self, result: Dict[str, Any], intent: str) -> Dict[str, Any]:
+
+    def _process_result_by_intent(
+        self, result: Dict[str, Any], intent: str
+    ) -> Dict[str, Any]:
         """根据意图处理结果"""
         processed = {
             "answer": "",
@@ -321,93 +362,99 @@ class UnifiedAgentOrchestrator:
             "visualizations": [],
             "data_analysis": {},
             "code_execution": {},
-            "confidence": "medium"
+            "confidence": "medium",
         }
-        
+
         # 提取答案
         if "messages" in result:
             messages = result["messages"]
             if messages:
                 # 获取最后一条消息作为答案
                 last_message = messages[-1]
-                if hasattr(last_message, 'content'):
+                if hasattr(last_message, "content"):
                     processed["answer"] = last_message.content
                 else:
                     processed["answer"] = str(last_message)
-        
+
         # 根据意图提取特定信息
         if intent in ["knowledge", "mixed"]:
             # 提取文档来源
             processed["sources"] = self._extract_sources(result)
-        
+
         if intent in ["data_analysis", "mixed"]:
             # 提取分析结果
             processed["data_analysis"] = self._extract_analysis_results(result)
             processed["visualizations"] = self._extract_visualizations(result)
             processed["code_execution"] = self._extract_code_execution_results(result)
-        
+
         return processed
-    
+
     def _extract_sources(self, result: Dict[str, Any]) -> List[str]:
         """提取文档来源"""
         sources = []
-        
+
         # 从工具调用中提取来源
         if "intermediate_steps" in result:
             for step in result["intermediate_steps"]:
                 if len(step) >= 2:
                     tool_call, tool_result = step[0], step[1]
-                    if hasattr(tool_call, 'tool') and "retrieval" in tool_call.tool:
+                    if hasattr(tool_call, "tool") and "retrieval" in tool_call.tool:
                         if isinstance(tool_result, list):
                             for doc in tool_result:
                                 if isinstance(doc, dict) and "doc_id" in doc:
                                     sources.append(doc["doc_id"])
-        
+
         return sources
-    
+
     def _extract_analysis_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """提取数据分析结果"""
         analysis_results = {}
-        
+
         if "intermediate_steps" in result:
             for step in result["intermediate_steps"]:
                 if len(step) >= 2:
                     tool_call, tool_result = step[0], step[1]
-                    if hasattr(tool_call, 'tool'):
+                    if hasattr(tool_call, "tool"):
                         if "data_analysis" in tool_call.tool:
                             analysis_results["data_analysis"] = tool_result
                         elif "preprocessing" in tool_call.tool:
                             analysis_results["preprocessing"] = tool_result
-        
+
         return analysis_results
-    
+
     def _extract_visualizations(self, result: Dict[str, Any]) -> List[Dict[str, Any]]:
         """提取可视化结果"""
         visualizations = []
-        
+
         if "intermediate_steps" in result:
             for step in result["intermediate_steps"]:
                 if len(step) >= 2:
                     tool_call, tool_result = step[0], step[1]
-                    if hasattr(tool_call, 'tool') and "visualization" in tool_call.tool:
-                        if isinstance(tool_result, dict) and "visualizations" in tool_result:
+                    if hasattr(tool_call, "tool") and "visualization" in tool_call.tool:
+                        if (
+                            isinstance(tool_result, dict)
+                            and "visualizations" in tool_result
+                        ):
                             visualizations.extend(tool_result["visualizations"])
-        
+
         return visualizations
-    
+
     def _extract_code_execution_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """提取代码执行结果"""
         code_results = {}
-        
+
         if "intermediate_steps" in result:
             for step in result["intermediate_steps"]:
                 if len(step) >= 2:
                     tool_call, tool_result = step[0], step[1]
-                    if hasattr(tool_call, 'tool') and "code_execution" in tool_call.tool:
+                    if (
+                        hasattr(tool_call, "tool")
+                        and "code_execution" in tool_call.tool
+                    ):
                         if isinstance(tool_result, dict):
                             code_results = tool_result
                             break
-        
+
         return code_results
 
 

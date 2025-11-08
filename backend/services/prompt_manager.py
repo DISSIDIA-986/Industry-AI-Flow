@@ -8,20 +8,22 @@ import json
 import logging
 import re
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, Union
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import asyncpg
-from langchain_core.prompts import PromptTemplate
 import jinja2
-from jinja2 import Template, Environment, meta
+from jinja2 import Environment, Template, meta
+from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
 
 
 class PromptStatus(Enum):
     """Prompt状态枚举"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     DRAFT = "draft"
@@ -30,6 +32,7 @@ class PromptStatus(Enum):
 
 class ExperimentStatus(Enum):
     """实验状态枚举"""
+
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETED = "completed"
@@ -39,6 +42,7 @@ class ExperimentStatus(Enum):
 @dataclass
 class PromptVariable:
     """Prompt变量定义"""
+
     name: str
     type: str = "string"  # string, number, boolean, json
     required: bool = True
@@ -51,6 +55,7 @@ class PromptVariable:
 @dataclass
 class PromptInfo:
     """Prompt信息数据类"""
+
     id: uuid.UUID
     name: str
     category: str
@@ -81,14 +86,17 @@ class PromptInfo:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         data = asdict(self)
-        data['variables'] = [asdict(var) for var in self.variables] if self.variables else []
-        data['success_rate'] = self.success_rate
+        data["variables"] = (
+            [asdict(var) for var in self.variables] if self.variables else []
+        )
+        data["success_rate"] = self.success_rate
         return data
 
 
 @dataclass
 class UsageLog:
     """使用记录数据类"""
+
     prompt_id: uuid.UUID
     session_id: Optional[str]
     context: Dict[str, Any]
@@ -120,7 +128,7 @@ class PromptManager:
         self._jinja_env = Environment(autoescape=True)
 
         # 预编译正则表达式
-        self._variable_pattern = re.compile(r'\{\{\s*(\w+)\s*\}\}')
+        self._variable_pattern = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
         logger.info("Prompt管理器初始化完成")
 
@@ -130,7 +138,7 @@ class PromptManager:
         category: str,
         context: Optional[Dict[str, Any]] = None,
         variables: Optional[Dict[str, Any]] = None,
-        enable_experiments: bool = True
+        enable_experiments: bool = True,
     ) -> Tuple[PromptInfo, str]:
         """
         获取最优Prompt并渲染模板
@@ -157,7 +165,9 @@ class PromptManager:
 
         # 获取最优Prompt
         if enable_experiments:
-            prompt_info = await self._get_prompt_with_experiment(name, category, context)
+            prompt_info = await self._get_prompt_with_experiment(
+                name, category, context
+            )
         else:
             prompt_info = await self._get_best_prompt(name, category, context)
 
@@ -171,16 +181,15 @@ class PromptManager:
         rendered_content = self._render_template(prompt_info.content, variables)
 
         # 记录使用（异步，不阻塞返回）
-        asyncio.create_task(self._record_usage_start(prompt_info.id, context, variables))
+        asyncio.create_task(
+            self._record_usage_start(prompt_info.id, context, variables)
+        )
 
         logger.info(f"获取Prompt成功: {category}/{name} v{prompt_info.version}")
         return prompt_info, rendered_content
 
     async def _get_best_prompt(
-        self,
-        name: str,
-        category: str,
-        context: Optional[Dict[str, Any]] = None
+        self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
         获取最佳Prompt版本
@@ -218,10 +227,7 @@ class PromptManager:
             return self._row_to_prompt_info(row)
 
     async def _get_prompt_with_experiment(
-        self,
-        name: str,
-        category: str,
-        context: Optional[Dict[str, Any]] = None
+        self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
         获取包含A/B测试的Prompt
@@ -255,13 +261,14 @@ class PromptManager:
 
             # A/B测试逻辑：根据流量分配选择版本
             import random
-            use_a = random.random() < float(experiment_row['traffic_split'])
 
-            selected_id = experiment_row['a_id'] if use_a else experiment_row['b_id']
+            use_a = random.random() < float(experiment_row["traffic_split"])
+
+            selected_id = experiment_row["a_id"] if use_a else experiment_row["b_id"]
 
             # 记录实验使用
             await self._record_experiment_usage(
-                experiment_row['id'], selected_id, context
+                experiment_row["id"], selected_id, context
             )
 
             # 获取选中的Prompt
@@ -286,7 +293,9 @@ class PromptManager:
             # 备选方案：获取最佳Prompt
             return await self._get_best_prompt(name, category, context)
 
-    def _render_template(self, template_content: str, variables: Optional[Dict[str, Any]]) -> str:
+    def _render_template(
+        self, template_content: str, variables: Optional[Dict[str, Any]]
+    ) -> str:
         """
         渲染Prompt模板
 
@@ -306,7 +315,7 @@ class PromptManager:
             rendered = template.render(**variables)
 
             # 清理多余的空行
-            rendered = re.sub(r'\n\s*\n\s*\n', '\n\n', rendered)
+            rendered = re.sub(r"\n\s*\n\s*\n", "\n\n", rendered)
             rendered = rendered.strip()
 
             return rendered
@@ -327,6 +336,7 @@ class PromptManager:
         Returns:
             str: 替换后的内容
         """
+
         def replace_match(match):
             var_name = match.group(1)
             return str(variables.get(var_name, match.group(0)))
@@ -364,7 +374,7 @@ class PromptManager:
         metadata: Optional[Dict[str, Any]] = None,
         priority: int = 0,
         tags: Optional[List[str]] = None,
-        created_by: Optional[str] = None
+        created_by: Optional[str] = None,
     ) -> PromptInfo:
         """
         创建新Prompt
@@ -409,11 +419,18 @@ class PromptManager:
 
                 row = await conn.fetchrow(
                     insert_query,
-                    prompt_id, name, category, subcategory, version,
+                    prompt_id,
+                    name,
+                    category,
+                    subcategory,
+                    version,
                     content,
-                    json.dumps([asdict(var) for var in variables]) if variables else '{}',
+                    json.dumps([asdict(var) for var in variables])
+                    if variables
+                    else "{}",
                     json.dumps(metadata or {}),
-                    priority, created_by
+                    priority,
+                    created_by,
                 )
 
                 # 处理标签
@@ -442,7 +459,7 @@ class PromptManager:
         tags: Optional[List[str]] = None,
         change_description: Optional[str] = None,
         updated_by: Optional[str] = None,
-        create_new_version: bool = True
+        create_new_version: bool = True,
     ) -> PromptInfo:
         """
         更新Prompt
@@ -473,12 +490,17 @@ class PromptManager:
                     new_version = self._increment_version(current.version)
 
                     # 保存当前版本到历史
-                    await self._save_version_to_history(conn, current, change_description)
+                    await self._save_version_to_history(
+                        conn, current, change_description
+                    )
 
                     # 创建新版本记录
                     new_variables = variables or current.variables
                     if content:
-                        new_variables = [PromptVariable(name=var) for var in self.extract_variables(content)]
+                        new_variables = [
+                            PromptVariable(name=var)
+                            for var in self.extract_variables(content)
+                        ]
 
                     insert_query = """
                         INSERT INTO prompts (
@@ -491,17 +513,25 @@ class PromptManager:
                     new_prompt_id = uuid.uuid4()
                     row = await conn.fetchrow(
                         insert_query,
-                        new_prompt_id, current.name, current.category,
-                        current.subcategory, new_version,
+                        new_prompt_id,
+                        current.name,
+                        current.category,
+                        current.subcategory,
+                        new_version,
                         content or current.content,
-                        json.dumps([asdict(var) for var in new_variables]) if new_variables else '{}',
+                        json.dumps([asdict(var) for var in new_variables])
+                        if new_variables
+                        else "{}",
                         json.dumps(metadata or current.metadata),
                         priority if priority is not None else current.priority,
-                        True, updated_by
+                        True,
+                        updated_by,
                     )
 
                     # 更新旧版本标记
-                    await self._mark_as_latest_version(conn, current.name, current.category, new_prompt_id)
+                    await self._mark_as_latest_version(
+                        conn, current.name, current.category, new_prompt_id
+                    )
 
                     # 处理标签
                     if tags is not None:
@@ -522,7 +552,9 @@ class PromptManager:
 
                     if variables is not None:
                         update_fields.append(f"variables = ${param_count}")
-                        update_values.append(json.dumps([asdict(var) for var in variables]))
+                        update_values.append(
+                            json.dumps([asdict(var) for var in variables])
+                        )
                         param_count += 1
 
                     if metadata is not None:
@@ -583,11 +615,18 @@ class PromptManager:
 
             await conn.execute(
                 insert_query,
-                log.prompt_id, log.session_id, json.dumps(log.context),
-                json.dumps(log.variables_used), log.execution_time_ms,
-                log.success, log.error_message, log.user_feedback,
+                log.prompt_id,
+                log.session_id,
+                json.dumps(log.context),
+                json.dumps(log.variables_used),
+                log.execution_time_ms,
+                log.success,
+                log.error_message,
+                log.user_feedback,
                 json.dumps(log.llm_response) if log.llm_response else None,
-                log.tokens_used, log.model_name, log.temperature
+                log.tokens_used,
+                log.model_name,
+                log.temperature,
             )
 
     async def get_prompt_performance(self, prompt_id: uuid.UUID) -> Dict[str, Any]:
@@ -626,22 +665,23 @@ class PromptManager:
                 return {}
 
             stats = {
-                'usage_count': row['usage_count'],
-                'success_count': row['success_count'],
-                'performance_score': float(row['performance_score']),
-                'total_logs': row['total_logs'],
-                'avg_execution_time_ms': float(row['avg_execution_time'] or 0),
-                'min_execution_time_ms': row['min_execution_time_ms'],
-                'max_execution_time_ms': row['max_execution_time_ms'],
-                'avg_user_feedback': float(row['avg_user_feedback'] or 0),
-                'total_tokens': row['total_tokens'],
-                'recent_success_count': row['recent_success_count'],
-                'recent_usage_count': row['recent_usage_count'],
-                'success_rate': row['success_count'] / max(row['usage_count'], 1),
-                'recent_success_rate': (
-                    row['recent_success_count'] / max(row['recent_usage_count'], 1)
-                    if row['recent_usage_count'] > 0 else 0
-                )
+                "usage_count": row["usage_count"],
+                "success_count": row["success_count"],
+                "performance_score": float(row["performance_score"]),
+                "total_logs": row["total_logs"],
+                "avg_execution_time_ms": float(row["avg_execution_time"] or 0),
+                "min_execution_time_ms": row["min_execution_time_ms"],
+                "max_execution_time_ms": row["max_execution_time_ms"],
+                "avg_user_feedback": float(row["avg_user_feedback"] or 0),
+                "total_tokens": row["total_tokens"],
+                "recent_success_count": row["recent_success_count"],
+                "recent_usage_count": row["recent_usage_count"],
+                "success_rate": row["success_count"] / max(row["usage_count"], 1),
+                "recent_success_rate": (
+                    row["recent_success_count"] / max(row["recent_usage_count"], 1)
+                    if row["recent_usage_count"] > 0
+                    else 0
+                ),
             }
 
             return stats
@@ -700,13 +740,14 @@ class PromptManager:
             SET is_latest = false
             WHERE name = $1 AND category = $2 AND id != $3
             """,
-            name, category, prompt_id
+            name,
+            category,
+            prompt_id,
         )
 
         # 设置当前版本为latest
         await conn.execute(
-            "UPDATE prompts SET is_latest = true WHERE id = $1",
-            prompt_id
+            "UPDATE prompts SET is_latest = true WHERE id = $1", prompt_id
         )
 
     async def _save_version_to_history(
@@ -720,22 +761,28 @@ class PromptManager:
                 change_description, performance_metrics, usage_stats, created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             """,
-            prompt_info.id, prompt_info.version, prompt_info.content,
-            json.dumps([asdict(var) for var in prompt_info.variables]) if prompt_info.variables else '{}',
+            prompt_info.id,
+            prompt_info.version,
+            prompt_info.content,
+            json.dumps([asdict(var) for var in prompt_info.variables])
+            if prompt_info.variables
+            else "{}",
             description,
-            json.dumps({
-                'performance_score': prompt_info.performance_score,
-                'usage_count': prompt_info.usage_count,
-                'success_count': prompt_info.success_count
-            }),
-            json.dumps({'created_at': prompt_info.created_at.isoformat()}),
-            prompt_info.created_by
+            json.dumps(
+                {
+                    "performance_score": prompt_info.performance_score,
+                    "usage_count": prompt_info.usage_count,
+                    "success_count": prompt_info.success_count,
+                }
+            ),
+            json.dumps({"created_at": prompt_info.created_at.isoformat()}),
+            prompt_info.created_by,
         )
 
     def _increment_version(self, current_version: str) -> str:
         """版本号递增"""
         try:
-            parts = current_version.split('.')
+            parts = current_version.split(".")
             if len(parts) == 3:
                 major, minor, patch = parts
                 patch = str(int(patch) + 1)
@@ -755,7 +802,7 @@ class PromptManager:
                 INSERT INTO prompt_tags (name) VALUES ($1)
                 ON CONFLICT (name) DO NOTHING
                 """,
-                tag_name
+                tag_name,
             )
 
             # 关联标签
@@ -765,7 +812,8 @@ class PromptManager:
                 SELECT $1, id FROM prompt_tags WHERE name = $2
                 ON CONFLICT DO NOTHING
                 """,
-                prompt_id, tag_name
+                prompt_id,
+                tag_name,
             )
 
     async def _update_prompt_tags(
@@ -774,8 +822,7 @@ class PromptManager:
         """更新Prompt标签"""
         # 删除现有标签
         await conn.execute(
-            "DELETE FROM prompt_tag_relations WHERE prompt_id = $1",
-            prompt_id
+            "DELETE FROM prompt_tag_relations WHERE prompt_id = $1", prompt_id
         )
 
         # 添加新标签
@@ -784,43 +831,41 @@ class PromptManager:
 
     def _row_to_prompt_info(self, row) -> PromptInfo:
         """数据库行转PromptInfo"""
-        variables_data = json.loads(row['variables']) if row['variables'] else []
+        variables_data = json.loads(row["variables"]) if row["variables"] else []
         variables = [PromptVariable(**var_data) for var_data in variables_data]
 
-        metadata = json.loads(row['metadata']) if row['metadata'] else {}
+        metadata = json.loads(row["metadata"]) if row["metadata"] else {}
 
         return PromptInfo(
-            id=row['id'],
-            name=row['name'],
-            category=row['category'],
-            subcategory=row['subcategory'],
-            version=row['version'],
-            content=row['content'],
+            id=row["id"],
+            name=row["name"],
+            category=row["category"],
+            subcategory=row["subcategory"],
+            version=row["version"],
+            content=row["content"],
             variables=variables,
             metadata=metadata,
-            is_active=row['is_active'],
-            is_latest=row['is_latest'],
-            priority=row['priority'],
-            performance_score=float(row['performance_score']),
-            usage_count=row['usage_count'],
-            success_count=row['success_count'],
-            created_at=row['created_at'],
-            updated_at=row['updated_at'],
-            created_by=row['created_by'],
-            updated_by=row['updated_by'],
-            tags=[]
+            is_active=row["is_active"],
+            is_latest=row["is_latest"],
+            priority=row["priority"],
+            performance_score=float(row["performance_score"]),
+            usage_count=row["usage_count"],
+            success_count=row["success_count"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            created_by=row["created_by"],
+            updated_by=row["updated_by"],
+            tags=[],
         )
 
-    def _row_to_prompt_info_with_tags(
-        self, row, tags: List[str] = None
-    ) -> PromptInfo:
+    def _row_to_prompt_info_with_tags(self, row, tags: List[str] = None) -> PromptInfo:
         """数据库行转PromptInfo（带标签）"""
         prompt_info = self._row_to_prompt_info(row)
 
         if tags:
             prompt_info.tags = tags
-        elif row.get('tags'):
-            prompt_info.tags = [tag for tag in row['tags'] if tag]
+        elif row.get("tags"):
+            prompt_info.tags = [tag for tag in row["tags"] if tag]
 
         return prompt_info
 
@@ -832,13 +877,18 @@ class PromptManager:
         pass
 
     async def _record_experiment_usage(
-        self, experiment_id: uuid.UUID, selected_prompt_id: uuid.UUID, context: Optional[Dict]
+        self,
+        experiment_id: uuid.UUID,
+        selected_prompt_id: uuid.UUID,
+        context: Optional[Dict],
     ) -> None:
         """记录实验使用"""
         # 这里可以实现更详细的实验跟踪逻辑
         pass
 
-    async def clear_cache(self, category: Optional[str] = None, name: Optional[str] = None):
+    async def clear_cache(
+        self, category: Optional[str] = None, name: Optional[str] = None
+    ):
         """清除缓存"""
         if category and name:
             cache_key = f"{category}:{name}"
@@ -849,9 +899,9 @@ class PromptManager:
     async def get_cache_stats(self) -> Dict[str, Any]:
         """获取缓存统计"""
         return {
-            'cache_size': len(self._cache),
-            'cache_ttl': self.cache_ttl,
-            'cache_keys': list(self._cache.keys())
+            "cache_size": len(self._cache),
+            "cache_ttl": self.cache_ttl,
+            "cache_keys": list(self._cache.keys()),
         }
 
     async def health_check(self) -> Dict[str, Any]:
@@ -860,13 +910,9 @@ class PromptManager:
             async with self.db_pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
                 return {
-                    'status': 'healthy',
-                    'database': 'connected',
-                    'cache_size': len(self._cache)
+                    "status": "healthy",
+                    "database": "connected",
+                    "cache_size": len(self._cache),
                 }
         except Exception as e:
-            return {
-                'status': 'unhealthy',
-                'error': str(e),
-                'database': 'disconnected'
-            }
+            return {"status": "unhealthy", "error": str(e), "database": "disconnected"}

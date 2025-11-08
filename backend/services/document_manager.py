@@ -2,24 +2,26 @@
 文档管理模块 - 处理文档的更新、删除和版本管理
 """
 
+import datetime
+import logging
 import os
 import uuid
-import datetime
-from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
-import logging
-from backend.services.core.vectorstore import VectorStore
-from backend.services.core.embedder import embed_single_text
-from backend.services.document_loader import DocumentLoader
-from backend.services.core.chunker import DocumentChunker
+from typing import Dict, List, Optional, Tuple
+
 from backend.config import settings
+from backend.services.core.chunker import DocumentChunker
+from backend.services.core.embedder import embed_single_text
+from backend.services.core.vectorstore import VectorStore
+from backend.services.document_loader import DocumentLoader
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentOperation(Enum):
     """文档操作类型"""
+
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
@@ -29,6 +31,7 @@ class DocumentOperation(Enum):
 @dataclass
 class DocumentVersion:
     """文档版本信息"""
+
     doc_id: str
     version: int
     filename: str
@@ -55,7 +58,8 @@ class DocumentManager:
 
         try:
             # 创建文档版本表
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS document_versions (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     doc_id VARCHAR(255) NOT NULL,
@@ -69,10 +73,12 @@ class DocumentManager:
                     FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                     UNIQUE (doc_id, version)
                 )
-            """)
+            """
+            )
 
             # 创建文档操作日志表
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS document_operations_log (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     doc_id VARCHAR(255),
@@ -84,10 +90,12 @@ class DocumentManager:
                     error_message TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # 创建文档更新触发器
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE OR REPLACE FUNCTION update_document_versions()
                 RETURNS TRIGGER AS $$
                 BEGIN
@@ -100,21 +108,30 @@ class DocumentManager:
                     RETURN NEW;
                 END;
                 $$ LANGUAGE plpgsql;
-            """)
+            """
+            )
 
             # 创建触发器
-            cur.execute("""
+            cur.execute(
+                """
                 DROP TRIGGER IF EXISTS trigger_update_document_versions ON document_versions;
                 CREATE TRIGGER trigger_update_document_versions
                     AFTER INSERT ON document_versions
                     FOR EACH ROW
                     EXECUTE FUNCTION update_document_versions();
-            """)
+            """
+            )
 
             # 创建索引
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_doc_versions_active ON document_versions(is_active)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_versions_active ON document_versions(is_active)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)"
+            )
 
             conn.commit()
             logger.info("Document management database tables initialized successfully")
@@ -127,7 +144,9 @@ class DocumentManager:
             cur.close()
             conn.close()
 
-    def update_document(self, doc_id: str, new_filepath: str, reason: str = None) -> bool:
+    def update_document(
+        self, doc_id: str, new_filepath: str, reason: str = None
+    ) -> bool:
         """
         更新文档内容
 
@@ -148,7 +167,9 @@ class DocumentManager:
 
         try:
             # 检查文档是否存在
-            cur.execute("SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,))
+            cur.execute(
+                "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
+            )
             existing_doc = cur.fetchone()
 
             if not existing_doc:
@@ -163,7 +184,10 @@ class DocumentManager:
                 return False
 
             # 获取当前版本号
-            cur.execute("SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s", (doc_id,))
+            cur.execute(
+                "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
+                (doc_id,),
+            )
             current_version = cur.fetchone()[0]
             new_version = current_version + 1
 
@@ -189,7 +213,15 @@ class DocumentManager:
 
             except Exception as e:
                 logger.error(f"Failed to process new document: {e}")
-                self._log_operation(doc_id, DocumentOperation.UPDATE, new_filename, old_filename, reason, "failed", str(e))
+                self._log_operation(
+                    doc_id,
+                    DocumentOperation.UPDATE,
+                    new_filename,
+                    old_filename,
+                    reason,
+                    "failed",
+                    str(e),
+                )
                 return False
 
             # 删除旧的文档块
@@ -197,43 +229,77 @@ class DocumentManager:
 
             # 插入新的文档块
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
                     VALUES (%s, %s, %s, %s)
-                """, (doc_id, i, chunk, embedding))
+                """,
+                    (doc_id, i, chunk, embedding),
+                )
 
             # 更新文档记录
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE documents
                 SET filename = %s, filepath = %s, chunk_count = %s
                 WHERE id = %s
-            """, (new_filename, new_filepath, len(chunks), doc_id))
+            """,
+                (new_filename, new_filepath, len(chunks), doc_id),
+            )
 
             # 创建版本记录
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO document_versions (doc_id, version, filename, filepath, chunk_count, operation, is_active)
                 VALUES (%s, %s, %s, %s, %s, %s, TRUE)
-            """, (doc_id, new_version, new_filename, new_filepath, len(chunks), DocumentOperation.UPDATE.value))
+            """,
+                (
+                    doc_id,
+                    new_version,
+                    new_filename,
+                    new_filepath,
+                    len(chunks),
+                    DocumentOperation.UPDATE.value,
+                ),
+            )
 
             conn.commit()
 
             # 记录成功操作
-            self._log_operation(doc_id, DocumentOperation.UPDATE, new_filename, old_filename, reason, "success")
+            self._log_operation(
+                doc_id,
+                DocumentOperation.UPDATE,
+                new_filename,
+                old_filename,
+                reason,
+                "success",
+            )
 
-            logger.info(f"Document {doc_id} updated successfully to version {new_version}")
+            logger.info(
+                f"Document {doc_id} updated successfully to version {new_version}"
+            )
             return True
 
         except Exception as e:
             conn.rollback()
             logger.error(f"Failed to update document {doc_id}: {e}")
-            self._log_operation(doc_id, DocumentOperation.UPDATE, os.path.basename(new_filepath),
-                             existing_doc[0] if existing_doc else None, reason, "failed", str(e))
+            self._log_operation(
+                doc_id,
+                DocumentOperation.UPDATE,
+                os.path.basename(new_filepath),
+                existing_doc[0] if existing_doc else None,
+                reason,
+                "failed",
+                str(e),
+            )
             return False
         finally:
             cur.close()
             conn.close()
 
-    def delete_document(self, doc_id: str, reason: str = None, soft_delete: bool = True) -> bool:
+    def delete_document(
+        self, doc_id: str, reason: str = None, soft_delete: bool = True
+    ) -> bool:
         """
         删除文档
 
@@ -254,7 +320,9 @@ class DocumentManager:
 
         try:
             # 获取文档信息
-            cur.execute("SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,))
+            cur.execute(
+                "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
+            )
             doc_info = cur.fetchone()
 
             if not doc_info:
@@ -265,59 +333,98 @@ class DocumentManager:
 
             if soft_delete:
                 # 软删除：只标记为非活跃状态
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE document_versions
                     SET is_active = FALSE
                     WHERE doc_id = %s AND is_active = TRUE
-                """, (doc_id,))
+                """,
+                    (doc_id,),
+                )
 
                 # 删除文档块
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
                 # 更新文档记录（保留基本信息）
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE documents
                     SET chunk_count = 0
                     WHERE id = %s
-                """, (doc_id,))
+                """,
+                    (doc_id,),
+                )
 
                 # 创建版本记录
-                cur.execute("SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s", (doc_id,))
+                cur.execute(
+                    "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
+                    (doc_id,),
+                )
                 current_version = cur.fetchone()[0]
                 new_version = current_version + 1
 
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO document_versions (doc_id, version, filename, filepath, chunk_count, operation, is_active)
                     VALUES (%s, %s, %s, %s, %s, %s, FALSE)
-                """, (doc_id, new_version, filename, filepath, 0, DocumentOperation.DELETE.value))
+                """,
+                    (
+                        doc_id,
+                        new_version,
+                        filename,
+                        filepath,
+                        0,
+                        DocumentOperation.DELETE.value,
+                    ),
+                )
 
             else:
                 # 硬删除：完全移除
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
-                cur.execute("DELETE FROM document_versions WHERE doc_id = %s", (doc_id,))
+                cur.execute(
+                    "DELETE FROM document_versions WHERE doc_id = %s", (doc_id,)
+                )
                 cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
 
             conn.commit()
 
             # 记录操作
             delete_type = "soft_delete" if soft_delete else "hard_delete"
-            self._log_operation(doc_id, DocumentOperation.DELETE, filename, None, reason, "success",
-                             f"Delete type: {delete_type}")
+            self._log_operation(
+                doc_id,
+                DocumentOperation.DELETE,
+                filename,
+                None,
+                reason,
+                "success",
+                f"Delete type: {delete_type}",
+            )
 
-            logger.info(f"Document {doc_id} {'soft' if soft_delete else 'hard'} deleted successfully")
+            logger.info(
+                f"Document {doc_id} {'soft' if soft_delete else 'hard'} deleted successfully"
+            )
             return True
 
         except Exception as e:
             conn.rollback()
             logger.error(f"Failed to delete document {doc_id}: {e}")
-            self._log_operation(doc_id, DocumentOperation.DELETE, doc_info[0] if doc_info else None,
-                             None, reason, "failed", str(e))
+            self._log_operation(
+                doc_id,
+                DocumentOperation.DELETE,
+                doc_info[0] if doc_info else None,
+                None,
+                reason,
+                "failed",
+                str(e),
+            )
             return False
         finally:
             cur.close()
             conn.close()
 
-    def replace_document(self, doc_id: str, new_filepath: str, reason: str = None) -> bool:
+    def replace_document(
+        self, doc_id: str, new_filepath: str, reason: str = None
+    ) -> bool:
         """
         替换文档（先删除后添加，保持相同的doc_id）
 
@@ -334,7 +441,9 @@ class DocumentManager:
 
         try:
             # 检查文档是否存在
-            cur.execute("SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,))
+            cur.execute(
+                "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
+            )
             existing_doc = cur.fetchone()
 
             if not existing_doc:
@@ -372,46 +481,89 @@ class DocumentManager:
 
             except Exception as e:
                 logger.error(f"Failed to process replacement document: {e}")
-                self._log_operation(doc_id, DocumentOperation.REPLACE, new_filename, old_filename, reason, "failed", str(e))
+                self._log_operation(
+                    doc_id,
+                    DocumentOperation.REPLACE,
+                    new_filename,
+                    old_filename,
+                    reason,
+                    "failed",
+                    str(e),
+                )
                 return False
 
             # 插入新的文档块
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
                     VALUES (%s, %s, %s, %s)
-                """, (doc_id, i, chunk, embedding))
+                """,
+                    (doc_id, i, chunk, embedding),
+                )
 
             # 更新文档记录
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE documents
                 SET filename = %s, filepath = %s, chunk_count = %s
                 WHERE id = %s
-            """, (new_filename, new_filepath, len(chunks), doc_id))
+            """,
+                (new_filename, new_filepath, len(chunks), doc_id),
+            )
 
             # 创建版本记录
-            cur.execute("SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s", (doc_id,))
+            cur.execute(
+                "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
+                (doc_id,),
+            )
             current_version = cur.fetchone()[0]
             new_version = current_version + 1
 
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO document_versions (doc_id, version, filename, filepath, chunk_count, operation, is_active)
                 VALUES (%s, %s, %s, %s, %s, %s, TRUE)
-            """, (doc_id, new_version, new_filename, new_filepath, len(chunks), DocumentOperation.REPLACE.value))
+            """,
+                (
+                    doc_id,
+                    new_version,
+                    new_filename,
+                    new_filepath,
+                    len(chunks),
+                    DocumentOperation.REPLACE.value,
+                ),
+            )
 
             conn.commit()
 
             # 记录操作
-            self._log_operation(doc_id, DocumentOperation.REPLACE, new_filename, old_filename, reason, "success")
+            self._log_operation(
+                doc_id,
+                DocumentOperation.REPLACE,
+                new_filename,
+                old_filename,
+                reason,
+                "success",
+            )
 
-            logger.info(f"Document {doc_id} replaced successfully with version {new_version}")
+            logger.info(
+                f"Document {doc_id} replaced successfully with version {new_version}"
+            )
             return True
 
         except Exception as e:
             conn.rollback()
             logger.error(f"Failed to replace document {doc_id}: {e}")
-            self._log_operation(doc_id, DocumentOperation.REPLACE, os.path.basename(new_filepath),
-                             existing_doc[0] if existing_doc else None, reason, "failed", str(e))
+            self._log_operation(
+                doc_id,
+                DocumentOperation.REPLACE,
+                os.path.basename(new_filepath),
+                existing_doc[0] if existing_doc else None,
+                reason,
+                "failed",
+                str(e),
+            )
             return False
         finally:
             cur.close()
@@ -423,25 +575,30 @@ class DocumentManager:
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT doc_id, version, filename, filepath, chunk_count, created_at, operation, is_active
                 FROM document_versions
                 WHERE doc_id = %s
                 ORDER BY version DESC
-            """, (doc_id,))
+            """,
+                (doc_id,),
+            )
 
             versions = []
             for row in cur.fetchall():
-                versions.append(DocumentVersion(
-                    doc_id=row[0],
-                    version=row[1],
-                    filename=row[2],
-                    filepath=row[3],
-                    chunk_count=row[4],
-                    created_at=row[5],
-                    operation=DocumentOperation(row[6]),
-                    is_active=row[7]
-                ))
+                versions.append(
+                    DocumentVersion(
+                        doc_id=row[0],
+                        version=row[1],
+                        filename=row[2],
+                        filepath=row[3],
+                        chunk_count=row[4],
+                        created_at=row[5],
+                        operation=DocumentOperation(row[6]),
+                        is_active=row[7],
+                    )
+                )
 
             return versions
 
@@ -452,11 +609,15 @@ class DocumentManager:
             cur.close()
             conn.close()
 
-    def restore_document_version(self, doc_id: str, version: int, reason: str = None) -> bool:
+    def restore_document_version(
+        self, doc_id: str, version: int, reason: str = None
+    ) -> bool:
         """恢复文档到指定版本"""
         # 这里可以实现版本恢复逻辑
         # 由于需要存储历史版本的完整内容，这需要更复杂的存储策略
-        logger.info(f"Document version restoration not yet implemented for {doc_id} version {version}")
+        logger.info(
+            f"Document version restoration not yet implemented for {doc_id} version {version}"
+        )
         return False
 
     def get_operation_log(self, doc_id: str = None, limit: int = 50) -> List[Dict]:
@@ -466,33 +627,41 @@ class DocumentManager:
 
         try:
             if doc_id:
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT doc_id, operation, filename, old_filename, reason, status, error_message, created_at
                     FROM document_operations_log
                     WHERE doc_id = %s
                     ORDER BY created_at DESC
                     LIMIT %s
-                """, (doc_id, limit))
+                """,
+                    (doc_id, limit),
+                )
             else:
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT doc_id, operation, filename, old_filename, reason, status, error_message, created_at
                     FROM document_operations_log
                     ORDER BY created_at DESC
                     LIMIT %s
-                """, (limit,))
+                """,
+                    (limit,),
+                )
 
             logs = []
             for row in cur.fetchall():
-                logs.append({
-                    'doc_id': row[0],
-                    'operation': row[1],
-                    'filename': row[2],
-                    'old_filename': row[3],
-                    'reason': row[4],
-                    'status': row[5],
-                    'error_message': row[6],
-                    'created_at': row[7]
-                })
+                logs.append(
+                    {
+                        "doc_id": row[0],
+                        "operation": row[1],
+                        "filename": row[2],
+                        "old_filename": row[3],
+                        "reason": row[4],
+                        "status": row[5],
+                        "error_message": row[6],
+                        "created_at": row[7],
+                    }
+                )
 
             return logs
 
@@ -503,19 +672,37 @@ class DocumentManager:
             cur.close()
             conn.close()
 
-    def _log_operation(self, doc_id: str, operation: DocumentOperation, filename: str,
-                      old_filename: str = None, reason: str = None, status: str = "success",
-                      error_message: str = None):
+    def _log_operation(
+        self,
+        doc_id: str,
+        operation: DocumentOperation,
+        filename: str,
+        old_filename: str = None,
+        reason: str = None,
+        status: str = "success",
+        error_message: str = None,
+    ):
         """记录文档操作日志"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO document_operations_log
                 (doc_id, operation, filename, old_filename, reason, status, error_message)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (doc_id, operation.value, filename, old_filename, reason, status, error_message))
+            """,
+                (
+                    doc_id,
+                    operation.value,
+                    filename,
+                    old_filename,
+                    reason,
+                    status,
+                    error_message,
+                ),
+            )
             conn.commit()
 
         except Exception as e:
@@ -534,28 +721,32 @@ class DocumentManager:
 
             # 总文档数
             cur.execute("SELECT COUNT(*) FROM documents")
-            stats['total_documents'] = cur.fetchone()[0]
+            stats["total_documents"] = cur.fetchone()[0]
 
             # 活跃文档数
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(DISTINCT dv.doc_id)
                 FROM document_versions dv
                 WHERE dv.is_active = TRUE
-            """)
-            stats['active_documents'] = cur.fetchone()[0]
+            """
+            )
+            stats["active_documents"] = cur.fetchone()[0]
 
             # 总文档块数
             cur.execute("SELECT COUNT(*) FROM document_chunks")
-            stats['total_chunks'] = cur.fetchone()[0]
+            stats["total_chunks"] = cur.fetchone()[0]
 
             # 版本统计
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT operation, COUNT(*)
                 FROM document_versions
                 GROUP BY operation
-            """)
+            """
+            )
             operation_stats = dict(cur.fetchall())
-            stats['operations'] = operation_stats
+            stats["operations"] = operation_stats
 
             return stats
 

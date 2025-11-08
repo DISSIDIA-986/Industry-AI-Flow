@@ -6,10 +6,11 @@
 import asyncio
 import json
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Any, Optional, Tuple, Union
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -17,14 +18,16 @@ logger = logging.getLogger(__name__)
 
 class RoutingPath(str, Enum):
     """路由路径枚举"""
-    DIRECT_ROUTING = "direct"          # 直接路由
-    CLARIFICATION = "clarification"    # 澄清流程
-    FALLBACK = "fallback"              # 回退方案
-    ESCALATION = "escalation"          # 升级处理
+
+    DIRECT_ROUTING = "direct"  # 直接路由
+    CLARIFICATION = "clarification"  # 澄清流程
+    FALLBACK = "fallback"  # 回退方案
+    ESCALATION = "escalation"  # 升级处理
 
 
 class AgentType(str, Enum):
     """Agent类型枚举"""
+
     RAG_AGENT = "rag_agent"
     DATA_ANALYSIS_AGENT = "data_analysis_agent"
     DOCUMENT_PROCESSING_AGENT = "document_processing_agent"
@@ -36,6 +39,7 @@ class AgentType(str, Enum):
 @dataclass
 class RoutingDecision:
     """路由决策结果"""
+
     selected_agent: AgentType
     routing_path: RoutingPath
     confidence: float
@@ -57,13 +61,14 @@ class RoutingDecision:
             "fallback_options": [agent.value for agent in self.fallback_options],
             "estimated_processing_time": self.estimated_processing_time,
             "requires_clarification": self.requires_clarification,
-            "clarification_context": self.clarification_context
+            "clarification_context": self.clarification_context,
         }
 
 
 @dataclass
 class SystemStatus:
     """系统状态信息"""
+
     agent_availability: Dict[AgentType, bool] = field(default_factory=dict)
     system_load: float = 0.0
     active_sessions: int = 0
@@ -72,20 +77,26 @@ class SystemStatus:
 
     def get_available_agents(self) -> List[AgentType]:
         """获取可用的Agent列表"""
-        return [agent for agent, available in self.agent_availability.items() if available]
+        return [
+            agent for agent, available in self.agent_availability.items() if available
+        ]
 
-    def get_least_loaded_agent(self, candidates: List[AgentType]) -> Optional[AgentType]:
+    def get_least_loaded_agent(
+        self, candidates: List[AgentType]
+    ) -> Optional[AgentType]:
         """从候选Agent中选择负载最低的"""
         if not candidates:
             return None
 
-        available_candidates = [agent for agent in candidates if self.agent_availability.get(agent, False)]
+        available_candidates = [
+            agent for agent in candidates if self.agent_availability.get(agent, False)
+        ]
         if not available_candidates:
             return None
 
         # 基于队列长度和平均响应时间选择最优Agent
         best_agent = None
-        best_score = float('inf')
+        best_score = float("inf")
 
         for agent in available_candidates:
             queue_score = self.queue_lengths.get(agent, 0)
@@ -112,54 +123,67 @@ class RoutingDecisionEngine:
         self.config = config or {}
 
         # 置信度阈值
-        self.confidence_thresholds = self.config.get("confidence_thresholds", {
-            "high": 0.8,      # 高置信度，直接路由
-            "medium": 0.6,    # 中等置信度，需要验证
-            "low": 0.4        # 低置信度，需要澄清
-        })
+        self.confidence_thresholds = self.config.get(
+            "confidence_thresholds",
+            {
+                "high": 0.8,  # 高置信度，直接路由
+                "medium": 0.6,  # 中等置信度，需要验证
+                "low": 0.4,  # 低置信度，需要澄清
+            },
+        )
 
         # Agent配置
-        self.agent_config = self.config.get("agent_config", {
-            AgentType.RAG_AGENT: {
-                "max_response_time": 30,
-                "retry_count": 2,
-                "priority": 1,
-                "capabilities": ["knowledge_retrieval", "semantic_search"]
+        self.agent_config = self.config.get(
+            "agent_config",
+            {
+                AgentType.RAG_AGENT: {
+                    "max_response_time": 30,
+                    "retry_count": 2,
+                    "priority": 1,
+                    "capabilities": ["knowledge_retrieval", "semantic_search"],
+                },
+                AgentType.DATA_ANALYSIS_AGENT: {
+                    "max_response_time": 120,
+                    "retry_count": 1,
+                    "priority": 2,
+                    "capabilities": ["data_analysis", "statistics", "visualization"],
+                },
+                AgentType.DOCUMENT_PROCESSING_AGENT: {
+                    "max_response_time": 60,
+                    "retry_count": 2,
+                    "priority": 2,
+                    "capabilities": ["ocr", "text_extraction", "document_parsing"],
+                },
+                AgentType.CODE_EXECUTION_AGENT: {
+                    "max_response_time": 90,
+                    "retry_count": 1,
+                    "priority": 3,
+                    "capabilities": [
+                        "code_execution",
+                        "computation",
+                        "algorithm_testing",
+                    ],
+                },
+                AgentType.GENERAL_AGENT: {
+                    "max_response_time": 45,
+                    "retry_count": 3,
+                    "priority": 4,
+                    "capabilities": ["general_qa", "fallback_handling"],
+                },
             },
-            AgentType.DATA_ANALYSIS_AGENT: {
-                "max_response_time": 120,
-                "retry_count": 1,
-                "priority": 2,
-                "capabilities": ["data_analysis", "statistics", "visualization"]
-            },
-            AgentType.DOCUMENT_PROCESSING_AGENT: {
-                "max_response_time": 60,
-                "retry_count": 2,
-                "priority": 2,
-                "capabilities": ["ocr", "text_extraction", "document_parsing"]
-            },
-            AgentType.CODE_EXECUTION_AGENT: {
-                "max_response_time": 90,
-                "retry_count": 1,
-                "priority": 3,
-                "capabilities": ["code_execution", "computation", "algorithm_testing"]
-            },
-            AgentType.GENERAL_AGENT: {
-                "max_response_time": 45,
-                "retry_count": 3,
-                "priority": 4,
-                "capabilities": ["general_qa", "fallback_handling"]
-            }
-        })
+        )
 
         # 路由规则
-        self.routing_rules = self.config.get("routing_rules", {
-            "direct_routing_threshold": 0.8,
-            "clarification_threshold": 0.5,
-            "enable_load_balancing": True,
-            "enable_fallback": True,
-            "max_fallback_attempts": 3
-        })
+        self.routing_rules = self.config.get(
+            "routing_rules",
+            {
+                "direct_routing_threshold": 0.8,
+                "clarification_threshold": 0.5,
+                "enable_load_balancing": True,
+                "enable_fallback": True,
+                "max_fallback_attempts": 3,
+            },
+        )
 
         # 系统状态模拟
         self.system_status = SystemStatus()
@@ -171,7 +195,7 @@ class RoutingDecisionEngine:
             "direct_routes": 0,
             "clarification_routes": 0,
             "fallback_routes": 0,
-            "agent_usage": {agent: 0 for agent in AgentType}
+            "agent_usage": {agent: 0 for agent in AgentType},
         }
 
         logger.info("路由决策引擎初始化完成")
@@ -189,13 +213,15 @@ class RoutingDecisionEngine:
         # 初始化平均响应时间
         for agent in AgentType:
             config = self.agent_config.get(agent, {})
-            self.system_status.average_response_times[agent] = config.get("max_response_time", 60) * 0.5
+            self.system_status.average_response_times[agent] = (
+                config.get("max_response_time", 60) * 0.5
+            )
 
     async def make_routing_decision(
         self,
         intent_result: Dict[str, Any],
         context: Dict[str, Any],
-        user_preferences: Optional[Dict[str, Any]] = None
+        user_preferences: Optional[Dict[str, Any]] = None,
     ) -> RoutingDecision:
         """
         做出路由决策
@@ -226,7 +252,10 @@ class RoutingDecisionEngine:
             # 负载均衡考虑
             if self.routing_rules.get("enable_load_balancing", True):
                 candidates = [primary_agent] + fallback_agents
-                selected_agent = self.system_status.get_least_loaded_agent(candidates) or primary_agent
+                selected_agent = (
+                    self.system_status.get_least_loaded_agent(candidates)
+                    or primary_agent
+                )
             else:
                 selected_agent = primary_agent
 
@@ -244,8 +273,10 @@ class RoutingDecisionEngine:
             if requires_clarification:
                 clarification_context = {
                     "possible_intents": self._get_possible_intents(intent_result),
-                    "clarification_questions": self._generate_clarification_questions(intent_result),
-                    "user_context": context
+                    "clarification_questions": self._generate_clarification_questions(
+                        intent_result
+                    ),
+                    "user_context": context,
                 }
 
             # 创建路由决策
@@ -258,13 +289,15 @@ class RoutingDecisionEngine:
                 fallback_options=fallback_agents,
                 estimated_processing_time=estimated_time,
                 requires_clarification=requires_clarification,
-                clarification_context=clarification_context
+                clarification_context=clarification_context,
             )
 
             # 更新统计
             self._update_routing_stats(decision)
 
-            logger.info(f"路由决策完成: {selected_agent.value} (置信度: {confidence:.2f}, 路径: {routing_path.value})")
+            logger.info(
+                f"路由决策完成: {selected_agent.value} (置信度: {confidence:.2f}, 路径: {routing_path.value})"
+            )
             return decision
 
         except Exception as e:
@@ -278,22 +311,35 @@ class RoutingDecisionEngine:
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
             "document_processing": AgentType.DOCUMENT_PROCESSING_AGENT,
-            "code_execution": AgentType.CODE_EXECUTION_AGENT
+            "code_execution": AgentType.CODE_EXECUTION_AGENT,
         }
         return intent_mapping.get(intent, AgentType.GENERAL_AGENT)
 
-    def _get_fallback_agents(self, primary_agent: AgentType, intent: str) -> List[AgentType]:
+    def _get_fallback_agents(
+        self, primary_agent: AgentType, intent: str
+    ) -> List[AgentType]:
         """获取备选Agent列表"""
         fallback_mapping = {
             AgentType.RAG_AGENT: [AgentType.GENERAL_AGENT],
-            AgentType.DATA_ANALYSIS_AGENT: [AgentType.RAG_AGENT, AgentType.GENERAL_AGENT],
-            AgentType.DOCUMENT_PROCESSING_AGENT: [AgentType.RAG_AGENT, AgentType.GENERAL_AGENT],
-            AgentType.CODE_EXECUTION_AGENT: [AgentType.DATA_ANALYSIS_AGENT, AgentType.GENERAL_AGENT],
-            AgentType.GENERAL_AGENT: []
+            AgentType.DATA_ANALYSIS_AGENT: [
+                AgentType.RAG_AGENT,
+                AgentType.GENERAL_AGENT,
+            ],
+            AgentType.DOCUMENT_PROCESSING_AGENT: [
+                AgentType.RAG_AGENT,
+                AgentType.GENERAL_AGENT,
+            ],
+            AgentType.CODE_EXECUTION_AGENT: [
+                AgentType.DATA_ANALYSIS_AGENT,
+                AgentType.GENERAL_AGENT,
+            ],
+            AgentType.GENERAL_AGENT: [],
         }
         return fallback_mapping.get(primary_agent, [AgentType.GENERAL_AGENT])
 
-    def _determine_routing_path(self, confidence: float, intent_result: Dict[str, Any]) -> RoutingPath:
+    def _determine_routing_path(
+        self, confidence: float, intent_result: Dict[str, Any]
+    ) -> RoutingPath:
         """确定路由路径"""
         high_threshold = self.confidence_thresholds.get("high", 0.8)
         low_threshold = self.confidence_thresholds.get("low", 0.4)
@@ -315,7 +361,7 @@ class RoutingDecisionEngine:
         agent: AgentType,
         intent_result: Dict[str, Any],
         context: Dict[str, Any],
-        user_preferences: Optional[Dict[str, Any]]
+        user_preferences: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """构建路由参数"""
         base_params = {
@@ -325,7 +371,7 @@ class RoutingDecisionEngine:
             "intent": intent_result.get("intent"),
             "confidence": intent_result.get("confidence"),
             "keywords": intent_result.get("keywords", []),
-            "context_clues": intent_result.get("context_clues", [])
+            "context_clues": intent_result.get("context_clues", []),
         }
 
         # 添加上下文信息
@@ -334,7 +380,7 @@ class RoutingDecisionEngine:
                 "session_id": context.get("session_id"),
                 "user_id": context.get("user_id"),
                 "query_count": context.get("query_count", 1),
-                "has_uploaded_files": context.get("has_uploaded_files", False)
+                "has_uploaded_files": context.get("has_uploaded_files", False),
             }
 
         # 添加用户偏好
@@ -343,7 +389,9 @@ class RoutingDecisionEngine:
 
         return base_params
 
-    def _estimate_processing_time(self, agent: AgentType, context: Dict[str, Any]) -> int:
+    def _estimate_processing_time(
+        self, agent: AgentType, context: Dict[str, Any]
+    ) -> int:
         """估算处理时间"""
         base_time = self.agent_config[agent]["max_response_time"]
 
@@ -386,7 +434,7 @@ class RoutingDecisionEngine:
             "图片": "document_processing",
             "代码": "code_execution",
             "运行": "code_execution",
-            "计算": "code_execution"
+            "计算": "code_execution",
         }
 
         for keyword in keywords:
@@ -396,7 +444,9 @@ class RoutingDecisionEngine:
 
         return possible_intents[:3]  # 最多返回3个可能意图
 
-    def _generate_clarification_questions(self, intent_result: Dict[str, Any]) -> List[str]:
+    def _generate_clarification_questions(
+        self, intent_result: Dict[str, Any]
+    ) -> List[str]:
         """生成澄清问题"""
         intent = intent_result.get("intent")
         keywords = intent_result.get("keywords", [])
@@ -406,29 +456,28 @@ class RoutingDecisionEngine:
             "knowledge_retrieval": [
                 "您是想了解具体的概念解释，还是需要查找特定的信息？",
                 "您希望我帮您检索哪个领域的知识？",
-                "您的问题更偏向于事实查询还是概念说明？"
+                "您的问题更偏向于事实查询还是概念说明？",
             ],
             "data_analysis": [
                 "您希望进行哪种类型的数据分析？是统计分析、可视化还是机器学习？",
                 "您是否已经上传了需要分析的数据集？",
-                "您的分析重点是什么？是探索性分析还是验证特定假设？"
+                "您的分析重点是什么？是探索性分析还是验证特定假设？",
             ],
             "document_processing": [
                 "您需要处理什么类型的文档？是PDF文件、图片还是其他格式？",
                 "您希望从文档中提取什么类型的内容？是文字、表格还是特定信息？",
-                "您的文档是否包含需要OCR识别的扫描内容？"
+                "您的文档是否包含需要OCR识别的扫描内容？",
             ],
             "code_execution": [
                 "您希望运行什么类型的代码？是数据处理、算法实现还是特定计算？",
                 "您是否有具体的编程语言偏好？",
-                "您的代码执行是否需要特定的环境或依赖？"
-            ]
+                "您的代码执行是否需要特定的环境或依赖？",
+            ],
         }
 
-        questions = clarification_templates.get(intent, [
-            "请您更详细地描述一下您的需求？",
-            "您希望我帮您完成什么具体任务？"
-        ])
+        questions = clarification_templates.get(
+            intent, ["请您更详细地描述一下您的需求？", "您希望我帮您完成什么具体任务？"]
+        )
 
         # 根据关键词调整问题
         if "图表" in keywords and intent == "data_analysis":
@@ -450,7 +499,9 @@ class RoutingDecisionEngine:
         elif decision.routing_path == RoutingPath.FALLBACK:
             self.routing_stats["fallback_routes"] += 1
 
-    def _create_fallback_decision(self, intent_result: Dict[str, Any], error: str) -> RoutingDecision:
+    def _create_fallback_decision(
+        self, intent_result: Dict[str, Any], error: str
+    ) -> RoutingDecision:
         """创建回退决策"""
         return RoutingDecision(
             selected_agent=AgentType.GENERAL_AGENT,
@@ -458,12 +509,14 @@ class RoutingDecisionEngine:
             confidence=0.5,
             reasoning=f"路由决策失败，回退到通用Agent。错误信息: {error}",
             parameters={
-                "timeout": self.agent_config[AgentType.GENERAL_AGENT]["max_response_time"],
+                "timeout": self.agent_config[AgentType.GENERAL_AGENT][
+                    "max_response_time"
+                ],
                 "retry_count": 3,
-                "fallback_reason": error
+                "fallback_reason": error,
             },
             fallback_options=[],
-            estimated_processing_time=45
+            estimated_processing_time=45,
         )
 
     def get_routing_statistics(self) -> Dict[str, Any]:
@@ -489,7 +542,9 @@ class RoutingDecisionEngine:
     def update_system_status(self, status_updates: Dict[str, Any]):
         """更新系统状态"""
         if "agent_availability" in status_updates:
-            self.system_status.agent_availability.update(status_updates["agent_availability"])
+            self.system_status.agent_availability.update(
+                status_updates["agent_availability"]
+            )
 
         if "system_load" in status_updates:
             self.system_status.system_load = status_updates["system_load"]
@@ -501,7 +556,9 @@ class RoutingDecisionEngine:
             self.system_status.queue_lengths.update(status_updates["queue_lengths"])
 
         if "average_response_times" in status_updates:
-            self.system_status.average_response_times.update(status_updates["average_response_times"])
+            self.system_status.average_response_times.update(
+                status_updates["average_response_times"]
+            )
 
     async def health_check(self) -> Dict[str, Any]:
         """健康检查"""
@@ -511,5 +568,5 @@ class RoutingDecisionEngine:
             "available_agents": len(self.system_status.get_available_agents()),
             "system_load": self.system_status.system_load,
             "active_sessions": self.system_status.active_sessions,
-            "routing_rules": self.routing_rules
+            "routing_rules": self.routing_rules,
         }
