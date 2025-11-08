@@ -3,13 +3,14 @@
 验证PaddleOCR 3.3.1与DocumentLoader的完整集成
 """
 
-import sys
 import os
+import sys
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from pathlib import Path
+
 from backend.services.document_loader import EnhancedDocumentLoader
 
 
@@ -23,7 +24,7 @@ def test_ocr_image_loading():
     # 1. 初始化DocumentLoader
     print("[1/3] 初始化DocumentLoader...")
     try:
-        loader = EnhancedDocumentLoader(use_ocr=True, ocr_lang='ch')
+        loader = EnhancedDocumentLoader(use_ocr=True, ocr_lang="ch")
         print("✅ DocumentLoader初始化成功")
         print()
     except Exception as e:
@@ -46,7 +47,7 @@ def test_ocr_image_loading():
         if text:
             print("✅ OCR识别成功")
             print("\n   识别结果:")
-            for idx, line in enumerate(text.split('\n'), 1):
+            for idx, line in enumerate(text.split("\n"), 1):
                 if line.strip():
                     print(f"   [{idx}] {line}")
         else:
@@ -59,6 +60,7 @@ def test_ocr_image_loading():
     except Exception as e:
         print(f"❌ OCR识别失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

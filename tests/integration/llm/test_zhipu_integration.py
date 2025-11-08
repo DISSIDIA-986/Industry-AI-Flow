@@ -3,14 +3,16 @@
 
 import os
 import sys
+
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
 
-from backend.config import settings
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
+
+from backend.config import settings
 
 
 def test_zhipu_basic_connection():
@@ -21,7 +23,11 @@ def test_zhipu_basic_connection():
 
     # 验证配置
     print(f"\n📋 配置信息:")
-    print(f"  - API Key: {settings.zhipu_api_key[:20]}..." if settings.zhipu_api_key else "  - ❌ API Key未配置")
+    print(
+        f"  - API Key: {settings.zhipu_api_key[:20]}..."
+        if settings.zhipu_api_key
+        else "  - ❌ API Key未配置"
+    )
     print(f"  - Base URL: {settings.zhipu_base_url}")
     print(f"  - Model: {settings.zhipu_model}")
     print(f"  - Timeout: {settings.api_timeout_ms/1000}s")
@@ -37,7 +43,7 @@ def test_zhipu_basic_connection():
             api_key=settings.zhipu_api_key,
             base_url=settings.zhipu_base_url,
             timeout=settings.api_timeout_ms / 1000,
-            temperature=0
+            temperature=0,
         )
 
         # 测试简单调用
@@ -53,6 +59,7 @@ def test_zhipu_basic_connection():
     except Exception as e:
         print(f"\n❌ 智谱 API 连接失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -70,7 +77,9 @@ def test_zhipu_with_agent():
     try:
         # 重新加载配置
         from importlib import reload
+
         from backend import config
+
         reload(config)
         from backend.config import settings
 
@@ -90,9 +99,7 @@ def test_zhipu_with_agent():
         print("\n🧪 测试简单对话（不触发工具）...")
         test_question = "请用一句话解释什么是人工智能。"
 
-        result = agent.invoke({
-            "messages": [HumanMessage(content=test_question)]
-        })
+        result = agent.invoke({"messages": [HumanMessage(content=test_question)]})
 
         print(f"\n✅ Agent 响应成功!")
         print(f"\n❓ 问题: {test_question}")
@@ -103,6 +110,7 @@ def test_zhipu_with_agent():
     except Exception as e:
         print(f"\n❌ Agent 集成测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -128,7 +136,9 @@ def test_zhipu_tool_calling():
 
     try:
         from importlib import reload
+
         from backend import config
+
         reload(config)
         from backend.agents.rag_agent import build_rag_agent
 
@@ -141,9 +151,7 @@ def test_zhipu_tool_calling():
         print(f"  {test_question}")
         print(f"\n🚀 开始执行...")
 
-        result = agent.invoke({
-            "messages": [HumanMessage(content=test_question)]
-        })
+        result = agent.invoke({"messages": [HumanMessage(content=test_question)]})
 
         print(f"\n✅ 工具调用测试成功!")
         print(f"\n💬 Agent 响应:")
@@ -163,6 +171,7 @@ def test_zhipu_tool_calling():
         else:
             print(f"\n❌ 工具调用测试失败: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -182,18 +191,18 @@ def test_provider_switching():
 
         try:
             from importlib import reload
+
             from backend import config
+
             reload(config)
-            from backend.config import settings
             from backend.agents.rag_agent import build_rag_agent
+            from backend.config import settings
 
             agent = build_rag_agent()
 
             # 简单测试
             if provider == "zhipu" and settings.zhipu_api_key:
-                result = agent.invoke({
-                    "messages": [HumanMessage(content="测试")]
-                })
+                result = agent.invoke({"messages": [HumanMessage(content="测试")]})
                 results[provider] = "✅ 成功"
             elif provider == "ollama":
                 # Ollama 可能未运行

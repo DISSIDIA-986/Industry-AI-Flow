@@ -4,13 +4,15 @@
 验证 RAG 数据分析节点的中文支持功能
 """
 
-import sys
 import os
-from pathlib import Path
-import pandas as pd
-import numpy as np
+import sys
 import warnings
-warnings.filterwarnings('ignore')
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+warnings.filterwarnings("ignore")
 
 # 添加项目路径
 sys.path.append(str(Path(__file__).parent))
@@ -18,6 +20,7 @@ sys.path.append(str(Path(__file__).parent))
 # 导入中文字体支持
 try:
     from backend.utils.matplotlib_chinese_support import setup_chinese_matplotlib
+
     setup_chinese_matplotlib()
     print("✅ 中文字体支持已启用")
 except ImportError:
@@ -25,6 +28,7 @@ except ImportError:
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 
 def generate_chinese_eda_code():
     """生成包含中文字体支持的EDA分析代码"""
@@ -333,11 +337,12 @@ if __name__ == "__main__":
 
     return analysis_code
 
+
 def test_integrated_chinese_analysis():
     """测试集成中文分析功能"""
-    print("="*60)
+    print("=" * 60)
     print("🇨🇳 测试集成中文数据分析功能")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # 生成包含中文支持的EDA代码
@@ -363,8 +368,10 @@ def test_integrated_chinese_analysis():
     except Exception as e:
         print(f"❌ 集成测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def main():
     """主函数"""
@@ -373,9 +380,9 @@ def main():
 
     success = test_integrated_chinese_analysis()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("📊 集成测试总结")
-    print("="*60)
+    print("=" * 60)
 
     if success:
         print("🎉 集成中文分析测试成功!")
@@ -414,6 +421,7 @@ def main():
         print("- Docker 环境配置")
 
     return success
+
 
 if __name__ == "__main__":
     success = main()

@@ -3,22 +3,25 @@
 测试 Docker 代码执行功能
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
+
 import pandas as pd
 
 # 添加项目路径
 sys.path.append(str(Path(__file__).parent))
 
+
 def test_docker_connectivity():
     """测试Docker连接"""
-    print("="*60)
+    print("=" * 60)
     print("🐳 测试 Docker 连接")
-    print("="*60)
+    print("=" * 60)
 
     try:
         import docker
+
         client = docker.from_env()
 
         # 测试Docker连接
@@ -30,8 +33,11 @@ def test_docker_connectivity():
         print(f"📦 发现 {len(images)} 个 Docker 镜像")
 
         # 检查是否已有分析镜像
-        analysis_images = [img for img in images
-                         if any(tag.endswith('code-analysis') for tag in img.tags)]
+        analysis_images = [
+            img
+            for img in images
+            if any(tag.endswith("code-analysis") for tag in img.tags)
+        ]
 
         if analysis_images:
             print("✅ 发现数据分析镜像:")
@@ -46,11 +52,12 @@ def test_docker_connectivity():
         print(f"❌ Docker 连接失败: {e}")
         return False, None
 
+
 def test_code_execution_without_docker():
     """测试不使用Docker的代码执行"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("⚙️ 测试 Python 代码执行（本地环境）")
-    print("="*60)
+    print("=" * 60)
 
     # 测试 Housing 数据分析的代码
     test_code = '''
@@ -127,7 +134,7 @@ if __name__ == "__main__":
     try:
         # 创建临时脚本文件
         script_path = Path("temp_analysis_script.py")
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(test_code)
 
         # 设置输出目录
@@ -135,7 +142,9 @@ if __name__ == "__main__":
         output_dir.mkdir(exist_ok=True)
 
         # 修改脚本以支持输出保存
-        modified_code = test_code + '''
+        modified_code = (
+            test_code
+            + """
 import json
 
 # 保存分析结果
@@ -146,7 +155,8 @@ with open(output_file, 'w', encoding='utf-8') as f:
     json.dump(results, f, indent=2, ensure_ascii=False)
 
 print(f"\\n结果已保存到: {output_file}")
-'''
+"""
+        )
 
         # 执行脚本
         exec_globals = {}
@@ -158,17 +168,22 @@ print(f"\\n结果已保存到: {output_file}")
         result_file = Path("docker_test_output/analysis_results.json")
         if result_file.exists():
             import json
-            with open(result_file, 'r', encoding='utf-8') as f:
+
+            with open(result_file, "r", encoding="utf-8") as f:
                 results = json.load(f)
 
             print("📊 分析结果:")
             print(f"   总记录数: {results['total_records']}")
             print(f"   平均价格: {results['price_stats']['mean']:,.0f}")
-            print(f"   价格范围: {results['price_stats']['min']:,.0f} - {results['price_stats']['max']:,.0f}")
+            print(
+                f"   价格范围: {results['price_stats']['min']:,.0f} - {results['price_stats']['max']:,.0f}"
+            )
 
             # 显示特征重要性
             print("   特征重要性排名:")
-            for i, (feature, importance) in enumerate(list(results['feature_importance'].items())[:5], 1):
+            for i, (feature, importance) in enumerate(
+                list(results["feature_importance"].items())[:5], 1
+            ):
                 print(f"   {i}. {feature}: {importance:.3f}")
 
             return True, results
@@ -179,14 +194,16 @@ print(f"\\n结果已保存到: {output_file}")
     except Exception as e:
         print(f"❌ 代码执行失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, None
 
+
 def test_advanced_analysis():
     """测试高级分析功能"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🧠 测试高级数据分析功能")
-    print("="*60)
+    print("=" * 60)
 
     advanced_code = '''
 import pandas as pd
@@ -290,7 +307,7 @@ if __name__ == "__main__":
     try:
         # 创建临时脚本
         script_path = Path("advanced_analysis_script.py")
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(advanced_code)
 
         # 执行高级分析
@@ -298,7 +315,7 @@ if __name__ == "__main__":
         exec(advanced_code, exec_globals)
 
         print("✅ 高级分析执行成功!")
-        return True, exec_globals.get('results', {})
+        return True, exec_globals.get("results", {})
 
     except ImportError as e:
         if "sklearn" in str(e):
@@ -311,11 +328,12 @@ if __name__ == "__main__":
         print(f"❌ 高级分析失败: {e}")
         return False, None
 
+
 def test_visualization_generation():
     """测试可视化生成"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("📊 测试可视化图表生成")
-    print("="*60)
+    print("=" * 60)
 
     visualization_code = '''
 import pandas as pd
@@ -481,9 +499,9 @@ if __name__ == "__main__":
         exec_globals = {}
         exec(visualization_code, exec_globals)
 
-        if exec_globals.get('charts'):
-            charts = exec_globals['charts']
-            output_dir = exec_globals.get('output_dir')
+        if exec_globals.get("charts"):
+            charts = exec_globals["charts"]
+            output_dir = exec_globals.get("output_dir")
 
             print("📊 生成的图表:")
             for i, chart_path in enumerate(charts, 1):
@@ -499,8 +517,10 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ 可视化生成失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, []
+
 
 def main():
     """主测试函数"""
@@ -511,33 +531,33 @@ def main():
     docker_available, client = test_docker_connectivity()
 
     # 测试2: 基础代码执行（本地环境）
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 2/4: 基础代码执行")
-    print("="*60)
+    print("=" * 60)
     code_success, basic_results = test_code_execution_without_docker()
 
     # 测试3: 高级分析功能
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 3/4: 高级数据分析")
-    print("="*60)
+    print("=" * 60)
     advanced_success, advanced_results = test_advanced_analysis()
 
     # 测试4: 可视化生成
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("测试 4/4: 可视化图表生成")
-    print("="*60)
+    print("=" * 60)
     viz_success, charts = test_visualization_generation()
 
     # 测试总结
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("📊 测试总结")
-    print("="*60)
+    print("=" * 60)
 
     tests = [
         ("Docker连接", docker_available),
         ("基础代码执行", code_success),
         ("高级数据分析", advanced_success if advanced_success is not None else False),
-        ("可视化生成", viz_success)
+        ("可视化生成", viz_success),
     ]
 
     success_count = 0
@@ -564,7 +584,7 @@ def main():
 
         if advanced_results:
             print(f"\n🧠 机器学习模型性能:")
-            perf = advanced_results['model_performance']
+            perf = advanced_results["model_performance"]
             print(f"   R² 分数: {perf['r2_score']:.3f}")
             print(f"   平均误差: {perf['mae']:,.0f}")
 
@@ -588,6 +608,7 @@ def main():
         print("- 系统权限设置")
 
     return overall_success
+
 
 if __name__ == "__main__":
     success = main()

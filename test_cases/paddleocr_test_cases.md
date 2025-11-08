@@ -32,7 +32,7 @@ This document contains test cases for PaddleOCR functionality in the Industry AI
 
 ## Test Case 4: OCR Processor Initialization
 - **Objective**: Test OCR processor initialization with project code
-- **Configuration**: 
+- **Configuration**:
   - Language: Chinese (ch)
   - GPU: Enabled
   - Version: PP-OCRv5

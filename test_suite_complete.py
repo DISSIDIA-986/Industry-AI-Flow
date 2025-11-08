@@ -4,42 +4,45 @@ Complete Test Suite for Industry AI Flow RAG System
 Covers all test cases from test_cases/ directory
 """
 
-import sys
-import os
+import importlib.util
 import json
+import os
+import sys
 import time
 import traceback
-from typing import Dict, List, Any
-from pathlib import Path
 from datetime import datetime
-import importlib.util
+from pathlib import Path
+from typing import Any, Dict, List
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 
 # Test results storage
 test_results = []
 bug_reports = []
-test_stats = {
-    "total": 0,
-    "passed": 0,
-    "failed": 0,
-    "errors": 0,
-    "skipped": 0
-}
+test_stats = {"total": 0, "passed": 0, "failed": 0, "errors": 0, "skipped": 0}
 
 # Colors
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
+
 
 class TestResult:
-    def __init__(self, test_id: str, category: str, status: str,
-                 execution_time: float = 0, description: str = "",
-                 expected: str = "", actual: str = "",
-                 notes: str = "", metrics: Dict = None):
+    def __init__(
+        self,
+        test_id: str,
+        category: str,
+        status: str,
+        execution_time: float = 0,
+        description: str = "",
+        expected: str = "",
+        actual: str = "",
+        notes: str = "",
+        metrics: Dict = None,
+    ):
         self.test_id = test_id
         self.category = category
         self.status = status
@@ -62,7 +65,7 @@ class TestResult:
             "actual": self.actual,
             "metrics": self.metrics,
             "notes": self.notes,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
@@ -89,8 +92,9 @@ def log_test(result: TestResult):
         print(f"   {result.notes}")
 
 
-def log_bug(test_id: str, category: str, description: str,
-            severity: str, stack_trace: str = ""):
+def log_bug(
+    test_id: str, category: str, description: str, severity: str, stack_trace: str = ""
+):
     """Log bug report"""
     bug = {
         "test_id": test_id,
@@ -98,7 +102,7 @@ def log_bug(test_id: str, category: str, description: str,
         "description": description,
         "severity": severity,
         "stack_trace": stack_trace,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
     bug_reports.append(bug)
     print(f"{RED}🐛 BUG: {test_id} - {description} [{severity}]{RESET}")
@@ -117,6 +121,7 @@ def can_import(module_path: str) -> bool:
 # Test Suite 1: Environment & Dependencies
 # ============================================
 
+
 def test_environment():
     """Test environment setup and dependencies"""
     print(f"\n{BLUE}{'='*60}{RESET}")
@@ -131,26 +136,37 @@ def test_environment():
     version_tuple = (python_version.major, python_version.minor)
 
     if version_tuple in expected_versions:
-        log_test(TestResult(
-            test_id, "Environment", "PASS",
-            time.time() - start_time,
-            "Python version compatibility",
-            "Python 3.9-3.13",
-            f"Python {python_version.major}.{python_version.minor}",
-            f"Python {python_version.major}.{python_version.minor}.{python_version.micro}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "PASS",
+                time.time() - start_time,
+                "Python version compatibility",
+                "Python 3.9-3.13",
+                f"Python {python_version.major}.{python_version.minor}",
+                f"Python {python_version.major}.{python_version.minor}.{python_version.micro}",
+            )
+        )
     else:
-        log_test(TestResult(
-            test_id, "Environment", "FAIL",
-            time.time() - start_time,
-            "Python version compatibility",
-            "Python 3.9-3.13",
-            f"Python {python_version.major}.{python_version.minor}",
-            "Python version incompatible with PaddlePaddle"
-        ))
-        log_bug(test_id, "Environment",
-               f"Python {python_version.major}.{python_version.minor} not in supported range",
-               "HIGH")
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "FAIL",
+                time.time() - start_time,
+                "Python version compatibility",
+                "Python 3.9-3.13",
+                f"Python {python_version.major}.{python_version.minor}",
+                "Python version incompatible with PaddlePaddle",
+            )
+        )
+        log_bug(
+            test_id,
+            "Environment",
+            f"Python {python_version.major}.{python_version.minor} not in supported range",
+            "HIGH",
+        )
 
     # Test 1.2: Core dependencies
     test_id = "ENV-002"
@@ -161,7 +177,7 @@ def test_environment():
         "fastapi": "FastAPI",
         "pydantic": "Pydantic",
         "pandas": "Pandas",
-        "numpy": "NumPy"
+        "numpy": "NumPy",
     }
 
     missing = []
@@ -170,25 +186,36 @@ def test_environment():
             missing.append(name)
 
     if missing:
-        log_test(TestResult(
-            test_id, "Environment", "FAIL",
-            time.time() - start_time,
-            "Core dependencies check",
-            "All modules importable",
-            f"Missing: {', '.join(missing)}",
-            "Install: pip install -r requirements.txt"
-        ))
-        log_bug(test_id, "Environment",
-               f"Missing dependencies: {', '.join(missing)}",
-               "HIGH")
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "FAIL",
+                time.time() - start_time,
+                "Core dependencies check",
+                "All modules importable",
+                f"Missing: {', '.join(missing)}",
+                "Install: pip install -r requirements.txt",
+            )
+        )
+        log_bug(
+            test_id,
+            "Environment",
+            f"Missing dependencies: {', '.join(missing)}",
+            "HIGH",
+        )
     else:
-        log_test(TestResult(
-            test_id, "Environment", "PASS",
-            time.time() - start_time,
-            "Core dependencies check",
-            "All modules importable",
-            "All core modules available"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "PASS",
+                time.time() - start_time,
+                "Core dependencies check",
+                "All modules importable",
+                "All core modules available",
+            )
+        )
 
     # Test 1.3: Test resources
     test_id = "ENV-003"
@@ -196,38 +223,65 @@ def test_environment():
     required_dirs = [
         "test_resources/datasets",
         "test_resources/documents",
-        "test_resources/images"
+        "test_resources/images",
     ]
 
     missing_dirs = [d for d in required_dirs if not os.path.exists(d)]
 
     if missing_dirs:
-        log_test(TestResult(
-            test_id, "Environment", "FAIL",
-            time.time() - start_time,
-            "Test resources check",
-            "All resource directories exist",
-            f"Missing: {', '.join(missing_dirs)}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "FAIL",
+                time.time() - start_time,
+                "Test resources check",
+                "All resource directories exist",
+                f"Missing: {', '.join(missing_dirs)}",
+            )
+        )
     else:
         # Count resources
-        datasets = len([f for f in os.listdir("test_resources/datasets") if f.endswith(('.json', '.csv'))])
-        documents = len([f for f in os.listdir("test_resources/documents") if not f.startswith('.')])
-        images = len([f for f in os.listdir("test_resources/images") if f.endswith(('.png', '.jpg'))])
+        datasets = len(
+            [
+                f
+                for f in os.listdir("test_resources/datasets")
+                if f.endswith((".json", ".csv"))
+            ]
+        )
+        documents = len(
+            [f for f in os.listdir("test_resources/documents") if not f.startswith(".")]
+        )
+        images = len(
+            [
+                f
+                for f in os.listdir("test_resources/images")
+                if f.endswith((".png", ".jpg"))
+            ]
+        )
 
-        log_test(TestResult(
-            test_id, "Environment", "PASS",
-            time.time() - start_time,
-            "Test resources check",
-            "All resource directories exist",
-            "All directories present",
-            metrics={"datasets": datasets, "documents": documents, "images": images}
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Environment",
+                "PASS",
+                time.time() - start_time,
+                "Test resources check",
+                "All resource directories exist",
+                "All directories present",
+                metrics={
+                    "datasets": datasets,
+                    "documents": documents,
+                    "images": images,
+                },
+            )
+        )
 
 
 # ============================================
 # Test Suite 2: Configuration & Structure
 # ============================================
+
 
 def test_configuration():
     """Test configuration and project structure"""
@@ -243,40 +297,60 @@ def test_configuration():
         from backend.config import settings
 
         required_settings = [
-            'embedding_model', 'chunk_size', 'chunk_overlap',
-            'top_k', 'database_url'
+            "embedding_model",
+            "chunk_size",
+            "chunk_overlap",
+            "top_k",
+            "database_url",
         ]
 
         missing = [s for s in required_settings if not hasattr(settings, s)]
 
         if missing:
-            log_test(TestResult(
-                test_id, "Configuration", "FAIL",
-                time.time() - start_time,
-                "Configuration settings",
-                f"All settings: {', '.join(required_settings)}",
-                f"Missing: {', '.join(missing)}"
-            ))
-            log_bug(test_id, "Configuration",
-                   f"Missing settings: {', '.join(missing)}",
-                   "MEDIUM")
+            log_test(
+                TestResult(
+                    test_id,
+                    "Configuration",
+                    "FAIL",
+                    time.time() - start_time,
+                    "Configuration settings",
+                    f"All settings: {', '.join(required_settings)}",
+                    f"Missing: {', '.join(missing)}",
+                )
+            )
+            log_bug(
+                test_id,
+                "Configuration",
+                f"Missing settings: {', '.join(missing)}",
+                "MEDIUM",
+            )
         else:
-            config_values = {s: str(getattr(settings, s))[:50] for s in required_settings}
-            log_test(TestResult(
-                test_id, "Configuration", "PASS",
+            config_values = {
+                s: str(getattr(settings, s))[:50] for s in required_settings
+            }
+            log_test(
+                TestResult(
+                    test_id,
+                    "Configuration",
+                    "PASS",
+                    time.time() - start_time,
+                    "Configuration settings",
+                    "All required settings present",
+                    "Configuration complete",
+                    metrics=config_values,
+                )
+            )
+    except Exception as e:
+        log_test(
+            TestResult(
+                test_id,
+                "Configuration",
+                "ERROR",
                 time.time() - start_time,
                 "Configuration settings",
-                "All required settings present",
-                "Configuration complete",
-                metrics=config_values
-            ))
-    except Exception as e:
-        log_test(TestResult(
-            test_id, "Configuration", "ERROR",
-            time.time() - start_time,
-            "Configuration settings",
-            notes=f"Import error: {str(e)}"
-        ))
+                notes=f"Import error: {str(e)}",
+            )
+        )
         log_bug(test_id, "Configuration", str(e), "HIGH", traceback.format_exc())
 
     # Test 2.2: Package structure
@@ -296,29 +370,41 @@ def test_configuration():
             missing_modules.append(module)
 
     if missing_modules:
-        log_test(TestResult(
-            test_id, "Configuration", "FAIL",
-            time.time() - start_time,
-            "Package structure",
-            "All service modules importable",
-            f"Cannot import: {', '.join(missing_modules)}"
-        ))
-        log_bug(test_id, "Configuration",
-               f"Missing modules: {', '.join(missing_modules)}",
-               "HIGH")
+        log_test(
+            TestResult(
+                test_id,
+                "Configuration",
+                "FAIL",
+                time.time() - start_time,
+                "Package structure",
+                "All service modules importable",
+                f"Cannot import: {', '.join(missing_modules)}",
+            )
+        )
+        log_bug(
+            test_id,
+            "Configuration",
+            f"Missing modules: {', '.join(missing_modules)}",
+            "HIGH",
+        )
     else:
-        log_test(TestResult(
-            test_id, "Configuration", "PASS",
-            time.time() - start_time,
-            "Package structure",
-            "All service modules importable",
-            "Package structure valid"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Configuration",
+                "PASS",
+                time.time() - start_time,
+                "Package structure",
+                "All service modules importable",
+                "Package structure valid",
+            )
+        )
 
 
 # ============================================
 # Test Suite 3: RAG Engine
 # ============================================
+
 
 def test_rag_engine():
     """Test RAG engine functionality"""
@@ -333,41 +419,57 @@ def test_rag_engine():
     try:
         from backend.services.rag_engine import SimpleRAG
 
-        required_methods = ['query', 'add_documents', 'delete_document']
+        required_methods = ["query", "add_documents", "delete_document"]
         missing_methods = [m for m in required_methods if not hasattr(SimpleRAG, m)]
 
         if missing_methods:
-            log_test(TestResult(
-                test_id, "RAG Engine", "FAIL",
-                time.time() - start_time,
-                "RAG engine structure",
-                f"Methods: {', '.join(required_methods)}",
-                f"Missing: {', '.join(missing_methods)}"
-            ))
-            log_bug(test_id, "RAG Engine",
-                   f"Missing methods: {', '.join(missing_methods)}",
-                   "HIGH")
+            log_test(
+                TestResult(
+                    test_id,
+                    "RAG Engine",
+                    "FAIL",
+                    time.time() - start_time,
+                    "RAG engine structure",
+                    f"Methods: {', '.join(required_methods)}",
+                    f"Missing: {', '.join(missing_methods)}",
+                )
+            )
+            log_bug(
+                test_id,
+                "RAG Engine",
+                f"Missing methods: {', '.join(missing_methods)}",
+                "HIGH",
+            )
         else:
-            log_test(TestResult(
-                test_id, "RAG Engine", "PASS",
+            log_test(
+                TestResult(
+                    test_id,
+                    "RAG Engine",
+                    "PASS",
+                    time.time() - start_time,
+                    "RAG engine structure",
+                    "All required methods exist",
+                    "RAG engine structure valid",
+                )
+            )
+    except Exception as e:
+        log_test(
+            TestResult(
+                test_id,
+                "RAG Engine",
+                "ERROR",
                 time.time() - start_time,
                 "RAG engine structure",
-                "All required methods exist",
-                "RAG engine structure valid"
-            ))
-    except Exception as e:
-        log_test(TestResult(
-            test_id, "RAG Engine", "ERROR",
-            time.time() - start_time,
-            "RAG engine structure",
-            notes=f"Import error: {str(e)}"
-        ))
+                notes=f"Import error: {str(e)}",
+            )
+        )
         log_bug(test_id, "RAG Engine", str(e), "CRITICAL", traceback.format_exc())
 
 
 # ============================================
 # Test Suite 4: Intent Classification
 # ============================================
+
 
 def test_intent_classification():
     """Test intent classification system"""
@@ -380,28 +482,41 @@ def test_intent_classification():
     start_time = time.time()
 
     try:
-        from backend.services.intent_classification.intent_classifier import IntentClassifier
+        from backend.services.intent_classification.intent_classifier import (
+            IntentClassifier,
+        )
 
-        log_test(TestResult(
-            test_id, "Intent Classification", "PASS",
-            time.time() - start_time,
-            "Intent classifier import",
-            "IntentClassifier importable",
-            "Intent classifier available"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Intent Classification",
+                "PASS",
+                time.time() - start_time,
+                "Intent classifier import",
+                "IntentClassifier importable",
+                "Intent classifier available",
+            )
+        )
     except Exception as e:
-        log_test(TestResult(
-            test_id, "Intent Classification", "ERROR",
-            time.time() - start_time,
-            "Intent classifier import",
-            notes=f"Import error: {str(e)}"
-        ))
-        log_bug(test_id, "Intent Classification", str(e), "HIGH", traceback.format_exc())
+        log_test(
+            TestResult(
+                test_id,
+                "Intent Classification",
+                "ERROR",
+                time.time() - start_time,
+                "Intent classifier import",
+                notes=f"Import error: {str(e)}",
+            )
+        )
+        log_bug(
+            test_id, "Intent Classification", str(e), "HIGH", traceback.format_exc()
+        )
 
 
 # ============================================
 # Test Suite 5: Document Processing
 # ============================================
+
 
 def test_document_processing():
     """Test document processing functionality"""
@@ -416,25 +531,34 @@ def test_document_processing():
     try:
         from backend.services.document_loader import DocumentLoader
 
-        log_test(TestResult(
-            test_id, "Document Processing", "PASS",
-            time.time() - start_time,
-            "Document loader import",
-            "DocumentLoader importable",
-            "Document loader available"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Document Processing",
+                "PASS",
+                time.time() - start_time,
+                "Document loader import",
+                "DocumentLoader importable",
+                "Document loader available",
+            )
+        )
     except Exception as e:
-        log_test(TestResult(
-            test_id, "Document Processing", "ERROR",
-            time.time() - start_time,
-            "Document loader import",
-            notes=f"Import error: {str(e)}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "Document Processing",
+                "ERROR",
+                time.time() - start_time,
+                "Document loader import",
+                notes=f"Import error: {str(e)}",
+            )
+        )
 
 
 # ============================================
 # Test Suite 6: OCR System
 # ============================================
+
 
 def test_ocr_system():
     """Test OCR functionality"""
@@ -448,12 +572,14 @@ def test_ocr_system():
 
     try:
         import paddle
+
         # Check if paddleocr can be imported without initialization errors
         paddle_version = paddle.__version__
 
         # Try to import paddleocr in a safer way
         try:
             import paddleocr
+
             ocr_available = True
         except (ImportError, RuntimeError) as ocr_error:
             # Handle PDX initialization error
@@ -462,30 +588,45 @@ def test_ocr_system():
             else:
                 raise
 
-        log_test(TestResult(
-            test_id, "OCR", "PASS",
-            time.time() - start_time,
-            "PaddleOCR installation",
-            "PaddlePaddle and PaddleOCR installed",
-            "OCR dependencies available",
-            metrics={"paddle_version": paddle_version, "ocr_available": ocr_available}
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "OCR",
+                "PASS",
+                time.time() - start_time,
+                "PaddleOCR installation",
+                "PaddlePaddle and PaddleOCR installed",
+                "OCR dependencies available",
+                metrics={
+                    "paddle_version": paddle_version,
+                    "ocr_available": ocr_available,
+                },
+            )
+        )
     except ImportError as e:
-        log_test(TestResult(
-            test_id, "OCR", "SKIP",
-            time.time() - start_time,
-            "PaddleOCR installation",
-            "PaddlePaddle and PaddleOCR installed",
-            "OCR not installed (optional)",
-            "Install: pip install paddlepaddle paddleocr"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "OCR",
+                "SKIP",
+                time.time() - start_time,
+                "PaddleOCR installation",
+                "PaddlePaddle and PaddleOCR installed",
+                "OCR not installed (optional)",
+                "Install: pip install paddlepaddle paddleocr",
+            )
+        )
     except Exception as e:
-        log_test(TestResult(
-            test_id, "OCR", "ERROR",
-            time.time() - start_time,
-            "PaddleOCR installation",
-            notes=f"Unexpected error: {str(e)}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "OCR",
+                "ERROR",
+                time.time() - start_time,
+                "PaddleOCR installation",
+                notes=f"Unexpected error: {str(e)}",
+            )
+        )
 
     # Test 6.2: OCR processor
     test_id = "OCR-002"
@@ -494,25 +635,34 @@ def test_ocr_system():
     try:
         from backend.services.document_processing.ocr_processor import OCRProcessor
 
-        log_test(TestResult(
-            test_id, "OCR", "PASS",
-            time.time() - start_time,
-            "OCR processor import",
-            "OCRProcessor importable",
-            "OCR processor available"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "OCR",
+                "PASS",
+                time.time() - start_time,
+                "OCR processor import",
+                "OCRProcessor importable",
+                "OCR processor available",
+            )
+        )
     except Exception as e:
-        log_test(TestResult(
-            test_id, "OCR", "SKIP",
-            time.time() - start_time,
-            "OCR processor import",
-            notes=f"Skipped: {str(e)}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "OCR",
+                "SKIP",
+                time.time() - start_time,
+                "OCR processor import",
+                notes=f"Skipped: {str(e)}",
+            )
+        )
 
 
 # ============================================
 # Test Suite 7: API Endpoints
 # ============================================
+
 
 def test_api_endpoints():
     """Test API endpoint structure"""
@@ -527,26 +677,35 @@ def test_api_endpoints():
     try:
         from backend.main import app
 
-        log_test(TestResult(
-            test_id, "API", "PASS",
-            time.time() - start_time,
-            "FastAPI application",
-            "FastAPI app importable",
-            "API application available"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "API",
+                "PASS",
+                time.time() - start_time,
+                "FastAPI application",
+                "FastAPI app importable",
+                "API application available",
+            )
+        )
     except Exception as e:
-        log_test(TestResult(
-            test_id, "API", "ERROR",
-            time.time() - start_time,
-            "FastAPI application",
-            notes=f"Import error: {str(e)}"
-        ))
+        log_test(
+            TestResult(
+                test_id,
+                "API",
+                "ERROR",
+                time.time() - start_time,
+                "FastAPI application",
+                notes=f"Import error: {str(e)}",
+            )
+        )
         log_bug(test_id, "API", str(e), "HIGH", traceback.format_exc())
 
 
 # ============================================
 # Report Generation
 # ============================================
+
 
 def generate_report():
     """Generate comprehensive test report"""
@@ -601,20 +760,20 @@ def generate_report():
             "errors": errors,
             "skipped": skipped,
             "pass_rate": f"{pass_rate:.1f}%",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         },
         "test_results": [r.to_dict() for r in test_results],
-        "bug_reports": bug_reports
+        "bug_reports": bug_reports,
     }
 
-    with open(report_file, 'w', encoding='utf-8') as f:
+    with open(report_file, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
 
     print(f"\n{GREEN}📊 Report saved: {report_file}{RESET}")
 
     if bug_reports:
         bug_file = f"{report_dir}/bug_report_{timestamp}.json"
-        with open(bug_file, 'w', encoding='utf-8') as f:
+        with open(bug_file, "w", encoding="utf-8") as f:
             json.dump(bug_reports, f, indent=2, ensure_ascii=False)
         print(f"{RED}🐛 Bug report saved: {bug_file}{RESET}")
 
@@ -624,6 +783,7 @@ def generate_report():
 # ============================================
 # Main Execution
 # ============================================
+
 
 def main():
     """Run complete test suite"""
@@ -650,7 +810,10 @@ def main():
     summary = generate_report()
 
     # Exit code
-    if summary["test_execution"]["failed"] > 0 or summary["test_execution"]["errors"] > 0:
+    if (
+        summary["test_execution"]["failed"] > 0
+        or summary["test_execution"]["errors"] > 0
+    ):
         print(f"\n{RED}❌ Tests completed with failures or errors{RESET}")
         return 1
     else:

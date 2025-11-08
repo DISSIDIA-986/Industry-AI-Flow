@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """RAG系统测试脚本"""
 
-import sys
-import os
 import json
+import os
+import sys
 import time
 
 # 添加backend目录到Python路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from backend.services.rag_engine import SimpleRAG
 
@@ -56,22 +56,26 @@ def evaluate_accuracy(rag_engine, test_cases):
 
             print(f"  ⏱️  延迟: {latency:.2f}秒")
 
-            results_detail.append({
-                "question": case["question"],
-                "expected_keywords": case.get("expected_keywords", []),
-                "answer": result["answer"],
-                "correct": keywords_matched,
-                "latency": latency
-            })
+            results_detail.append(
+                {
+                    "question": case["question"],
+                    "expected_keywords": case.get("expected_keywords", []),
+                    "answer": result["answer"],
+                    "correct": keywords_matched,
+                    "latency": latency,
+                }
+            )
 
         except Exception as e:
             print(f"  ❌ 错误: {str(e)}")
-            results_detail.append({
-                "question": case["question"],
-                "error": str(e),
-                "correct": False,
-                "latency": 0
-            })
+            results_detail.append(
+                {
+                    "question": case["question"],
+                    "error": str(e),
+                    "correct": False,
+                    "latency": 0,
+                }
+            )
 
         print()
 
@@ -100,7 +104,7 @@ def evaluate_accuracy(rag_engine, test_cases):
         "p95_latency": p95_latency,
         "correct": correct,
         "total": total,
-        "details": results_detail
+        "details": results_detail,
     }
 
 

@@ -11,21 +11,21 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-SC-001 to 003**
 - **Input**: Image with mathematical symbols (∫ ∑ ∞ + - × ÷ = ≠ ≤ ≥)
 - **Expected Output**: Accurate recognition of mathematical symbols
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Symbol Accuracy: >90%
   - Symbol Context Preservation: >85%
 - **Image**: `/test_resources/images/math_equations_image.png`
 
 - **Input**: Image with currency symbols ($ € £ ¥ ¢)
 - **Expected Output**: Accurate recognition of currency symbols
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Symbol Accuracy: >92%
   - Context Preservation: >88%
 - **Image**: `/test_resources/images/currency_symbols_image.png`
 
 - **Input**: Image with special punctuation (! ? @ # % & *)
 - **Expected Output**: Accurate recognition of special characters
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Symbol Accuracy: >88%
   - Context Preservation: >82%
 - **Image**: `/test_resources/images/special_chars_image.png`
@@ -34,7 +34,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-HT-001 to 002**
 - **Input**: Handwritten note image (created earlier)
 - **Expected Output**: Recognition of main text content with accuracy assessment
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Character Accuracy: >70%
   - Word Accuracy: >60%
   - Readability Score: >75%
@@ -42,7 +42,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 
 - **Input**: Mixed handwritten-printed text image
 - **Expected Output**: Separation and accurate recognition of different text types
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Handwritten Accuracy: >65%
   - Printed Accuracy: >85%
   - Type Differentiation: >80%
@@ -51,7 +51,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-TS-001 to 002**
 - **Input**: Complex sales report table image (created earlier)
 - **Expected Output**: Accurate extraction with proper table structure preservation
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Cell Content Accuracy: >85%
   - Table Structure Preservation: >80%
   - Header Recognition: >90%
@@ -59,7 +59,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 
 - **Input**: Nested table image
 - **Expected Output**: Recognition of nested table structures
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Nested Structure Accuracy: >75%
   - Content Accuracy: >80%
 
@@ -70,14 +70,14 @@ This document provides extended test cases for PaddleOCR integration testing wit
 - **Input**: Blurry, low-resolution image processed through OCR
 - **Pipeline**: Low-quality OCR text → RAG ingestion → retrieval
 - **Expected Output**: System handles OCR errors gracefully in RAG pipeline
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Error Tolerance: Maintains 70% retrieval quality with 20% OCR error rate
   - Performance Degradation: <30% performance drop with poor OCR input
 
 - **Input**: High OCR error rate document (e.g., old scanned documents)
 - **Pipeline**: High-error OCR text → RAG processing
 - **Expected Output**: System identifies low-quality input and adjusts appropriately
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Quality Assessment: Correctly identifies low-quality input
   - Adaptive Processing: Adjusts retrieval strategy for noisy text
 
@@ -86,7 +86,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 - **Input**: Multi-page document with consistent OCR processing
 - **Pipeline**: Multi-page images → Batch OCR → RAG ingestion
 - **Expected Output**: All pages processed consistently with preserved context
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Multi-page Success: >95% success rate
   - Context Continuity: Maintains document context across pages
   - Processing Efficiency: Maintains reasonable throughput
@@ -98,14 +98,14 @@ This document provides extended test cases for PaddleOCR integration testing wit
 - **Configuration**: Multi-language model
 - **Input**: Image with English, Chinese, and numbers mixed
 - **Expected Output**: Accurate recognition of all scripts
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Multi-script Accuracy: >85% overall
   - Script Segregation: >90% accurate separation
 
-- **Configuration**: Multi-language model  
+- **Configuration**: Multi-language model
 - **Input**: Image with Latin, Arabic, and numeric text
 - **Expected Output**: Recognition of mixed scripts
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Multi-script Accuracy: >80% overall
   - Direction Handling: Proper RTL/LTR text handling
 
@@ -115,7 +115,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-LD-001 to 001**
 - **Input**: Large document (50+ pages)
 - **Expected Time**: <15 minutes total processing time
-- **Metrics**: 
+- **Metrics**:
   - Processing Throughput: >5 pages per minute
   - Memory Usage: <4GB peak usage
   - Stability: No crashes during processing
@@ -124,7 +124,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-CC-001 to 001**
 - **Test**: Multiple OCR tasks while RAG system is active
 - **Concurrency**: 10 parallel OCR + RAG tasks
-- **Metrics**: 
+- **Metrics**:
   - Throughput: All tasks complete successfully
   - Performance Degradation: <40% slowdown under load
   - Resource Sharing: Fair resource allocation
@@ -135,19 +135,19 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-UD-001 to 003**
 - **Input**: Hand-drawn diagrams with text labels
 - **Expected Output**: Recognition of text elements in diagram
-- **Metrics**: 
+- **Metrics**:
   - Text Recognition: >60% of labeled text recognized
   - Non-text Handling: Proper exclusion of pure graphics
 
 - **Input**: Form with check boxes and radio buttons
 - **Expected Output**: Recognition of form text and field types
-- **Metrics**: 
+- **Metrics**:
   - Form Element Recognition: >75% of fields identified
   - Content Accuracy: >80% for form content
 
 - **Input**: Tabular form with handwritten entries
 - **Expected Output**: Table structure and content recognition
-- **Metrics**: 
+- **Metrics**:
   - Structure Recognition: >70% of table structure preserved
   - Handwritten Content: >65% accuracy for handwritten entries
 
@@ -155,7 +155,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-ER-001 to 001**
 - **Input**: Document with OCR processing errors
 - **Expected Behavior**: System attempts recovery or provides error feedback
-- **Metrics**: 
+- **Metrics**:
   - Recovery Success: >80% of errors handled gracefully
   - Feedback Quality: Clear error messages provided
 
@@ -165,14 +165,14 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-OQ-001 to 002**
 - **Assessment**: Performance degradation from poor OCR quality
 - **Method**: Intentionally degraded OCR output at various quality levels
-- **Metrics**: 
+- **Metrics**:
   - Quality Threshold: Point where RAG becomes ineffective
   - Degradation Curve: Performance vs. OCR quality
   - Tolerance Limits: Minimum acceptable OCR quality for effective RAG
 
 - **Assessment**: Impact of specific OCR error types on RAG performance
 - **Method**: Introduce specific error types (character substitution, word deletion, etc.)
-- **Metrics**: 
+- **Metrics**:
   - Error Type Impact: Which errors most affect RAG
   - Resilience Score: RAG system's ability to handle specific error types
 
@@ -180,7 +180,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-SP-001 to 001**
 - **Test**: How well meaning is preserved through OCR → RAG pipeline
 - **Method**: Compare RAG responses on original text vs. OCR-extracted text
-- **Metrics**: 
+- **Metrics**:
   - Semantic Preservation: >80% of meaning preserved
   - Answer Quality Maintenance: <15% degradation in answer quality
 
@@ -191,7 +191,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 - **Workflow**: Image → Preprocessing → OCR → RAG
 - **Input**: Various quality images requiring preprocessing
 - **Expected**: Preprocessing improves OCR quality which improves RAG
-- **Metrics**: 
+- **Metrics**:
   - Preprocessing Impact: Measurable improvement after preprocessing
   - Efficiency: Preprocessing doesn't significantly slow pipeline
 
@@ -201,7 +201,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-MV-001 to 001**
 - **Test**: Compare performance of different PaddleOCR models
 - **Models**: PP-OCRv3 vs PP-OCRv4 vs PP-OCRv5
-- **Metrics**: 
+- **Metrics**:
   - Accuracy Comparison: Quantified improvement between versions
   - Speed Comparison: Processing speed differences
   - Resource Usage: Different memory/compute requirements
@@ -212,7 +212,7 @@ This document provides extended test cases for PaddleOCR integration testing wit
 **Test ID: OCR-ED-CS-001 to 001**
 - **Test**: Use OCR confidence scores to weight RAG results
 - **Method**: Lower confidence OCR text gets lower weight in retrieval
-- **Metrics**: 
+- **Metrics**:
   - Confidence Integration: Proper use of confidence scores
   - Quality Improvement: Better overall results with confidence weighting
 

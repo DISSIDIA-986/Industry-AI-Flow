@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """测试 OCR 功能"""
 
-import sys
 import os
+import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from backend.services.document_loader import EnhancedDocumentLoader
 from backend.config import settings
+from backend.services.document_loader import EnhancedDocumentLoader
 
 
 def test_ocr():
     """测试 OCR 初始化和基本功能"""
-    print("="*60)
+    print("=" * 60)
     print("OCR 功能测试")
-    print("="*60)
+    print("=" * 60)
     print()
 
     # 测试1: 初始化 OCR (使用配置的默认语言)
@@ -50,9 +50,9 @@ def test_ocr():
     print(f"✅ OCR 当前语言: {settings.ocr_lang} ('en'=英文, 'ch'=中文, 'en+ch'=混合)")
     print()
 
-    print("="*60)
+    print("=" * 60)
     print("📊 OCR 测试总结")
-    print("="*60)
+    print("=" * 60)
     print("✅ EnhancedDocumentLoader 已就绪")
     print("✅ 支持文本、PDF、图片文档")
     print("✅ 自动检测扫描内容并使用 OCR")

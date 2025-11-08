@@ -5,14 +5,14 @@ All project datasets and image files have been moved from their original locatio
 
 ## Files Moved to test_resources/datasets/
 - Housing.csv → /test_resources/datasets/Housing.csv
-- Thyroid_Diff.csv → /test_resources/datasets/Thyroid_Diff.csv  
+- Thyroid_Diff.csv → /test_resources/datasets/Thyroid_Diff.csv
 - Unemployment_Canada_1976_present.csv → /test_resources/datasets/Unemployment_Canada_1976_present.csv
 - employee_data.csv (original test file) → /test_resources/datasets/employee_data.csv
 - Plus additional test datasets created during comprehensive testing
 
 ## Files Moved to test_resources/images/
 - All visualization images from test_output/ directory
-- All Chinese visualization images from output/generated/ directory  
+- All Chinese visualization images from output/generated/ directory
 - test_ocr.png from samples/ directory
 - Plus additional test images created during comprehensive testing
 
@@ -48,13 +48,13 @@ All references to the original file paths in test files have been updated to poi
 test_resources/
 ├── datasets/                 # All CSV and dataset files
 │   ├── Housing.csv           # Original Housing dataset
-│   ├── Thyroid_Diff.csv      # Original Thyroid dataset  
+│   ├── Thyroid_Diff.csv      # Original Thyroid dataset
 │   ├── Unemployment_Canada_1976_present.csv  # Original Unemployment dataset
 │   ├── employee_data.csv     # Test dataset
 │   └── ...                   # Additional test datasets
 └── images/                   # All image files
     ├── 房屋特征价格关系_中文.png      # Chinese visualization images
-    ├── 房屋特征相关性热力图_中文.png    # Chinese visualization images  
+    ├── 房屋特征相关性热力图_中文.png    # Chinese visualization images
     ├── 中文文本渲染测试.png           # Chinese visualization images
     ├── 房价综合分析仪表板_中文.png     # Chinese visualization images
     ├── 房价分布分析_中文.png          # Chinese visualization images

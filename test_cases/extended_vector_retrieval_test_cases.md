@@ -112,7 +112,7 @@ This document provides extended test cases for evaluating the vector retrieval s
 - **Test Type**: Typo tolerance
 
 - **Query**: "recurent neural nets"
-- **Expected Documents**: RNN-related documents  
+- **Expected Documents**: RNN-related documents
 - **Target Recall**: >78%
 - **Test Type**: Spelling error tolerance
 
@@ -163,7 +163,7 @@ This document provides extended test cases for evaluating the vector retrieval s
 - **Test Type**: Spam detection
 
 - **Query**: "Click here for free money machine learning tips"
-- **Expected Behavior**: Low confidence, appropriate handling  
+- **Expected Behavior**: Low confidence, appropriate handling
 - **Target**: Proper rejection or low-relevance results
 - **Test Type**: Optimization query detection
 

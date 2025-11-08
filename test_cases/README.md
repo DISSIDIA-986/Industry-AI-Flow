@@ -100,7 +100,7 @@ test_resources/                              # Test data and assets
    make test
    ```
 
-2. **Adding New Tests**: 
+2. **Adding New Tests**:
    - Add new test case descriptions to the appropriate `.md` file in `test_cases/`
    - Add new test data to the appropriate subdirectory in `test_resources/`
 

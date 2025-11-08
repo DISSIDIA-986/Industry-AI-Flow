@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """测试LangChain 1.0 RAG Agent"""
 
-from backend.agents.rag_agent import rag_agent
 from langchain_core.messages import HumanMessage
+
+from backend.agents.rag_agent import rag_agent
 
 
 def test_agent_basic():
@@ -16,19 +17,18 @@ def test_agent_basic():
 
     try:
         # 调用Agent
-        result = rag_agent.invoke({
-            "messages": [HumanMessage(content=question)]
-        })
+        result = rag_agent.invoke({"messages": [HumanMessage(content=question)]})
 
         print(f"\n✅ Agent调用成功!")
         print(f"\n问题: {question}")
         print(f"\n消息数量: {len(result['messages'])}")
         print(f"\n最后的消息:")
-        print(result['messages'][-1].content[:500])  # 显示前500字符
+        print(result["messages"][-1].content[:500])  # 显示前500字符
 
     except Exception as e:
         print(f"\n❌ Agent调用失败: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -52,8 +52,8 @@ def test_tools_independently():
     print("测试3: 工具定义验证")
     print("=" * 60)
 
-    from backend.tools.retrieval import hybrid_retrieval_tool
     from backend.tools.reranker import rerank_tool
+    from backend.tools.retrieval import hybrid_retrieval_tool
 
     print(f"\n✅ hybrid_retrieval_tool:")
     print(f"  - 名称: {hybrid_retrieval_tool.name}")

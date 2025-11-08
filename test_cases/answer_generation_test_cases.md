@@ -237,7 +237,7 @@ This document provides comprehensive test cases for evaluating the answer genera
 
 #### Test Set 8.1: Noisy Context Handling
 **Test ID: AG-RO-NC-001 to 002**
-- **Query**: "How does dropout work?" 
+- **Query**: "How does dropout work?"
 - **Retrieved Context**: Mix of relevant and irrelevant documents (noisy retrieval)
 - **Evaluation**: Response focuses on relevant information, ignores noise
 - **Target Score**: >0.7 noise resilience
