@@ -1,0 +1,39 @@
+# Python 3.13 + PaddleOCR专用依赖文件
+# 专门为建筑图纸OCR识别设计
+# 生成时间: 2025-11-08
+
+# PaddleOCR核心依赖 - Python 3.13完全支持
+paddlepaddle==2.6.1
+paddleocr==2.7.0
+
+# 图像处理 - 建筑图纸识别必需
+pillow==10.0.1
+opencv-python==4.8.0.76
+
+# 数值计算和数据处理
+numpy==1.24.3
+pandas==1.5.3
+matplotlib==3.7.2
+
+# 网络和配置
+requests==2.31.0
+pyyaml==6.0.1
+python-dotenv==1.0.0
+
+# 工具库
+tqdm==4.66.1
+click==8.1.7
+
+# 开发和测试工具
+pytest==7.4.0
+pytest-asyncio==0.21.0
+black==23.7.0
+flake8==6.0.0
+
+# 可选的图像增强依赖
+scikit-image==0.21.0
+imageio==2.31.5
+
+# Jupyter支持 (可选)
+jupyter==1.0.0
+notebook==6.5.4
