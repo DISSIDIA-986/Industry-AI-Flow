@@ -113,6 +113,38 @@ python3.13 --version
 
 ## 🚀 快速开始
 
+### 🛠️ 使用 Makefile 快速操作
+
+我们提供了优化的 Makefile 来简化开发流程：
+
+```bash
+# 查看所有可用命令
+make help
+
+# 快速开始（推荐新用户）
+make quick-start
+
+# 运行示例
+make example-rag      # 运行RAG示例
+make example-ocr      # 运行OCR示例
+
+# 测试相关
+make test             # 运行所有测试
+make test-unit        # 只运行单元测试
+make test-comprehensive # 运行综合测试套件
+make test-ocr         # 运行OCR集成测试
+make test-rag         # 运行RAG系统测试
+
+# 实用工具
+make utilities        # 查看可用工具脚本
+make import-docs      # 导入示例文档
+make import-data      # 导入示例数据集
+
+# 代码质量
+make format           # 格式化代码
+make lint             # 运行代码检查
+```
+
 ### 📋 环境要求（快速参考）
 
 - **Python**: **3.13.x ONLY** ⚠️ (严格限制，不支持3.14+)
@@ -235,17 +267,119 @@ curl -X POST "http://localhost:8000/rag/query" \
 
 ```
 Industry-AI-Flow/
-├── 📁 backend/                          # 后端核心服务
-│   ├── agents/                         # AI Agent实现
-│   ├── api/                           # REST API接口
-│   ├── middleware/                    # 中间件层
-│   ├── migrations/                    # 数据库迁移
-│   ├── services/                      # 核心业务服务
-│   ├── tools/                         # 工具模块
-│   ├── utils/                         # 工具函数
-│   ├── main.py                        # 应用入口
-│   └── requirements.txt               # Python依赖
-│
+├── 📁 backend/                          # 🔧 后端核心服务
+│   ├── agents/                         # 🤖 AI Agent实现
+│   ├── api/                           # 🌐 REST API接口
+│   ├── middleware/                    # 🔀 中间件层
+│   ├── migrations/                    # 🗄️ 数据库迁移
+│   ├── services/                      # ⚙️ 核心业务服务
+│   │   ├── intent_classification/      # 🧠 意图分类服务
+│   │   ├── llm_integration/           # 🦙 LLM集成服务
+│   │   ├── data_analysis/             # 📊 数据分析服务
+│   │   ├── feedback_system/           # 💬 用户反馈系统
+│   │   ├── core/                      # 🔧 核心工具服务
+│   │   ├── document_processing/       # 📄 文档处理服务
+│   │   ├── document_loader.py         # 📚 文档加载器
+│   │   ├── embedding_generator.py     # 🎯 嵌入生成器
+│   │   ├── metadata_filter.py         # 🏷️ 元数据过滤器
+│   │   ├── ocr_processor.py           # 👁️ OCR处理器
+│   │   ├── prompt_manager.py          # 📝 提示管理器
+│   │   ├── query_classifier.py        # 🔍 查询分类器
+│   │   ├── rag_engine.py              # 🔗 RAG引擎
+│   │   ├── vectorstore.py             # 🗂️ 向量存储
+│   │   └── llm_client.py              # 🤖 LLM客户端
+│   ├── tools/                         # 🛠️ 工具模块
+│   ├── utils/                         # 🔧 工具函数
+│   ├── main.py                        # 🚀 应用入口
+│   ├── requirements.txt               # 📦 Python依赖
+│   └── config.py                      # ⚙️ 配置文件
+
+├── 📁 examples/                       # 📚 示例代码集合
+│   ├── README.md                      # 📖 示例说明文档
+│   ├── basic_usage/                   # 🟢 基础使用示例
+│   │   ├── rag_example.py             # 🔍 RAG功能演示
+│   │   ├── ocr_example.py             # 📷 OCR功能演示
+│   │   └── intent_classification_example.py # 🧠 意图分类演示
+│   ├── advanced_features/             # 🔧 高级功能示例
+│   │   ├── custom_agent_example.py    # 🤖 自定义Agent示例
+│   │   ├── workflow_example.py        # 🔄 工作流编排示例
+│   │   └── performance_tuning.py      # ⚡ 性能调优示例
+│   ├── api_examples/                  # 🔌 API集成示例
+│   │   ├── rest_api_example.py        # 🌐 REST API示例
+│   │   ├── websocket_example.py       # 🔌 WebSocket示例
+│   │   └── batch_processing.py        # 📦 批量处理示例
+│   └── integration_examples/          # 🔗 集成示例
+│       ├── database_integration.py    # 🗄️ 数据库集成
+│       ├── message_queue.py           # 📨 消息队列
+│       └── monitoring.py              # 📊 监控集成
+
+├── 📁 datasets/                       # 📊 数据集和测试数据
+│   ├── sample_documents/              # 📄 示例文档
+│   │   └── ai_basics.md               # 🤖 AI基础知识文档
+│   ├── test_queries/                  # ❓ 测试查询集合
+│   │   └── ai_queries.json            # 🧠 AI相关测试查询
+│   └── reference_data/                # 📋 参考数据和答案
+
+├── 📁 tests/                          # 🧪 优化后的测试结构
+│   ├── unit/                          # 🔬 单元测试
+│   │   ├── test_intent_classifier.py  # 🧠 意图分类测试
+│   │   ├── test_rag_engine.py         # 🔍 RAG引擎测试
+│   │   └── test_ocr_processor.py      # 📷 OCR处理器测试
+│   ├── integration/                   # 🔗 集成测试
+│   │   ├── test_end_to_end_workflow.py # 🔄 端到端工作流测试
+│   │   ├── test_api_integration.py    # 🌐 API集成测试
+│   │   └── test_database_integration.py # 🗄️ 数据库集成测试
+│   ├── performance/                   # ⚡ 性能测试
+│   │   ├── test_load_performance.py   # 📊 负载性能测试
+│   │   └── test_stress_testing.py     # 💪 压力测试
+│   ├── fixtures/                      # 📁 测试数据和固件
+│   │   ├── sample_documents/          # 📄 测试文档
+│   │   └── test_data.json             # 📊 测试数据
+│   ├── test_question_classification.py # 🧠 问题分类测试
+│   ├── test_vector_retrieval.py       # 🔍 向量检索测试
+│   ├── test_answer_generation.py      # 💬 回答生成测试
+│   ├── test_ocr_integration.py        # 📷 OCR集成测试
+│   ├── test_data_analysis_code_execution.py # 📊 数据分析和代码执行测试
+│   ├── test_streamlit_interface.py    # 🎨 Streamlit接口测试
+│   ├── test_frontend_chat_interface.py # 💬 前端聊天接口测试
+│   ├── test_user_feedback_rag_impact.py # 💬 用户反馈RAG影响测试
+│   └── run_comprehensive_tests.py     # 🧪 综合测试运行器
+
+├── 📁 scripts/                        # 🔧 重新组织的脚本工具
+│   ├── README.md                      # 📖 脚本说明文档
+│   ├── deployment/                    # 🚀 部署脚本
+│   │   └── build_data_analysis_docker.sh # 🐳 Docker构建脚本
+│   ├── migration/                     # 🗄️ 迁移脚本
+│   │   ├── migrate_to_pgvector.sh     # 🗂️ pgvector迁移
+│   │   ├── init_prompt_system.py      # 📝 初始化提示系统
+│   │   ├── migrate_existing_prompts.py # 🔄 迁移现有提示
+│   │   └── seed_intent_prompts.py     # 🌱 意图提示种子数据
+│   ├── monitoring/                    # 📊 监控脚本（预留）
+│   │   └── README.md                  # 📖 监控说明
+│   ├── setup/                         # ⚙️ 安装设置脚本
+│   │   ├── setup_local.sh             # 🏠 本地环境设置
+│   │   ├── verify_env.sh              # ✅ 环境验证
+│   │   ├── setup_test_database.sh     # 🗄️ 测试数据库设置
+│   │   └── install_pgvector_pg14.sh   # 🐘 pgvector安装
+│   ├── testing/                       # 🧪 测试脚本
+│   │   ├── quick_test.sh              # ⚡ 快速测试
+│   │   ├── test_ocr.py                # 📷 OCR测试
+│   │   ├── test_rag.py                # 🔍 RAG测试
+│   │   ├── comprehensive_system_test.py # 🧪 综合系统测试
+│   │   ├── test_realistic_rag.py      # 🔍 现实RAG测试
+│   │   ├── test_improved_system.py    # 💫 改进系统测试
+│   │   ├── test_document_loader_ocr.py # 📄 文档加载OCR测试
+│   │   ├── test_paddleocr_integration.py # 🏓 PaddleOCR集成测试
+│   │   ├── test_llama_cpp_integration.py # 🦙 llama.cpp集成测试
+│   │   ├── test_llama_cpp_simple.py   # 🦙 简单llama.cpp测试
+│   │   └── create_test_image.py       # 🖼️ 创建测试图像
+│   └── utilities/                     # 🛠️ 实用工具脚本
+│       ├── README.md                  # 📖 实用工具说明
+│       ├── compare_configs.py         # ⚙️ 配置比较
+│       ├── generate_test_embeddings.py # 🎯 生成测试嵌入
+│       ├── import_csv_datasets.py     # 📊 导入CSV数据集
+│       └── import_docs.py             # 📄 导入文档
+
 ├── 📁 docs/                           # 📚 项目文档中心
 │   ├── README.md                      # 📖 文档导航索引
 │   ├── architecture/                  # 🏗️ 架构设计文档
@@ -272,25 +406,29 @@ Industry-AI-Flow/
 │       ├── advanced-features.md       # 高级功能说明
 │       ├── troubleshooting.md         # 故障排除
 │       └── faq.md                     # 常见问题
-│
-├── 📁 tests/                          # 🧪 综合测试套件
-│   ├── test_*.py                      # 各功能模块测试
-│   └── run_comprehensive_tests.py     # 统一测试运行器
-│
-├── 📁 archive/                        # 📦 归档文档（.globalignore忽略）
-│   ├── research/                      # 过时的研究文档
-│   ├── migration/                     # 迁移相关文档
-│   ├── test-reports/                  # 历史测试报告
-│   └── old-docs/                      # 其他临时文档
-│
-├── 📁 scripts/                        # 🔧 脚本工具
+
 ├── 📁 infrastructure/                 # 🏗️ 基础设施配置
+│   ├── docker/                        # 🐳 Docker配置
+│   ├── kubernetes/                    # ☸️ Kubernetes配置
+│   └── monitoring/                    # 📊 监控配置
+
 ├── 📁 streamlit/                      # 🎨 Streamlit前端界面
+│   ├── streamlit_app.py               # 🎨 主应用界面
+│   └── streamlit_prompt_manager.py    # 📝 提示管理界面
+
+├── 📁 archive/                        # 📦 归档文档（.globalignore忽略）
+│   ├── research/                      # 🔬 过时的研究文档
+│   ├── migration/                     # 🗄️ 迁移相关文档
+│   ├── test-reports/                  # 📊 历史测试报告
+│   └── old-docs/                      # 📄 其他临时文档
+
 ├── 📄 README.md                        # 📖 项目主页
 ├── 📄 QUICK_START_GUIDE.md             # 🚀 快速开始指南
 ├── 📄 INSTALLATION_GUIDE.md            # ⚙️ 详细安装指南
-├── 📄 Makefile                         # 🔨 构建脚本
-└── 📄 .globalignore                    # 🚫 忽略归档和临时文件
+├── 📄 PROJECT_STRUCTURE_OPTIMIZATION_PLAN.md # 📋 项目结构优化计划
+├── 📄 Makefile                         # 🔨 优化的构建脚本
+├── 📄 .globalignore                    # 🚫 忽略归档和临时文件
+└── 📄 .env.example                     # 📝 环境变量示例
 ```
 
 ### 核心架构组件

@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities
 
 # Default target
 .DEFAULT_GOAL := help
@@ -21,16 +21,16 @@ help: ## Show this help message
 # ==========================================
 install: ## Install all dependencies
 	@echo "📦 Installing dependencies..."
-	pip install -r requirements.txt
+	cd backend && pip install -r requirements.txt
 
 dev-setup: ## Setup development environment
 	@echo "🔧 Setting up development environment..."
-	pip install -r requirements.txt
+	cd backend && pip install -r requirements.txt
 	pre-commit install || echo "Pre-commit not available, skipping..."
 
 install-dev: ## Install development dependencies only
 	@echo "🛠️ Installing development dependencies..."
-	pip install -r requirements.txt
+	cd backend && pip install -r requirements.txt
 	pip install black isort flake8 mypy pytest pytest-cov pytest-asyncio
 
 # ==========================================
@@ -51,6 +51,22 @@ test-integration: ## Run integration tests only
 test-performance: ## Run performance tests only
 	@echo "⚡ Running performance tests..."
 	pytest tests/performance/ -v
+
+test-comprehensive: ## Run comprehensive test suite
+	@echo "🧪 Running comprehensive test suite..."
+	python tests/run_comprehensive_tests.py
+
+test-ocr: ## Run OCR integration tests
+	@echo "📷 Running OCR tests..."
+	python scripts/testing/test_ocr.py
+
+test-rag: ## Run RAG system tests
+	@echo "🔍 Running RAG tests..."
+	python scripts/testing/test_rag.py
+
+test-llama: ## Run llama.cpp integration tests
+	@echo "🦙 Running llama.cpp tests..."
+	python scripts/testing/test_llama_cpp_simple.py
 
 lint: ## Run code linting
 	@echo "🔍 Running linting..."
@@ -106,6 +122,39 @@ docker-run: ## Run Docker containers
 docker-stop: ## Stop Docker containers
 	@echo "⏹️ Stopping Docker containers..."
 	docker-compose -f infrastructure/docker/docker-compose.yaml down
+
+# ==========================================
+# Examples and Utilities
+# ==========================================
+examples: ## Run example applications
+	@echo "📚 Running example applications..."
+	@echo "Choose an example to run:"
+	@echo "  - rag:     Basic RAG example"
+	@echo "  - ocr:     OCR functionality example"
+	@echo "Usage: make examples [rag|ocr]"
+
+example-rag: ## Run RAG example
+	@echo "🔍 Running RAG example..."
+	cd examples/basic_usage && python rag_example.py
+
+example-ocr: ## Run OCR example
+	@echo "📷 Running OCR example..."
+	cd examples/basic_usage && python ocr_example.py
+
+utilities: ## Show available utility scripts
+	@echo "🛠️ Available utility scripts:"
+	@echo "  - Import datasets:   python scripts/utilities/import_csv_datasets.py"
+	@echo "  - Import documents:  python scripts/utilities/import_docs.py"
+	@echo "  - Generate embeddings: python scripts/utilities/generate_test_embeddings.py"
+	@echo "  - Compare configs:   python scripts/utilities/compare_configs.py"
+
+import-data: ## Import sample datasets
+	@echo "📊 Importing sample datasets..."
+	python scripts/utilities/import_csv_datasets.py --input datasets/sample_data.csv
+
+import-docs: ## Import sample documents
+	@echo "📄 Importing sample documents..."
+	python scripts/utilities/import_docs.py --source datasets/sample_documents/
 
 # ==========================================
 # Application Operations
@@ -180,11 +229,15 @@ quick-start: ## Quick start for development
 	@echo "🚀 Quick starting development environment..."
 	$(MAKE) install-dev
 	$(MAKE) db-setup
+	$(MAKE) import-docs
 	@echo "✅ Development environment ready!"
 	@echo "Run 'make run' to start the application"
+	@echo "Run 'make example-rag' to try the RAG example"
+	@echo "Run 'make example-ocr' to try the OCR example"
 
 quick-test: ## Quick test to verify setup
 	@echo "⚡ Quick testing setup..."
-	$(MAKE) test-intent
+	$(MAKE) test-unit
+	$(MAKE) test-rag
 	$(MAKE) format-check
 	@echo "✅ Setup verification complete!"
