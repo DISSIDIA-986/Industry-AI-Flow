@@ -1,6 +1,6 @@
 from backend.services.embedder import embed_single_text
 from backend.services.vectorstore import VectorStore
-from backend.services.ollama_client import OllamaClient
+from backend.services.llm_client import get_llm_client, get_backend_status
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
 from backend.services.feedback_manager import FeedbackManager, UserFeedback, FeedbackType
@@ -8,6 +8,7 @@ from backend.config import settings
 import uuid
 import datetime
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,14 @@ class SimpleRAG:
             enable_feedback: 是否启用反馈机制
         """
         self.vectorstore = VectorStore()
-        self.llm_client = OllamaClient()
+        self.llm_client = get_llm_client()  # 使用工厂方法获取客户端
         self.use_hybrid_search = use_hybrid_search
         self.use_reranker = use_reranker
         self.enable_feedback = enable_feedback
+
+        # 记录后端信息
+        backend_status = get_backend_status()
+        logger.info(f"✅ RAG 引擎初始化完成 - 后端: {backend_status.get('backend', 'unknown')}")
 
         # Phase 2 Step 2: 初始化混合检索器
         if use_hybrid_search:
