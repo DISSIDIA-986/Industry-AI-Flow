@@ -29,7 +29,7 @@ def test_paddle_version():
         print(f"✅ PaddlePaddle版本: {version}")
 
         # 检查版本是否满足要求
-        major, minor = map(int, version.split('.')[:2])
+        major, minor = map(int, version.split(".")[:2])
         if major > 2 or (major == 2 and minor >= 6):
             print(f"✅ 版本满足要求 (>=2.6.0)")
             return True
@@ -57,14 +57,14 @@ def test_mps_device():
         custom_devices = paddle.device.get_all_custom_device_type()
         print(f"检测到的自定义设备: {custom_devices}")
 
-        if 'mps' in custom_devices:
+        if "mps" in custom_devices:
             print(f"✅ Apple MPS设备可用!")
             print(f"   预期性能提升: 2-5x (M1/M2/M3芯片)")
             print(f"   在M1 Max上某些场景可达4.7x")
 
             # 尝试使用MPS
             try:
-                paddle.set_device('mps')
+                paddle.set_device("mps")
                 print(f"✅ 成功切换到MPS设备")
                 return True
             except Exception as e:
@@ -102,6 +102,7 @@ def test_paddleocr_version():
 
         # 尝试导入PaddleOCR类
         from paddleocr import PaddleOCR
+
         print(f"✅ PaddleOCR导入成功")
 
         print(f"\nPP-OCRv5 主要特性:")
@@ -132,9 +133,9 @@ def test_ocr_initialization():
         processor = OCRProcessor(
             use_local=True,
             use_api_fallback=False,  # 仅测试本地
-            lang="ch",               # PP-OCRv5混合语言
+            lang="ch",  # PP-OCRv5混合语言
             use_gpu=True,
-            ocr_version="PP-OCRv5"
+            ocr_version="PP-OCRv5",
         )
 
         if processor.local_ocr:
@@ -151,6 +152,7 @@ def test_ocr_initialization():
     except Exception as e:
         print(f"❌ OCR初始化失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -168,7 +170,7 @@ def test_numpy_version():
         print(f"NumPy版本: {version}")
 
         # 检查版本
-        major = int(version.split('.')[0])
+        major = int(version.split(".")[0])
         if major < 2:
             print(f"✅ NumPy版本兼容 (<2.0)")
             return True

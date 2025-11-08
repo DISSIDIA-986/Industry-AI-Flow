@@ -10,8 +10,8 @@
 """
 
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent
@@ -73,15 +73,14 @@ def test_ocr_on_visualization():
             start_time = time.time()
 
             # 使用LangChain工具进行OCR
-            result = ocr_image.invoke({
-                "image_path": str(image_path),
-                "language": "ch"  # PP-OCRv5中文模式
-            })
+            result = ocr_image.invoke(
+                {"image_path": str(image_path), "language": "ch"}  # PP-OCRv5中文模式
+            )
 
             # 计算耗时
             elapsed_time = time.time() - start_time
 
-            if result['success']:
+            if result["success"]:
                 print(f"✅ 识别成功!")
                 print(f"   方法: {result['method']}")
                 print(f"   置信度: {result['confidence']:.2%}")
@@ -89,7 +88,7 @@ def test_ocr_on_visualization():
                 print(f"   文本框数量: {result.get('num_boxes', 0)}")
 
                 # 显示识别的文本
-                text = result['text']
+                text = result["text"]
                 if text:
                     print(f"\n📝 识别文本:")
                     # 限制显示长度
@@ -100,46 +99,53 @@ def test_ocr_on_visualization():
                         print(text)
 
                     # 文本分析
-                    lines = text.strip().split('\n')
+                    lines = text.strip().split("\n")
                     print(f"\n📊 文本统计:")
                     print(f"   总字符数: {len(text)}")
                     print(f"   行数: {len(lines)}")
                     print(f"   非空行数: {len([l for l in lines if l.strip()])}")
 
-                results.append({
-                    'file': image_path.name,
-                    'success': True,
-                    'method': result['method'],
-                    'confidence': result['confidence'],
-                    'time': elapsed_time,
-                    'text_length': len(text),
-                    'num_boxes': result.get('num_boxes', 0),
-                })
+                results.append(
+                    {
+                        "file": image_path.name,
+                        "success": True,
+                        "method": result["method"],
+                        "confidence": result["confidence"],
+                        "time": elapsed_time,
+                        "text_length": len(text),
+                        "num_boxes": result.get("num_boxes", 0),
+                    }
+                )
             else:
                 print(f"❌ 识别失败: {result.get('error', 'Unknown error')}")
-                results.append({
-                    'file': image_path.name,
-                    'success': False,
-                    'error': result.get('error', 'Unknown'),
-                })
+                results.append(
+                    {
+                        "file": image_path.name,
+                        "success": False,
+                        "error": result.get("error", "Unknown"),
+                    }
+                )
 
         except Exception as e:
             print(f"❌ 处理异常: {e}")
             import traceback
+
             traceback.print_exc()
-            results.append({
-                'file': image_path.name,
-                'success': False,
-                'error': str(e),
-            })
+            results.append(
+                {
+                    "file": image_path.name,
+                    "success": False,
+                    "error": str(e),
+                }
+            )
 
     # 输出总结
     print("\n" + "=" * 80)
     print("测试总结")
     print("=" * 80)
 
-    successful = [r for r in results if r['success']]
-    failed = [r for r in results if not r['success']]
+    successful = [r for r in results if r["success"]]
+    failed = [r for r in results if not r["success"]]
 
     print(f"\n总计: {len(image_files)} 个图片")
     print(f"成功: {len(successful)} 个")
@@ -150,13 +156,15 @@ def test_ocr_on_visualization():
         print(f"\n✅ 成功识别的图片:")
         for r in successful:
             print(f"   • {r['file']}")
-            print(f"     - 方法: {r['method']}, 置信度: {r['confidence']:.2%}, "
-                  f"耗时: {r['time']:.2f}s, 字符数: {r['text_length']}")
+            print(
+                f"     - 方法: {r['method']}, 置信度: {r['confidence']:.2%}, "
+                f"耗时: {r['time']:.2f}s, 字符数: {r['text_length']}"
+            )
 
         # 性能统计
-        avg_time = sum(r['time'] for r in successful) / len(successful)
-        avg_confidence = sum(r['confidence'] for r in successful) / len(successful)
-        total_chars = sum(r['text_length'] for r in successful)
+        avg_time = sum(r["time"] for r in successful) / len(successful)
+        avg_confidence = sum(r["confidence"] for r in successful) / len(successful)
+        total_chars = sum(r["text_length"] for r in successful)
 
         print(f"\n📊 性能统计:")
         print(f"   平均耗时: {avg_time:.2f}秒/张")
@@ -165,7 +173,7 @@ def test_ocr_on_visualization():
         print(f"   平均字符/张: {total_chars/len(successful):.0f}")
 
         # MPS加速提示
-        if successful and successful[0]['method'] == 'local':
+        if successful and successful[0]["method"] == "local":
             print(f"\n⚡ MPS加速状态:")
             print(f"   当前识别方法: 本地PaddleOCR")
             print(f"   如果已启用MPS，预期性能为CPU的2-5倍")
@@ -198,10 +206,9 @@ def test_batch_processing():
         print(f"\n批量处理 {len(image_files)} 个图片...")
 
         start_time = time.time()
-        result = batch_extract_documents.invoke({
-            "file_paths": image_files,
-            "use_ocr": True
-        })
+        result = batch_extract_documents.invoke(
+            {"file_paths": image_files, "use_ocr": True}
+        )
         elapsed_time = time.time() - start_time
 
         print(f"\n批量处理结果:")
@@ -211,7 +218,7 @@ def test_batch_processing():
         print(f"   总耗时: {elapsed_time:.2f}秒")
         print(f"   平均: {elapsed_time/result['total']:.2f}秒/张")
 
-        return result['success']
+        return result["success"]
 
     except Exception as e:
         print(f"批量处理失败: {e}")
@@ -252,7 +259,7 @@ def test_integration_workflow():
 
         # 保存提取的文本
         output_file = project_root / "ocr_output.txt"
-        output_file.write_text(content.text, encoding='utf-8')
+        output_file.write_text(content.text, encoding="utf-8")
         print(f"\n✅ 文本已保存到: {output_file}")
 
         # 显示前200字符
@@ -267,6 +274,7 @@ def test_integration_workflow():
     except Exception as e:
         print(f"工作流测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

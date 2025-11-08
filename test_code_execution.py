@@ -18,9 +18,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from backend.services.code_executor import (
+    CodeExecutionError,
     code_executor,
     validate_code,
-    CodeExecutionError,
 )
 from backend.tools.code_execution import (
     code_execution_tool,
@@ -39,7 +39,7 @@ def test_environment():
         info = get_execution_environment_info.invoke({})
         print(f"✅ Docker可用: {info['docker_available']}")
         print(f"📊 资源限制:")
-        for key, value in info['resource_limits'].items():
+        for key, value in info["resource_limits"].items():
             print(f"   - {key}: {value}")
         print(f"📦 可用库: {', '.join(info['available_libraries'][:5])}...")
         print(f"🛡️  安全特性: {len(info['security_features'])} 项")
@@ -72,7 +72,9 @@ def test_code_validator():
             print(f"✅ {description}: {'通过' if is_valid else '拒绝'}")
             passed += 1
         else:
-            print(f"❌ {description}: 预期{'通过' if should_pass else '拒绝'}, 实际{'通过' if is_valid else '拒绝'}")
+            print(
+                f"❌ {description}: 预期{'通过' if should_pass else '拒绝'}, 实际{'通过' if is_valid else '拒绝'}"
+            )
             if not is_valid:
                 print(f"   错误: {result.error}")
 
@@ -109,10 +111,10 @@ print(data.describe())
 
     try:
         result = code_executor.execute_code(code)
-        if result['success']:
+        if result["success"]:
             print(f"✅ 代码执行成功 ({result['execution_time']:.2f}秒)")
             print(f"📤 输出:")
-            print(result['stdout'])
+            print(result["stdout"])
             return True
         else:
             print(f"❌ 执行失败: {result.get('error', 'Unknown error')}")
@@ -158,10 +160,10 @@ print("Plot saved successfully to test_plot.png")
 
     try:
         result = code_executor.execute_code(code)
-        if result['success']:
+        if result["success"]:
             print(f"✅ 可视化执行成功 ({result['execution_time']:.2f}秒)")
             print(f"📊 生成文件: {len(result['visualizations'])} 个")
-            for viz in result['visualizations']:
+            for viz in result["visualizations"]:
                 print(f"   - {viz}")
             return True
         else:
@@ -184,18 +186,20 @@ def test_langchain_tools():
 
     # 测试代码验证工具
     print("\n5.1 代码验证工具:")
-    validation_result = code_validation_tool.invoke({
-        "code": "import pandas as pd\nprint('Hello')"
-    })
+    validation_result = code_validation_tool.invoke(
+        {"code": "import pandas as pd\nprint('Hello')"}
+    )
     print(f"   验证结果: {'✅ 有效' if validation_result['valid'] else '❌ 无效'}")
 
     # 测试代码执行工具
     print("\n5.2 代码执行工具:")
-    exec_result = code_execution_tool.invoke({
-        "code": "import numpy as np\nprint('NumPy version:', np.__version__)",
-        "timeout": 30
-    })
-    if exec_result['success']:
+    exec_result = code_execution_tool.invoke(
+        {
+            "code": "import numpy as np\nprint('NumPy version:', np.__version__)",
+            "timeout": 30,
+        }
+    )
+    if exec_result["success"]:
         print(f"   ✅ 执行成功")
         print(f"   输出: {exec_result['stdout'].strip()}")
         return True
@@ -243,10 +247,10 @@ print("✅ Model training completed successfully!")
 
     try:
         result = code_executor.execute_code(code, timeout=60)
-        if result['success']:
+        if result["success"]:
             print(f"✅ ML代码执行成功 ({result['execution_time']:.2f}秒)")
             print(f"📤 输出:")
-            print(result['stdout'])
+            print(result["stdout"])
             return True
         else:
             print(f"❌ 执行失败: {result.get('error', 'Unknown error')}")

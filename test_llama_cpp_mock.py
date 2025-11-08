@@ -3,22 +3,24 @@
 llama.cpp 客户端模拟测试
 测试代码结构和接口，不依赖实际库加载
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 添加路径以便导入backend模块
-backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
+backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 sys.path.insert(0, backend_path)
+
 
 def test_file_structure():
     """测试文件结构"""
     print("🔍 测试文件结构...")
 
     files_to_check = [
-        'backend/services/llama_cpp_client.py',
-        'backend/services/llm_client.py',
-        'backend/config.py'
+        "backend/services/llama_cpp_client.py",
+        "backend/services/llm_client.py",
+        "backend/config.py",
     ]
 
     for file_path in files_to_check:
@@ -30,22 +32,23 @@ def test_file_structure():
 
     return True
 
+
 def test_client_interface():
     """测试客户端接口定义"""
     print("\n🔍 测试客户端接口定义...")
 
     try:
         # 读取客户端代码并检查关键方法
-        with open('backend/services/llama_cpp_client.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/llama_cpp_client.py", "r", encoding="utf-8") as f:
             client_code = f.read()
 
         required_methods = [
-            'def generate(',
-            'def chat(',
-            'def get_model_info(',
-            'def get_memory_usage(',
-            'def unload_model(',
-            'def is_loaded('
+            "def generate(",
+            "def chat(",
+            "def get_model_info(",
+            "def get_memory_usage(",
+            "def unload_model(",
+            "def is_loaded(",
         ]
 
         for method in required_methods:
@@ -60,20 +63,21 @@ def test_client_interface():
         print(f"❌ 接口检查失败: {e}")
         return False
 
+
 def test_config_compatibility():
     """测试配置兼容性"""
     print("\n🔍 测试配置兼容性...")
 
     try:
         # 检查配置文件
-        with open('backend/config.py', 'r', encoding='utf-8') as f:
+        with open("backend/config.py", "r", encoding="utf-8") as f:
             config_code = f.read()
 
         required_configs = [
-            'llm_backend',
-            'llama_model_path',
-            'default_temperature',
-            'default_max_tokens'
+            "llm_backend",
+            "llama_model_path",
+            "default_temperature",
+            "default_max_tokens",
         ]
 
         for config in required_configs:
@@ -87,19 +91,20 @@ def test_config_compatibility():
         print(f"❌ 配置检查失败: {e}")
         return False
 
+
 def test_factory_pattern():
     """测试工厂模式实现"""
     print("\n🔍 测试工厂模式实现...")
 
     try:
-        with open('backend/services/llm_client.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/llm_client.py", "r", encoding="utf-8") as f:
             factory_code = f.read()
 
         required_patterns = [
-            'class LLMClientFactory',
-            'def create_client',
-            'llama_cpp',
-            'ollama'
+            "class LLMClientFactory",
+            "def create_client",
+            "llama_cpp",
+            "ollama",
         ]
 
         for pattern in required_patterns:
@@ -114,20 +119,21 @@ def test_factory_pattern():
         print(f"❌ 工厂模式检查失败: {e}")
         return False
 
+
 def test_error_handling():
     """测试错误处理"""
     print("\n🔍 测试错误处理...")
 
     try:
-        with open('backend/services/llama_cpp_client.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/llama_cpp_client.py", "r", encoding="utf-8") as f:
             client_code = f.read()
 
         error_patterns = [
-            'try:',
-            'except ImportError',
-            'except Exception',
-            'FileNotFoundError',
-            'RuntimeError'
+            "try:",
+            "except ImportError",
+            "except Exception",
+            "FileNotFoundError",
+            "RuntimeError",
         ]
 
         for pattern in error_patterns:
@@ -141,19 +147,20 @@ def test_error_handling():
         print(f"❌ 错误处理检查失败: {e}")
         return False
 
+
 def test_metal_support():
     """测试 Metal 支持代码"""
     print("\n🔍 测试 Metal 支持代码...")
 
     try:
-        with open('backend/services/llama_cpp_client.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/llama_cpp_client.py", "r", encoding="utf-8") as f:
             client_code = f.read()
 
         metal_patterns = [
-            'GGML_METAL',
-            'torch.backends.mps',
-            '_detect_gpu_layers',
-            'n_gpu_layers'
+            "GGML_METAL",
+            "torch.backends.mps",
+            "_detect_gpu_layers",
+            "n_gpu_layers",
         ]
 
         for pattern in metal_patterns:
@@ -167,6 +174,7 @@ def test_metal_support():
         print(f"❌ Metal 支持检查失败: {e}")
         return False
 
+
 def simulate_client_usage():
     """模拟客户端使用"""
     print("\n🔍 模拟客户端使用...")
@@ -174,25 +182,27 @@ def simulate_client_usage():
     try:
         # 创建模拟配置
         mock_config = {
-            'llm_backend': 'llama_cpp',
-            'llama_model_path': 'models/test-model.gguf',
-            'default_temperature': 0.7,
-            'default_max_tokens': 2000
+            "llm_backend": "llama_cpp",
+            "llama_model_path": "models/test-model.gguf",
+            "default_temperature": 0.7,
+            "default_max_tokens": 2000,
         }
 
         print(f"✅ 模拟配置: {mock_config}")
 
         # 模拟生成调用
         mock_generate_params = {
-            'prompt': 'Hello, how are you?',
-            'temperature': 0.7,
-            'max_tokens': 100
+            "prompt": "Hello, how are you?",
+            "temperature": 0.7,
+            "max_tokens": 100,
         }
 
         print(f"✅ 模拟生成参数: {mock_generate_params}")
 
         # 模拟响应
-        mock_response = "Hello! I'm doing well, thank you for asking. This is a mock response."
+        mock_response = (
+            "Hello! I'm doing well, thank you for asking. This is a mock response."
+        )
         print(f"✅ 模拟响应: {mock_response}")
 
         return True
@@ -200,20 +210,16 @@ def simulate_client_usage():
         print(f"❌ 模拟使用失败: {e}")
         return False
 
+
 def test_migration_summary():
     """测试迁移总结文件"""
     print("\n🔍 测试迁移总结文件...")
 
     try:
-        with open('LLAMACPP_MIGRATION_SUMMARY.md', 'r', encoding='utf-8') as f:
+        with open("LLAMACPP_MIGRATION_SUMMARY.md", "r", encoding="utf-8") as f:
             summary_content = f.read()
 
-        required_sections = [
-            '# llama.cpp 迁移总结',
-            '## 迁移内容',
-            '## 关键改进',
-            '## 测试建议'
-        ]
+        required_sections = ["# llama.cpp 迁移总结", "## 迁移内容", "## 关键改进", "## 测试建议"]
 
         for section in required_sections:
             if section in summary_content:
@@ -225,6 +231,7 @@ def test_migration_summary():
     except Exception as e:
         print(f"❌ 迁移总结检查失败: {e}")
         return False
+
 
 def main():
     """主测试函数"""
@@ -240,7 +247,7 @@ def main():
         ("错误处理", test_error_handling),
         ("Metal 支持", test_metal_support),
         ("模拟使用", simulate_client_usage),
-        ("迁移总结", test_migration_summary)
+        ("迁移总结", test_migration_summary),
     ]
 
     passed = 0
@@ -249,7 +256,7 @@ def main():
     for test_name, test_func in tests:
         print(f"\n{'='*50}")
         print(f"测试: {test_name}")
-        print('='*50)
+        print("=" * 50)
 
         if test_func():
             passed += 1
@@ -259,7 +266,7 @@ def main():
 
     print(f"\n{'='*50}")
     print(f"测试总结: {passed}/{total} 通过")
-    print('='*50)
+    print("=" * 50)
 
     if passed >= total * 0.8:  # 80% 通过率
         print("🎉 大部分测试通过！llama.cpp 客户端代码结构正确")
@@ -271,6 +278,7 @@ def main():
     else:
         print("⚠️  部分测试失败，请检查代码实现")
         return False
+
 
 if __name__ == "__main__":
     success = main()

@@ -10,17 +10,19 @@ Tests the vector retrieval system across multiple dimensions:
 4. Query Complexity Tests
 """
 
-import sys
 import json
-import time
 import logging
+import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Set
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -33,26 +35,21 @@ class VectorRetrievalTester:
             "recall_tests": [],
             "precision_tests": [],
             "dataset_tests": [],
-            "complexity_tests": []
+            "complexity_tests": [],
         }
-        self.stats = {
-            "total_tests": 0,
-            "passed": 0,
-            "failed": 0,
-            "errors": 0
-        }
+        self.stats = {"total_tests": 0, "passed": 0, "failed": 0, "errors": 0}
 
     def setup(self):
         """Initialize the RAG engine"""
         try:
-            from backend.services.rag_engine import SimpleRAG
             from backend.config import settings
+            from backend.services.rag_engine import SimpleRAG
 
             # Initialize RAG with hybrid search and reranker
             self.rag_engine = SimpleRAG(
                 use_hybrid_search=True,
                 use_reranker=True,
-                enable_feedback=False  # Disable for testing
+                enable_feedback=False,  # Disable for testing
             )
 
             logger.info("✅ RAG engine initialized successfully")
@@ -60,6 +57,7 @@ class VectorRetrievalTester:
         except Exception as e:
             logger.error(f"❌ Failed to initialize RAG engine: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -72,32 +70,50 @@ class VectorRetrievalTester:
             # Load AI research paper
             ai_research = docs_dir / "ai_research_paper.txt"
             if ai_research.exists():
-                with open(ai_research, 'r', encoding='utf-8') as f:
+                with open(ai_research, "r", encoding="utf-8") as f:
                     content = f.read()
-                    documents.append({
-                        "content": content,
-                        "metadata": {"doc_id": "ai_research", "source": "ai_research_paper.txt", "type": "text"}
-                    })
+                    documents.append(
+                        {
+                            "content": content,
+                            "metadata": {
+                                "doc_id": "ai_research",
+                                "source": "ai_research_paper.txt",
+                                "type": "text",
+                            },
+                        }
+                    )
 
             # Load RAG documentation
             rag_doc = docs_dir / "retrieval_augmented_generation.md"
             if rag_doc.exists():
-                with open(rag_doc, 'r', encoding='utf-8') as f:
+                with open(rag_doc, "r", encoding="utf-8") as f:
                     content = f.read()
-                    documents.append({
-                        "content": content,
-                        "metadata": {"doc_id": "rag_doc", "source": "retrieval_augmented_generation.md", "type": "markdown"}
-                    })
+                    documents.append(
+                        {
+                            "content": content,
+                            "metadata": {
+                                "doc_id": "rag_doc",
+                                "source": "retrieval_augmented_generation.md",
+                                "type": "markdown",
+                            },
+                        }
+                    )
 
             # Load AI basics
             ai_basics = docs_dir / "sample_ai_basics.md"
             if ai_basics.exists():
-                with open(ai_basics, 'r', encoding='utf-8') as f:
+                with open(ai_basics, "r", encoding="utf-8") as f:
                     content = f.read()
-                    documents.append({
-                        "content": content,
-                        "metadata": {"doc_id": "ai_basics", "source": "sample_ai_basics.md", "type": "markdown"}
-                    })
+                    documents.append(
+                        {
+                            "content": content,
+                            "metadata": {
+                                "doc_id": "ai_basics",
+                                "source": "sample_ai_basics.md",
+                                "type": "markdown",
+                            },
+                        }
+                    )
 
             logger.info(f"✅ Loaded {len(documents)} test documents")
             return documents
@@ -121,17 +137,22 @@ class VectorRetrievalTester:
         except Exception as e:
             logger.error(f"❌ Error adding documents: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
-    def calculate_recall(self, retrieved_ids: Set[str], relevant_ids: Set[str]) -> float:
+    def calculate_recall(
+        self, retrieved_ids: Set[str], relevant_ids: Set[str]
+    ) -> float:
         """Calculate recall: retrieved_relevant / total_relevant"""
         if not relevant_ids:
             return 0.0
         intersection = retrieved_ids.intersection(relevant_ids)
         return len(intersection) / len(relevant_ids)
 
-    def calculate_precision(self, retrieved_ids: Set[str], relevant_ids: Set[str]) -> float:
+    def calculate_precision(
+        self, retrieved_ids: Set[str], relevant_ids: Set[str]
+    ) -> float:
         """Calculate precision: retrieved_relevant / total_retrieved"""
         if not retrieved_ids:
             return 0.0
@@ -149,18 +170,18 @@ class VectorRetrievalTester:
             {
                 "query": "What is RAG?",
                 "expected_docs": {"rag_doc"},  # Should find RAG documentation
-                "min_recall": 0.8
+                "min_recall": 0.8,
             },
             {
                 "query": "machine learning basics",
                 "expected_docs": {"ai_basics", "ai_research"},  # Could be in both
-                "min_recall": 0.5  # At least one should be found
+                "min_recall": 0.5,  # At least one should be found
             },
             {
                 "query": "artificial intelligence research",
                 "expected_docs": {"ai_research", "ai_basics"},
-                "min_recall": 0.5
-            }
+                "min_recall": 0.5,
+            },
         ]
 
         results = []
@@ -172,29 +193,38 @@ class VectorRetrievalTester:
             try:
                 # Perform retrieval
                 result = self.rag_engine.query(query, top_k=5)
-                retrieved_docs = set([chunk.get('doc_id', '').split('_chunk')[0] for chunk in result.get('retrieved_chunks', [])])
+                retrieved_docs = set(
+                    [
+                        chunk.get("doc_id", "").split("_chunk")[0]
+                        for chunk in result.get("retrieved_chunks", [])
+                    ]
+                )
 
                 # Calculate recall
                 recall = self.calculate_recall(retrieved_docs, expected_docs)
 
-                passed = (recall >= min_recall)
+                passed = recall >= min_recall
                 test_result = {
                     "query": query,
                     "expected_docs": list(expected_docs),
                     "retrieved_docs": list(retrieved_docs),
                     "recall": recall,
                     "min_recall": min_recall,
-                    "passed": passed
+                    "passed": passed,
                 }
                 results.append(test_result)
 
                 self.stats["total_tests"] += 1
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: '{query}' → Recall: {recall:.2f} (≥{min_recall:.2f})")
+                    logger.info(
+                        f"✅ PASS: '{query}' → Recall: {recall:.2f} (≥{min_recall:.2f})"
+                    )
                 else:
                     self.stats["failed"] += 1
-                    logger.error(f"❌ FAIL: '{query}' → Recall: {recall:.2f} (<{min_recall:.2f})")
+                    logger.error(
+                        f"❌ FAIL: '{query}' → Recall: {recall:.2f} (<{min_recall:.2f})"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ ERROR: {query} → {e}")
@@ -213,13 +243,13 @@ class VectorRetrievalTester:
             {
                 "query": "retrieval augmented generation systems",
                 "expected_docs": {"rag_doc"},
-                "min_recall": 0.7  # Should find RAG doc even with different phrasing
+                "min_recall": 0.7,  # Should find RAG doc even with different phrasing
             },
             {
                 "query": "ML fundamentals",  # ML = Machine Learning
                 "expected_docs": {"ai_basics", "ai_research"},
-                "min_recall": 0.5
-            }
+                "min_recall": 0.5,
+            },
         ]
 
         results = []
@@ -230,10 +260,15 @@ class VectorRetrievalTester:
 
             try:
                 result = self.rag_engine.query(query, top_k=5)
-                retrieved_docs = set([chunk.get('doc_id', '').split('_chunk')[0] for chunk in result.get('retrieved_chunks', [])])
+                retrieved_docs = set(
+                    [
+                        chunk.get("doc_id", "").split("_chunk")[0]
+                        for chunk in result.get("retrieved_chunks", [])
+                    ]
+                )
 
                 recall = self.calculate_recall(retrieved_docs, expected_docs)
-                passed = (recall >= min_recall)
+                passed = recall >= min_recall
 
                 test_result = {
                     "query": query,
@@ -241,7 +276,7 @@ class VectorRetrievalTester:
                     "retrieved_docs": list(retrieved_docs),
                     "recall": recall,
                     "min_recall": min_recall,
-                    "passed": passed
+                    "passed": passed,
                 }
                 results.append(test_result)
 
@@ -270,13 +305,13 @@ class VectorRetrievalTester:
             {
                 "query": "How do neural networks learn from data?",
                 "expected_docs": {"ai_research", "ai_basics"},
-                "min_recall": 0.3  # Lower threshold for conceptual matching
+                "min_recall": 0.3,  # Lower threshold for conceptual matching
             },
             {
                 "query": "What are the components of an AI system?",
                 "expected_docs": {"ai_basics", "ai_research"},
-                "min_recall": 0.3
-            }
+                "min_recall": 0.3,
+            },
         ]
 
         results = []
@@ -287,10 +322,15 @@ class VectorRetrievalTester:
 
             try:
                 result = self.rag_engine.query(query, top_k=5)
-                retrieved_docs = set([chunk.get('doc_id', '').split('_chunk')[0] for chunk in result.get('retrieved_chunks', [])])
+                retrieved_docs = set(
+                    [
+                        chunk.get("doc_id", "").split("_chunk")[0]
+                        for chunk in result.get("retrieved_chunks", [])
+                    ]
+                )
 
                 recall = self.calculate_recall(retrieved_docs, expected_docs)
-                passed = (recall >= min_recall)
+                passed = recall >= min_recall
 
                 test_result = {
                     "query": query,
@@ -298,7 +338,7 @@ class VectorRetrievalTester:
                     "retrieved_docs": list(retrieved_docs),
                     "recall": recall,
                     "min_recall": min_recall,
-                    "passed": passed
+                    "passed": passed,
                 }
                 results.append(test_result)
 
@@ -308,7 +348,9 @@ class VectorRetrievalTester:
                     logger.info(f"✅ PASS: '{query[:40]}...' → Recall: {recall:.2f}")
                 else:
                     self.stats["failed"] += 1
-                    logger.warning(f"⚠️ PARTIAL: '{query[:40]}...' → Recall: {recall:.2f}")
+                    logger.warning(
+                        f"⚠️ PARTIAL: '{query[:40]}...' → Recall: {recall:.2f}"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ ERROR: {query} → {e}")
@@ -330,14 +372,14 @@ class VectorRetrievalTester:
                 "query": "RAG system architecture",
                 "expected_docs": {"rag_doc"},
                 "top_k": 5,
-                "min_precision": 0.6  # At least 60% of top-5 should be relevant
+                "min_precision": 0.6,  # At least 60% of top-5 should be relevant
             },
             {
                 "query": "AI and machine learning concepts",
                 "expected_docs": {"ai_basics", "ai_research"},
                 "top_k": 5,
-                "min_precision": 0.4  # Broad query, lower threshold
-            }
+                "min_precision": 0.4,  # Broad query, lower threshold
+            },
         ]
 
         results = []
@@ -349,17 +391,17 @@ class VectorRetrievalTester:
 
             try:
                 result = self.rag_engine.query(query, top_k=top_k)
-                retrieved_chunks = result.get('retrieved_chunks', [])
+                retrieved_chunks = result.get("retrieved_chunks", [])
 
                 # Count relevant chunks
                 relevant_count = 0
                 for chunk in retrieved_chunks:
-                    doc_id = chunk.get('doc_id', '').split('_chunk')[0]
+                    doc_id = chunk.get("doc_id", "").split("_chunk")[0]
                     if doc_id in expected_docs:
                         relevant_count += 1
 
                 precision = relevant_count / top_k if top_k > 0 else 0
-                passed = (precision >= min_precision)
+                passed = precision >= min_precision
 
                 test_result = {
                     "query": query,
@@ -368,17 +410,21 @@ class VectorRetrievalTester:
                     "relevant_count": relevant_count,
                     "precision": precision,
                     "min_precision": min_precision,
-                    "passed": passed
+                    "passed": passed,
                 }
                 results.append(test_result)
 
                 self.stats["total_tests"] += 1
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: '{query[:40]}...' → Precision: {precision:.2f} ({relevant_count}/{top_k})")
+                    logger.info(
+                        f"✅ PASS: '{query[:40]}...' → Precision: {precision:.2f} ({relevant_count}/{top_k})"
+                    )
                 else:
                     self.stats["failed"] += 1
-                    logger.error(f"❌ FAIL: '{query[:40]}...' → Precision: {precision:.2f} ({relevant_count}/{top_k})")
+                    logger.error(
+                        f"❌ FAIL: '{query[:40]}...' → Precision: {precision:.2f} ({relevant_count}/{top_k})"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ ERROR: {query} → {e}")
@@ -395,21 +441,17 @@ class VectorRetrievalTester:
         logger.info("\n=== Test Set 3.1: Query Complexity Tests ===")
 
         test_cases = [
-            {
-                "query": "RAG",  # Simple keyword
-                "complexity": "simple",
-                "top_k": 3
-            },
+            {"query": "RAG", "complexity": "simple", "top_k": 3},  # Simple keyword
             {
                 "query": "How does RAG work?",  # Simple question
                 "complexity": "moderate",
-                "top_k": 5
+                "top_k": 5,
             },
             {
                 "query": "Explain the differences between traditional information retrieval and RAG systems, including advantages and limitations",  # Complex query
                 "complexity": "complex",
-                "top_k": 5
-            }
+                "top_k": 5,
+            },
         ]
 
         results = []
@@ -423,11 +465,11 @@ class VectorRetrievalTester:
                 result = self.rag_engine.query(query, top_k=top_k)
                 response_time = time.time() - start_time
 
-                retrieved_count = len(result.get('retrieved_chunks', []))
-                has_answer = len(result.get('answer', '')) > 0
+                retrieved_count = len(result.get("retrieved_chunks", []))
+                has_answer = len(result.get("answer", "")) > 0
 
                 # Success criteria: retrieved results and generated answer
-                passed = (retrieved_count > 0 and has_answer)
+                passed = retrieved_count > 0 and has_answer
 
                 test_result = {
                     "query": query,
@@ -436,17 +478,21 @@ class VectorRetrievalTester:
                     "retrieved_count": retrieved_count,
                     "has_answer": has_answer,
                     "response_time": response_time,
-                    "passed": passed
+                    "passed": passed,
                 }
                 results.append(test_result)
 
                 self.stats["total_tests"] += 1
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {complexity} query → {retrieved_count} chunks, {response_time*1000:.1f}ms")
+                    logger.info(
+                        f"✅ PASS: {complexity} query → {retrieved_count} chunks, {response_time*1000:.1f}ms"
+                    )
                 else:
                     self.stats["failed"] += 1
-                    logger.error(f"❌ FAIL: {complexity} query → {retrieved_count} chunks")
+                    logger.error(
+                        f"❌ FAIL: {complexity} query → {retrieved_count} chunks"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ ERROR: {complexity} query → {e}")
@@ -458,9 +504,9 @@ class VectorRetrievalTester:
 
     def run_all_tests(self):
         """Execute all test categories"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🚀 Starting Comprehensive Vector Retrieval Tests")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         if not self.setup():
             logger.error("❌ Setup failed. Cannot proceed with tests.")
@@ -478,23 +524,23 @@ class VectorRetrievalTester:
             return False
 
         # Category 1: Recall Tests
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📊 CATEGORY 1: Recall Rate Tests")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_1_1_exact_match_recall()
         self.test_1_2_synonym_recall()
         self.test_1_3_conceptual_recall()
 
         # Category 2: Precision Tests
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🎯 CATEGORY 2: Precision Tests")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_2_1_relevant_results_density()
 
         # Category 3: Query Complexity
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🧠 CATEGORY 3: Query Complexity Tests")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_3_1_query_complexity()
 
         # Print final summary
@@ -504,9 +550,9 @@ class VectorRetrievalTester:
 
     def print_summary(self):
         """Print comprehensive test summary"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📊 COMPREHENSIVE TEST SUMMARY")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         total = self.stats["total_tests"]
         passed = self.stats["passed"]
@@ -529,9 +575,11 @@ class VectorRetrievalTester:
         else:
             logger.info(f"\n❌ NEEDS IMPROVEMENT: Pass rate {pass_rate:.1f}% (<60%)")
 
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
 
-    def save_results(self, output_file: str = "test_results/vector_retrieval_results.json"):
+    def save_results(
+        self, output_file: str = "test_results/vector_retrieval_results.json"
+    ):
         """Save detailed test results to JSON file"""
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -539,10 +587,10 @@ class VectorRetrievalTester:
         results = {
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "statistics": self.stats,
-            "detailed_results": self.test_results
+            "detailed_results": self.test_results,
         }
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
         logger.info(f"\n💾 Results saved to: {output_path}")

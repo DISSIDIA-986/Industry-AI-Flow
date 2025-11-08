@@ -4,8 +4,8 @@
 直接测试核心功能，避免复杂的导入问题
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加项目根目录到路径
@@ -20,7 +20,7 @@ print()
 # 测试基本的LangChain功能
 try:
     print("1. 测试LangChain核心功能...")
-    from langchain_core.messages import HumanMessage, AIMessage
+    from langchain_core.messages import AIMessage, HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
 
     # 创建简单的提示模板
@@ -47,14 +47,10 @@ try:
 
     # 使用轻量级模型进行测试
     print("   正在加载轻量级模型...")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer("all-MiniLM-L6-v2")
 
     # 测试嵌入
-    test_sentences = [
-        "这是一个测试句子。",
-        "这是另一个测试句子。",
-        "机器学习很有趣。"
-    ]
+    test_sentences = ["这是一个测试句子。", "这是另一个测试句子。", "机器学习很有趣。"]
 
     embeddings = model.encode(test_sentences)
     print(f"   ✅ Sentence Transformers正常")
@@ -63,6 +59,7 @@ try:
 
     # 计算相似度
     from sklearn.metrics.pairwise import cosine_similarity
+
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
     print(f"   ✅ 句子相似度计算: {similarity:.4f}")
 
@@ -94,13 +91,13 @@ print()
 try:
     print("4. 测试einops...")
     import einops
-
     import torch
+
     x = torch.randn(2, 3, 4, 5)
 
     # 使用einops重排张量
-    y = einops.rearrange(x, 'b c h w -> b h w c')
-    z = einops.reduce(x, 'b c h w -> b h w', 'mean')
+    y = einops.rearrange(x, "b c h w -> b h w c")
+    z = einops.reduce(x, "b c h w -> b h w", "mean")
 
     print(f"   ✅ einops正常工作")
     print(f"   ✅ 重排操作: {x.shape} -> {y.shape}")
@@ -185,7 +182,7 @@ test_results = {
     "PyTorch": True,
     "einops": True,
     "答案生成模拟": True,
-    "多步推理": True
+    "多步推理": True,
 }
 
 passed_tests = sum(test_results.values())
