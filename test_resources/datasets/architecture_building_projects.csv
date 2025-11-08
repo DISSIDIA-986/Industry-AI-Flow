@@ -1,0 +1,11 @@
+name,project_type,building_area_sqm,construction_cost_usd,project_duration_months,architect,completion_date,energy_efficiency_rating,structural_system
+Empire State Building,Commercial Office,208879,40940000,21,Shreve, Lamb & Harmon,1931-05-01,C,Steel Frame
+Burj Khalifa,Residential/Mixed Use,333104,1500000000,54,Skidmore, Owings & Merrill,2010-01-04,A+,Reinforced Concrete
+One World Trade Center,Commercial Office,328921,3900000000,128,Skidmore, Owings & Merrill,2014-11-03,B,Steel Frame
+Taipei 101,Commercial Office,376084,1710000000,54,C&Y Architects,2004-07-14,A+,Composite
+Shanghai Tower,Commercial Office,385814,2400000000,83,Gensler,2015-08-13,A+,Composite
+Petronas Towers,Commercial Office,297169,1245000000,59,Cesar Pelli & Associates,1998-08-27,A,Steel Frame
+Sagrada Familia,Religious,40500,120000000,172,Antoni Gaudí/Cristián García Vila,2026-12-10,A+,Reinforced Concrete
+Sydney Opera House,Performing Arts,18182,102000000,126,Jørn Utzon,1973-10-20,C,Pre-stressed Concrete
+Guggenheim Museum,Arts Museum,10680,108200000,72,Frank Gehry,1997-10-19,B,Steel Frame
+Louvre Pyramid,Museum Entrance,1300,60000000,32,I.M. Pei,1989-03-30,B,Steel and Glass

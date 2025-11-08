@@ -1,0 +1,121 @@
+{
+  "architecture_construction_test_dataset": {
+    "building_codes_compliance": [
+      {
+        "id": "acc_001",
+        "query": "What are the fire safety requirements for high-rise residential buildings according to IBC?",
+        "expected_intent": "Knowledge Retrieval",
+        "domain": "Building Codes",
+        "complexity": "High"
+      },
+      {
+        "id": "acc_002",
+        "query": "How does ASCE 7-22 affect structural design in seismic zones?",
+        "expected_intent": "Knowledge Retrieval",
+        "domain": "Structural Engineering",
+        "complexity": "High"
+      },
+      {
+        "id": "acc_003",
+        "query": "What are the accessibility requirements for commercial buildings under ADA?",
+        "expected_intent": "Knowledge Retrieval", 
+        "domain": "Building Codes",
+        "complexity": "Medium"
+      }
+    ],
+    "structural_analysis": [
+      {
+        "id": "sa_001",
+        "query": "Analyze the load-bearing capacity of a steel beam spanning 8 meters with a uniformly distributed load of 50 kN/m",
+        "expected_intent": "Data Analysis and Code Execution",
+        "domain": "Structural Engineering",
+        "complexity": "High",
+        "required_data": "/test_resources/datasets/construction_materials_properties.csv"
+      },
+      {
+        "id": "sa_002",
+        "query": "Calculate the wind load on a 50-meter tall building in a hurricane-prone area",
+        "expected_intent": "Data Analysis and Code Execution",
+        "domain": "Structural Engineering", 
+        "complexity": "High"
+      },
+      {
+        "id": "sa_003",
+        "query": "Compare the thermal performance of different wall assemblies",
+        "expected_intent": "Data Analysis",
+        "domain": "Environmental Design",
+        "complexity": "Medium",
+        "required_data": "/test_resources/datasets/construction_materials_properties.csv"
+      }
+    ],
+    "project_management": [
+      {
+        "id": "pm_001",
+        "query": "What is the typical duration for a 20-story commercial building project?",
+        "expected_intent": "Knowledge Retrieval",
+        "domain": "Construction Management",
+        "complexity": "Low",
+        "required_data": "/test_resources/datasets/architecture_building_projects.csv"
+      },
+      {
+        "id": "pm_002",
+        "query": "Analyze the cost trends for high-rise construction over the past decade",
+        "expected_intent": "Data Analysis",
+        "domain": "Construction Economics",
+        "complexity": "High",
+        "required_data": "/test_resources/datasets/architecture_building_projects.csv"
+      },
+      {
+        "id": "pm_003",
+        "query": "How do energy efficiency ratings affect building project costs?",
+        "expected_intent": "Data Analysis",
+        "domain": "Sustainable Design",
+        "complexity": "Medium",
+        "required_data": "/test_resources/datasets/architecture_building_projects.csv"
+      }
+    ],
+    "sustainability_analysis": [
+      {
+        "id": "sa_004",
+        "query": "Which structural system has the lowest carbon footprint for a 15-story office building?",
+        "expected_intent": "Knowledge Retrieval and Data Analysis",
+        "domain": "Sustainable Design",
+        "complexity": "High",
+        "required_data": [
+          "/test_resources/datasets/construction_materials_properties.csv",
+          "/test_resources/datasets/architecture_building_projects.csv"
+        ]
+      },
+      {
+        "id": "sa_005",
+        "query": "Analyze the relationship between building shape and energy efficiency",
+        "expected_intent": "Data Analysis",
+        "domain": "Environmental Design",
+        "complexity": "Medium"
+      }
+    ],
+    "design_assistance": [
+      {
+        "id": "da_001",
+        "query": "What are the recommended ceiling heights for office spaces to ensure good acoustic performance?",
+        "expected_intent": "Knowledge Retrieval",
+        "domain": "Architectural Design",
+        "complexity": "Medium"
+      },
+      {
+        "id": "da_002",
+        "query": "Design a column layout for a 60x40 meter warehouse with minimum structural depth",
+        "expected_intent": "Knowledge Retrieval and Code Execution",
+        "domain": "Structural Design",
+        "complexity": "High"
+      },
+      {
+        "id": "da_003",
+        "query": "How can I optimize natural lighting in a residential building?",
+        "expected_intent": "Knowledge Retrieval",
+        "domain": "Environmental Design",
+        "complexity": "Medium"
+      }
+    ]
+  }
+}
