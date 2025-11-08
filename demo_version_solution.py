@@ -4,10 +4,11 @@
 展示如何解决Python版本不兼容导致的测试中断问题
 """
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
+
 
 def run_command(cmd, description, capture_output=True):
     """运行命令并显示结果"""
@@ -17,7 +18,9 @@ def run_command(cmd, description, capture_output=True):
 
     try:
         if capture_output:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=30
+            )
             if result.stdout:
                 print(result.stdout)
             if result.stderr:
@@ -32,6 +35,7 @@ def run_command(cmd, description, capture_output=True):
     except Exception as e:
         print(f"❌ 执行失败: {e}")
         return False
+
 
 def demo_version_management_solution():
     """演示版本管理解决方案"""
@@ -61,8 +65,9 @@ def demo_version_management_solution():
 
     # 3. 演示版本检查
     print(f"\n📋 步骤 3: 演示版本兼容性检查")
-    success = run_command("python3 version_manager.py --check-deps paddleocr langchain",
-                        "检查关键依赖兼容性")
+    success = run_command(
+        "python3 version_manager.py --check-deps paddleocr langchain", "检查关键依赖兼容性"
+    )
 
     if not success:
         print("🔍 检测到版本兼容性问题，这解释了为什么测试会中断")
@@ -150,9 +155,11 @@ def demo_version_management_solution():
     print("  3. 验证环境兼容性")
     print("  4. 开始稳定的测试开发")
 
+
 def main():
     """主函数"""
     demo_version_management_solution()
+
 
 if __name__ == "__main__":
     main()
