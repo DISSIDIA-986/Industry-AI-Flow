@@ -1,16 +1,33 @@
 from sentence_transformers import SentenceTransformer
 from backend.config import settings
+from backend.utils.device_manager import device_manager
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 全局模型实例（避免重复加载）
 _model = None
 
 
 def get_model():
-    """获取或初始化嵌入模型"""
+    """获取或初始化嵌入模型（带设备优化）"""
     global _model
     if _model is None:
-        # Phase 2: nomic-embed 需要 trust_remote_code=True
-        _model = SentenceTransformer(settings.embedding_model, trust_remote_code=True)
+        # 获取设备配置
+        device = device_manager.get_sentence_transformer_device()
+
+        logger.info(f"🚀 初始化嵌入模型: {settings.embedding_model}")
+        logger.info(f"   使用设备: {device_manager.device_name}")
+
+        # 加载模型并指定设备
+        _model = SentenceTransformer(
+            settings.embedding_model,
+            trust_remote_code=True,
+            device=device
+        )
+
+        logger.info(f"✅ 模型加载完成，维度: {_model.get_sentence_embedding_dimension()}")
+
     return _model
 
 

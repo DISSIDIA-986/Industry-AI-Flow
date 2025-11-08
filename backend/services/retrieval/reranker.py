@@ -1,9 +1,13 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
+from backend.utils.device_manager import device_manager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Reranker:
-    """重排序模块：使用交叉编码器对检索结果进行精排"""
+    """重排序模块：使用交叉编码器对检索结果进行精排（支持 MPS/GPU/CPU）"""
 
     def __init__(self, model_name: str = "BAAI/bge-reranker-base"):
         """
@@ -12,17 +16,18 @@ class Reranker:
         Args:
             model_name: HuggingFace模型名称，默认使用 bge-reranker-base
         """
+        logger.info(f"🚀 初始化 Reranker 模型: {model_name}")
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
         self.model.eval()
 
-        # 使用MPS (Apple Silicon) 或 CPU
-        if torch.backends.mps.is_available():
-            self.device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
-
+        # 使用设备管理器获取设备
+        self.device = device_manager.get_torch_device()
         self.model.to(self.device)
+
+        logger.info(f"✅ Reranker 模型加载完成")
+        logger.info(f"   使用设备: {device_manager.device_name}")
         print(f"✅ Reranker 模型加载完成，使用设备: {self.device}")
 
     def rerank(self, query: str, documents: list[dict], top_k: int = 5) -> list[dict]:
