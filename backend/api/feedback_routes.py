@@ -2,19 +2,21 @@
 反馈系统API路由
 """
 
-from fastapi import APIRouter, HTTPException, Body
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
 import logging
+from typing import Any, Dict, List, Optional
 
-from backend.services.rag_engine import SimpleRAG
+from fastapi import APIRouter, Body, HTTPException
+from pydantic import BaseModel
+
 from backend.config import settings
+from backend.services.rag_engine import SimpleRAG
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 全局RAG实例
 rag_instance = None
+
 
 def get_rag_instance():
     """获取RAG实例"""
@@ -26,6 +28,7 @@ def get_rag_instance():
 
 class FeedbackRequest(BaseModel):
     """反馈请求模型"""
+
     query_id: str
     question: str
     answer: str
@@ -37,12 +40,14 @@ class FeedbackRequest(BaseModel):
 
 class FeedbackResponse(BaseModel):
     """反馈响应模型"""
+
     success: bool
     message: str
 
 
 class FeedbackStatisticsResponse(BaseModel):
     """反馈统计响应模型"""
+
     total_queries: int
     helpful_count: int
     not_helpful_count: int
@@ -74,12 +79,14 @@ async def submit_feedback(request: FeedbackRequest):
             feedback_type=request.feedback_type,
             user_comment=request.user_comment,
             retrieved_chunks=request.retrieved_chunks,
-            feedback_weight=request.feedback_weight
+            feedback_weight=request.feedback_weight,
         )
 
         if success:
             logger.info(f"Feedback submitted successfully for query {request.query_id}")
-            return FeedbackResponse(success=True, message="Feedback submitted successfully")
+            return FeedbackResponse(
+                success=True, message="Feedback submitted successfully"
+            )
         else:
             logger.warning(f"Failed to submit feedback for query {request.query_id}")
             return FeedbackResponse(success=False, message="Failed to submit feedback")
@@ -145,7 +152,7 @@ async def get_high_quality_documents(min_score: float = 0.5, limit: int = 100):
             "documents": documents,
             "count": len(documents),
             "min_score": min_score,
-            "limit": limit
+            "limit": limit,
         }
 
     except HTTPException:
@@ -158,7 +165,7 @@ async def get_high_quality_documents(min_score: float = 0.5, limit: int = 100):
 @router.post("/feedback/trigger-reranking")
 async def trigger_manual_reranking(
     query_id: str = Body(..., embed=True),
-    optimization_strategy: str = Body("adjust_weights", embed=True)
+    optimization_strategy: str = Body("adjust_weights", embed=True),
 ):
     """
     手动触发重排序优化
@@ -177,13 +184,15 @@ async def trigger_manual_reranking(
         # 这里可以实现手动触发重排序的逻辑
         # 实际应用中可能需要异步任务队列
 
-        logger.info(f"Manual reranking triggered for query {query_id} with strategy {optimization_strategy}")
+        logger.info(
+            f"Manual reranking triggered for query {query_id} with strategy {optimization_strategy}"
+        )
 
         return {
             "success": True,
             "message": "Reranking optimization triggered successfully",
             "query_id": query_id,
-            "strategy": optimization_strategy
+            "strategy": optimization_strategy,
         }
 
     except Exception as e:

@@ -61,7 +61,10 @@ class DocumentExtractor:
 
         if use_ocr:
             try:
-                from backend.services.document_processing.ocr_processor import OCRProcessor
+                from backend.services.document_processing.ocr_processor import (
+                    OCRProcessor,
+                )
+
                 self.ocr_processor = OCRProcessor()
             except Exception as e:
                 logger.warning(f"OCR初始化失败: {e}")

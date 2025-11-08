@@ -2,22 +2,24 @@
 反馈机制模块 - RAG系统的用户反馈和自适应优化
 """
 
-import uuid
 import datetime
 import json
-from typing import List, Dict, Optional, Tuple
+import logging
+import uuid
 from dataclasses import dataclass
 from enum import Enum
-import logging
+from typing import Dict, List, Optional, Tuple
+
+from backend.services.core.embedder import embed_single_text
 from backend.services.core.vectorstore import VectorStore
 from backend.services.retrieval.reranker import Reranker
-from backend.services.core.embedder import embed_single_text
 
 logger = logging.getLogger(__name__)
 
 
 class FeedbackType(Enum):
     """反馈类型"""
+
     HELPFUL = "helpful"
     NOT_HELPFUL = "not_helpful"
     PARTIALLY_HELPFUL = "partially_helpful"
@@ -26,6 +28,7 @@ class FeedbackType(Enum):
 @dataclass
 class UserFeedback:
     """用户反馈数据结构"""
+
     query_id: str
     question: str
     answer: str
@@ -45,6 +48,7 @@ class UserFeedback:
 @dataclass
 class FeedbackStatistics:
     """反馈统计信息"""
+
     total_queries: int
     helpful_count: int
     not_helpful_count: int
@@ -68,7 +72,8 @@ class FeedbackManager:
 
         try:
             # 创建反馈表
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS query_feedback (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     query_id VARCHAR(255) UNIQUE NOT NULL,
@@ -81,10 +86,12 @@ class FeedbackManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     processed_at TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # 创建文档质量评分表
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS document_quality_scores (
                     doc_id VARCHAR(255) NOT NULL,
                     chunk_id INTEGER NOT NULL,
@@ -94,10 +101,12 @@ class FeedbackManager:
                     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (doc_id, chunk_id)
                 )
-            """)
+            """
+            )
 
             # 创建查询优化记录表
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS query_optimization_log (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     query_id VARCHAR(255) NOT NULL,
@@ -107,12 +116,19 @@ class FeedbackManager:
                     improvement_score FLOAT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # 创建索引
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_created ON query_feedback(created_at)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_doc_quality ON document_quality_scores(quality_score)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_feedback_created ON query_feedback(created_at)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_quality ON document_quality_scores(quality_score)"
+            )
 
             conn.commit()
             logger.info("Feedback database tables initialized successfully")
@@ -132,7 +148,8 @@ class FeedbackManager:
 
         try:
             # 插入反馈记录
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO query_feedback
                 (query_id, question, answer, feedback_type, user_comment, retrieved_chunks, feedback_weight)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -143,15 +160,19 @@ class FeedbackManager:
                     feedback_weight = EXCLUDED.feedback_weight,
                     processed_at = CURRENT_TIMESTAMP
                 RETURNING id
-            """, (
-                feedback.query_id,
-                feedback.question,
-                feedback.answer,
-                feedback.feedback_type.value,
-                feedback.user_comment,
-                json.dumps(feedback.retrieved_chunks) if feedback.retrieved_chunks else None,
-                feedback.feedback_weight
-            ))
+            """,
+                (
+                    feedback.query_id,
+                    feedback.question,
+                    feedback.answer,
+                    feedback.feedback_type.value,
+                    feedback.user_comment,
+                    json.dumps(feedback.retrieved_chunks)
+                    if feedback.retrieved_chunks
+                    else None,
+                    feedback.feedback_weight,
+                ),
+            )
 
             result = cur.fetchone()
             conn.commit()
@@ -184,17 +205,20 @@ class FeedbackManager:
 
         try:
             for chunk in feedback.retrieved_chunks:
-                doc_id = chunk.get('doc_id')
-                chunk_id = chunk.get('chunk_id', 0)
+                doc_id = chunk.get("doc_id")
+                chunk_id = chunk.get("chunk_id", 0)
 
                 if not doc_id:
                     continue
 
                 # 计算反馈对文档质量的影响
-                quality_delta = self._calculate_quality_impact(feedback.feedback_type, feedback.feedback_weight)
+                quality_delta = self._calculate_quality_impact(
+                    feedback.feedback_type, feedback.feedback_weight
+                )
 
                 # 更新文档质量评分
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO document_quality_scores (doc_id, chunk_id, quality_score, helpful_count, not_helpful_count)
                     VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (doc_id, chunk_id)
@@ -209,9 +233,15 @@ class FeedbackManager:
                             ELSE document_quality_scores.not_helpful_count
                         END,
                         last_updated = CURRENT_TIMESTAMP
-                """, (doc_id, chunk_id, quality_delta,
-                      1 if feedback.feedback_type == FeedbackType.HELPFUL else 0,
-                      1 if feedback.feedback_type == FeedbackType.NOT_HELPFUL else 0))
+                """,
+                    (
+                        doc_id,
+                        chunk_id,
+                        quality_delta,
+                        1 if feedback.feedback_type == FeedbackType.HELPFUL else 0,
+                        1 if feedback.feedback_type == FeedbackType.NOT_HELPFUL else 0,
+                    ),
+                )
 
             conn.commit()
 
@@ -222,12 +252,14 @@ class FeedbackManager:
             cur.close()
             conn.close()
 
-    def _calculate_quality_impact(self, feedback_type: FeedbackType, weight: float = 1.0) -> float:
+    def _calculate_quality_impact(
+        self, feedback_type: FeedbackType, weight: float = 1.0
+    ) -> float:
         """计算反馈对文档质量的影响分数"""
         impact_scores = {
             FeedbackType.HELPFUL: 1.0,
             FeedbackType.NOT_HELPFUL: -1.5,  # 负面反馈权重更高
-            FeedbackType.PARTIALLY_HELPFUL: 0.3
+            FeedbackType.PARTIALLY_HELPFUL: 0.3,
         }
         return impact_scores.get(feedback_type, 0.0) * weight
 
@@ -253,10 +285,10 @@ class FeedbackManager:
         # 基于负面反馈调整重排序权重
         if self.reranker:
             optimization_data = {
-                'query_id': feedback.query_id,
-                'strategy': 'adjust_reranking_weights',
-                'feedback_type': feedback.feedback_type.value,
-                'retrieved_chunks': feedback.retrieved_chunks
+                "query_id": feedback.query_id,
+                "strategy": "adjust_reranking_weights",
+                "feedback_type": feedback.feedback_type.value,
+                "retrieved_chunks": feedback.retrieved_chunks,
             }
             # 在实际应用中，这里应该发送到任务队列
             self._optimize_reranking_weights(optimization_data)
@@ -266,7 +298,9 @@ class FeedbackManager:
         try:
             # 基于反馈调整重排序模型的权重
             # 这里可以实现更复杂的机器学习优化逻辑
-            logger.info(f"Optimizing reranking weights based on feedback: {optimization_data}")
+            logger.info(
+                f"Optimizing reranking weights based on feedback: {optimization_data}"
+            )
 
             # 简单实现：调整相似度和相关性权重
             # 实际应用中可以使用更复杂的在线学习算法
@@ -281,12 +315,15 @@ class FeedbackManager:
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*) FROM query_feedback
                 WHERE feedback_type = 'not_helpful'
                 AND question % %s  -- 使用PostgreSQL的模糊匹配
                 AND created_at > NOW() - INTERVAL '24 hours'
-            """, (feedback.question,))
+            """,
+                (feedback.question,),
+            )
 
             similar_negative_feedback = cur.fetchone()[0]
             return similar_negative_feedback >= 2  # 如果24小时内有2次以上类似负面反馈
@@ -303,10 +340,10 @@ class FeedbackManager:
         logger.info(f"Scheduling query rewriting for query {feedback.query_id}")
 
         optimization_data = {
-            'query_id': feedback.query_id,
-            'original_query': feedback.question,
-            'strategy': 'query_expansion',
-            'feedback_type': feedback.feedback_type.value
+            "query_id": feedback.query_id,
+            "original_query": feedback.question,
+            "strategy": "query_expansion",
+            "feedback_type": feedback.feedback_type.value,
         }
 
         # 在实际应用中，这里应该发送到任务队列
@@ -328,7 +365,8 @@ class FeedbackManager:
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(CASE WHEN feedback_type = 'helpful' THEN 1 END) as helpful,
@@ -337,12 +375,16 @@ class FeedbackManager:
                     AVG(feedback_weight) as avg_weight
                 FROM query_feedback
                 WHERE created_at > NOW() - INTERVAL '%s days'
-            """, (days,))
+            """,
+                (days,),
+            )
 
             result = cur.fetchone()
             total, helpful, not_helpful, partially_helpful, avg_weight = result
 
-            success_rate = (helpful + partially_helpful * 0.5) / total if total > 0 else 0.0
+            success_rate = (
+                (helpful + partially_helpful * 0.5) / total if total > 0 else 0.0
+            )
 
             return FeedbackStatistics(
                 total_queries=total,
@@ -350,7 +392,7 @@ class FeedbackManager:
                 not_helpful_count=not_helpful,
                 partially_helpful_count=partially_helpful,
                 success_rate=success_rate,
-                avg_feedback_weight=avg_weight or 1.0
+                avg_feedback_weight=avg_weight or 1.0,
             )
 
         except Exception as e:
@@ -360,13 +402,16 @@ class FeedbackManager:
             cur.close()
             conn.close()
 
-    def get_high_quality_documents(self, min_score: float = 0.5, limit: int = 100) -> List[Dict]:
+    def get_high_quality_documents(
+        self, min_score: float = 0.5, limit: int = 100
+    ) -> List[Dict]:
         """获取高质量文档列表"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT DISTINCT d.id, d.filename, AVG(dqs.quality_score) as avg_quality
                 FROM documents d
                 JOIN document_chunks dc ON d.id = dc.doc_id
@@ -375,15 +420,19 @@ class FeedbackManager:
                 HAVING AVG(dqs.quality_score) >= %s
                 ORDER BY avg_quality DESC
                 LIMIT %s
-            """, (min_score, limit))
+            """,
+                (min_score, limit),
+            )
 
             results = []
             for row in cur.fetchall():
-                results.append({
-                    'doc_id': row[0],
-                    'filename': row[1],
-                    'quality_score': float(row[2]) if row[2] else 0.0
-                })
+                results.append(
+                    {
+                        "doc_id": row[0],
+                        "filename": row[1],
+                        "quality_score": float(row[2]) if row[2] else 0.0,
+                    }
+                )
 
             return results
 
@@ -394,21 +443,25 @@ class FeedbackManager:
             cur.close()
             conn.close()
 
-    def adjust_search_weights(self, feedback_history: List[UserFeedback]) -> Dict[str, float]:
+    def adjust_search_weights(
+        self, feedback_history: List[UserFeedback]
+    ) -> Dict[str, float]:
         """基于反馈历史调整搜索权重"""
         if not feedback_history:
-            return {'vector_weight': 0.7, 'bm25_weight': 0.3}
+            return {"vector_weight": 0.7, "bm25_weight": 0.3}
 
         # 分析反馈模式并调整权重
-        helpful_ratio = sum(1 for f in feedback_history if f.feedback_type == FeedbackType.HELPFUL) / len(feedback_history)
+        helpful_ratio = sum(
+            1 for f in feedback_history if f.feedback_type == FeedbackType.HELPFUL
+        ) / len(feedback_history)
 
         # 如果成功率低，可能需要调整检索策略
         if helpful_ratio < 0.5:
             # 增加向量搜索权重，可能语义理解更重要
-            return {'vector_weight': 0.8, 'bm25_weight': 0.2}
+            return {"vector_weight": 0.8, "bm25_weight": 0.2}
         elif helpful_ratio > 0.8:
             # 成功率高，可以保持当前策略或略微增加关键词权重
-            return {'vector_weight': 0.6, 'bm25_weight': 0.4}
+            return {"vector_weight": 0.6, "bm25_weight": 0.4}
         else:
             # 默认平衡策略
-            return {'vector_weight': 0.7, 'bm25_weight': 0.3}
+            return {"vector_weight": 0.7, "bm25_weight": 0.3}

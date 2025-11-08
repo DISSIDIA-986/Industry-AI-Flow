@@ -1,6 +1,8 @@
+import uuid
+
 import psycopg2
 from pgvector.psycopg2 import register_vector
-import uuid
+
 from backend.config import settings
 
 
@@ -24,7 +26,7 @@ class VectorStore:
         filename: str,
         filepath: str,
         chunks: list[str],
-        embeddings: list[list[float]]
+        embeddings: list[list[float]],
     ) -> str:
         """存储文档及其分块向量"""
         conn = self.get_connection()
@@ -38,7 +40,7 @@ class VectorStore:
                 INSERT INTO documents (id, filename, filepath, chunk_count)
                 VALUES (%s, %s, %s, %s)
                 """,
-                (doc_id, filename, filepath, len(chunks))
+                (doc_id, filename, filepath, len(chunks)),
             )
 
             # 2. 插入所有文档块和向量
@@ -48,7 +50,7 @@ class VectorStore:
                     INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (doc_id, i, chunk, embedding)
+                    (doc_id, i, chunk, embedding),
                 )
 
             conn.commit()
@@ -62,9 +64,7 @@ class VectorStore:
             conn.close()
 
     def similarity_search(
-        self,
-        query_embedding: list[float],
-        top_k: int = 3
+        self, query_embedding: list[float], top_k: int = 3
     ) -> list[dict]:
         """向量相似度搜索（兼容无pgvector的环境）"""
         conn = self.get_connection()
@@ -72,16 +72,18 @@ class VectorStore:
 
         try:
             # 检查是否安装了 pgvector 扩展
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT EXISTS(
                     SELECT 1 FROM pg_extension WHERE extname = 'vector'
                 )
-            """)
+            """
+            )
             has_pgvector = cur.fetchone()[0]
 
             if has_pgvector:
                 # 使用 pgvector 的余弦相似度
-                embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
+                embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
                 cur.execute(
                     """
                     SELECT
@@ -94,11 +96,12 @@ class VectorStore:
                     ORDER BY distance
                     LIMIT %s
                     """,
-                    (embedding_str, top_k)
+                    (embedding_str, top_k),
                 )
             else:
                 # 回退到 Python 计算相似度（向量存储为 TEXT）
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT
                         dc.doc_id,
                         dc.content,
@@ -107,7 +110,8 @@ class VectorStore:
                     FROM document_chunks dc
                     JOIN documents d ON dc.doc_id = d.id
                     WHERE dc.embedding IS NOT NULL
-                """)
+                """
+                )
 
                 # 计算余弦相似度
                 import numpy as np
@@ -119,22 +123,24 @@ class VectorStore:
                 for row in cur.fetchall():
                     # 解析存储的向量（PostgreSQL 数组格式 {x,y,z}）
                     embedding_str = row[2]
-                    if embedding_str.startswith('{') and embedding_str.endswith('}'):
+                    if embedding_str.startswith("{") and embedding_str.endswith("}"):
                         # PostgreSQL 数组格式
                         embedding_str = embedding_str[1:-1]  # 去除首尾的 {}
-                    stored_embedding = [float(x) for x in embedding_str.split(',')]
+                    stored_embedding = [float(x) for x in embedding_str.split(",")]
                     stored_vec = np.array(stored_embedding).reshape(1, -1)
 
                     # 计算相似度（转为距离）
                     similarity = cosine_similarity(query_vec, stored_vec)[0][0]
                     distance = 1 - similarity
 
-                    all_results.append({
-                        "doc_id": row[0],
-                        "content": row[1],
-                        "distance": distance,
-                        "filename": row[3]
-                    })
+                    all_results.append(
+                        {
+                            "doc_id": row[0],
+                            "content": row[1],
+                            "distance": distance,
+                            "filename": row[3],
+                        }
+                    )
 
                 # 排序并取 top_k
                 all_results.sort(key=lambda x: x["distance"])
@@ -142,12 +148,14 @@ class VectorStore:
 
             results = []
             for row in cur.fetchall():
-                results.append({
-                    "doc_id": row[0],
-                    "content": row[1],
-                    "distance": float(row[2]),
-                    "filename": row[3]
-                })
+                results.append(
+                    {
+                        "doc_id": row[0],
+                        "content": row[1],
+                        "distance": float(row[2]),
+                        "filename": row[3],
+                    }
+                )
 
             return results
 

@@ -3,8 +3,10 @@
 """
 import os
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
+
 import fitz  # PyMuPDF
+
 from backend.config import settings
 
 # Phase 2 Step 4: OCR 支持（可选）
@@ -141,8 +143,8 @@ class EnhancedDocumentLoader:
         text_lines = []
         if result and len(result) > 0:
             page_result = result[0]
-            if 'rec_texts' in page_result:
-                text_lines = page_result['rec_texts']
+            if "rec_texts" in page_result:
+                text_lines = page_result["rec_texts"]
 
         return "\n".join(text_lines)
 
@@ -195,13 +197,15 @@ class DocumentLoader:
             text_content = self.enhanced_loader.load_document(file_path)
 
             # 创建单个Document对象
-            return [Document(
-                page_content=text_content,
-                metadata={
-                    "source": file_path,
-                    "file_type": Path(file_path).suffix.lower()
-                }
-            )]
+            return [
+                Document(
+                    page_content=text_content,
+                    metadata={
+                        "source": file_path,
+                        "file_type": Path(file_path).suffix.lower(),
+                    },
+                )
+            ]
 
         except Exception as e:
             print(f"Error loading document {file_path}: {e}")

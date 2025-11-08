@@ -1,9 +1,11 @@
 """代码执行工具 - LangChain 工具接口"""
 
-from langchain_core.tools import tool
-from typing import Annotated, List, Dict, Any, Optional
-from backend.services.code_executor import code_executor, CodeExecutionError
 import logging
+from typing import Annotated, Any, Dict, List, Optional
+
+from langchain_core.tools import tool
+
+from backend.services.code_executor import CodeExecutionError, code_executor
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 def code_execution_tool(
     code: Annotated[str, "要执行的 Python 代码"],
     data_files: Annotated[Optional[List[str]], "数据文件路径列表"] = None,
-    timeout: Annotated[Optional[int], "执行超时时间（秒）"] = None
+    timeout: Annotated[Optional[int], "执行超时时间（秒）"] = None,
 ) -> Dict[str, Any]:
     """
     代码执行工具 - 在安全的 Docker 沙箱环境中执行 Python 代码
@@ -54,7 +56,7 @@ def code_execution_tool(
         >>> print(f"执行成功: {result['success']}")
         >>> print(f"输出: {result['stdout']}")
     """
-    
+
     # 检查代码执行器是否可用
     if code_executor is None:
         return {
@@ -64,17 +66,15 @@ def code_execution_tool(
             "stderr": "Code executor not available",
             "exit_code": -1,
             "execution_time": 0,
-            "visualizations": []
+            "visualizations": [],
         }
-    
+
     try:
         # 执行代码
         result = code_executor.execute_code(
-            code=code,
-            data_files=data_files,
-            timeout=timeout
+            code=code, data_files=data_files, timeout=timeout
         )
-        
+
         # 记录执行日志
         if result["success"]:
             logger.info(f"代码执行成功，耗时 {result['execution_time']:.2f} 秒")
@@ -82,9 +82,9 @@ def code_execution_tool(
                 logger.info(f"生成了 {len(result['visualizations'])} 个可视化文件")
         else:
             logger.warning(f"代码执行失败: {result.get('error', 'Unknown error')}")
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"代码执行工具异常: {e}")
         return {
@@ -94,14 +94,12 @@ def code_execution_tool(
             "stderr": str(e),
             "exit_code": -1,
             "execution_time": 0,
-            "visualizations": []
+            "visualizations": [],
         }
 
 
 @tool
-def code_validation_tool(
-    code: Annotated[str, "要验证的 Python 代码"]
-) -> Dict[str, Any]:
+def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> Dict[str, Any]:
     """
     代码验证工具 - 检查 Python 代码的安全性和语法正确性
 
@@ -128,45 +126,45 @@ def code_validation_tool(
         ... })
         >>> print(f"代码有效: {result['valid']}")
     """
-    
+
     if code_executor is None:
         return {
             "valid": False,
             "syntax_errors": ["代码执行器不可用"],
             "security_errors": [],
             "warnings": [],
-            "suggestions": ["请检查 Docker 环境"]
+            "suggestions": ["请检查 Docker 环境"],
         }
-    
+
     try:
         # 使用执行器的验证功能
         validation_errors = code_executor._validate_code(code)
-        
+
         # 分类错误
         syntax_errors = []
         security_errors = []
-        
+
         for error in validation_errors:
             if "语法错误" in error:
                 syntax_errors.append(error)
             else:
                 security_errors.append(error)
-        
+
         # 生成建议
         suggestions = []
         if security_errors:
             suggestions.append("移除危险操作，如 os.system、subprocess 等")
         if syntax_errors:
             suggestions.append("修复语法错误")
-        
+
         return {
             "valid": len(validation_errors) == 0,
             "syntax_errors": syntax_errors,
             "security_errors": security_errors,
             "warnings": [],
-            "suggestions": suggestions
+            "suggestions": suggestions,
         }
-        
+
     except Exception as e:
         logger.error(f"代码验证工具异常: {e}")
         return {
@@ -174,7 +172,7 @@ def code_validation_tool(
             "syntax_errors": [f"验证异常: {str(e)}"],
             "security_errors": [],
             "warnings": [],
-            "suggestions": []
+            "suggestions": [],
         }
 
 
@@ -201,18 +199,18 @@ def get_execution_environment_info() -> Dict[str, Any]:
         >>> info = get_execution_environment_info.invoke({})
         >>> print(f"Docker 可用: {info['docker_available']}")
     """
-    
+
     from backend.config import settings
-    
+
     # 基础配置信息
     config_info = {
         "timeout": settings.code_execution_timeout,
         "memory_limit": settings.code_execution_memory_limit,
         "cpu_limit": settings.code_execution_cpu_limit,
         "docker_image": settings.docker_image_name,
-        "temp_dir": settings.temp_data_dir
+        "temp_dir": settings.temp_data_dir,
     }
-    
+
     # 安全特性
     security_features = [
         "Docker 容器隔离",
@@ -221,16 +219,24 @@ def get_execution_environment_info() -> Dict[str, Any]:
         "资源限制（CPU/内存/时间）",
         "临时文件系统",
         "代码安全检查",
-        "危险操作黑名单"
+        "危险操作黑名单",
     ]
-    
+
     # 可用库列表（基于Docker镜像）
     available_libraries = [
-        "pandas", "numpy", "matplotlib", "seaborn", "plotly",
-        "scikit-learn", "xgboost", "lightgbm", "openpyxl",
-        "xlrd", "psycopg2-binary"
+        "pandas",
+        "numpy",
+        "matplotlib",
+        "seaborn",
+        "plotly",
+        "scikit-learn",
+        "xgboost",
+        "lightgbm",
+        "openpyxl",
+        "xlrd",
+        "psycopg2-binary",
     ]
-    
+
     return {
         "docker_available": code_executor is not None,
         "resource_limits": config_info,
@@ -240,6 +246,6 @@ def get_execution_environment_info() -> Dict[str, Any]:
             "enable_docker_sandbox": settings.enable_docker_sandbox,
             "max_iterations": 3,  # Agent 最大迭代次数
             "supported_file_types": [".csv", ".xlsx", ".xls", ".json", ".txt"],
-            "visualization_formats": [".png", ".jpg", ".svg", ".html", ".pdf"]
-        }
+            "visualization_formats": [".png", ".jpg", ".svg", ".html", ".pdf"],
+        },
     }

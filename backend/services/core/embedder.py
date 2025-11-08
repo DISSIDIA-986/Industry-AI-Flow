@@ -1,7 +1,9 @@
+import logging
+
 from sentence_transformers import SentenceTransformer
+
 from backend.config import settings
 from backend.utils.device_manager import device_manager
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +23,7 @@ def get_model():
 
         # 加载模型并指定设备
         _model = SentenceTransformer(
-            settings.embedding_model,
-            trust_remote_code=True,
-            device=device
+            settings.embedding_model, trust_remote_code=True, device=device
         )
 
         logger.info(f"✅ 模型加载完成，维度: {_model.get_sentence_embedding_dimension()}")

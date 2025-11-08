@@ -6,22 +6,27 @@ Prompt管理API路由
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import asyncpg
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from backend.services.prompt_manager import (
-    PromptManager, PromptInfo, PromptVariable, UsageLog, PromptStatus
+    PromptInfo,
+    PromptManager,
+    PromptStatus,
+    PromptVariable,
+    UsageLog,
 )
 
 logger = logging.getLogger(__name__)
 
 # 创建路由器
 router = APIRouter(prefix="/api/prompts", tags=["prompts"])
+
 
 # Pydantic模型定义
 class PromptVariableCreate(BaseModel):
@@ -92,6 +97,7 @@ async def get_prompt_manager() -> PromptManager:
     """获取Prompt管理器实例（这里需要实际的依赖注入逻辑）"""
     # 实际实现中应该从应用上下文获取
     from backend.config import get_database_pool
+
     pool = await get_database_pool()
     return PromptManager(pool)
 
@@ -103,7 +109,7 @@ async def list_prompts(
     is_latest: Optional[bool] = Query(True, description="是否最新版本"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     获取Prompt列表
@@ -163,19 +169,21 @@ async def list_prompts(
             for row in rows:
                 prompt_data = dict(row)
                 # 转换variables
-                if prompt_data['variables']:
-                    prompt_data['variables'] = json.loads(prompt_data['variables'])
+                if prompt_data["variables"]:
+                    prompt_data["variables"] = json.loads(prompt_data["variables"])
                 prompts.append(prompt_data)
 
-            return JSONResponse({
-                "data": prompts,
-                "pagination": {
-                    "page": page,
-                    "size": size,
-                    "total": total_count,
-                    "pages": (total_count + size - 1) // size
+            return JSONResponse(
+                {
+                    "data": prompts,
+                    "pagination": {
+                        "page": page,
+                        "size": size,
+                        "total": total_count,
+                        "pages": (total_count + size - 1) // size,
+                    },
                 }
-            })
+            )
 
     except Exception as e:
         logger.error(f"获取Prompt列表失败: {e}")
@@ -184,8 +192,7 @@ async def list_prompts(
 
 @router.get("/{prompt_id}", response_model=Dict[str, Any])
 async def get_prompt(
-    prompt_id: UUID,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
     """
     获取指定Prompt详情
@@ -211,7 +218,7 @@ async def get_prompt(
         response = {
             "prompt": prompt_info.to_dict(),
             "performance": performance,
-            "versions": [dict(version) for version in versions]
+            "versions": [dict(version) for version in versions],
         }
 
         return response
@@ -226,7 +233,7 @@ async def get_prompt(
 @router.post("/", response_model=Dict[str, Any])
 async def create_prompt(
     prompt_data: PromptCreate,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     创建新Prompt
@@ -248,13 +255,13 @@ async def create_prompt(
             metadata=prompt_data.metadata,
             priority=prompt_data.priority,
             tags=prompt_data.tags,
-            created_by=prompt_data.created_by
+            created_by=prompt_data.created_by,
         )
 
         return {
             "success": True,
             "prompt": prompt_info.to_dict(),
-            "message": "Prompt创建成功"
+            "message": "Prompt创建成功",
         }
 
     except ValueError as e:
@@ -268,7 +275,7 @@ async def create_prompt(
 async def update_prompt(
     prompt_id: UUID,
     prompt_data: PromptUpdate,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     更新Prompt
@@ -289,13 +296,13 @@ async def update_prompt(
             tags=prompt_data.tags,
             change_description=prompt_data.change_description,
             updated_by=prompt_data.created_by,
-            create_new_version=prompt_data.create_new_version
+            create_new_version=prompt_data.create_new_version,
         )
 
         return {
             "success": True,
             "prompt": prompt_info.to_dict(),
-            "message": "Prompt更新成功"
+            "message": "Prompt更新成功",
         }
 
     except ValueError as e:
@@ -307,8 +314,7 @@ async def update_prompt(
 
 @router.delete("/{prompt_id}", response_model=Dict[str, Any])
 async def delete_prompt(
-    prompt_id: UUID,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
     """
     删除Prompt（软删除）
@@ -318,13 +324,10 @@ async def delete_prompt(
             # 软删除：设置为非激活状态
             await conn.execute(
                 "UPDATE prompts SET is_active = false, updated_at = NOW() WHERE id = $1",
-                prompt_id
+                prompt_id,
             )
 
-        return {
-            "success": True,
-            "message": "Prompt删除成功"
-        }
+        return {"success": True, "message": "Prompt删除成功"}
 
     except Exception as e:
         logger.error(f"删除Prompt失败: {e}")
@@ -335,7 +338,7 @@ async def delete_prompt(
 async def test_prompt(
     prompt_id: UUID,
     test_data: PromptTest,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     测试Prompt渲染
@@ -366,8 +369,8 @@ async def test_prompt(
                 "id": str(prompt_info.id),
                 "name": prompt_info.name,
                 "version": prompt_info.version,
-                "category": prompt_info.category
-            }
+                "category": prompt_info.category,
+            },
         }
 
     except HTTPException:
@@ -381,7 +384,7 @@ async def test_prompt(
 async def get_prompt_performance(
     prompt_id: UUID,
     days: int = Query(7, ge=1, le=365, description="统计天数"),
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     获取Prompt性能统计
@@ -426,7 +429,7 @@ async def get_prompt_performance(
         return {
             "summary": performance,
             "daily_stats": [dict(row) for row in daily_stats],
-            "recent_logs": [dict(row) for row in recent_logs]
+            "recent_logs": [dict(row) for row in recent_logs],
         }
 
     except HTTPException:
@@ -439,7 +442,7 @@ async def get_prompt_performance(
 @router.post("/usage-logs", response_model=Dict[str, Any])
 async def record_usage_log(
     log_data: UsageLogCreate,
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     记录Prompt使用日志
@@ -457,15 +460,12 @@ async def record_usage_log(
             llm_response=log_data.llm_response,
             tokens_used=log_data.tokens_used,
             model_name=log_data.model_name,
-            temperature=log_data.temperature
+            temperature=log_data.temperature,
         )
 
         await prompt_manager.record_usage_log(usage_log)
 
-        return {
-            "success": True,
-            "message": "使用日志记录成功"
-        }
+        return {"success": True, "message": "使用日志记录成功"}
 
     except Exception as e:
         logger.error(f"记录使用日志失败: {e}")
@@ -473,9 +473,7 @@ async def record_usage_log(
 
 
 @router.get("/categories/list", response_model=List[str])
-async def list_categories(
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
-):
+async def list_categories(prompt_manager: PromptManager = Depends(get_prompt_manager)):
     """
     获取所有Prompt分类
     """
@@ -485,7 +483,7 @@ async def list_categories(
                 "SELECT DISTINCT category FROM prompts WHERE is_active = true ORDER BY category"
             )
 
-        return [row['category'] for row in categories]
+        return [row["category"] for row in categories]
 
     except Exception as e:
         logger.error(f"获取分类列表失败: {e}")
@@ -493,9 +491,7 @@ async def list_categories(
 
 
 @router.get("/tags/list", response_model=List[Dict[str, Any]])
-async def list_tags(
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
-):
+async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager)):
     """
     获取所有标签
     """
@@ -525,7 +521,7 @@ async def search_prompts(
     q: str = Query(..., description="搜索关键词"),
     category: Optional[str] = Query(None, description="分类筛选"),
     limit: int = Query(10, ge=1, le=50, description="结果数量限制"),
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     搜索Prompt
@@ -574,8 +570,8 @@ async def search_prompts(
             results = []
             for row in rows:
                 prompt_data = dict(row)
-                if prompt_data['variables']:
-                    prompt_data['variables'] = json.loads(prompt_data['variables'])
+                if prompt_data["variables"]:
+                    prompt_data["variables"] = json.loads(prompt_data["variables"])
                 results.append(prompt_data)
 
             return results
@@ -590,7 +586,7 @@ async def clone_prompt(
     prompt_id: UUID,
     new_name: str = Query(..., description="新Prompt名称"),
     new_version: str = Query(default="1.0.0", description="新版本号"),
-    prompt_manager: PromptManager = Depends(get_prompt_manager)
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
     克隆Prompt
@@ -612,13 +608,13 @@ async def clone_prompt(
             metadata={**original_prompt.metadata, "cloned_from": str(prompt_id)},
             priority=original_prompt.priority,
             tags=original_prompt.tags,
-            created_by=f"cloned_from_{original_prompt.created_by or 'unknown'}"
+            created_by=f"cloned_from_{original_prompt.created_by or 'unknown'}",
         )
 
         return {
             "success": True,
             "prompt": cloned_prompt.to_dict(),
-            "message": "Prompt克隆成功"
+            "message": "Prompt克隆成功",
         }
 
     except HTTPException:

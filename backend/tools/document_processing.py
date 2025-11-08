@@ -4,15 +4,12 @@ LangChain 1.0 文档处理工具
 支持文档OCR、内容提取和预处理
 """
 
-from typing import Annotated, Optional
 from pathlib import Path
+from typing import Annotated, Optional
 
 from langchain_core.tools import tool
 
-from backend.services.document_processing import (
-    ocr_processor,
-    process_document,
-)
+from backend.services.document_processing import ocr_processor, process_document
 
 
 @tool
@@ -216,10 +213,12 @@ def batch_extract_documents(
             {"file_path": file_path, "use_ocr": use_ocr}
         )
 
-        results.append({
-            "file_path": file_path,
-            **result,
-        })
+        results.append(
+            {
+                "file_path": file_path,
+                **result,
+            }
+        )
 
         if result["success"]:
             succeeded += 1
