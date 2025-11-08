@@ -1,9 +1,9 @@
-from backend.services.embedder import embed_single_text
-from backend.services.vectorstore import VectorStore
-from backend.services.llm_client import get_llm_client, get_backend_status
+from backend.services.core.embedder import embed_single_text
+from backend.services.core.vectorstore import VectorStore
+from backend.services.llm_integration.llm_client import get_llm_client, get_backend_status
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
-from backend.services.feedback_manager import FeedbackManager, UserFeedback, FeedbackType
+from backend.services.feedback_system.feedback_manager import FeedbackManager, UserFeedback, FeedbackType
 from backend.config import settings
 import uuid
 import datetime
@@ -195,3 +195,89 @@ class SimpleRAG:
         except Exception as e:
             logger.error(f"Failed to get high quality documents: {e}")
             return []
+
+    def add_documents(self, documents: list) -> bool:
+        """
+        添加文档到RAG系统
+
+        Args:
+            documents: 文档列表,每个文档包含content和metadata
+
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            from backend.services.core.chunker import chunk_text
+            from backend.services.core.embedder import embed_texts
+
+            # 分块
+            all_chunks = []
+
+            for doc in documents:
+                content = doc.get('content', '')
+                metadata = doc.get('metadata', {})
+                doc_id = metadata.get('doc_id', str(uuid.uuid4()))
+
+                # Use the standalone chunk_text function
+                chunk_dicts = chunk_text(content, chunk_size=settings.chunk_size, chunk_overlap=settings.chunk_overlap)
+                for i, chunk_dict in enumerate(chunk_dicts):
+                    all_chunks.append({
+                        'doc_id': doc_id,
+                        'chunk_id': f"{doc_id}_chunk_{i}",
+                        'content': chunk_dict['content'],
+                        'metadata': metadata
+                    })
+
+            # 向量化并存储
+            texts = [chunk['content'] for chunk in all_chunks]
+            embeddings = embed_texts(texts)
+
+            # Store documents using store_document_with_chunks
+            # Group by doc_id for proper storage
+            doc_groups = {}
+            for chunk, embedding in zip(all_chunks, embeddings):
+                doc_id = chunk['doc_id']
+                if doc_id not in doc_groups:
+                    doc_groups[doc_id] = {'chunks': [], 'embeddings': [], 'metadata': chunk['metadata']}
+                doc_groups[doc_id]['chunks'].append(chunk['content'])
+                doc_groups[doc_id]['embeddings'].append(embedding)
+
+            # Store each document
+            for doc_id, data in doc_groups.items():
+                metadata = data['metadata']
+                filename = metadata.get('source', doc_id)
+                filepath = metadata.get('source', doc_id)
+                self.vectorstore.store_document_with_chunks(
+                    filename=filename,
+                    filepath=filepath,
+                    chunks=data['chunks'],
+                    embeddings=data['embeddings']
+                )
+
+            logger.info(f"Successfully added {len(documents)} documents with {len(all_chunks)} chunks")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to add documents: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def delete_document(self, doc_id: str) -> bool:
+        """
+        删除文档
+
+        Args:
+            doc_id: 文档ID
+
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 删除文档的所有chunks
+            self.vectorstore.delete_by_doc_id(doc_id)
+            logger.info(f"Successfully deleted document: {doc_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete document {doc_id}: {e}")
+            return False

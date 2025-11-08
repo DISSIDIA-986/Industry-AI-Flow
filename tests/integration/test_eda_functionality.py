@@ -22,7 +22,7 @@ async def test_basic_eda():
     print("🔬 测试基础 EDA 功能 - Housing 数据集")
     print("="*60)
 
-    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/datasets/Housing.csv"
+    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
 
     # 测试请求
     eda_request = """
@@ -116,7 +116,7 @@ def test_data_transfer():
     print("📦 测试数据传递功能")
     print("="*60)
 
-    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/datasets/Housing.csv"
+    data_file = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
 
     try:
         # 测试文件传递
