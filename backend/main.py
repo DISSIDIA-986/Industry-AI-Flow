@@ -6,6 +6,16 @@ import psutil
 import os
 import tempfile
 import shutil
+import logging
+
+# 导入新的API路由
+from backend.api.feedback_routes import router as feedback_router
+from backend.api.document_management_routes import router as document_management_router
+from backend.api.enhanced_query_routes import router as enhanced_query_router
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 检查环境变量
 try:
@@ -22,7 +32,11 @@ def get_rag_engine():
     global rag_engine
     if rag_engine is None:
         from backend.services.rag_engine import SimpleRAG
-        rag_engine = SimpleRAG()
+        rag_engine = SimpleRAG(
+            use_hybrid_search=True,
+            use_reranker=True,
+            enable_feedback=settings.enable_feedback_system
+        )
     return rag_engine
 
 def get_unified_orchestrator():
@@ -40,13 +54,30 @@ def get_code_executor():
     return code_executor
 
 app = FastAPI(
-    title="Luncheon AI Flow - Unified RAG & Code Analysis",
-    description="融合知识问答和数据分析能力的智能系统",
-    version="1.0.0"
+    title="Luncheon AI Flow - Enhanced RAG & Code Analysis",
+    description="融合知识问答、用户反馈、文档管理和数据分析能力的智能系统",
+    version="2.0.0"
 )
+
+# 注册新的API路由
+app.include_router(feedback_router, prefix="/api/v1", tags=["feedback"])
+app.include_router(document_management_router, prefix="/api/v1", tags=["document-management"])
+app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
 
 # RAG引擎将通过lazy loading初始化
 # rag_engine = SimpleRAG()  # 移除直接初始化，使用lazy loading
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动事件"""
+    try:
+        # 初始化数据库
+        from backend.init_database import init_database
+        init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        # 不阻止应用启动，但记录错误
 
 
 class QueryRequest(BaseModel):
