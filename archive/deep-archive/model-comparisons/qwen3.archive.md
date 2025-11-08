@@ -107,19 +107,19 @@ graph TB
     A[用户上传] --> B{文件类型}
     B -->|结构化| C[PostgreSQL<br/>元数据+小文件]
     B -->|非结构化| D[S3/MinIO<br/>大文件对象存储]
-    
+
     C --> E[向量库<br/>pgvector]
     D --> F[定时任务<br/>内容提取]
     F --> G[文本分析<br/>OCR/NLP]
     G --> H[向量库<br/>pgvector]
-    
+
     I[检索请求] --> J{检索类型}
     J -->|元数据| C
     J -->|内容检索| K[混合检索引擎<br/>BM25+向量]
     K --> L[RRF融合]
     L --> M[重排序]
     M --> N[结果返回]
-    
+
     style A fill:#e3f2fd
     style I fill:#e3f2fd
     style K fill:#f3e5f5
@@ -146,22 +146,22 @@ class TenantStorageManager:
     def __init__(self):
         self.object_storage = S3Client()
         self.metadata_db = PostgreSQLConnection()
-    
+
     def store_document(self, tenant_id: str, file_path: str, metadata: dict):
         """存储租户文档"""
         # 1. 生成租户专属路径
         object_key = f"tenants/{tenant_id}/documents/{uuid4()}/{os.path.basename(file_path)}"
-        
+
         # 2. 上传到对象存储
         self.object_storage.upload_file(file_path, object_key)
-        
+
         # 3. 记录元数据到租户专属Schema
         schema_name = f"tenant_{tenant_id}"
         self.metadata_db.execute(
             f"INSERT INTO {schema_name}.documents (object_key, metadata) VALUES (%s, %s)",
             (object_key, json.dumps(metadata))
         )
-        
+
         # 4. 触发内容提取和向量化流程
         self.trigger_processing_pipeline(tenant_id, object_key)
 ```
@@ -179,7 +179,7 @@ graph LR
     C --> D[分类模型]
     D --> E[路径生成]
     E --> F[存储组织]
-    
+
     subgraph "智能分类引擎"
         C -->|文本特征| D1[主题分类器]
         C -->|元数据特征| D2[类型分类器]
@@ -189,7 +189,7 @@ graph LR
         D3 --> D
         D -->|分类结果| E
     end
-    
+
     style A fill:#e3f2fd
     style F fill:#e8f5e8
 ```
@@ -202,11 +202,11 @@ class DocumentAnalyzer:
     def __init__(self):
         self.nlp_model = spacy.load("zh_core_web_sm")  # 中文NLP模型
         self.classification_model = self.load_classification_model()
-        
+
     def extract_features(self, file_path: str) -> dict:
         """提取文档特征用于智能分类"""
         content = self.extract_content(file_path)
-        
+
         # 1. 基础文本特征
         features = {
             "word_count": len(content.split()),
@@ -214,7 +214,7 @@ class DocumentAnalyzer:
             "line_count": content.count('\n'),
             "avg_word_length": self.calculate_avg_word_length(content),
         }
-        
+
         # 2. NLP特征
         doc = self.nlp_model(content)
         features.update({
@@ -223,44 +223,44 @@ class DocumentAnalyzer:
             "sentiment_score": self.analyze_sentiment(content),
             "language": self.detect_language(content),
         })
-        
+
         # 3. 关键词密度分析
         features["keyword_density"] = self.analyze_keyword_density(content)
-        
+
         # 4. 文档类型推断
         features["inferred_type"] = self.infer_document_type(content)
-        
+
         return features
-    
+
     def generate_meaningful_filename(self, original_name: str, content: str, features: dict) -> str:
         """生成有意义的文件名"""
         # 1. 提取核心主题词
         topic_words = self.extract_topic_words(content, top_k=3)
-        
+
         # 2. 识别关键实体 (日期、编号等)
         entities = features.get("named_entities", [])
         dates = [e for e in entities if self.is_date_entity(e)]
         numbers = [e for e in entities if self.is_number_entity(e)]
-        
+
         # 3. 构建文件名
         name_parts = []
-        
+
         # 添加主题词
         if topic_words:
             name_parts.extend(topic_words[:2])  # 最多2个主题词
-            
+
         # 添加关键日期
         if dates:
             name_parts.append(dates[0].replace("/", "-"))  # 格式化日期
-            
+
         # 添加文档类型标识
         doc_type = features.get("inferred_type", "document")
         name_parts.append(doc_type)
-        
+
         # 组合文件名
         base_name = "_".join(name_parts)
         extension = os.path.splitext(original_name)[1]
-        
+
         return f"{base_name}{extension}"
 ```
 
@@ -282,25 +282,25 @@ class DocumentClassifier:
         self.type_classifier = self.load_model("doc_type_classifier.pkl")
         self.domain_classifier = self.load_model("domain_classifier.pkl")
         self.sensitivity_classifier = self.load_model("sensitivity_classifier.pkl")
-        
+
     def classify_document(self, features: dict) -> dict:
         """多维度文档分类"""
         classification = {}
-        
+
         # 1. 文档类型分类
         classification["type"] = self.type_classifier.predict([features])[0]
-        
+
         # 2. 业务领域分类
         classification["domain"] = self.domain_classifier.predict([features])[0]
-        
+
         # 3. 敏感等级分类
         classification["sensitivity"] = self.sensitivity_classifier.predict([features])[0]
-        
+
         # 4. 时效性分析
         classification["timeliness"] = self.analyze_timeliness(features)
-        
+
         return classification
-    
+
     def generate_storage_path(self, classification: dict, tenant_id: str) -> str:
         """根据分类结果生成存储路径"""
         # 路径结构: tenants/{tenant_id}/{domain}/{type}/{sensitivity}/{timeliness}/
@@ -312,7 +312,7 @@ class DocumentClassifier:
             classification["sensitivity"],  # 敏感等级
             classification["timeliness"],   # 时效性
         ]
-        
+
         return "/".join(path_parts)
 ```
 
@@ -324,36 +324,36 @@ class IntelligentStorageOrganizer:
     def __init__(self):
         self.classifier = DocumentClassifier()
         self.analyzer = DocumentAnalyzer()
-        
+
     def process_uploaded_document(self, file_path: str, tenant_id: str) -> str:
         """处理上传文档并智能组织存储"""
         # 1. 提取文档特征
         features = self.analyzer.extract_features(file_path)
-        
+
         # 2. 文档分类
         classification = self.classifier.classify_document(features)
-        
+
         # 3. 生成有意义文件名
         meaningful_name = self.analyzer.generate_meaningful_filename(
-            os.path.basename(file_path), 
-            self.extract_content(file_path), 
+            os.path.basename(file_path),
+            self.extract_content(file_path),
             features
         )
-        
+
         # 4. 生成存储路径
         storage_path = self.classifier.generate_storage_path(classification, tenant_id)
-        
+
         # 5. 构造完整对象键
         object_key = f"{storage_path}/{meaningful_name}"
-        
+
         # 6. 上传到对象存储
         s3_client.upload_file(file_path, bucket_name, object_key)
-        
+
         # 7. 记录元数据
         self.record_metadata(tenant_id, object_key, classification, features)
-        
+
         return object_key
-    
+
     def record_metadata(self, tenant_id: str, object_key: str, classification: dict, features: dict):
         """记录文档元数据"""
         metadata = {
@@ -363,7 +363,7 @@ class IntelligentStorageOrganizer:
             "uploaded_at": datetime.now().isoformat(),
             "tenant_id": tenant_id,
         }
-        
+
         # 存储到PostgreSQL元数据表
         db.execute("""
             INSERT INTO document_metadata (object_key, tenant_id, metadata, classification)
@@ -380,34 +380,34 @@ class ClassificationTrainingData:
         """准备分类模型训练数据"""
         # 1. 收集已标注文档样本
         labeled_docs = self.collect_labeled_documents()
-        
+
         # 2. 特征工程
         features = []
         labels = []
-        
+
         for doc_path, doc_labels in labeled_docs:
             # 提取文档特征
             doc_features = self.extract_document_features(doc_path)
             features.append(doc_features)
-            
+
             # 准备标签
             labels.append({
                 "type": doc_labels.get("type"),
                 "domain": doc_labels.get("domain"),
                 "sensitivity": doc_labels.get("sensitivity"),
             })
-        
+
         # 3. 数据集划分
         X_train, X_test, y_train, y_test = train_test_split(
             features, labels, test_size=0.2, random_state=42
         )
-        
+
         return X_train, X_test, y_train, y_test
-    
+
     def extract_document_features(self, file_path: str) -> dict:
         """提取文档特征用于训练"""
         content = self.extract_content(file_path)
-        
+
         # 文本统计特征
         features = {
             "length": len(content),
@@ -415,17 +415,17 @@ class ClassificationTrainingData:
             "sentence_count": len(content.split('.')),
             "paragraph_count": len(content.split('\n\n')),
         }
-        
+
         # TF-IDF特征
         tfidf_vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
         tfidf_features = tfidf_vectorizer.fit_transform([content]).toarray()[0]
         features["tfidf"] = tfidf_features.tolist()
-        
+
         # N-gram特征
         ngram_vectorizer = CountVectorizer(ngram_range=(1, 3), max_features=500)
         ngram_features = ngram_vectorizer.fit_transform([content]).toarray()[0]
         features["ngrams"] = ngram_features.tolist()
-        
+
         return features
 ```
 
@@ -484,7 +484,7 @@ graph LR
     B --> C[租户隔离]
     C --> D[文档权限]
     D --> E[操作审计]
-    
+
     style A fill:#e8f5e8
     style E fill:#ffebee
 ```
@@ -497,16 +497,16 @@ class SecureStorage:
         """安全存储文档"""
         # 1. 生成租户专属密钥
         tenant_key = self.key_management.get_tenant_key(tenant_id)
-        
+
         # 2. AES-256-GCM 加密文件
         encrypted_file = self.crypto.encrypt_file(file_path, tenant_key)
-        
+
         # 3. 计算文件SHA-256哈希用于完整性校验
         file_hash = self.crypto.calculate_hash(file_path)
-        
+
         # 4. 存储加密文件和元数据
         object_key = self.storage.store_object(encrypted_file)
-        
+
         # 5. 记录审计日志
         self.audit.log_document_upload(
             tenant_id=tenant_id,
@@ -564,23 +564,23 @@ class IntelligentClassificationPipeline:
         """处理文档并实现智能分类"""
         # 1. 内容提取
         content = self.extract_document_content(file_path)
-        
+
         # 2. 特征提取
         features = self.extract_features(content)
-        
+
         # 3. 文档分类
         classification = self.classify_document(features)
-        
+
         # 4. 生成智能文件名
         smart_filename = self.generate_smart_filename(file_path, content, classification)
-        
+
         # 5. 生成存储路径
         storage_path = self.generate_storage_path(classification)
-        
+
         # 6. 存储文档
         final_path = f"{storage_path}/{smart_filename}"
         self.store_document(file_path, final_path)
-        
+
         return final_path
 ```
 
@@ -591,12 +591,12 @@ class LifecycleManager:
     def migrate_cold_documents(self):
         """迁移冷数据至归档存储"""
         cutoff_date = datetime.now() - timedelta(days=730)
-        
+
         cold_docs = execute_sql("""
-            SELECT id, object_key FROM documents 
+            SELECT id, object_key FROM documents
             WHERE uploaded_at < %s AND storage_tier = 'warm'
         """, (cutoff_date,))
-        
+
         for doc in cold_docs:
             # 迁移至冷存储
             self.migrate_to_glacier(doc.object_key)
@@ -652,12 +652,12 @@ class LifecycleManager:
     - 本地MinIO + PostgreSQL Docker Compose
     - 单节点部署
     - 适用于验证和测试
-  
+
   生产环境:
     - 分布式MinIO集群 + PostgreSQL主从
     - 多AZ部署保障高可用
     - 配合CDN加速全球访问
-    
+
   混合部署:
     - 热数据本地 + 冷数据云端
     - 降低存储成本的同时保证性能
@@ -717,7 +717,7 @@ class ClassificationOptimizer:
     def __init__(self):
         self.feedback_queue = Queue()
         self.model_updater = ModelUpdater()
-        
+
     def collect_user_feedback(self, predicted_class: str, actual_class: str, confidence: float):
         """收集用户反馈用于模型优化"""
         feedback_data = {
@@ -727,30 +727,30 @@ class ClassificationOptimizer:
             "timestamp": datetime.now()
         }
         self.feedback_queue.put(feedback_data)
-        
+
     def periodic_model_update(self):
         """定期更新分类模型"""
         # 1. 收集反馈数据
         feedback_data = self.collect_feedback_batch()
-        
+
         # 2. 分析模型表现
         performance_metrics = self.analyze_model_performance(feedback_data)
-        
+
         # 3. 如果准确率低于阈值或有足够反馈数据，则重新训练
         if performance_metrics["accuracy"] < 0.85 or len(feedback_data) > 1000:
             self.retrain_model(feedback_data)
-            
+
     def retrain_model(self, training_data: list):
         """重新训练分类模型"""
         # 1. 数据预处理
         processed_data = self.preprocess_training_data(training_data)
-        
+
         # 2. 模型训练
         new_model = self.train_classification_model(processed_data)
-        
+
         # 3. 模型评估
         evaluation_results = self.evaluate_model(new_model, processed_data["test_set"])
-        
+
         # 4. 如果新模型表现更好，则部署
         if evaluation_results["accuracy"] > self.current_model_accuracy:
             self.deploy_new_model(new_model)
