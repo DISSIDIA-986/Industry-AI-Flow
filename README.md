@@ -46,13 +46,13 @@ sequenceDiagram
     participant VectorStore as pgvector数据库
     participant RAG as RAG引擎
     participant LLM as Ollama模型
-    
+
     User->>API: 上传文档
     API->>Loader: 解析文档内容
     Loader->>Embedder: 向量化
     Embedder->>VectorStore: 存储embedding
     VectorStore-->>API: 存储完成
-    
+
     User->>API: 提问
     API->>RAG: 检索相关文档
     RAG->>VectorStore: 查询相似chunk
