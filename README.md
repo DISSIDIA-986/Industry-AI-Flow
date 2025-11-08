@@ -583,6 +583,8 @@ MIT License
 - **⚙️ [安装指南](INSTALLATION_GUIDE.md)** - 详细的环境配置
 - **👨‍💻 [开发指南](docs/development/contributing.md)** - 参与项目开发
 - **🧪 [测试指南](docs/development/testing.md)** - 运行和编写测试
+- **📝 [测试用例](test_cases/README.md)** - 测试用例规格说明
+- **📦 [测试资源](test_resources/README.md)** - 测试数据和资源
 - **📖 [用户手册](docs/user-guide/basic-usage.md)** - 功能使用说明
 
 ## 🔗 相关链接
