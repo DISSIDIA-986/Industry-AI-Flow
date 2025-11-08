@@ -64,28 +64,58 @@ sequenceDiagram
 
 ## 技术栈
 
-- **LLM**: Ollama + Qwen2.5:7b（本地运行）
+- **LLM**: llama.cpp + Qwen2.5:7b GGUF（本地推理，Metal 加速）
 - **向量库**: PostgreSQL + pgvector（本地 homebrew）
 - **嵌入模型**: nomic-embed-text-v1.5（768维）
 - **后端**: FastAPI
 - **OCR**: PaddleOCR（支持图片文档）
 - **检索**: 混合检索（BM25 + 向量 + RRF融合）
 - **重排序**: bge-reranker-base
+- **备用LLM**: Ollama（兼容后端）
 
-## 环境要求
+## ⚠️ 环境要求
 
-- macOS（M1/M2/M3 推荐）
-- 内存: 16GB+ RAM
-- Python: 3.10+
-- PostgreSQL: 14+（通过 homebrew 安装）
-- Redis（通过 homebrew 安装）
-- Ollama
+### 🔴 CRITICAL: Python Version Requirement
+
+**本项目必须使用 Python 3.13.x**
+
+```bash
+# ✅ 正确的Python版本
+python3.13 --version
+# 输出: Python 3.13.x
+
+# ❌ 错误 - 不支持Python 3.14+
+python3.14 --version  # 会导致PaddlePaddle安装失败！
+```
+
+**原因**:
+- PaddlePaddle on macOS 需要使用 **Developer Nightly Build** 版本
+- Nightly Build 最高支持 Python 3.13 (支持 3.9/3.10/3.11/3.12/3.13)
+- Python 3.14+ 将导致 PaddlePaddle 无法安装，进而影响 PaddleOCR OCR 功能
+
+**安装 Python 3.13** (如果未安装):
+```bash
+# macOS (推荐使用 Homebrew)
+brew install python@3.13
+
+# 验证安装
+python3.13 --version
+```
+
+### 其他环境要求
+
+- **macOS**: M1/M2/M3 Apple Silicon (推荐)
+- **内存**: 16GB+ RAM
+- **Python**: **3.13.x ONLY** (严格要求)
+- **PostgreSQL**: 14+ (通过 homebrew 安装)
+- **Redis**: 通过 homebrew 安装
+- **Ollama**: 本地LLM运行环境
 
 ## 🚀 快速开始
 
-### 📋 环境要求
+### 📋 环境要求（快速参考）
 
-- **Python**: 3.10+
+- **Python**: **3.13.x ONLY** ⚠️ (严格限制，不支持3.14+)
 - **PostgreSQL**: 14+ (with pgvector extension)
 - **Node.js**: 16+ (可选，用于前端工具)
 - **Docker**: 20+ (可选，用于容器化部署)
@@ -97,14 +127,36 @@ sequenceDiagram
 git clone <repository-url>
 cd Industry-AI-Flow
 
-# 2. 快速启动 (推荐)
-make quick-start
+# 2. ⚠️ CRITICAL: 使用 Python 3.13 创建虚拟环境
+python3.13 -m venv venv
+source venv/bin/activate
 
-# 3. 或者手动安装
-make install-dev
+# 3. 安装 PaddlePaddle Nightly Build (macOS required)
+python -m pip install --pre paddlepaddle -i https://www.paddlepaddle.org.cn/packages/nightly/cpu/
+
+# 4. 安装 llama-cpp-python (with Metal acceleration for Apple Silicon)
+export CMAKE_ARGS="-DGGML_METAL=on -DCMAKE_OSX_ARCHITECTURES=arm64"
+export ARCHFLAGS="-arch arm64"
+pip install --no-cache-dir llama-cpp-python==0.2.90
+
+# 5. 安装其他依赖
+pip install -r backend/requirements.txt
+
+# 6. 创建模型软链接（使用 Ollama 已下载的模型）
+mkdir -p models
+ln -sf ~/.ollama/models/blobs/sha256-xxx models/qwen2.5-7b-instruct.gguf
+
+# 7. 数据库设置
 make db-setup
+
+# 8. 启动服务
 make run
 ```
+
+**重要提示**:
+- 步骤 2-3 是 macOS 系统的必要步骤
+- 必须先安装 PaddlePaddle Nightly Build，再安装其他依赖
+- 不要跳过步骤 2 的 Python 3.13 虚拟环境创建
 
 ### 🎯 核心功能测试
 
@@ -189,58 +241,56 @@ Industry-AI-Flow/
 │   ├── middleware/                    # 中间件层
 │   ├── migrations/                    # 数据库迁移
 │   ├── services/                      # 核心业务服务
-│   │   ├── intent_classifier.py      # 意图分类器
-│   │   ├── context_manager.py        # 上下文管理
-│   │   ├── routing_decision.py      # 路由决策引擎
-│   │   ├── intent_workflow.py        # 意图工作流
-│   │   ├── prompt_manager.py         # Prompt管理
-│   │   ├── rag_engine.py             # RAG检索引擎
-│   │   └── ...                       # 其他服务
 │   ├── tools/                         # 工具模块
 │   ├── utils/                         # 工具函数
 │   ├── main.py                        # 应用入口
 │   └── requirements.txt               # Python依赖
 │
-├── 📁 docs/                           # 项目文档
-│   ├── design/                       # 设计文档
-│   ├── implementation/               # 实现总结
-│   ├── api/                          # API文档
-│   ├── guides/                       # 使用指南
-│   └── research/                     # 研究文档
+├── 📁 docs/                           # 📚 项目文档中心
+│   ├── README.md                      # 📖 文档导航索引
+│   ├── architecture/                  # 🏗️ 架构设计文档
+│   │   ├── system-overview.md         # 系统整体架构
+│   │   ├── intent-classifier.md       # 意图分类系统设计
+│   │   ├── prompt-management.md       # 提示管理策略
+│   │   ├── metadata-retrieval.md      # 元数据检索方案
+│   │   ├── llama.cpp.md               # 本地模型集成
+│   │   └── PaddleOCR.md               # OCR文字识别
+│   ├── implementation/                # 🔧 实现和部署文档
+│   │   ├── setup-guide.md             # 环境配置和安装
+│   │   ├── configuration.md           # 系统配置参数
+│   │   ├── api-reference.md           # API接口文档
+│   │   ├── deployment.md              # 生产环境部署
+│   │   ├── ocr-optimization.md        # OCR功能优化
+│   │   └── zhipu-integration.md       # 智谱AI集成
+│   ├── development/                   # 👨‍💻 开发文档
+│   │   ├── contributing.md            # 贡献指南
+│   │   ├── testing.md                 # 测试框架和用例
+│   │   ├── code-style.md              # 代码规范
+│   │   └── debugging.md               # 调试技巧
+│   └── user-guide/                    # 📖 用户指南
+│       ├── basic-usage.md             # 基础功能使用
+│       ├── advanced-features.md       # 高级功能说明
+│       ├── troubleshooting.md         # 故障排除
+│       └── faq.md                     # 常见问题
 │
-├── 📁 scripts/                        # 脚本工具
-│   ├── setup/                        # 环境设置
-│   ├── migration/                    # 数据迁移
-│   ├── testing/                      # 测试脚本
-│   └── deployment/                   # 部署脚本
+├── 📁 tests/                          # 🧪 综合测试套件
+│   ├── test_*.py                      # 各功能模块测试
+│   └── run_comprehensive_tests.py     # 统一测试运行器
 │
-├── 📁 tests/                          # 测试文件
-│   ├── unit/                         # 单元测试
-│   ├── integration/                  # 集成测试
-│   ├── performance/                  # 性能测试
-│   └── reports/                      # 测试报告
+├── 📁 archive/                        # 📦 归档文档（.globalignore忽略）
+│   ├── research/                      # 过时的研究文档
+│   ├── migration/                     # 迁移相关文档
+│   ├── test-reports/                  # 历史测试报告
+│   └── old-docs/                      # 其他临时文档
 │
-├── 📁 infrastructure/                 # 基础设施
-│   ├── docker/                       # Docker配置
-│   ├── kubernetes/                   # K8s配置
-│   └── monitoring/                   # 监控配置
-│
-├── 📁 tools/                          # 开发工具
-│   ├── data-generator/               # 数据生成工具
-│   ├── performance-monitor/          # 性能监控
-│   └── deployment-automation/        # 部署自动化
-│
-├── 📁 workspace/                      # 工作空间
-│   ├── experiments/                  # 实验性代码
-│   ├── prototypes/                   # 原型代码
-│   └── sandbox/                      # 沙盒测试
-│
-├── 📁 examples/                       # 示例代码
-├── 📄 README.md                        # 项目说明
-├── 📄 requirements.txt                 # 统一依赖文件
-├── 📄 .gitignore                       # Git忽略规则
-├── 📄 Makefile                         # 构建脚本
-└── 📄 .env.example                     # 环境变量示例
+├── 📁 scripts/                        # 🔧 脚本工具
+├── 📁 infrastructure/                 # 🏗️ 基础设施配置
+├── 📁 streamlit/                      # 🎨 Streamlit前端界面
+├── 📄 README.md                        # 📖 项目主页
+├── 📄 QUICK_START_GUIDE.md             # 🚀 快速开始指南
+├── 📄 INSTALLATION_GUIDE.md            # ⚙️ 详细安装指南
+├── 📄 Makefile                         # 🔨 构建脚本
+└── 📄 .globalignore                    # 🚫 忽略归档和临时文件
 ```
 
 ### 核心架构组件
@@ -388,9 +438,21 @@ Content-Type: application/json
 
 MIT License
 
-## 参考文档
+## 📚 文档导航
 
-- [本地开发可行性方案](research/local-development-feasibility.md)
-- [Phase 2 技术总结](research/local-development-phase2-summary.md)
-- [实施 Prompt v2.2](research/local-development-feasibility.prompt.v2.md)
-- [综合架构方案](research/best-ai-workflow.plan.md)
+- **📖 [文档中心](docs/README.md)** - 完整的文档索引和导航
+- **🚀 [快速开始](QUICK_START_GUIDE.md)** - 5分钟快速上手
+- **⚙️ [安装指南](INSTALLATION_GUIDE.md)** - 详细的环境配置
+- **👨‍💻 [开发指南](docs/development/contributing.md)** - 参与项目开发
+- **🧪 [测试指南](docs/development/testing.md)** - 运行和编写测试
+- **📖 [用户手册](docs/user-guide/basic-usage.md)** - 功能使用说明
+
+## 🔗 相关链接
+
+- **架构设计**：[系统架构](docs/architecture/)、[RAG设计](docs/architecture/rag-design.md)
+- **实现文档**：[API参考](docs/implementation/api-reference.md)、[部署指南](docs/implementation/deployment.md)
+- **开发资源**：[贡献指南](docs/development/contributing.md)、[代码规范](docs/development/code-style.md)
+
+## 🗂️ 历史文档
+
+过时的研究文档、迁移记录和测试报告已归档到 `archive/` 目录（通过 `.globalignore` 忽略），如需查阅可进入该目录。
