@@ -3,13 +3,15 @@
 RAG引擎功能测试（不依赖实际向量数据库）
 测试代码结构和接口
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 添加路径以便导入backend模块
-backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
+backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 sys.path.insert(0, backend_path)
+
 
 def test_rag_engine_structure():
     """测试RAG引擎结构"""
@@ -17,19 +19,16 @@ def test_rag_engine_structure():
 
     try:
         # 检查文件是否存在
-        rag_file = 'backend/services/rag_engine.py'
+        rag_file = "backend/services/rag_engine.py"
         if not os.path.exists(rag_file):
             print(f"❌ 文件不存在: {rag_file}")
             return False
 
         # 读取代码并检查关键类和方法
-        with open(rag_file, 'r', encoding='utf-8') as f:
+        with open(rag_file, "r", encoding="utf-8") as f:
             rag_code = f.read()
 
-        required_classes = [
-            'class RAGEngine',
-            'class EnhancedRAGEngine'
-        ]
+        required_classes = ["class RAGEngine", "class EnhancedRAGEngine"]
 
         for cls in required_classes:
             if cls in rag_code:
@@ -39,11 +38,11 @@ def test_rag_engine_structure():
 
         # 检查关键方法
         required_methods = [
-            'def add_documents',
-            'def query',
-            'def search',
-            'def delete_documents',
-            'def get_stats'
+            "def add_documents",
+            "def query",
+            "def search",
+            "def delete_documents",
+            "def get_stats",
         ]
 
         for method in required_methods:
@@ -57,22 +56,23 @@ def test_rag_engine_structure():
         print(f"❌ RAG引擎结构检查失败: {e}")
         return False
 
+
 def test_vector_database_integration():
     """测试向量数据库集成"""
     print("\n🔍 测试向量数据库集成...")
 
     try:
-        with open('backend/services/rag_engine.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/rag_engine.py", "r", encoding="utf-8") as f:
             rag_code = f.read()
 
         vector_patterns = [
-            'sentence_transformers',
-            'SentenceTransformer',
-            'numpy',
-            'faiss',
-            'chromadb',
-            'vector',
-            'embedding'
+            "sentence_transformers",
+            "SentenceTransformer",
+            "numpy",
+            "faiss",
+            "chromadb",
+            "vector",
+            "embedding",
         ]
 
         for pattern in vector_patterns:
@@ -86,21 +86,16 @@ def test_vector_database_integration():
         print(f"❌ 向量数据库集成检查失败: {e}")
         return False
 
+
 def test_llm_integration():
     """测试LLM集成"""
     print("\n🔍 测试LLM集成...")
 
     try:
-        with open('backend/services/rag_engine.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/rag_engine.py", "r", encoding="utf-8") as f:
             rag_code = f.read()
 
-        llm_patterns = [
-            'llm_client',
-            'generate',
-            'llama_cpp',
-            'ollama',
-            'LLMClient'
-        ]
+        llm_patterns = ["llm_client", "generate", "llama_cpp", "ollama", "LLMClient"]
 
         for pattern in llm_patterns:
             if pattern in rag_code.lower():
@@ -113,20 +108,21 @@ def test_llm_integration():
         print(f"❌ LLM集成检查失败: {e}")
         return False
 
+
 def test_document_processing():
     """测试文档处理功能"""
     print("\n🔍 测试文档处理功能...")
 
     try:
-        with open('backend/services/rag_engine.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/rag_engine.py", "r", encoding="utf-8") as f:
             rag_code = f.read()
 
         doc_patterns = [
-            'DocumentLoader',
-            'load_document',
-            'chunk_size',
-            'chunk_overlap',
-            'text_splitter'
+            "DocumentLoader",
+            "load_document",
+            "chunk_size",
+            "chunk_overlap",
+            "text_splitter",
         ]
 
         for pattern in doc_patterns:
@@ -140,20 +136,21 @@ def test_document_processing():
         print(f"❌ 文档处理功能检查失败: {e}")
         return False
 
+
 def test_retrieval_mechanism():
     """测试检索机制"""
     print("\n🔍 测试检索机制...")
 
     try:
-        with open('backend/services/rag_engine.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/rag_engine.py", "r", encoding="utf-8") as f:
             rag_code = f.read()
 
         retrieval_patterns = [
-            'similarity_search',
-            'cosine_similarity',
-            'top_k',
-            'threshold',
-            'retrieve'
+            "similarity_search",
+            "cosine_similarity",
+            "top_k",
+            "threshold",
+            "retrieve",
         ]
 
         for pattern in retrieval_patterns:
@@ -167,21 +164,22 @@ def test_retrieval_mechanism():
         print(f"❌ 检索机制检查失败: {e}")
         return False
 
+
 def test_configuration():
     """测试配置功能"""
     print("\n🔍 测试配置功能...")
 
     try:
         # 检查配置文件
-        with open('backend/config.py', 'r', encoding='utf-8') as f:
+        with open("backend/config.py", "r", encoding="utf-8") as f:
             config_code = f.read()
 
         rag_configs = [
-            'embedding_model',
-            'vector_db_path',
-            'chunk_size',
-            'chunk_overlap',
-            'max_context_length'
+            "embedding_model",
+            "vector_db_path",
+            "chunk_size",
+            "chunk_overlap",
+            "max_context_length",
         ]
 
         for config in rag_configs:
@@ -195,25 +193,18 @@ def test_configuration():
         print(f"❌ 配置功能检查失败: {e}")
         return False
 
+
 def simulate_rag_workflow():
     """模拟RAG工作流程"""
     print("\n🔍 模拟RAG工作流程...")
 
     try:
         # 模拟文档加载
-        documents = [
-            "人工智能是计算机科学的一个分支",
-            "机器学习是人工智能的子领域",
-            "深度学习使用神经网络进行学习"
-        ]
+        documents = ["人工智能是计算机科学的一个分支", "机器学习是人工智能的子领域", "深度学习使用神经网络进行学习"]
         print(f"✅ 文档加载: {len(documents)} 个文档")
 
         # 模拟文档分块
-        chunks = [
-            "人工智能是计算机科学的一个分支",
-            "机器学习是人工智能的子领域",
-            "深度学习使用神经网络进行学习"
-        ]
+        chunks = ["人工智能是计算机科学的一个分支", "机器学习是人工智能的子领域", "深度学习使用神经网络进行学习"]
         print(f"✅ 文档分块: {len(chunks)} 个片段")
 
         # 模拟向量化
@@ -243,21 +234,16 @@ def simulate_rag_workflow():
         print(f"❌ 模拟RAG工作流程失败: {e}")
         return False
 
+
 def test_error_handling():
     """测试错误处理"""
     print("\n🔍 测试错误处理...")
 
     try:
-        with open('backend/services/rag_engine.py', 'r', encoding='utf-8') as f:
+        with open("backend/services/rag_engine.py", "r", encoding="utf-8") as f:
             rag_code = f.read()
 
-        error_patterns = [
-            'try:',
-            'except',
-            'raise',
-            'logging',
-            'logger'
-        ]
+        error_patterns = ["try:", "except", "raise", "logging", "logger"]
 
         for pattern in error_patterns:
             if pattern in rag_code:
@@ -269,6 +255,7 @@ def test_error_handling():
     except Exception as e:
         print(f"❌ 错误处理检查失败: {e}")
         return False
+
 
 def main():
     """主测试函数"""
@@ -284,7 +271,7 @@ def main():
         ("检索机制", test_retrieval_mechanism),
         ("配置功能", test_configuration),
         ("模拟RAG工作流程", simulate_rag_workflow),
-        ("错误处理", test_error_handling)
+        ("错误处理", test_error_handling),
     ]
 
     passed = 0
@@ -293,7 +280,7 @@ def main():
     for test_name, test_func in tests:
         print(f"\n{'='*50}")
         print(f"测试: {test_name}")
-        print('='*50)
+        print("=" * 50)
 
         if test_func():
             passed += 1
@@ -303,7 +290,7 @@ def main():
 
     print(f"\n{'='*50}")
     print(f"测试总结: {passed}/{total} 通过")
-    print('='*50)
+    print("=" * 50)
 
     if passed >= total * 0.75:  # 75% 通过率
         print("🎉 大部分测试通过！RAG引擎结构正确")
@@ -315,6 +302,7 @@ def main():
     else:
         print("⚠️  部分测试失败，请检查RAG引擎实现")
         return False
+
 
 if __name__ == "__main__":
     success = main()

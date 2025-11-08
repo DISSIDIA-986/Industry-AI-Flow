@@ -3,8 +3,9 @@
 测试PaddleOCR API的正确用法
 """
 
-import sys
 import os
+import sys
+
 
 def test_paddleocr_api():
     """测试PaddleOCR的各种API调用方式"""
@@ -14,6 +15,7 @@ def test_paddleocr_api():
     try:
         import paddleocr
         from paddleocr import PaddleOCR
+
         print("✅ PaddleOCR导入成功")
         print(f"📦 PaddleOCR版本: {paddleocr.__version__}")
 
@@ -28,7 +30,7 @@ def test_paddleocr_api():
         # 测试不同的初始化方式
         print("\n🧪 测试1: 基本初始化")
         try:
-            ocr = PaddleOCR(lang='en')
+            ocr = PaddleOCR(lang="en")
             print("✅ 基本初始化成功")
         except Exception as e:
             print(f"❌ 基本初始化失败: {e}")
@@ -69,6 +71,7 @@ def test_paddleocr_api():
     except Exception as e:
         print(f"❌ 测试失败: {e}")
         return False
+
 
 if __name__ == "__main__":
     success = test_paddleocr_api()

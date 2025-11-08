@@ -4,13 +4,14 @@ Python 3.13环境下的版本管理测试脚本
 使用虚拟环境中的Python 3.13进行测试
 """
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 PYTHON_313_CMD = "/opt/homebrew/bin/python3.13"
 VENV_CMD = "source venv_python313/bin/activate && python"
+
 
 def run_command(cmd, description, capture_output=True):
     """运行命令并显示结果"""
@@ -20,7 +21,9 @@ def run_command(cmd, description, capture_output=True):
 
     try:
         if capture_output:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=30
+            )
             if result.stdout:
                 print(result.stdout)
             if result.stderr:
@@ -36,17 +39,20 @@ def run_command(cmd, description, capture_output=True):
         print(f"❌ 执行失败: {e}")
         return False
 
+
 def test_python_version_checker():
     """测试Python版本检查器"""
     print("=" * 80)
     print("🧪 测试 1: Python 3.13环境版本检查器")
     print("=" * 80)
 
-    success = run_command(f"{PYTHON_313_CMD} python_version_checker.py",
-                       "运行Python 3.13版本检查器")
+    success = run_command(
+        f"{PYTHON_313_CMD} python_version_checker.py", "运行Python 3.13版本检查器"
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def test_architecture_with_venv():
     """测试建筑行业测试（使用虚拟环境）"""
@@ -54,11 +60,13 @@ def test_architecture_with_venv():
     print("🧪 测试 2: 建筑行业测试（Python 3.13环境）")
     print("=" * 80)
 
-    success = run_command(f"{PYTHON_313_CMD} test_architecture_construction_industry.py",
-                       "运行建筑行业测试")
+    success = run_command(
+        f"{PYTHON_313_CMD} test_architecture_construction_industry.py", "运行建筑行业测试"
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def test_version_manager():
     """测试版本管理器"""
@@ -66,11 +74,14 @@ def test_version_manager():
     print("🧪 测试 3: 版本管理器")
     print("=" * 80)
 
-    success = run_command(f"{PYTHON_313_CMD} version_manager.py --check-deps paddleocr",
-                       "检查PaddleOCR依赖兼容性")
+    success = run_command(
+        f"{PYTHON_313_CMD} version_manager.py --check-deps paddleocr",
+        "检查PaddleOCR依赖兼容性",
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def test_advanced_version_manager():
     """测试高级版本管理器"""
@@ -78,11 +89,13 @@ def test_advanced_version_manager():
     print("🧪 测试 4: 高级版本管理器")
     print("=" * 80)
 
-    success = run_command(f"{PYTHON_313_CMD} advanced_version_manager.py",
-                       "运行高级版本管理器分析")
+    success = run_command(
+        f"{PYTHON_313_CMD} advanced_version_manager.py", "运行高级版本管理器分析"
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def test_version_checker_with_venv():
     """测试版本检查器（使用虚拟环境）"""
@@ -90,11 +103,11 @@ def test_version_checker_with_venv():
     print("🧪 测试 5: 版本检查器（虚拟环境）")
     print("=" * 80)
 
-    success = run_command(f"{VENV_CMD} python_version_checker.py",
-                       "在虚拟环境中运行版本检查器")
+    success = run_command(f"{VENV_CMD} python_version_checker.py", "在虚拟环境中运行版本检查器")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def test_architecture_with_venv_full():
     """测试建筑行业测试（完整虚拟环境）"""
@@ -102,11 +115,14 @@ def test_architecture_with_venv_full():
     print("🧪 测试 6: 建筑行业测试（虚拟环境）")
     print("=" * 80)
 
-    success = run_command("source venv_python313/bin/activate && python test_architecture_construction_industry.py",
-                       "在虚拟环境中运行建筑行业测试")
+    success = run_command(
+        "source venv_python313/bin/activate && python test_architecture_construction_industry.py",
+        "在虚拟环境中运行建筑行业测试",
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success
+
 
 def generate_final_report(test_results):
     """生成最终测试报告"""
@@ -158,6 +174,7 @@ def generate_final_report(test_results):
 
     return success_rate >= 60
 
+
 def main():
     """主函数"""
     print("🎯 Python 3.13环境版本管理系统 - 最终测试")
@@ -170,13 +187,14 @@ def main():
         test_architecture_with_venv(),
         test_advanced_version_manager(),
         test_version_checker_with_venv(),
-        test_architecture_with_venv_full()
+        test_architecture_with_venv_full(),
     ]
 
     # 生成最终报告
     success = generate_final_report(test_results)
 
     return success
+
 
 if __name__ == "__main__":
     success = main()

@@ -10,20 +10,22 @@ Tests data analysis capabilities using actual datasets from test_resources/datas
 4. Visualization and Charting (validation only - actual rendering requires display)
 """
 
-import sys
 import json
-import time
 import logging
+import sys
+import time
 from pathlib import Path
 from typing import Dict, List
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -35,14 +37,9 @@ class DataAnalysisTester:
             "loading_tests": [],
             "statistical_tests": [],
             "transformation_tests": [],
-            "visualization_tests": []
+            "visualization_tests": [],
         }
-        self.stats = {
-            "total_tests": 0,
-            "passed": 0,
-            "failed": 0,
-            "errors": 0
-        }
+        self.stats = {"total_tests": 0, "passed": 0, "failed": 0, "errors": 0}
         self.datasets = {}
 
     def setup(self):
@@ -55,7 +52,7 @@ class DataAnalysisTester:
                 "employee_data.csv",
                 "Housing.csv",
                 "Thyroid_Diff.csv",
-                "Unemployment_Canada_1976_present.csv"
+                "Unemployment_Canada_1976_present.csv",
             ]
 
             for csv_file in csv_files:
@@ -63,9 +60,11 @@ class DataAnalysisTester:
                 if file_path.exists():
                     try:
                         df = pd.read_csv(file_path)
-                        dataset_name = csv_file.replace('.csv', '')
+                        dataset_name = csv_file.replace(".csv", "")
                         self.datasets[dataset_name] = df
-                        logger.info(f"✅ Loaded {csv_file}: {df.shape[0]} rows, {df.shape[1]} columns")
+                        logger.info(
+                            f"✅ Loaded {csv_file}: {df.shape[0]} rows, {df.shape[1]} columns"
+                        )
                     except Exception as e:
                         logger.warning(f"⚠️ Failed to load {csv_file}: {e}")
 
@@ -79,6 +78,7 @@ class DataAnalysisTester:
         except Exception as e:
             logger.error(f"❌ Failed to setup: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -102,7 +102,7 @@ class DataAnalysisTester:
                     "columns": len(df.columns),
                     "has_data": has_data,
                     "has_columns": has_columns,
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["loading_tests"].append(test_result)
@@ -110,7 +110,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} loaded successfully ({len(df)} rows)")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} loaded successfully ({len(df)} rows)"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - empty or no columns")
@@ -132,13 +134,15 @@ class DataAnalysisTester:
                     "columns": list(df.columns),
                     "dtypes": df.dtypes.astype(str).to_dict(),
                     "null_counts": df.isnull().sum().to_dict(),
-                    "memory_usage": df.memory_usage(deep=True).sum()
+                    "memory_usage": df.memory_usage(deep=True).sum(),
                 }
 
                 # Validation: dataset has meaningful structure
                 has_multiple_rows = df.shape[0] > 1
                 has_multiple_cols = df.shape[1] > 1
-                has_varied_types = len(set(df.dtypes)) > 1 or len(df.dtypes) == 1  # At least consistent types
+                has_varied_types = (
+                    len(set(df.dtypes)) > 1 or len(df.dtypes) == 1
+                )  # At least consistent types
 
                 passed = has_multiple_rows and has_multiple_cols
 
@@ -148,9 +152,9 @@ class DataAnalysisTester:
                     "validation": {
                         "has_multiple_rows": has_multiple_rows,
                         "has_multiple_cols": has_multiple_cols,
-                        "has_varied_types": has_varied_types
+                        "has_varied_types": has_varied_types,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["loading_tests"].append(test_result)
@@ -158,7 +162,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} - Shape: {df.shape}, Types: {len(set(df.dtypes))}")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} - Shape: {df.shape}, Types: {len(set(df.dtypes))}"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - insufficient structure")
@@ -186,9 +192,9 @@ class DataAnalysisTester:
                 stats = df[numeric_cols].describe()
 
                 # Validate statistics are computed
-                has_mean = 'mean' in stats.index
-                has_std = 'std' in stats.index
-                has_min_max = 'min' in stats.index and 'max' in stats.index
+                has_mean = "mean" in stats.index
+                has_std = "std" in stats.index
+                has_min_max = "min" in stats.index and "max" in stats.index
 
                 passed = has_mean and has_std and has_min_max
 
@@ -199,9 +205,9 @@ class DataAnalysisTester:
                     "validation": {
                         "has_mean": has_mean,
                         "has_std": has_std,
-                        "has_min_max": has_min_max
+                        "has_min_max": has_min_max,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["statistical_tests"].append(test_result)
@@ -209,7 +215,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} - Statistics computed for {len(numeric_cols)} columns")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} - Statistics computed for {len(numeric_cols)} columns"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - incomplete statistics")
@@ -229,7 +237,9 @@ class DataAnalysisTester:
                 numeric_cols = df.select_dtypes(include=[np.number]).columns
 
                 if len(numeric_cols) < 2:
-                    logger.warning(f"⚠️ SKIP: {dataset_name} - need at least 2 numeric columns")
+                    logger.warning(
+                        f"⚠️ SKIP: {dataset_name} - need at least 2 numeric columns"
+                    )
                     continue
 
                 corr_matrix = df[numeric_cols].corr()
@@ -244,14 +254,16 @@ class DataAnalysisTester:
                 # Find strong correlations (|r| > 0.7, excluding diagonal)
                 strong_corrs = []
                 for i in range(len(corr_matrix)):
-                    for j in range(i+1, len(corr_matrix)):
+                    for j in range(i + 1, len(corr_matrix)):
                         corr_value = corr_matrix.iloc[i, j]
                         if abs(corr_value) > 0.7:
-                            strong_corrs.append({
-                                "var1": corr_matrix.index[i],
-                                "var2": corr_matrix.columns[j],
-                                "correlation": float(corr_value)
-                            })
+                            strong_corrs.append(
+                                {
+                                    "var1": corr_matrix.index[i],
+                                    "var2": corr_matrix.columns[j],
+                                    "correlation": float(corr_value),
+                                }
+                            )
 
                 test_result = {
                     "dataset": dataset_name,
@@ -260,9 +272,9 @@ class DataAnalysisTester:
                     "validation": {
                         "is_square": is_square,
                         "diagonal_is_one": diagonal_is_one,
-                        "is_symmetric": is_symmetric
+                        "is_symmetric": is_symmetric,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["statistical_tests"].append(test_result)
@@ -270,7 +282,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} - Correlation matrix {corr_matrix.shape}, {len(strong_corrs)} strong correlations")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} - Correlation matrix {corr_matrix.shape}, {len(strong_corrs)} strong correlations"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - invalid correlation matrix")
@@ -299,7 +313,9 @@ class DataAnalysisTester:
                 # Validate transformations
                 dropna_reduced = len(df_dropna) <= len(df)
                 fillna_no_nulls = df_fillna.isnull().sum().sum() == 0
-                original_preserved = len(df) == len(self.datasets[dataset_name])  # Original unchanged
+                original_preserved = len(df) == len(
+                    self.datasets[dataset_name]
+                )  # Original unchanged
 
                 passed = dropna_reduced and fillna_no_nulls and original_preserved
 
@@ -312,9 +328,9 @@ class DataAnalysisTester:
                     "validation": {
                         "dropna_reduced": dropna_reduced,
                         "fillna_no_nulls": fillna_no_nulls,
-                        "original_preserved": original_preserved
+                        "original_preserved": original_preserved,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["transformation_tests"].append(test_result)
@@ -322,7 +338,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} - Missing data handling: {total_nulls} nulls, dropna={len(df_dropna)}, fillna=0")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} - Missing data handling: {total_nulls} nulls, dropna={len(df_dropna)}, fillna=0"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - transformation issues")
@@ -342,7 +360,9 @@ class DataAnalysisTester:
                 numeric_cols = df.select_dtypes(include=[np.number]).columns
 
                 if len(numeric_cols) == 0:
-                    logger.warning(f"⚠️ SKIP: {dataset_name} - no numeric columns for filtering")
+                    logger.warning(
+                        f"⚠️ SKIP: {dataset_name} - no numeric columns for filtering"
+                    )
                     continue
 
                 # Filter: rows where first numeric column > median
@@ -351,8 +371,14 @@ class DataAnalysisTester:
                 df_filtered = df[df[first_numeric] > median_value]
 
                 # Validate filtering
-                filter_reduced = len(df_filtered) < len(df) or len(df_filtered) == 0  # Should reduce or be empty
-                filter_correct = df_filtered[first_numeric].min() >= median_value if len(df_filtered) > 0 else True
+                filter_reduced = (
+                    len(df_filtered) < len(df) or len(df_filtered) == 0
+                )  # Should reduce or be empty
+                filter_correct = (
+                    df_filtered[first_numeric].min() >= median_value
+                    if len(df_filtered) > 0
+                    else True
+                )
                 original_preserved = len(df) == len(self.datasets[dataset_name])
 
                 passed = filter_reduced and filter_correct and original_preserved
@@ -366,9 +392,9 @@ class DataAnalysisTester:
                     "validation": {
                         "filter_reduced": filter_reduced,
                         "filter_correct": filter_correct,
-                        "original_preserved": original_preserved
+                        "original_preserved": original_preserved,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["transformation_tests"].append(test_result)
@@ -376,7 +402,9 @@ class DataAnalysisTester:
 
                 if passed:
                     self.stats["passed"] += 1
-                    logger.info(f"✅ PASS: {dataset_name} - Filtered {len(df)} → {len(df_filtered)} rows")
+                    logger.info(
+                        f"✅ PASS: {dataset_name} - Filtered {len(df)} → {len(df_filtered)} rows"
+                    )
                 else:
                     self.stats["failed"] += 1
                     logger.error(f"❌ FAIL: {dataset_name} - filtering issues")
@@ -397,7 +425,9 @@ class DataAnalysisTester:
                 numeric_cols = df.select_dtypes(include=[np.number]).columns
 
                 if len(numeric_cols) < 2:
-                    logger.warning(f"⚠️ SKIP: {dataset_name} - need at least 2 numeric columns")
+                    logger.warning(
+                        f"⚠️ SKIP: {dataset_name} - need at least 2 numeric columns"
+                    )
                     continue
 
                 # Prepare data for different chart types
@@ -406,7 +436,9 @@ class DataAnalysisTester:
 
                 # 2. Scatter plot data (two columns)
                 scatter_x = df[numeric_cols[0]].dropna()
-                scatter_y = df[numeric_cols[1]].dropna() if len(numeric_cols) > 1 else scatter_x
+                scatter_y = (
+                    df[numeric_cols[1]].dropna() if len(numeric_cols) > 1 else scatter_x
+                )
 
                 # 3. Box plot data (single column statistics)
                 box_stats = df[numeric_cols[0]].describe()
@@ -414,7 +446,7 @@ class DataAnalysisTester:
                 # Validate data preparation
                 hist_ready = len(hist_data) > 0
                 scatter_ready = len(scatter_x) > 0 and len(scatter_y) > 0
-                box_ready = 'min' in box_stats.index and 'max' in box_stats.index
+                box_ready = "min" in box_stats.index and "max" in box_stats.index
 
                 passed = hist_ready and scatter_ready and box_ready
 
@@ -426,9 +458,9 @@ class DataAnalysisTester:
                     "validation": {
                         "hist_ready": hist_ready,
                         "scatter_ready": scatter_ready,
-                        "box_ready": box_ready
+                        "box_ready": box_ready,
                     },
-                    "passed": passed
+                    "passed": passed,
                 }
 
                 self.test_results["visualization_tests"].append(test_result)
@@ -448,39 +480,39 @@ class DataAnalysisTester:
 
     def run_all_tests(self):
         """Execute all test categories"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🚀 Starting Comprehensive Data Analysis Tests")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         if not self.setup():
             logger.error("❌ Setup failed. Cannot proceed with tests.")
             return False
 
         # Category 1: Loading and Inspection
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📂 CATEGORY 1: Dataset Loading and Inspection")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_1_1_dataset_loading()
         self.test_1_2_dataset_inspection()
 
         # Category 2: Statistical Analysis
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📊 CATEGORY 2: Statistical Analysis")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_2_1_descriptive_statistics()
         self.test_2_2_correlation_analysis()
 
         # Category 3: Data Transformation
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🔄 CATEGORY 3: Data Transformation and Cleaning")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_3_1_missing_data_handling()
         self.test_3_2_data_filtering()
 
         # Category 4: Visualization Data Preparation
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📈 CATEGORY 4: Visualization Data Preparation")
-        logger.info("="*80)
+        logger.info("=" * 80)
         self.test_4_1_visualization_data_preparation()
 
         # Print final summary
@@ -490,9 +522,9 @@ class DataAnalysisTester:
 
     def print_summary(self):
         """Print comprehensive test summary"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📊 COMPREHENSIVE TEST SUMMARY")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         total = self.stats["total_tests"]
         passed = self.stats["passed"]
@@ -516,9 +548,11 @@ class DataAnalysisTester:
         else:
             logger.info(f"\n❌ NEEDS IMPROVEMENT: Pass rate {pass_rate:.1f}% (<70%)")
 
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
 
-    def save_results(self, output_file: str = "test_results/data_analysis_results.json"):
+    def save_results(
+        self, output_file: str = "test_results/data_analysis_results.json"
+    ):
         """Save detailed test results to JSON file"""
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -543,10 +577,10 @@ class DataAnalysisTester:
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "statistics": self.stats,
             "datasets_tested": list(self.datasets.keys()),
-            "detailed_results": self.test_results
+            "detailed_results": self.test_results,
         }
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False, cls=NumpyEncoder)
 
         logger.info(f"\n💾 Results saved to: {output_path}")

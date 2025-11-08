@@ -5,8 +5,8 @@
 """
 
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 
 def check_dependencies():
@@ -20,13 +20,14 @@ def check_dependencies():
     # 检查PaddlePaddle
     try:
         import paddle
+
         version = paddle.__version__
         print(f"✅ PaddlePaddle: {version}")
 
         # 检查MPS设备
         try:
             custom_devices = paddle.device.get_all_custom_device_type()
-            if 'mps' in custom_devices:
+            if "mps" in custom_devices:
                 print(f"   ✅ MPS设备可用")
             else:
                 print(f"   ⚠️  MPS设备未检测到")
@@ -40,6 +41,7 @@ def check_dependencies():
     # 检查PaddleOCR
     try:
         import paddleocr
+
         print(f"✅ PaddleOCR 已安装")
     except ImportError:
         print(f"❌ PaddleOCR 未安装")
@@ -48,8 +50,9 @@ def check_dependencies():
     # 检查NumPy
     try:
         import numpy as np
+
         version = np.__version__
-        major = int(version.split('.')[0])
+        major = int(version.split(".")[0])
         if major < 2:
             print(f"✅ NumPy: {version} (兼容)")
         else:
@@ -73,8 +76,8 @@ def test_ocr_basic():
     print("=" * 80)
 
     try:
-        from paddleocr import PaddleOCR
         import paddle
+        from paddleocr import PaddleOCR
 
         # 初始化OCR
         print("\n初始化PaddleOCR...")
@@ -83,7 +86,7 @@ def test_ocr_basic():
         use_gpu = False
         try:
             custom_devices = paddle.device.get_all_custom_device_type()
-            if 'mps' in custom_devices:
+            if "mps" in custom_devices:
                 use_gpu = True
                 print("✅ 启用MPS加速")
             elif paddle.device.is_compiled_with_cuda():
@@ -94,12 +97,7 @@ def test_ocr_basic():
         except:
             print("⚠️  使用CPU模式")
 
-        ocr = PaddleOCR(
-            use_angle_cls=True,
-            lang='ch',
-            use_gpu=use_gpu,
-            show_log=False
-        )
+        ocr = PaddleOCR(use_angle_cls=True, lang="ch", use_gpu=use_gpu, show_log=False)
 
         print("✅ PaddleOCR初始化成功")
         return ocr
@@ -107,6 +105,7 @@ def test_ocr_basic():
     except Exception as e:
         print(f"❌ 初始化失败: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -174,47 +173,47 @@ def test_images(ocr):
                 if len(full_text) > 300:
                     print("...")
 
-                results.append({
-                    'name': img_path.name,
-                    'success': True,
-                    'time': elapsed,
-                    'boxes': len(texts),
-                    'confidence': avg_conf,
-                    'chars': len(full_text),
-                    'text': full_text
-                })
+                results.append(
+                    {
+                        "name": img_path.name,
+                        "success": True,
+                        "time": elapsed,
+                        "boxes": len(texts),
+                        "confidence": avg_conf,
+                        "chars": len(full_text),
+                        "text": full_text,
+                    }
+                )
 
             else:
                 print(f"⚠️  未识别到文本")
-                results.append({
-                    'name': img_path.name,
-                    'success': False,
-                })
+                results.append(
+                    {
+                        "name": img_path.name,
+                        "success": False,
+                    }
+                )
 
         except Exception as e:
             print(f"❌ 识别失败: {e}")
-            results.append({
-                'name': img_path.name,
-                'success': False,
-                'error': str(e)
-            })
+            results.append({"name": img_path.name, "success": False, "error": str(e)})
 
     # 总结
     print("\n" + "=" * 80)
     print("识别总结")
     print("=" * 80)
 
-    successful = [r for r in results if r.get('success', False)]
-    failed = [r for r in results if not r.get('success', False)]
+    successful = [r for r in results if r.get("success", False)]
+    failed = [r for r in results if not r.get("success", False)]
 
     print(f"\n总计: {len(results)} 个图片")
     print(f"成功: {len(successful)} 个")
     print(f"失败: {len(failed)} 个")
 
     if successful:
-        avg_time = sum(r['time'] for r in successful) / len(successful)
-        avg_conf = sum(r['confidence'] for r in successful) / len(successful)
-        total_chars = sum(r['chars'] for r in successful)
+        avg_time = sum(r["time"] for r in successful) / len(successful)
+        avg_conf = sum(r["confidence"] for r in successful) / len(successful)
+        total_chars = sum(r["chars"] for r in successful)
 
         print(f"\n性能统计:")
         print(f"   平均耗时: {avg_time:.2f}秒/张")
@@ -224,13 +223,13 @@ def test_images(ocr):
 
         # 保存所有识别文本
         output_file = Path(__file__).parent / "ocr_results.txt"
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             for r in successful:
                 f.write(f"{'='*80}\n")
                 f.write(f"图片: {r['name']}\n")
                 f.write(f"置信度: {r['confidence']:.2%}\n")
                 f.write(f"{'='*80}\n")
-                f.write(r['text'])
+                f.write(r["text"])
                 f.write("\n\n")
 
         print(f"\n✅ 识别结果已保存到: {output_file}")

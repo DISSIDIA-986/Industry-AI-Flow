@@ -3,13 +3,15 @@
 完整问答流程测试（不依赖实际模型运行）
 测试端到端的问答系统架构
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 添加路径以便导入backend模块
-backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
+backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 sys.path.insert(0, backend_path)
+
 
 def test_api_structure():
     """测试API结构"""
@@ -17,10 +19,7 @@ def test_api_structure():
 
     try:
         # 检查主API文件
-        api_files = [
-            'backend/main.py',
-            'backend/api/__init__.py'
-        ]
+        api_files = ["backend/main.py", "backend/api/__init__.py"]
 
         for api_file in api_files:
             if os.path.exists(api_file):
@@ -29,17 +28,10 @@ def test_api_structure():
                 print(f"⚠️  API文件缺失: {api_file}")
 
         # 检查主API代码
-        with open('backend/main.py', 'r', encoding='utf-8') as f:
+        with open("backend/main.py", "r", encoding="utf-8") as f:
             main_code = f.read()
 
-        api_patterns = [
-            'FastAPI',
-            '@app.post',
-            '@app.get',
-            'upload',
-            'query',
-            'chat'
-        ]
+        api_patterns = ["FastAPI", "@app.post", "@app.get", "upload", "query", "chat"]
 
         for pattern in api_patterns:
             if pattern in main_code:
@@ -52,17 +44,18 @@ def test_api_structure():
         print(f"❌ API结构检查失败: {e}")
         return False
 
+
 def test_integration_components():
     """测试集成组件"""
     print("\n🔍 测试集成组件...")
 
     try:
         components = {
-            'LLM客户端': 'backend/services/llm_client.py',
-            'llama.cpp客户端': 'backend/services/llama_cpp_client.py',
-            '文档加载器': 'backend/services/document_loader.py',
-            'RAG引擎': 'backend/services/rag_engine.py',
-            '配置文件': 'backend/config.py'
+            "LLM客户端": "backend/services/llm_client.py",
+            "llama.cpp客户端": "backend/services/llama_cpp_client.py",
+            "文档加载器": "backend/services/document_loader.py",
+            "RAG引擎": "backend/services/rag_engine.py",
+            "配置文件": "backend/config.py",
         }
 
         for name, path in components.items():
@@ -77,20 +70,21 @@ def test_integration_components():
         print(f"❌ 集成组件检查失败: {e}")
         return False
 
+
 def test_workflow_endpoints():
     """测试工作流程端点"""
     print("\n🔍 测试工作流程端点...")
 
     try:
-        with open('backend/main.py', 'r', encoding='utf-8') as f:
+        with open("backend/main.py", "r", encoding="utf-8") as f:
             main_code = f.read()
 
         workflow_endpoints = [
-            'document/upload',
-            'document/query',
-            'chat',
-            'health',
-            'status'
+            "document/upload",
+            "document/query",
+            "chat",
+            "health",
+            "status",
         ]
 
         for endpoint in workflow_endpoints:
@@ -103,6 +97,7 @@ def test_workflow_endpoints():
     except Exception as e:
         print(f"❌ 工作流程端点检查失败: {e}")
         return False
+
 
 def simulate_qa_workflow():
     """模拟完整问答工作流程"""
@@ -117,17 +112,13 @@ def simulate_qa_workflow():
         print("\n步骤 2: 文档处理和分析")
         # 模拟文档处理
         if os.path.exists("samples/test_document_1.txt"):
-            with open("samples/test_document_1.txt", 'r', encoding='utf-8') as f:
+            with open("samples/test_document_1.txt", "r", encoding="utf-8") as f:
                 content = f.read()
             print(f"✅ 文档内容提取: {len(content)} 字符")
 
         print("\n步骤 3: 文档分块")
         # 模拟文档分块
-        chunks = [
-            "这是文档的第一段内容",
-            "这是文档的第二段内容",
-            "这是文档的第三段内容"
-        ]
+        chunks = ["这是文档的第一段内容", "这是文档的第二段内容", "这是文档的第三段内容"]
         print(f"✅ 文档分块: {len(chunks)} 个片段")
 
         print("\n步骤 4: 向量化处理")
@@ -168,7 +159,7 @@ def simulate_qa_workflow():
             "query": user_query,
             "answer": llm_response,
             "sources": relevant_chunks,
-            "confidence": 0.89
+            "confidence": 0.89,
         }
         print(f"✅ 返回结果: 置信度 {result['confidence']}")
 
@@ -177,18 +168,13 @@ def simulate_qa_workflow():
         print(f"❌ 模拟问答工作流程失败: {e}")
         return False
 
+
 def test_error_scenarios():
     """测试错误场景"""
     print("\n🔍 测试错误场景...")
 
     try:
-        error_scenarios = [
-            "无效文件格式",
-            "文件过大",
-            "网络连接失败",
-            "模型加载失败",
-            "向量检索无结果"
-        ]
+        error_scenarios = ["无效文件格式", "文件过大", "网络连接失败", "模型加载失败", "向量检索无结果"]
 
         for scenario in error_scenarios:
             print(f"✅ 错误处理: {scenario}")
@@ -198,20 +184,15 @@ def test_error_scenarios():
         print(f"❌ 错误场景测试失败: {e}")
         return False
 
+
 def test_performance_considerations():
     """测试性能考虑"""
     print("\n🔍 测试性能考虑...")
 
     try:
-        performance_features = [
-            "异步处理",
-            "文件大小限制",
-            "批处理支持",
-            "缓存机制",
-            "并发控制"
-        ]
+        performance_features = ["异步处理", "文件大小限制", "批处理支持", "缓存机制", "并发控制"]
 
-        with open('backend/main.py', 'r', encoding='utf-8') as f:
+        with open("backend/main.py", "r", encoding="utf-8") as f:
             main_code = f.read()
 
         for feature in performance_features:
@@ -225,22 +206,23 @@ def test_performance_considerations():
         print(f"❌ 性能考虑测试失败: {e}")
         return False
 
+
 def test_configuration_completeness():
     """测试配置完整性"""
     print("\n🔍 测试配置完整性...")
 
     try:
-        with open('backend/config.py', 'r', encoding='utf-8') as f:
+        with open("backend/config.py", "r", encoding="utf-8") as f:
             config_code = f.read()
 
         required_configs = [
-            'llm_backend',
-            'embedding_model',
-            'max_file_size',
-            'supported_formats',
-            'chunk_size',
-            'api_host',
-            'api_port'
+            "llm_backend",
+            "embedding_model",
+            "max_file_size",
+            "supported_formats",
+            "chunk_size",
+            "api_host",
+            "api_port",
         ]
 
         for config in required_configs:
@@ -254,19 +236,20 @@ def test_configuration_completeness():
         print(f"❌ 配置完整性测试失败: {e}")
         return False
 
+
 def test_migration_status():
     """测试迁移状态"""
     print("\n🔍 测试迁移状态...")
 
     try:
         migration_files = [
-            'LLAMACPP_MIGRATION_SUMMARY.md',
-            'PADDLEOCR_INSTALLATION_SUMMARY.md'
+            "LLAMACPP_MIGRATION_SUMMARY.md",
+            "PADDLEOCR_INSTALLATION_SUMMARY.md",
         ]
 
         for file_path in migration_files:
             if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                 print(f"✅ 迁移文档: {file_path} ({len(content)} 字符)")
             else:
@@ -276,6 +259,7 @@ def test_migration_status():
     except Exception as e:
         print(f"❌ 迁移状态测试失败: {e}")
         return False
+
 
 def main():
     """主测试函数"""
@@ -291,7 +275,7 @@ def main():
         ("错误场景", test_error_scenarios),
         ("性能考虑", test_performance_considerations),
         ("配置完整性", test_configuration_completeness),
-        ("迁移状态", test_migration_status)
+        ("迁移状态", test_migration_status),
     ]
 
     passed = 0
@@ -300,7 +284,7 @@ def main():
     for test_name, test_func in tests:
         print(f"\n{'='*50}")
         print(f"测试: {test_name}")
-        print('='*50)
+        print("=" * 50)
 
         if test_func():
             passed += 1
@@ -310,7 +294,7 @@ def main():
 
     print(f"\n{'='*50}")
     print(f"测试总结: {passed}/{total} 通过")
-    print('='*50)
+    print("=" * 50)
 
     if passed >= total * 0.8:  # 80% 通过率
         print("🎉 大部分测试通过！完整问答流程架构正确")
@@ -323,6 +307,7 @@ def main():
     else:
         print("⚠️  部分测试失败，请检查系统架构")
         return False
+
 
 if __name__ == "__main__":
     success = main()

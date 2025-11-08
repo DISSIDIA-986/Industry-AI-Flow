@@ -14,14 +14,11 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from backend.services.document_processing import (
-    ocr_processor,
-    process_document,
-)
+from backend.services.document_processing import ocr_processor, process_document
 from backend.tools.document_processing import (
+    batch_extract_documents,
     extract_document_text,
     ocr_image,
-    batch_extract_documents,
 )
 
 
@@ -53,7 +50,9 @@ def test_document_extractor():
     print("=" * 60)
 
     try:
-        from backend.services.document_processing.document_extractor import DocumentExtractor
+        from backend.services.document_processing.document_extractor import (
+            DocumentExtractor,
+        )
 
         extractor = DocumentExtractor(use_ocr=True)
 
@@ -131,12 +130,14 @@ def test_langchain_tools():
 
         # 测试提取工具
         print("\n4.1 文档提取工具:")
-        result = extract_document_text.invoke({
-            "file_path": str(test_file),
-            "use_ocr": False,
-        })
+        result = extract_document_text.invoke(
+            {
+                "file_path": str(test_file),
+                "use_ocr": False,
+            }
+        )
 
-        if result['success']:
+        if result["success"]:
             print(f"   ✅ 提取成功")
             print(f"   文件类型: {result['file_type']}")
             print(f"   方法: {result['method']}")
@@ -174,16 +175,18 @@ def test_batch_processing():
             created_files.append(test_file)
 
         # 批量处理
-        result = batch_extract_documents.invoke({
-            "file_paths": test_files,
-            "use_ocr": False,
-        })
+        result = batch_extract_documents.invoke(
+            {
+                "file_paths": test_files,
+                "use_ocr": False,
+            }
+        )
 
         print(f"   总文件数: {result['total']}")
         print(f"   成功: {result['succeeded']}")
         print(f"   失败: {result['failed']}")
 
-        if result['success']:
+        if result["success"]:
             print(f"✅ 批量处理成功")
             return True
         else:

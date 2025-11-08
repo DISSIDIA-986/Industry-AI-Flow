@@ -4,11 +4,12 @@
 验证修复后的版本管理系统能否正确识别和解决各种测试场景的问题
 """
 
+import json
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
-import json
+
 
 def run_command(cmd, description, capture_output=True):
     """运行命令并显示结果"""
@@ -18,7 +19,9 @@ def run_command(cmd, description, capture_output=True):
 
     try:
         if capture_output:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=30
+            )
             if result.stdout:
                 print(result.stdout)
             if result.stderr:
@@ -34,19 +37,20 @@ def run_command(cmd, description, capture_output=True):
         print(f"❌ 执行失败: {e}")
         return False
 
+
 def test_python_version_checker():
     """测试Python版本检查器"""
     print("=" * 80)
     print("🧪 测试 1: Python版本检查器功能")
     print("=" * 80)
 
-    success = run_command("python3 python_version_checker.py",
-                       "运行Python版本检查器")
+    success = run_command("python3 python_version_checker.py", "运行Python版本检查器")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:
         print("💡 预期行为: Python 3.14环境下应该检测到版本不匹配")
     return success
+
 
 def test_version_manager():
     """测试基础版本管理器"""
@@ -54,13 +58,15 @@ def test_version_manager():
     print("🧪 测试 2: 基础版本管理器")
     print("=" * 80)
 
-    success = run_command("python3 version_manager.py --check-deps paddleocr",
-                       "检查PaddleOCR依赖兼容性")
+    success = run_command(
+        "python3 version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
+    )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:
         print("💡 预期行为: Python 3.14环境下应该报告PaddleOCR不兼容")
     return success
+
 
 def test_architecture_tests():
     """测试建筑相关测试"""
@@ -69,13 +75,17 @@ def test_architecture_tests():
     print("=" * 80)
 
     # 测试建筑测试是否能在当前环境下运行
-    success = run_command("python3 test_architecture_construction_industry.py",
-                       "运行建筑行业测试", capture_output=True)
+    success = run_command(
+        "python3 test_architecture_construction_industry.py",
+        "运行建筑行业测试",
+        capture_output=True,
+    )
 
     # 检查测试结果
     test_output = subprocess.run(
         ["python3", "test_architecture_construction_industry.py"],
-        capture_output=True, text=True
+        capture_output=True,
+        text=True,
     )
 
     print(f"\n📊 测试结果: {'✅ 通过' if test_output.returncode == 0 else '❌ 失败'}")
@@ -88,6 +98,7 @@ def test_architecture_tests():
 
     return test_output.returncode == 0
 
+
 def test_ocr_tests():
     """测试OCR相关测试"""
     print("\n" + "=" * 80)
@@ -95,8 +106,7 @@ def test_ocr_tests():
     print("=" * 80)
 
     # 测试简化OCR测试
-    success = run_command("python3 test_ocr_simple.py",
-                       "运行简化OCR测试")
+    success = run_command("python3 test_ocr_simple.py", "运行简化OCR测试")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:
@@ -104,20 +114,21 @@ def test_ocr_tests():
 
     return success
 
+
 def test_installation_script():
     """测试安装脚本"""
     print("\n" + "=" * 80)
     print("🧪 测试 5: Python 3.13专用安装脚本")
     print("=" * 80)
 
-    success = run_command("./install_python313_paddleocr.sh",
-                       "运行Python 3.13专用安装脚本")
+    success = run_command("./install_python313_paddleocr.sh", "运行Python 3.13专用安装脚本")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:
         print("💡 预期行为: Python 3.14环境下安装脚本应该拒绝运行")
 
     return success
+
 
 def analyze_test_files():
     """分析测试文件的依赖情况"""
@@ -129,7 +140,7 @@ def analyze_test_files():
         "test_ocr_simple.py",
         "test_paddleocr_v5.py",
         "test_architecture_construction_industry.py",
-        "test_ocr_chinese_viz.py"
+        "test_ocr_chinese_viz.py",
     ]
 
     analysis_results = {}
@@ -137,53 +148,58 @@ def analyze_test_files():
     for test_file in test_files:
         if os.path.exists(test_file):
             try:
-                with open(test_file, 'r', encoding='utf-8') as f:
+                with open(test_file, "r", encoding="utf-8") as f:
                     content = f.read()
 
                 # 检查是否包含版本检查
-                has_version_check = any(keyword in content for keyword in [
-                    'sys.version', 'python_version', 'version_info', 'python3'
-                ])
+                has_version_check = any(
+                    keyword in content
+                    for keyword in [
+                        "sys.version",
+                        "python_version",
+                        "version_info",
+                        "python3",
+                    ]
+                )
 
                 # 检查是否包含PaddleOCR导入
-                has_paddleocr = any(keyword in content for keyword in [
-                    'import paddleocr', 'from paddleocr', 'paddleocr.'
-                ])
+                has_paddleocr = any(
+                    keyword in content
+                    for keyword in ["import paddleocr", "from paddleocr", "paddleocr."]
+                )
 
                 # 检查是否包含版本要求
-                has_version_requirement = any(keyword in content for keyword in [
-                    '>=3.13', 'python 3.13', 'requires', 'version'
-                ])
+                has_version_requirement = any(
+                    keyword in content
+                    for keyword in [">=3.13", "python 3.13", "requires", "version"]
+                )
 
                 analysis_results[test_file] = {
-                    'exists': True,
-                    'has_version_check': has_version_check,
-                    'has_paddleocr': has_paddleocr,
-                    'has_version_requirement': has_version_requirement,
-                    'needs_python313': has_paddleocr or has_version_requirement
+                    "exists": True,
+                    "has_version_check": has_version_check,
+                    "has_paddleocr": has_paddleocr,
+                    "has_version_requirement": has_version_requirement,
+                    "needs_python313": has_paddleocr or has_version_requirement,
                 }
 
             except Exception as e:
-                analysis_results[test_file] = {
-                    'exists': True,
-                    'error': str(e)
-                }
+                analysis_results[test_file] = {"exists": True, "error": str(e)}
         else:
-            analysis_results[test_file] = {'exists': False}
+            analysis_results[test_file] = {"exists": False}
 
     # 显示分析结果
     print("📋 测试文件依赖分析:")
     for file_name, result in analysis_results.items():
-        if result.get('exists', False):
+        if result.get("exists", False):
             status = "✅ 存在"
-            if 'error' in result:
+            if "error" in result:
                 status += f" (错误: {result['error']})"
 
             print(f"  {status} {file_name}")
 
-            if 'needs_python313' in result:
+            if "needs_python313" in result:
                 print(f"    🎯 需要Python 3.13: {result['needs_python313']}")
-            if result.get('has_version_check', False):
+            if result.get("has_version_check", False):
                 print(f"    ✅ 有版本检查")
             else:
                 print(f"    ❌ 缺少版本检查")
@@ -192,6 +208,7 @@ def analyze_test_files():
             print(f"  ❌ 不存在 {file_name}")
 
     return analysis_results
+
 
 def generate_fix_summary():
     """生成修复总结"""
@@ -224,6 +241,7 @@ def generate_fix_summary():
     print("  3. 验证PaddleOCR功能")
     print("  4. 开始稳定测试开发")
 
+
 def main():
     """主函数"""
     print("🎯 版本管理修复效果验证测试")
@@ -231,12 +249,12 @@ def main():
 
     # 运行各项测试
     test_results = {
-        'python_version_checker': test_python_version_checker(),
-        'version_manager': test_version_manager(),
-        'architecture_tests': test_architecture_tests(),
-        'ocr_tests': test_ocr_tests(),
-        'installation_script': test_installation_script(),
-        'test_files_analysis': analyze_test_files()
+        "python_version_checker": test_python_version_checker(),
+        "version_manager": test_version_manager(),
+        "architecture_tests": test_architecture_tests(),
+        "ocr_tests": test_ocr_tests(),
+        "installation_script": test_installation_script(),
+        "test_files_analysis": analyze_test_files(),
     }
 
     # 统计结果 - 只计算布尔值结果
@@ -267,6 +285,7 @@ def main():
     generate_fix_summary()
 
     return success_rate >= 0.6
+
 
 if __name__ == "__main__":
     success = main()
