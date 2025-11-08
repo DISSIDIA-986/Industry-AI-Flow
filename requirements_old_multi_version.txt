@@ -1,0 +1,117 @@
+# ============================================
+# Industry AI Flow - Unified Requirements
+# ============================================
+
+# ============================================
+# LangChain 1.0 Core Framework
+# ============================================
+langchain>=1.0.0              # LangChain 1.0 main package
+langchain-core>=0.3.29        # Core abstractions and interfaces
+langchain-community>=0.3.17   # Community integrations
+langgraph>=0.2.0              # Agent workflow orchestration
+
+# LangChain Integration Packages
+langchain-ollama>=0.2.0       # Ollama integration
+langchain-postgres>=0.0.16    # PostgreSQL/pgvector vector store
+langchain-anthropic>=0.3.0    # Anthropic integration (Zhipu compatible)
+
+# ============================================
+# Vectorization and NLP Models
+# ============================================
+sentence-transformers>=2.2.2  # Local embeddings
+transformers>=4.36.0          # HuggingFace models (reranking, etc.)
+torch>=2.9.0                  # PyTorch backend
+rank-bm25>=0.2.2              # BM25 algorithm (hybrid search)
+
+# ============================================
+# Database and Vector Storage
+# ============================================
+psycopg2-binary>=2.9.9        # PostgreSQL driver
+pgvector>=0.2.4               # pgvector extension support
+asyncpg>=0.29.0               # Async PostgreSQL driver
+sqlalchemy>=2.0.0             # SQL toolkit
+alembic>=1.13.0               # Database migrations
+
+# ============================================
+# Web Framework
+# ============================================
+fastapi>=0.104.1              # FastAPI web framework
+uvicorn>=0.24.0               # ASGI server
+pydantic>=2.0.0               # Data validation and settings
+pydantic-settings>=2.0.0      # Environment configuration
+
+# ============================================
+# Data Processing and Analysis
+# ============================================
+pandas>=2.1.0                 # Data manipulation
+numpy>=1.26.4                 # Numerical computing
+scipy>=1.11.0                 # Scientific computing
+scikit-learn>=1.5.2           # Machine learning
+xgboost>=2.0.3                # XGBoost models
+lightgbm>=4.3.0               # LightGBM models
+
+# ============================================
+# Visualization
+# ============================================
+matplotlib>=3.8.0             # Plotting library
+seaborn>=0.13.1               # Statistical visualization
+plotly>=5.17.0                # Interactive charts
+streamlit>=1.28.0             # Web UI for demos and tools
+
+# ============================================
+# Document Processing
+# ============================================
+python-multipart>=0.0.6       # Form data handling
+aiofiles>=23.2.0              # Async file operations
+PyPDF2>=3.0.1                 # PDF processing
+python-docx>=1.1.0            # Word document processing
+pillow>=10.1.0                # Image processing
+pytesseract>=0.3.10           # OCR functionality (Tesseract backend)
+paddlepaddle>=2.6.0           # PaddlePaddle deep learning framework (>=2.6.0 for MPS support)
+paddleocr>=3.3.0              # PaddleOCR 3.3.1 with PP-OCRv5
+numpy>=1.26.4,<2.0            # NumPy (PaddleOCR compatibility: <2.0)
+baidu-aip>=4.16.0             # Baidu AI SDK (OCR API fallback)
+openpyxl>=3.1.2               # Excel file support
+xlrd>=2.0.1                   # Legacy Excel support
+
+# ============================================
+# Code Execution and Tools
+# ============================================
+docker>=6.1.0                 # Docker Python SDK
+psutil>=5.9.0                 # System resource monitoring
+jinja2>=3.1.0                 # Template engine
+
+# ============================================
+# Chinese NLP Support
+# ============================================
+jieba>=0.42.1                 # Chinese word segmentation
+einops>=0.8.0                 # Tensor operations (nomic-embed-text-v1.5 dependency)
+
+# ============================================
+# Utilities and Development
+# ============================================
+python-dotenv>=1.0.0          # Environment variable loading
+click>=8.1.0                  # Command line interface
+rich>=13.7.0                  # Rich text and beautiful formatting
+typer>=0.9.0                  # Modern CLI framework
+httpx>=0.27.0                 # HTTP client (Zhipu API requests)
+aiohttp>=3.9.0                # Async HTTP client
+
+# ============================================
+# Development and Testing
+# ============================================
+pytest>=7.4.3                 # Testing framework
+pytest-asyncio>=0.21.0        # Async testing support
+pytest-cov>=4.1.0             # Coverage reporting
+black>=23.11.0                # Code formatting
+isort>=5.12.0                 # Import sorting
+flake8>=6.1.0                 # Linting
+mypy>=1.7.0                   # Type checking
+
+# ============================================
+# Monitoring and Observability (Optional)
+# ============================================
+# langsmith>=0.1.0            # LangSmith tracing and monitoring
+# opentelemetry-api>=1.20.0   # OpenTelemetry integration
+# prometheus-client>=0.19.0   # Prometheus metrics
+# structlog>=23.2.0            # Structured logging
