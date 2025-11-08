@@ -1,19 +1,21 @@
 """可迭代代码执行 Agent - 支持 LangChain 1.0 中间件和自我修复机制"""
 
-from langchain.agents import create_agent
-from langchain_core.tools import tool
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.callbacks import BaseCallbackHandler
-from typing import Dict, List, Any, Optional, TypedDict, Annotated
-from dataclasses import dataclass
+import asyncio
 import json
 import logging
-import asyncio
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Annotated, Any, Dict, List, Optional, TypedDict
+
+from langchain.agents import create_agent
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.tools import tool
+
+from backend.config import settings
 from backend.services.code_executor import code_executor
 from backend.services.data_transfer import data_transfer
 from backend.tools.code_execution import code_execution_tool
-from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExecutionAttempt:
     """执行尝试记录"""
+
     attempt_id: str
     code: str
     timestamp: datetime
@@ -41,6 +44,7 @@ class ExecutionAttempt:
 
 class CodeExecutionState(TypedDict):
     """代码执行状态"""
+
     original_request: str
     current_code: str
     attempts: List[ExecutionAttempt]
@@ -61,36 +65,46 @@ class IterativeExecutionCallback(BaseCallbackHandler):
 
     def on_agent_action(self, action, **kwargs):
         """Agent 动作回调"""
-        self.execution_log.append({
-            "type": "agent_action",
-            "action": str(action),
-            "timestamp": datetime.now().isoformat()
-        })
+        self.execution_log.append(
+            {
+                "type": "agent_action",
+                "action": str(action),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def on_tool_start(self, serialized, input_str, **kwargs):
         """工具开始回调"""
-        self.execution_log.append({
-            "type": "tool_start",
-            "tool": serialized.get("name", "unknown"),
-            "input": input_str,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.execution_log.append(
+            {
+                "type": "tool_start",
+                "tool": serialized.get("name", "unknown"),
+                "input": input_str,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def on_tool_end(self, output, **kwargs):
         """工具结束回调"""
-        self.execution_log.append({
-            "type": "tool_end",
-            "output": output[:500] if isinstance(output, str) else str(output)[:500],
-            "timestamp": datetime.now().isoformat()
-        })
+        self.execution_log.append(
+            {
+                "type": "tool_end",
+                "output": output[:500]
+                if isinstance(output, str)
+                else str(output)[:500],
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def on_tool_error(self, error, **kwargs):
         """工具错误回调"""
-        self.execution_log.append({
-            "type": "tool_error",
-            "error": str(error),
-            "timestamp": datetime.now().isoformat()
-        })
+        self.execution_log.append(
+            {
+                "type": "tool_error",
+                "error": str(error),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         # 分析错误模式
         self._analyze_error_pattern(error)
@@ -101,27 +115,41 @@ class IterativeExecutionCallback(BaseCallbackHandler):
 
         # 常见错误模式识别
         if "import" in error_str and "no module" in error_str:
-            self.error_patterns["missing_import"] = self.error_patterns.get("missing_import", 0) + 1
+            self.error_patterns["missing_import"] = (
+                self.error_patterns.get("missing_import", 0) + 1
+            )
             self.fix_strategies["missing_import"] = "add_import_statement"
 
         elif "name" in error_str and "not defined" in error_str:
-            self.error_patterns["name_error"] = self.error_patterns.get("name_error", 0) + 1
+            self.error_patterns["name_error"] = (
+                self.error_patterns.get("name_error", 0) + 1
+            )
             self.fix_strategies["name_error"] = "define_variable"
 
         elif "syntax" in error_str or "syntaxerror" in error_str:
-            self.error_patterns["syntax_error"] = self.error_patterns.get("syntax_error", 0) + 1
+            self.error_patterns["syntax_error"] = (
+                self.error_patterns.get("syntax_error", 0) + 1
+            )
             self.fix_strategies["syntax_error"] = "fix_syntax"
 
         elif "index" in error_str and "out of range" in error_str:
-            self.error_patterns["index_error"] = self.error_patterns.get("index_error", 0) + 1
+            self.error_patterns["index_error"] = (
+                self.error_patterns.get("index_error", 0) + 1
+            )
             self.fix_strategies["index_error"] = "fix_indexing"
 
         elif "type" in error_str and "error" in error_str:
-            self.error_patterns["type_error"] = self.error_patterns.get("type_error", 0) + 1
+            self.error_patterns["type_error"] = (
+                self.error_patterns.get("type_error", 0) + 1
+            )
             self.fix_strategies["type_error"] = "fix_type_conversion"
 
-        elif "file" in error_str and ("not found" in error_str or "no such file" in error_str):
-            self.error_patterns["file_error"] = self.error_patterns.get("file_error", 0) + 1
+        elif "file" in error_str and (
+            "not found" in error_str or "no such file" in error_str
+        ):
+            self.error_patterns["file_error"] = (
+                self.error_patterns.get("file_error", 0) + 1
+            )
             self.fix_strategies["file_error"] = "fix_file_path"
 
 
@@ -136,7 +164,7 @@ class CodeFixer:
                 "matplotlib": "import matplotlib.pyplot as plt",
                 "seaborn": "import seaborn as sns",
                 "sklearn": "from sklearn import *",
-                "plotly": "import plotly.express as px"
+                "plotly": "import plotly.express as px",
             },
             "fix_syntax": [
                 # 修复常见语法错误
@@ -145,37 +173,39 @@ class CodeFixer:
                 ("def ", "def ", "(self):"),
                 ("if ", "if ", ":"),
                 ("for ", "for ", " in range"),
-                ("while ", "while ", ":")
+                ("while ", "while ", ":"),
             ],
             "define_variable": {
                 # 变量定义模板
                 "df": "df = pd.DataFrame()",
                 "data": "data = []",
                 "result": "result = None",
-                "fig": "fig, ax = plt.subplots()"
+                "fig": "fig, ax = plt.subplots()",
             },
             "fix_indexing": {
                 # 索引修复策略
                 "out_of_bounds": "使用 len(df) - 1 作为最大索引",
                 "negative_index": "使用负数索引从末尾访问",
-                "iloc_loc": "使用 df.iloc 而不是直接索引"
+                "iloc_loc": "使用 df.iloc 而不是直接索引",
             },
             "fix_type_conversion": {
                 # 类型转换修复
                 "str_to_int": "int()",
                 "str_to_float": "float()",
                 "list_to_series": "pd.Series()",
-                "series_to_list": ".tolist()"
+                "series_to_list": ".tolist()",
             },
             "fix_file_path": {
                 # 文件路径修复
                 "workspace": "/workspace/data/",
                 "relative": "./data/",
-                "absolute": "/tmp/luncheon_data/"
-            }
+                "absolute": "/tmp/luncheon_data/",
+            },
         }
 
-    def fix_code(self, code: str, error_message: str, fix_strategy: str) -> tuple[str, List[str]]:
+    def fix_code(
+        self, code: str, error_message: str, fix_strategy: str
+    ) -> tuple[str, List[str]]:
         """
         修复代码
 
@@ -215,13 +245,17 @@ class CodeFixer:
             logger.warning(f"代码修复失败: {e}")
             return code, fixes_applied
 
-    def _fix_missing_imports(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_missing_imports(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复缺失的导入"""
         error_lower = error_message.lower()
         fixed_code = code
 
         # 检测缺失的模块
-        for module, import_statement in self.fix_templates["add_import_statement"].items():
+        for module, import_statement in self.fix_templates[
+            "add_import_statement"
+        ].items():
             if module in error_lower and module not in code.lower():
                 # 在代码开头添加导入
                 fixed_code = f"{import_statement}\n\n{fixed_code}"
@@ -229,7 +263,9 @@ class CodeFixer:
 
         return fixed_code, fixes_applied
 
-    def _fix_syntax_errors(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_syntax_errors(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复语法错误"""
         fixed_code = code
 
@@ -241,7 +277,9 @@ class CodeFixer:
 
         return fixed_code, fixes_applied
 
-    def _fix_undefined_variables(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_undefined_variables(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复未定义变量"""
         fixed_code = code
         error_lower = error_message.lower()
@@ -250,23 +288,25 @@ class CodeFixer:
         for var_name, var_definition in self.fix_templates["define_variable"].items():
             if f"'{var_name}'" in error_lower and var_name not in code:
                 # 在使用变量前添加定义
-                lines = code.split('\n')
+                lines = code.split("\n")
                 insert_index = 0
 
                 # 寻找合适的插入位置（在导入语句之后）
                 for i, line in enumerate(lines):
-                    if line.strip().startswith(('import', 'from')) or not line.strip():
+                    if line.strip().startswith(("import", "from")) or not line.strip():
                         continue
                     insert_index = i
                     break
 
                 lines.insert(insert_index, f"# 定义变量 {var_name}\n{var_definition}\n")
-                fixed_code = '\n'.join(lines)
+                fixed_code = "\n".join(lines)
                 fixes_applied.append(f"定义变量: {var_name}")
 
         return fixed_code, fixes_applied
 
-    def _fix_index_errors(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_index_errors(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复索引错误"""
         fixed_code = code
         fixes_applied.append("检查并修复索引访问")
@@ -276,7 +316,9 @@ class CodeFixer:
 
         return fixed_code, fixes_applied
 
-    def _fix_type_errors(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_type_errors(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复类型错误"""
         fixed_code = code
         fixes_applied.append("添加类型转换")
@@ -285,7 +327,9 @@ class CodeFixer:
 
         return fixed_code, fixes_applied
 
-    def _fix_file_paths(self, code: str, error_message: str, fixes_applied: List[str]) -> tuple[str, List[str]]:
+    def _fix_file_paths(
+        self, code: str, error_message: str, fixes_applied: List[str]
+    ) -> tuple[str, List[str]]:
         """修复文件路径错误"""
         fixed_code = code
         fixes_applied.append("修正文件路径")
@@ -295,7 +339,7 @@ class CodeFixer:
             "./data/": "/workspace/data/",
             "../data/": "/workspace/data/",
             "data/": "/workspace/data/",
-            "~/": "/tmp/"
+            "~/": "/tmp/",
         }
 
         for wrong_path, correct_path in path_mappings.items():
@@ -324,8 +368,9 @@ class IterativeCodeExecutionAgent:
 
     def _get_llm(self):
         """获取 LLM 实例"""
-        from langchain_ollama import ChatOllama
         from langchain_anthropic import ChatAnthropic
+        from langchain_ollama import ChatOllama
+
         from backend.config import settings
 
         if settings.llm_provider == "zhipu":
@@ -333,13 +378,13 @@ class IterativeCodeExecutionAgent:
                 model=settings.zhipu_model,
                 api_key=settings.zhipu_api_key,
                 base_url=settings.zhipu_base_url,
-                temperature=0.1
+                temperature=0.1,
             )
         else:
             return ChatOllama(
                 model=settings.ollama_model,
                 base_url=settings.ollama_host,
-                temperature=0.1
+                temperature=0.1,
             )
 
     async def execute_code_iteratively(
@@ -347,7 +392,7 @@ class IterativeCodeExecutionAgent:
         original_request: str,
         initial_code: Optional[str] = None,
         data_file: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         迭代执行代码，直到成功或达到最大尝试次数
@@ -375,7 +420,7 @@ class IterativeCodeExecutionAgent:
             execution_history=[],
             max_attempts=self.max_attempts,
             current_attempt=0,
-            is_completed=False
+            is_completed=False,
         )
 
         # 如果没有初始代码，生成初始代码
@@ -385,10 +430,15 @@ class IterativeCodeExecutionAgent:
             )
 
         # 迭代执行
-        while state["current_attempt"] < state["max_attempts"] and not state["is_completed"]:
+        while (
+            state["current_attempt"] < state["max_attempts"]
+            and not state["is_completed"]
+        ):
             state["current_attempt"] += 1
 
-            self.logger.info(f"代码执行尝试 {state['current_attempt']}/{state['max_attempts']}")
+            self.logger.info(
+                f"代码执行尝试 {state['current_attempt']}/{state['max_attempts']}"
+            )
 
             # 执行代码
             attempt_result = await self._execute_code_attempt(state, data_file)
@@ -409,7 +459,7 @@ class IterativeCodeExecutionAgent:
         self,
         request: str,
         data_file: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """生成初始代码"""
         prompt = f"""
@@ -434,18 +484,13 @@ class IterativeCodeExecutionAgent:
 - 输出分析结果
 """
 
-        messages = [
-            ("system", "你是一个专业的数据分析师，擅长编写 Python 数据分析代码。"),
-            ("human", prompt)
-        ]
+        messages = [("system", "你是一个专业的数据分析师，擅长编写 Python 数据分析代码。"), ("human", prompt)]
 
         response = await self.llm.ainvoke(messages)
         return response.content
 
     async def _execute_code_attempt(
-        self,
-        state: CodeExecutionState,
-        data_file: Optional[str] = None
+        self, state: CodeExecutionState, data_file: Optional[str] = None
     ) -> ExecutionAttempt:
         """执行单次代码尝试"""
         attempt_id = f"attempt_{state['current_attempt']}"
@@ -458,7 +503,7 @@ class IterativeCodeExecutionAgent:
             result = code_executor.execute_code(
                 code=state["current_code"],
                 data_files=data_files,
-                timeout=settings.code_execution_timeout
+                timeout=settings.code_execution_timeout,
             )
 
             attempt = ExecutionAttempt(
@@ -469,7 +514,7 @@ class IterativeCodeExecutionAgent:
                 stdout=result.get("stdout", ""),
                 stderr=result.get("stderr", ""),
                 execution_time=result.get("execution_time", 0.0),
-                visualizations=result.get("visualizations", [])
+                visualizations=result.get("visualizations", []),
             )
 
             if not result["success"]:
@@ -483,38 +528,29 @@ class IterativeCodeExecutionAgent:
                 code=state["current_code"],
                 timestamp=datetime.now(),
                 success=False,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def _analyze_and_fix_code(
-        self,
-        state: CodeExecutionState,
-        failed_attempt: ExecutionAttempt
+        self, state: CodeExecutionState, failed_attempt: ExecutionAttempt
     ) -> str:
         """分析错误并修复代码"""
         self.logger.info(f"分析执行错误: {failed_attempt.error_message}")
 
         # 使用 LLM 分析错误
         analysis_result = await self._analyze_error_with_llm(
-            failed_attempt.code,
-            failed_attempt.error_message,
-            failed_attempt.stderr
+            failed_attempt.code, failed_attempt.error_message, failed_attempt.stderr
         )
 
         # 应用自动修复
         fixed_code = await self._apply_automatic_fixes(
-            failed_attempt.code,
-            failed_attempt.error_message,
-            analysis_result
+            failed_attempt.code, failed_attempt.error_message, analysis_result
         )
 
         return fixed_code
 
     async def _analyze_error_with_llm(
-        self,
-        code: str,
-        error_message: str,
-        stderr: str
+        self, code: str, error_message: str, stderr: str
     ) -> Dict[str, Any]:
         """使用 LLM 分析错误"""
         prompt = f"""
@@ -553,10 +589,7 @@ class IterativeCodeExecutionAgent:
 }}
 """
 
-        messages = [
-            ("system", "你是一个专业的 Python 调试专家，擅长分析和修复代码错误。"),
-            ("human", prompt)
-        ]
+        messages = [("system", "你是一个专业的 Python 调试专家，擅长分析和修复代码错误。"), ("human", prompt)]
 
         try:
             response = await self.llm.ainvoke(messages)
@@ -569,14 +602,11 @@ class IterativeCodeExecutionAgent:
                 "root_cause": "无法解析错误信息",
                 "fix_suggestions": ["检查代码语法"],
                 "missing_imports": [],
-                "code_changes": []
+                "code_changes": [],
             }
 
     async def _apply_automatic_fixes(
-        self,
-        code: str,
-        error_message: str,
-        analysis_result: Dict[str, Any]
+        self, code: str, error_message: str, analysis_result: Dict[str, Any]
     ) -> str:
         """应用自动修复"""
         fixed_code = code
@@ -599,13 +629,13 @@ class IterativeCodeExecutionAgent:
             original = change.get("original", "")
             fixed = change.get("fixed", "")
 
-            lines = fixed_code.split('\n')
+            lines = fixed_code.split("\n")
             if 0 <= line_num < len(lines):
                 if original in lines[line_num]:
                     lines[line_num] = lines[line_num].replace(original, fixed)
                     fixes_applied.append(f"第{line_num}行: {original} -> {fixed}")
 
-            fixed_code = '\n'.join(lines)
+            fixed_code = "\n".join(lines)
 
         # 使用内置修复器
         if fixes_applied:  # 如果 LLM 修复失败，尝试内置修复
@@ -646,8 +676,8 @@ class IterativeCodeExecutionAgent:
                     "total_attempts": len(state["attempts"]),
                     "success": True,
                     "error_count": len(failed_attempts),
-                    "fixes_applied": self._count_fixes_applied(state["attempts"])
-                }
+                    "fixes_applied": self._count_fixes_applied(state["attempts"]),
+                },
             }
         else:
             return {
@@ -658,16 +688,18 @@ class IterativeCodeExecutionAgent:
                 "failed_attempts": [
                     {
                         "attempt_id": attempt.attempt_id,
-                        "error_message": attempt.error_message
+                        "error_message": attempt.error_message,
                     }
                     for attempt in failed_attempts
                 ],
                 "summary": {
                     "total_attempts": len(state["attempts"]),
                     "success": False,
-                    "last_error": failed_attempts[-1].error_message if failed_attempts else "Unknown error",
-                    "error_patterns": self.callback_handler.error_patterns
-                }
+                    "last_error": failed_attempts[-1].error_message
+                    if failed_attempts
+                    else "Unknown error",
+                    "error_patterns": self.callback_handler.error_patterns,
+                },
             }
 
     def _count_fixes_applied(self, attempts: List[ExecutionAttempt]) -> int:

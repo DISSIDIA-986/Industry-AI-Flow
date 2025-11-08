@@ -16,16 +16,18 @@ def chunk_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> lis
     while start < len(text):
         end = start + chunk_size
         chunk_content = text[start:end]
-        chunks.append({
-            "content": chunk_content,
-            "metadata": {
-                "chunk_id": idx,
-                "start_pos": start,
-                "end_pos": min(end, len(text)),
-                "length": len(chunk_content)
+        chunks.append(
+            {
+                "content": chunk_content,
+                "metadata": {
+                    "chunk_id": idx,
+                    "start_pos": start,
+                    "end_pos": min(end, len(text)),
+                    "length": len(chunk_content),
+                },
             }
-        })
-        start += (chunk_size - chunk_overlap)
+        )
+        start += chunk_size - chunk_overlap
         idx += 1
     return chunks
 
@@ -35,6 +37,7 @@ class DocumentChunker:
 
     def __init__(self):
         from backend.config import settings
+
         self.chunk_size = settings.chunk_size
         self.chunk_overlap = settings.chunk_overlap
 
@@ -59,18 +62,17 @@ class DocumentChunker:
             raw_chunks = chunk_text(
                 text=text_content,
                 chunk_size=self.chunk_size,
-                chunk_overlap=self.chunk_overlap
+                chunk_overlap=self.chunk_overlap,
             )
 
             # 转换为LangChain Document对象
             chunks = []
             for chunk_data in raw_chunks:
                 chunk_metadata = original_metadata.copy()
-                chunk_metadata.update(chunk_data['metadata'])
+                chunk_metadata.update(chunk_data["metadata"])
 
                 chunk = Document(
-                    page_content=chunk_data['content'],
-                    metadata=chunk_metadata
+                    page_content=chunk_data["content"], metadata=chunk_metadata
                 )
                 chunks.append(chunk)
 

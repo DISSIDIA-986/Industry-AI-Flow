@@ -2,15 +2,17 @@
 llama.cpp 客户端实现
 提供本地 GGUF 模型推理功能，支持 Metal 加速
 """
-import os
 import logging
+import os
 import time
-from typing import Optional, Dict, Any, List
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import psutil
 
 try:
     from llama_cpp import Llama
+
     LLAMA_CPP_AVAILABLE = True
 except ImportError:
     LLAMA_CPP_AVAILABLE = False
@@ -30,7 +32,7 @@ class LlamaCppClient:
         n_threads: int = None,
         n_gpu_layers: int = -1,
         n_batch: int = 512,
-        verbose: bool = False
+        verbose: bool = False,
     ):
         """
         初始化 llama.cpp 客户端
@@ -49,9 +51,13 @@ class LlamaCppClient:
                 "CMAKE_ARGS='-DGGML_METAL=on' pip install llama-cpp-python"
             )
 
-        self.model_path = model_path or getattr(settings, 'llama_model_path', 'models/qwen2.5-7b-instruct.gguf')
-        self.n_ctx = n_ctx or getattr(settings, 'llama_context_size', 4096)
-        self.n_threads = n_threads or getattr(settings, 'llama_threads', os.cpu_count() or 8)
+        self.model_path = model_path or getattr(
+            settings, "llama_model_path", "models/qwen2.5-7b-instruct.gguf"
+        )
+        self.n_ctx = n_ctx or getattr(settings, "llama_context_size", 4096)
+        self.n_threads = n_threads or getattr(
+            settings, "llama_threads", os.cpu_count() or 8
+        )
         self.n_gpu_layers = n_gpu_layers
         self.n_batch = n_batch
         self.verbose = verbose
@@ -91,6 +97,7 @@ class LlamaCppClient:
         """自动检测GPU并返回适当的层数"""
         try:
             import torch
+
             if torch.backends.mps.is_available():
                 logger.info("✅ 检测到 Apple Silicon Metal，启用 GPU 加速")
                 return -1  # 使用所有GPU层
@@ -106,7 +113,9 @@ class LlamaCppClient:
         """加载模型"""
         try:
             logger.info(f"开始加载模型: {Path(self.model_path).name}")
-            logger.info(f"配置 - 上下文: {self.n_ctx}, 线程: {self.n_threads}, GPU层: {self.n_gpu_layers}")
+            logger.info(
+                f"配置 - 上下文: {self.n_ctx}, 线程: {self.n_threads}, GPU层: {self.n_gpu_layers}"
+            )
 
             start_time = time.time()
             self.model = Llama(
@@ -115,7 +124,7 @@ class LlamaCppClient:
                 n_threads=self.n_threads,
                 n_gpu_layers=self.n_gpu_layers,
                 n_batch=self.n_batch,
-                verbose=self.verbose
+                verbose=self.verbose,
             )
 
             load_time = time.time() - start_time
@@ -147,7 +156,7 @@ class LlamaCppClient:
         repeat_penalty: Optional[float] = None,
         stop: Optional[List[str]] = None,
         stream: bool = False,
-        **kwargs
+        **kwargs,
     ) -> str:
         """
         生成文本（兼容 OllamaClient 接口）
@@ -167,9 +176,17 @@ class LlamaCppClient:
             生成的文本
         """
         # 使用传入参数或默认值
-        temperature = temperature if temperature is not None else getattr(settings, 'default_temperature', 0.7)
-        max_tokens = max_tokens if max_tokens is not None else getattr(settings, 'default_max_tokens', 2000)
-        top_p = top_p if top_p is not None else getattr(settings, 'default_top_p', 0.9)
+        temperature = (
+            temperature
+            if temperature is not None
+            else getattr(settings, "default_temperature", 0.7)
+        )
+        max_tokens = (
+            max_tokens
+            if max_tokens is not None
+            else getattr(settings, "default_max_tokens", 2000)
+        )
+        top_p = top_p if top_p is not None else getattr(settings, "default_top_p", 0.9)
         top_k = top_k if top_k is not None else 40
         repeat_penalty = repeat_penalty if repeat_penalty is not None else 1.1
 
@@ -182,7 +199,7 @@ class LlamaCppClient:
                 top_k=top_k,
                 repeat_penalty=repeat_penalty,
                 stop=stop,
-                echo=False
+                echo=False,
             )
 
             return response["choices"][0]["text"]
@@ -196,7 +213,7 @@ class LlamaCppClient:
         messages: list,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        top_p: Optional[float] = None
+        top_p: Optional[float] = None,
     ) -> str:
         """
         对话模式生成（兼容 OllamaClient 接口）
@@ -225,10 +242,7 @@ class LlamaCppClient:
         prompt = "\n".join(prompt_parts) + "\nAssistant:"
 
         return self.generate(
-            prompt=prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p
+            prompt=prompt, temperature=temperature, max_tokens=max_tokens, top_p=top_p
         )
 
     def get_model_info(self) -> Dict[str, Any]:
@@ -241,7 +255,7 @@ class LlamaCppClient:
             "n_threads": self.n_threads,
             "n_gpu_layers": self.n_gpu_layers,
             "gpu_acceleration": self.n_gpu_layers > 0,
-            "n_batch": self.n_batch
+            "n_batch": self.n_batch,
         }
 
     def get_current_config(self) -> Dict[str, Any]:
@@ -249,9 +263,9 @@ class LlamaCppClient:
         return {
             "model": Path(self.model_path).name,
             "base_url": "local",
-            "default_temperature": getattr(settings, 'default_temperature', 0.7),
-            "default_max_tokens": getattr(settings, 'default_max_tokens', 2000),
-            "default_top_p": getattr(settings, 'default_top_p', 0.9)
+            "default_temperature": getattr(settings, "default_temperature", 0.7),
+            "default_max_tokens": getattr(settings, "default_max_tokens", 2000),
+            "default_top_p": getattr(settings, "default_top_p", 0.9),
         }
 
     def list_models(self) -> list:
@@ -273,7 +287,7 @@ class LlamaCppClient:
         process = psutil.Process(os.getpid())
         return {
             "memory_mb": round(process.memory_info().rss / 1024 / 1024, 2),
-            "cpu_percent": process.cpu_percent()
+            "cpu_percent": process.cpu_percent(),
         }
 
     def unload_model(self):

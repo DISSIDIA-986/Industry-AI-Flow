@@ -1,8 +1,9 @@
 """Agent State Definitions - LangChain 1.0 TypedDict-based"""
 
-from typing import TypedDict, Annotated, Sequence
-from langchain_core.messages import BaseMessage
 import operator
+from typing import Annotated, Sequence, TypedDict
+
+from langchain_core.messages import BaseMessage
 
 
 class RAGAgentState(TypedDict):

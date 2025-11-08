@@ -2,19 +2,21 @@
 增强的查询API路由 - 支持参数配置和反馈集成
 """
 
-from fastapi import APIRouter, HTTPException, Body, Query
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
 import logging
+from typing import Any, Dict, List, Optional
 
-from backend.services.rag_engine import SimpleRAG
+from fastapi import APIRouter, Body, HTTPException, Query
+from pydantic import BaseModel
+
 from backend.config import settings
+from backend.services.rag_engine import SimpleRAG
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 全局RAG实例
 rag_instance = None
+
 
 def get_rag_instance():
     """获取RAG实例"""
@@ -23,13 +25,14 @@ def get_rag_instance():
         rag_instance = SimpleRAG(
             use_hybrid_search=True,
             use_reranker=True,
-            enable_feedback=settings.enable_feedback_system
+            enable_feedback=settings.enable_feedback_system,
         )
     return rag_instance
 
 
 class QueryRequest(BaseModel):
     """查询请求模型"""
+
     question: str
     top_k: Optional[int] = None
     temperature: Optional[float] = None
@@ -39,6 +42,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """查询响应模型"""
+
     query_id: str
     question: str
     answer: str
@@ -49,6 +53,7 @@ class QueryResponse(BaseModel):
 
 class LLMConfigUpdateRequest(BaseModel):
     """LLM配置更新请求模型"""
+
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     top_p: Optional[float] = None
@@ -70,20 +75,24 @@ async def enhanced_query(request: QueryRequest):
 
         # 参数验证
         if request.temperature is not None and not (0.0 <= request.temperature <= 1.0):
-            raise HTTPException(status_code=400, detail="Temperature must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Temperature must be between 0.0 and 1.0"
+            )
 
         if request.max_tokens is not None and request.max_tokens <= 0:
             raise HTTPException(status_code=400, detail="Max tokens must be positive")
 
         if request.top_p is not None and not (0.0 <= request.top_p <= 1.0):
-            raise HTTPException(status_code=400, detail="Top_p must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Top_p must be between 0.0 and 1.0"
+            )
 
         # 执行查询
         result = rag.query(
             question=request.question,
             top_k=request.top_k,
             temperature=request.temperature,
-            max_tokens=request.max_tokens
+            max_tokens=request.max_tokens,
         )
 
         logger.info(f"Query processed successfully: {request.question[:100]}...")
@@ -113,9 +122,9 @@ async def get_current_llm_config():
             "default_config": {
                 "temperature": settings.default_temperature,
                 "max_tokens": settings.default_max_tokens,
-                "top_p": settings.default_top_p
+                "top_p": settings.default_top_p,
             },
-            "model_info": rag.llm_client.get_model_info()
+            "model_info": rag.llm_client.get_model_info(),
         }
 
     except Exception as e:
@@ -137,24 +146,28 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
     try:
         # 参数验证
         if request.temperature is not None and not (0.0 <= request.temperature <= 1.0):
-            raise HTTPException(status_code=400, detail="Temperature must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Temperature must be between 0.0 and 1.0"
+            )
 
         if request.max_tokens is not None and request.max_tokens <= 0:
             raise HTTPException(status_code=400, detail="Max tokens must be positive")
 
         if request.top_p is not None and not (0.0 <= request.top_p <= 1.0):
-            raise HTTPException(status_code=400, detail="Top_p must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Top_p must be between 0.0 and 1.0"
+            )
 
         rag = get_rag_instance()
 
         # 构建更新参数
         update_params = {}
         if request.temperature is not None:
-            update_params['default_temperature'] = request.temperature
+            update_params["default_temperature"] = request.temperature
         if request.max_tokens is not None:
-            update_params['default_max_tokens'] = request.max_tokens
+            update_params["default_max_tokens"] = request.max_tokens
         if request.top_p is not None:
-            update_params['default_top_p'] = request.top_p
+            update_params["default_top_p"] = request.top_p
 
         # 更新配置
         rag.llm_client.update_config(**update_params)
@@ -167,7 +180,7 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
             "success": True,
             "message": "LLM configuration updated successfully",
             "updated_params": update_params,
-            "new_config": new_config
+            "new_config": new_config,
         }
 
     except HTTPException:
@@ -192,7 +205,7 @@ async def list_available_models():
         return {
             "models": models,
             "current_model": rag.llm_client.model,
-            "count": len(models)
+            "count": len(models),
         }
 
     except Exception as e:
@@ -216,12 +229,12 @@ async def switch_model(model_name: str = Body(..., embed=True)):
 
         # 获取可用模型列表
         available_models = rag.llm_client.list_models()
-        model_names = [model.get('name', '') for model in available_models]
+        model_names = [model.get("name", "") for model in available_models]
 
         if model_name not in model_names:
             raise HTTPException(
                 status_code=400,
-                detail=f"Model '{model_name}' not available. Available models: {model_names}"
+                detail=f"Model '{model_name}' not available. Available models: {model_names}",
             )
 
         # 切换模型
@@ -234,7 +247,7 @@ async def switch_model(model_name: str = Body(..., embed=True)):
             "success": True,
             "message": "Model switched successfully",
             "old_model": old_model,
-            "new_model": model_name
+            "new_model": model_name,
         }
 
     except HTTPException:
@@ -261,14 +274,11 @@ async def get_adaptive_search_weights():
         return {
             "current_weights": {
                 "vector_weight": vector_weight,
-                "bm25_weight": bm25_weight
+                "bm25_weight": bm25_weight,
             },
-            "default_weights": {
-                "vector_weight": 0.7,
-                "bm25_weight": 0.3
-            },
+            "default_weights": {"vector_weight": 0.7, "bm25_weight": 0.3},
             "feedback_enabled": rag.enable_feedback,
-            "adaptive_adjustment": rag.enable_feedback and True  # 如果启用反馈系统则支持自适应调整
+            "adaptive_adjustment": rag.enable_feedback and True,  # 如果启用反馈系统则支持自适应调整
         }
 
     except Exception as e:
@@ -281,7 +291,7 @@ async def chat_completion(
     messages: List[Dict[str, str]] = Body(...),
     temperature: Optional[float] = Body(None),
     max_tokens: Optional[int] = Body(None),
-    top_p: Optional[float] = Body(None)
+    top_p: Optional[float] = Body(None),
 ):
     """
     对话模式完成接口
@@ -300,35 +310,51 @@ async def chat_completion(
 
         # 参数验证
         if temperature is not None and not (0.0 <= temperature <= 1.0):
-            raise HTTPException(status_code=400, detail="Temperature must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Temperature must be between 0.0 and 1.0"
+            )
 
         if max_tokens is not None and max_tokens <= 0:
             raise HTTPException(status_code=400, detail="Max tokens must be positive")
 
         if top_p is not None and not (0.0 <= top_p <= 1.0):
-            raise HTTPException(status_code=400, detail="Top_p must be between 0.0 and 1.0")
+            raise HTTPException(
+                status_code=400, detail="Top_p must be between 0.0 and 1.0"
+            )
 
         # 验证消息格式
         for message in messages:
-            if not isinstance(message, dict) or 'role' not in message or 'content' not in message:
-                raise HTTPException(status_code=400, detail="Each message must have 'role' and 'content' fields")
+            if (
+                not isinstance(message, dict)
+                or "role" not in message
+                or "content" not in message
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Each message must have 'role' and 'content' fields",
+                )
 
-            if message['role'] not in ['user', 'assistant', 'system']:
-                raise HTTPException(status_code=400, detail="Message role must be 'user', 'assistant', or 'system'")
+            if message["role"] not in ["user", "assistant", "system"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Message role must be 'user', 'assistant', or 'system'",
+                )
 
         # 执行对话
         response = rag.llm_client.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            top_p=top_p
+            top_p=top_p,
         )
 
-        logger.info(f"Chat completion processed successfully with {len(messages)} messages")
+        logger.info(
+            f"Chat completion processed successfully with {len(messages)} messages"
+        )
         return {
             "response": response,
             "model": rag.llm_client.model,
-            "message_count": len(messages)
+            "message_count": len(messages),
         }
 
     except HTTPException:
@@ -356,7 +382,7 @@ async def query_health_check():
             "llm_client": "healthy",
             "feedback_system": "enabled" if rag.enable_feedback else "disabled",
             "hybrid_search": "enabled" if rag.use_hybrid_search else "disabled",
-            "reranker": "enabled" if rag.use_reranker else "disabled"
+            "reranker": "enabled" if rag.use_reranker else "disabled",
         }
 
         # 测试LLM连接

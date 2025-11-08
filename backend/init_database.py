@@ -2,8 +2,10 @@
 数据库初始化脚本 - 创建所有必要的表和索引
 """
 
-import psycopg2
 import logging
+
+import psycopg2
+
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,8 @@ def init_database():
             pgvector_available = False
 
         # 创建文档表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS documents (
                 id VARCHAR(255) PRIMARY KEY,
                 filename VARCHAR(255) NOT NULL,
@@ -38,11 +41,13 @@ def init_database():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # 创建文档块表
         if pgvector_available:
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS document_chunks (
                     id SERIAL PRIMARY KEY,
                     doc_id VARCHAR(255) NOT NULL,
@@ -53,10 +58,12 @@ def init_database():
                     FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                     UNIQUE (doc_id, chunk_id)
                 )
-            """)
+            """
+            )
         else:
             # 如果pgvector不可用，将向量存储为TEXT
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS document_chunks (
                     id SERIAL PRIMARY KEY,
                     doc_id VARCHAR(255) NOT NULL,
@@ -67,10 +74,12 @@ def init_database():
                     FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                     UNIQUE (doc_id, chunk_id)
                 )
-            """)
+            """
+            )
 
         # 创建反馈表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS query_feedback (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 query_id VARCHAR(255) UNIQUE NOT NULL,
@@ -83,10 +92,12 @@ def init_database():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 processed_at TIMESTAMP
             )
-        """)
+        """
+        )
 
         # 创建文档质量评分表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS document_quality_scores (
                 doc_id VARCHAR(255) NOT NULL,
                 chunk_id INTEGER NOT NULL,
@@ -96,10 +107,12 @@ def init_database():
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (doc_id, chunk_id)
             )
-        """)
+        """
+        )
 
         # 创建查询优化记录表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS query_optimization_log (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 query_id VARCHAR(255) NOT NULL,
@@ -109,10 +122,12 @@ def init_database():
                 improvement_score FLOAT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # 创建文档版本表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS document_versions (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 doc_id VARCHAR(255) NOT NULL,
@@ -126,10 +141,12 @@ def init_database():
                 FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                 UNIQUE (doc_id, version)
             )
-        """)
+        """
+        )
 
         # 创建文档操作日志表
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS document_operations_log (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 doc_id VARCHAR(255),
@@ -141,7 +158,8 @@ def init_database():
                 error_message TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # 创建索引
         indexes = [
@@ -153,12 +171,14 @@ def init_database():
             "CREATE INDEX IF NOT EXISTS idx_doc_quality ON document_quality_scores(quality_score)",
             "CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)",
             "CREATE INDEX IF NOT EXISTS idx_doc_versions_active ON document_versions(is_active)",
-            "CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)"
+            "CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)",
         ]
 
         # 只有pgvector可用时才创建向量索引
         if pgvector_available:
-            indexes.append("CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops)")
+            indexes.append(
+                "CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops)"
+            )
 
         for index_sql in indexes:
             try:
@@ -167,7 +187,8 @@ def init_database():
                 logger.warning(f"Failed to create index: {e}")
 
         # 创建更新时间的触发器
-        cur.execute("""
+        cur.execute(
+            """
             CREATE OR REPLACE FUNCTION update_updated_at_column()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -175,18 +196,22 @@ def init_database():
                 RETURN NEW;
             END;
             $$ language 'plpgsql';
-        """)
+        """
+        )
 
-        cur.execute("""
+        cur.execute(
+            """
             DROP TRIGGER IF EXISTS update_documents_updated_at ON documents;
             CREATE TRIGGER update_documents_updated_at
                 BEFORE UPDATE ON documents
                 FOR EACH ROW
                 EXECUTE FUNCTION update_updated_at_column();
-        """)
+        """
+        )
 
         # 创建文档版本触发器函数
-        cur.execute("""
+        cur.execute(
+            """
             CREATE OR REPLACE FUNCTION update_document_versions()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -196,25 +221,30 @@ def init_database():
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """)
+        """
+        )
 
-        cur.execute("""
+        cur.execute(
+            """
             DROP TRIGGER IF EXISTS trigger_update_document_versions ON document_versions;
             CREATE TRIGGER trigger_update_document_versions
                 AFTER INSERT ON document_versions
                 FOR EACH ROW
                 EXECUTE FUNCTION update_document_versions();
-        """)
+        """
+        )
 
         conn.commit()
         logger.info("Database initialized successfully")
 
         # 打印表信息
-        cur.execute("""
+        cur.execute(
+            """
             SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name
-        """)
+        """
+        )
         tables = [row[0] for row in cur.fetchall()]
         logger.info(f"Created tables: {', '.join(tables)}")
 

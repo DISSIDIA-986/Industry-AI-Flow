@@ -7,25 +7,27 @@
 2. 生产环境: CUDA GPU + CPU 混合部署
 """
 
-import torch
 import logging
 from enum import Enum
 from typing import Optional
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class DeviceType(Enum):
     """设备类型枚举"""
-    MPS = "mps"      # Apple Metal Performance Shaders
-    CUDA = "cuda"    # NVIDIA GPU
-    CPU = "cpu"      # CPU fallback
+
+    MPS = "mps"  # Apple Metal Performance Shaders
+    CUDA = "cuda"  # NVIDIA GPU
+    CPU = "cpu"  # CPU fallback
 
 
 class DeviceManager:
     """设备管理器 - 单例模式"""
 
-    _instance: Optional['DeviceManager'] = None
+    _instance: Optional["DeviceManager"] = None
     _device: Optional[torch.device] = None
     _device_type: Optional[DeviceType] = None
 
@@ -64,7 +66,9 @@ class DeviceManager:
             self._device = torch.device("cuda")
             self._device_type = DeviceType.CUDA
             cuda_device_count = torch.cuda.device_count()
-            cuda_device_name = torch.cuda.get_device_name(0) if cuda_device_count > 0 else "Unknown"
+            cuda_device_name = (
+                torch.cuda.get_device_name(0) if cuda_device_count > 0 else "Unknown"
+            )
             logger.info("✅ 使用 NVIDIA CUDA GPU 加速")
             logger.info(f"   - GPU 数量: {cuda_device_count}")
             logger.info(f"   - GPU 型号: {cuda_device_name}")
@@ -129,26 +133,32 @@ class DeviceManager:
 
         if self._device_type == DeviceType.MPS:
             # Apple MPS 优化
-            config.update({
-                "convert_to_numpy": True,  # MPS 结果转 numpy
-                "normalize_embeddings": True,  # 归一化加速余弦相似度计算
-            })
+            config.update(
+                {
+                    "convert_to_numpy": True,  # MPS 结果转 numpy
+                    "normalize_embeddings": True,  # 归一化加速余弦相似度计算
+                }
+            )
 
         elif self._device_type == DeviceType.CUDA:
             # CUDA GPU 优化
-            config.update({
-                "convert_to_numpy": True,
-                "normalize_embeddings": True,
-                "batch_size": 64,  # GPU 可以处理更大的 batch
-            })
+            config.update(
+                {
+                    "convert_to_numpy": True,
+                    "normalize_embeddings": True,
+                    "batch_size": 64,  # GPU 可以处理更大的 batch
+                }
+            )
 
         else:
             # CPU 优化
-            config.update({
-                "convert_to_numpy": True,
-                "normalize_embeddings": True,
-                "batch_size": 16,  # CPU batch size 较小
-            })
+            config.update(
+                {
+                    "convert_to_numpy": True,
+                    "normalize_embeddings": True,
+                    "batch_size": 16,  # CPU batch size 较小
+                }
+            )
 
         return config
 
@@ -205,4 +215,5 @@ if __name__ == "__main__":
     # 测试配置
     print("推理优化配置:")
     import json
+
     print(json.dumps(get_inference_config(), indent=2))

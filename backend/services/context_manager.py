@@ -8,9 +8,9 @@ import json
 import logging
 import re
 import uuid
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict, field
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileContext:
     """文件上下文信息"""
+
     file_id: str
     file_name: str
     file_type: str
@@ -30,13 +31,14 @@ class FileContext:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         data = asdict(self)
-        data['upload_time'] = self.upload_time.isoformat()
+        data["upload_time"] = self.upload_time.isoformat()
         return data
 
 
 @dataclass
 class InteractionRecord:
     """交互记录"""
+
     record_id: str
     timestamp: datetime
     user_query: str
@@ -50,13 +52,14 @@ class InteractionRecord:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data
 
 
 @dataclass
 class SessionContext:
     """会话上下文"""
+
     session_id: str
     user_id: Optional[str] = None
     start_time: datetime = field(default_factory=datetime.now)
@@ -88,7 +91,9 @@ class SessionContext:
 
         # 更新完成率
         successful_interactions = sum(1 for r in self.interaction_history if r.success)
-        self.completion_rate = successful_interactions / max(len(self.interaction_history), 1)
+        self.completion_rate = successful_interactions / max(
+            len(self.interaction_history), 1
+        )
 
     def add_uploaded_file(self, file_context: FileContext):
         """添加上传文件"""
@@ -130,7 +135,7 @@ class SessionContext:
             "language": self.language_preference,
             "uploaded_files_count": len(self.uploaded_files),
             "completion_rate": self.completion_rate,
-            "detected_intents": self.get_recent_intents()
+            "detected_intents": self.get_recent_intents(),
         }
 
 
@@ -154,15 +159,17 @@ class ContextManager:
 
         # 统计信息
         self.stats = {
-            'active_sessions': 0,
-            'total_interactions': 0,
-            'avg_session_duration': 0.0,
-            'cache_hits': 0
+            "active_sessions": 0,
+            "total_interactions": 0,
+            "avg_session_duration": 0.0,
+            "cache_hits": 0,
         }
 
         logger.info(f"上下文管理器初始化完成，后端: {storage_backend}")
 
-    async def get_session_context(self, session_id: str, user_id: Optional[str] = None) -> SessionContext:
+    async def get_session_context(
+        self, session_id: str, user_id: Optional[str] = None
+    ) -> SessionContext:
         """
         获取会话上下文
 
@@ -178,7 +185,7 @@ class ContextManager:
             session = self._session_cache[session_id]
             # 验证会话是否仍然有效（24小时内有活动）
             if (datetime.now() - session.last_activity).total_seconds() < 86400:
-                self.stats['cache_hits'] += 1
+                self.stats["cache_hits"] += 1
                 logger.debug(f"从缓存获取会话: {session_id}")
                 return session
             else:
@@ -195,7 +202,9 @@ class ContextManager:
         logger.info(f"创建/加载会话上下文: {session_id}")
         return session
 
-    async def update_session_context(self, session_id: str, updates: Dict[str, Any]) -> SessionContext:
+    async def update_session_context(
+        self, session_id: str, updates: Dict[str, Any]
+    ) -> SessionContext:
         """
         更新会话上下文
 
@@ -233,7 +242,7 @@ class ContextManager:
         confidence: float,
         processing_time_ms: int,
         user_feedback: Optional[int] = None,
-        success: bool = True
+        success: bool = True,
     ) -> None:
         """
         添加交互记录
@@ -259,7 +268,7 @@ class ContextManager:
             confidence=confidence,
             processing_time_ms=processing_time_ms,
             user_feedback=user_feedback,
-            success=success
+            success=success,
         )
 
         session.add_interaction(record)
@@ -271,12 +280,14 @@ class ContextManager:
                 session.satisfaction_score = user_feedback
             else:
                 # 计算移动平均
-                session.satisfaction_score = (session.satisfaction_score * 0.8 + user_feedback * 0.2)
+                session.satisfaction_score = (
+                    session.satisfaction_score * 0.8 + user_feedback * 0.2
+                )
 
         await self._save_session_to_storage(session)
         self._session_cache[session_id] = session
 
-        self.stats['total_interactions'] += 1
+        self.stats["total_interactions"] += 1
 
     async def add_uploaded_file(
         self,
@@ -287,7 +298,7 @@ class ContextManager:
         file_size: int,
         file_path: str,
         preview: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         添加上传文件记录
@@ -310,7 +321,7 @@ class ContextManager:
             upload_time=datetime.now(),
             file_path=file_path,
             preview=preview,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         session = await self.get_session_context(session_id)
@@ -324,10 +335,7 @@ class ContextManager:
         self._session_cache[session_id] = session
 
     async def get_enhanced_context(
-        self,
-        session_id: str,
-        max_history: int = 10,
-        include_files: bool = True
+        self, session_id: str, max_history: int = 10, include_files: bool = True
     ) -> Dict[str, Any]:
         """
         获取增强的上下文信息
@@ -347,20 +355,26 @@ class ContextManager:
             "session_info": session.get_context_summary(),
             "recent_intents": session.get_recent_intents(),
             "interaction_count": session.query_count,
-            "session_stage": session.session_stage
+            "session_stage": session.session_stage,
         }
 
         # 历史交互
         if session.interaction_history:
             recent_history = session.interaction_history[-max_history:]
-            context["interaction_history"] = [record.to_dict() for record in recent_history]
+            context["interaction_history"] = [
+                record.to_dict() for record in recent_history
+            ]
 
         # 文件信息
         if include_files and session.uploaded_files:
             context["file_context"] = {
                 "total_files": len(session.uploaded_files),
-                "recent_files": [file.to_dict() for file in session.uploaded_files[-3:]],
-                "file_types": list(set(file.file_type for file in session.uploaded_files))
+                "recent_files": [
+                    file.to_dict() for file in session.uploaded_files[-3:]
+                ],
+                "file_types": list(
+                    set(file.file_type for file in session.uploaded_files)
+                ),
             }
 
         # 用户偏好
@@ -380,12 +394,51 @@ class ContextManager:
             context_keywords.append(file.file_name)
 
         # 去重并清理
-        context["context_keywords"] = list(set(
-            word for word in context_keywords
-            if len(word) > 1 and word.lower() not in [
-                "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "this", "that", "is", "are", "be", "have", "has", "what", "when", "where", "why", "how", "all", "any", "can", "could", "would", "should", "will"
-            ]
-        ))[:20]  # 限制关键词数量
+        context["context_keywords"] = list(
+            set(
+                word
+                for word in context_keywords
+                if len(word) > 1
+                and word.lower()
+                not in [
+                    "the",
+                    "a",
+                    "an",
+                    "and",
+                    "or",
+                    "but",
+                    "in",
+                    "on",
+                    "at",
+                    "to",
+                    "for",
+                    "of",
+                    "with",
+                    "by",
+                    "this",
+                    "that",
+                    "is",
+                    "are",
+                    "be",
+                    "have",
+                    "has",
+                    "what",
+                    "when",
+                    "where",
+                    "why",
+                    "how",
+                    "all",
+                    "any",
+                    "can",
+                    "could",
+                    "would",
+                    "should",
+                    "will",
+                ]
+            )
+        )[
+            :20
+        ]  # 限制关键词数量
 
         return context
 
@@ -409,7 +462,7 @@ class ContextManager:
             "intent_evolution": self._analyze_intent_evolution(session),
             "time_distribution": self._analyze_time_distribution(session),
             "success_patterns": self._analyze_success_patterns(session),
-            "interaction_rhythm": self._analyze_interaction_rhythm(session)
+            "interaction_rhythm": self._analyze_interaction_rhythm(session),
         }
 
         return patterns
@@ -420,7 +473,7 @@ class ContextManager:
             return []
 
         # 简单的关键词提取
-        words = re.findall(r'\b[a-zA-Z\u4e00-\u9fff]{2,}\b', text.lower())
+        words = re.findall(r"\b[a-zA-Z\u4e00-\u9fff]{2,}\b", text.lower())
         return words
 
     def _analyze_query_patterns(self, session: SessionContext) -> Dict[str, Any]:
@@ -434,15 +487,17 @@ class ContextManager:
         lengths = [len(query) for query in queries]
 
         # 查询类型分析
-        question_count = sum(1 for query in queries if '?' in query or '？' in query)
-        statement_count = sum(1 for query in queries if query.endswith('.') or query.endswith('。'))
+        question_count = sum(1 for query in queries if "?" in query or "？" in query)
+        statement_count = sum(
+            1 for query in queries if query.endswith(".") or query.endswith("。")
+        )
 
         return {
             "avg_query_length": sum(lengths) / max(len(lengths), 1),
             "max_query_length": max(lengths) if lengths else 0,
             "min_query_length": min(lengths) if lengths else 0,
             "question_ratio": question_count / max(len(queries), 1),
-            "statement_ratio": statement_count / max(len(queries), 1)
+            "statement_ratio": statement_count / max(len(queries), 1),
         }
 
     def _analyze_intent_evolution(self, session: SessionContext) -> Dict[str, Any]:
@@ -453,15 +508,18 @@ class ContextManager:
         # 意图变化分析
         intent_changes = 0
         for i in range(1, len(session.detected_intents)):
-            if session.detected_intents[i] != session.detected_intents[i-1]:
+            if session.detected_intents[i] != session.detected_intents[i - 1]:
                 intent_changes += 1
 
         return {
             "total_intents": len(session.detected_intents),
             "unique_intents": len(set(session.detected_intents)),
             "intent_changes": intent_changes,
-            "intent_diversity": intent_changes / max(len(session.detected_intents) - 1, 1),
-            "current_intent": session.detected_intents[-1] if session.detected_intents else None
+            "intent_diversity": intent_changes
+            / max(len(session.detected_intents) - 1, 1),
+            "current_intent": session.detected_intents[-1]
+            if session.detected_intents
+            else None,
         }
 
     def _analyze_time_distribution(self, session: SessionContext) -> Dict[str, Any]:
@@ -474,14 +532,14 @@ class ContextManager:
         # 计算交互间隔
         intervals = []
         for i in range(1, len(timestamps)):
-            interval = (timestamps[i] - timestamps[i-1]).total_seconds()
+            interval = (timestamps[i] - timestamps[i - 1]).total_seconds()
             intervals.append(interval)
 
         return {
             "total_session_duration": session.get_session_duration(),
             "avg_interaction_interval": sum(intervals) / max(len(intervals), 1),
             "min_interval": min(intervals) if intervals else 0,
-            "max_interval": max(intervals) if intervals else 0
+            "max_interval": max(intervals) if intervals else 0,
         }
 
     def _analyze_success_patterns(self, session: SessionContext) -> Dict[str, Any]:
@@ -500,7 +558,8 @@ class ContextManager:
             "total_interactions": total,
             "successful_interactions": successful,
             "avg_confidence": sum(confidences) / max(len(confidences), 1),
-            "high_confidence_rate": sum(1 for c in confidences if c >= 0.8) / max(len(confidences), 1)
+            "high_confidence_rate": sum(1 for c in confidences if c >= 0.8)
+            / max(len(confidences), 1),
         }
 
     def _analyze_interaction_rhythm(self, session: SessionContext) -> Dict[str, Any]:
@@ -509,22 +568,28 @@ class ContextManager:
             return {"status": "insufficient_data"}
 
         timestamps = [record.timestamp for record in session.interaction_history]
-        processing_times = [record.processing_time_ms for record in session.interaction_history]
+        processing_times = [
+            record.processing_time_ms for record in session.interaction_history
+        ]
 
         # 计算交互节奏
         intervals = []
         for i in range(1, len(timestamps)):
-            interval = (timestamps[i] - timestamps[i-1]).total_seconds()
+            interval = (timestamps[i] - timestamps[i - 1]).total_seconds()
             intervals.append(interval)
 
         return {
             "avg_interaction_interval": sum(intervals) / max(len(intervals), 1),
-            "interaction_frequency": len(session.interaction_history) / max(session.get_session_duration() / 60, 1),  # 每分钟
-            "avg_processing_time": sum(processing_times) / max(len(processing_times), 1),
-            "processing_time_trend": "stable"  # 简化版本，可以添加趋势分析
+            "interaction_frequency": len(session.interaction_history)
+            / max(session.get_session_duration() / 60, 1),  # 每分钟
+            "avg_processing_time": sum(processing_times)
+            / max(len(processing_times), 1),
+            "processing_time_trend": "stable",  # 简化版本，可以添加趋势分析
         }
 
-    async def _load_session_from_storage(self, session_id: str, user_id: Optional[str] = None) -> SessionContext:
+    async def _load_session_from_storage(
+        self, session_id: str, user_id: Optional[str] = None
+    ) -> SessionContext:
         """从存储加载会话"""
         # 模拟从数据库加载
         return SessionContext(
@@ -536,7 +601,7 @@ class ContextManager:
             session_topic="初始对话",
             detected_intents=["knowledge_retrieval"],
             user_preferences={"language": "zh-CN", "response_style": "professional"},
-            context_keywords=["查询", "信息", "帮助"]
+            context_keywords=["查询", "信息", "帮助"],
         )
 
     async def _save_session_to_storage(self, session: SessionContext) -> None:
@@ -554,7 +619,7 @@ class ContextManager:
             if (current_time - session.last_activity).total_seconds() < 3600:  # 1小时内活跃
                 active_count += 1
 
-        self.stats['active_sessions'] = active_count
+        self.stats["active_sessions"] = active_count
 
     def get_stats(self) -> Dict[str, Any]:
         """获取管理器统计信息"""
@@ -562,14 +627,14 @@ class ContextManager:
             **self.stats,
             "cache_size": len(self._session_cache),
             "file_cache_size": len(self._file_cache),
-            "storage_backend": self.storage_backend
+            "storage_backend": self.storage_backend,
         }
 
     def clear_cache(self):
         """清空缓存"""
         self._session_cache.clear()
         self._file_cache.clear()
-        self.stats['cache_hits'] = 0
+        self.stats["cache_hits"] = 0
         logger.info("上下文缓存已清空")
 
     async def cleanup_expired_sessions(self, max_age_hours: int = 24) -> int:
@@ -591,7 +656,7 @@ class ContextManager:
         return {
             "status": "healthy",
             "storage_backend": self.storage_backend,
-            "active_sessions": self.stats['active_sessions'],
+            "active_sessions": self.stats["active_sessions"],
             "cache_size": len(self._session_cache),
-            "total_interactions": self.stats['total_interactions']
+            "total_interactions": self.stats["total_interactions"],
         }

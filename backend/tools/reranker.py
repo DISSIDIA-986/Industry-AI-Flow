@@ -1,7 +1,9 @@
 """Rerank Tool - 使用Cross-Encoder重排序文档"""
 
-from langchain_core.tools import tool
 from typing import Annotated
+
+from langchain_core.tools import tool
+
 from backend.services.retrieval.reranker import Reranker
 
 
@@ -9,7 +11,7 @@ from backend.services.retrieval.reranker import Reranker
 def rerank_tool(
     query: Annotated[str, "用户查询文本"],
     documents: Annotated[list[dict], "待排序的文档列表"],
-    top_k: Annotated[int, "返回的top文档数量"] = 5
+    top_k: Annotated[int, "返回的top文档数量"] = 5,
 ) -> list[dict]:
     """
     文档重排序工具 - 使用Cross-Encoder模型精排文档
@@ -42,10 +44,6 @@ def rerank_tool(
     reranker = Reranker()
 
     # 执行重排序
-    reranked_docs = reranker.rerank(
-        query=query,
-        documents=documents,
-        top_k=top_k
-    )
+    reranked_docs = reranker.rerank(query=query, documents=documents, top_k=top_k)
 
     return reranked_docs

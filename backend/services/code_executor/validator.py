@@ -212,10 +212,15 @@ class CodeValidator:
             elif isinstance(node, ast.For):
                 # Check for very large ranges
                 if isinstance(node.iter, ast.Call):
-                    if isinstance(node.iter.func, ast.Name) and node.iter.func.id == "range":
+                    if (
+                        isinstance(node.iter.func, ast.Name)
+                        and node.iter.func.id == "range"
+                    ):
                         if len(node.iter.args) > 0:
                             arg = node.iter.args[0]
-                            if isinstance(arg, ast.Constant) and isinstance(arg.value, int):
+                            if isinstance(arg, ast.Constant) and isinstance(
+                                arg.value, int
+                            ):
                                 if arg.value > 1_000_000:
                                     return f"Warning: Large range detected ({arg.value:,} iterations)"
 

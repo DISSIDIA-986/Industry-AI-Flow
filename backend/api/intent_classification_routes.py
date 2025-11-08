@@ -7,17 +7,17 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from backend.services.intent_workflow import IntentClassificationWorkflow
-from backend.services.intent_classifier import IntentClassifier, QueryContext
 from backend.services.context_manager import ContextManager
-from backend.services.routing_decision import RoutingDecisionEngine
+from backend.services.intent_classifier import IntentClassifier, QueryContext
+from backend.services.intent_workflow import IntentClassificationWorkflow
 from backend.services.prompt_manager import PromptManager
+from backend.services.routing_decision import RoutingDecisionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ _intent_workflow: Optional[IntentClassificationWorkflow] = None
 # 请求/响应模型
 class ClassifyRequest(BaseModel):
     """分类请求模型"""
+
     query: str = Field(..., description="用户查询文本", min_length=1, max_length=2000)
     session_id: str = Field(..., description="会话ID", min_length=1, max_length=100)
     user_id: Optional[str] = Field(None, description="用户ID", max_length=100)
@@ -40,6 +41,7 @@ class ClassifyRequest(BaseModel):
 
 class ClassifyResponse(BaseModel):
     """分类响应模型"""
+
     success: bool = Field(..., description="是否成功")
     intent: Optional[str] = Field(None, description="识别的意图")
     confidence: Optional[float] = Field(None, description="置信度")
@@ -55,6 +57,7 @@ class ClassifyResponse(BaseModel):
 
 class ContinueWorkflowRequest(BaseModel):
     """继续工作流请求模型"""
+
     user_response: str = Field(..., description="用户回应", min_length=1, max_length=2000)
     session_id: str = Field(..., description="会话ID", min_length=1, max_length=100)
     thread_id: Optional[str] = Field(None, description="线程ID")
@@ -62,6 +65,7 @@ class ContinueWorkflowRequest(BaseModel):
 
 class SessionContextResponse(BaseModel):
     """会话上下文响应模型"""
+
     session_id: str
     user_id: Optional[str]
     query_count: int
@@ -76,6 +80,7 @@ class SessionContextResponse(BaseModel):
 
 class WorkflowStatsResponse(BaseModel):
     """工作流统计响应模型"""
+
     total_routes: int
     direct_routing_rate: float
     clarification_rate: float
@@ -116,7 +121,7 @@ async def initialize_intent_workflow():
             intent_classifier=intent_classifier,
             context_manager=context_manager,
             routing_engine=routing_engine,
-            prompt_manager=prompt_manager
+            prompt_manager=prompt_manager,
         )
 
         logger.info("意图分类工作流初始化完成")
@@ -130,7 +135,7 @@ async def initialize_intent_workflow():
 async def classify_intent(
     request: ClassifyRequest,
     background_tasks: BackgroundTasks,
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     意图分类和路由接口
@@ -148,7 +153,7 @@ async def classify_intent(
             query=request.query,
             session_id=request.session_id,
             user_id=request.user_id,
-            thread_id=request.thread_id
+            thread_id=request.thread_id,
         )
 
         # 计算处理时间
@@ -166,7 +171,7 @@ async def classify_intent(
             clarification_message=result.get("clarification_response"),
             processing_time_ms=processing_time,
             metadata=result.get("metadata", {}),
-            error=result.get("error")
+            error=result.get("error"),
         )
 
         # 在后台记录使用日志
@@ -175,7 +180,7 @@ async def classify_intent(
             request.session_id,
             request.user_id,
             request.query,
-            result
+            result,
         )
 
         logger.info(f"分类请求处理完成，成功: {result['success']}")
@@ -186,7 +191,7 @@ async def classify_intent(
         return ClassifyResponse(
             success=False,
             error=f"意图分类处理失败: {str(e)}",
-            agent_response="抱歉，处理您的请求时遇到了系统错误。请稍后重试。"
+            agent_response="抱歉，处理您的请求时遇到了系统错误。请稍后重试。",
         )
 
 
@@ -194,7 +199,7 @@ async def classify_intent(
 async def continue_workflow(
     request: ContinueWorkflowRequest,
     background_tasks: BackgroundTasks,
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     继续工作流接口
@@ -208,29 +213,32 @@ async def continue_workflow(
         result = await workflow.continue_workflow(
             user_response=request.user_response,
             session_id=request.session_id,
-            thread_id=request.thread_id
+            thread_id=request.thread_id,
         )
 
         # 构建响应
         response = ClassifyResponse(
             success=result["success"],
-            intent=result.get("intent_result", {}).get("intent") if result.get("intent_result") else None,
-            confidence=result.get("intent_result", {}).get("confidence") if result.get("intent_result") else None,
-            reasoning=result.get("intent_result", {}).get("reasoning") if result.get("intent_result") else None,
+            intent=result.get("intent_result", {}).get("intent")
+            if result.get("intent_result")
+            else None,
+            confidence=result.get("intent_result", {}).get("confidence")
+            if result.get("intent_result")
+            else None,
+            reasoning=result.get("intent_result", {}).get("reasoning")
+            if result.get("intent_result")
+            else None,
             routing_decision=result.get("routing_decision"),
             agent_response=result.get("agent_response"),
             clarification_needed=result.get("clarification_needed", False),
             clarification_message=result.get("clarification_response"),
             metadata=result.get("metadata", {}),
-            error=result.get("error")
+            error=result.get("error"),
         )
 
         # 在后台记录使用日志
         background_tasks.add_task(
-            log_continuation_usage,
-            request.session_id,
-            request.user_response,
-            result
+            log_continuation_usage, request.session_id, request.user_response, result
         )
 
         logger.info(f"继续工作流请求处理完成，成功: {result['success']}")
@@ -241,14 +249,14 @@ async def continue_workflow(
         return ClassifyResponse(
             success=False,
             error=f"继续工作流处理失败: {str(e)}",
-            agent_response="抱歉，处理您的回应时遇到了系统错误。请重新描述您的需求。"
+            agent_response="抱歉，处理您的回应时遇到了系统错误。请重新描述您的需求。",
         )
 
 
 @router.get("/session/{session_id}/context", response_model=SessionContextResponse)
 async def get_session_context(
     session_id: str,
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     获取会话上下文接口
@@ -264,9 +272,7 @@ async def get_session_context(
 
         # 获取增强上下文
         enhanced_context = await workflow.context_manager.get_enhanced_context(
-            session_id=session_id,
-            max_history=10,
-            include_files=True
+            session_id=session_id, max_history=10, include_files=True
         )
 
         # 构建响应
@@ -280,7 +286,7 @@ async def get_session_context(
             recent_intents=session_context.get_recent_intents(5),
             context_keywords=enhanced_context.get("context_keywords", []),
             completion_rate=session_context.completion_rate,
-            session_duration_minutes=session_context.get_session_duration() / 60
+            session_duration_minutes=session_context.get_session_duration() / 60,
         )
 
         logger.info(f"会话上下文获取完成，查询数: {response.query_count}")
@@ -294,7 +300,7 @@ async def get_session_context(
 @router.get("/session/{session_id}/patterns")
 async def analyze_session_patterns(
     session_id: str,
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     分析会话模式接口
@@ -312,7 +318,7 @@ async def analyze_session_patterns(
             "success": True,
             "session_id": session_id,
             "patterns": patterns,
-            "analysis_timestamp": datetime.now().isoformat()
+            "analysis_timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
@@ -322,7 +328,7 @@ async def analyze_session_patterns(
 
 @router.get("/stats/workflow", response_model=WorkflowStatsResponse)
 async def get_workflow_statistics(
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     获取工作流统计接口
@@ -346,8 +352,10 @@ async def get_workflow_statistics(
             clarification_rate=routing_stats.get("clarification_rate", 0.0),
             fallback_rate=routing_stats.get("fallback_rate", 0.0),
             agent_usage_rates=routing_stats.get("agent_usage_rates", {}),
-            available_agents=len(workflow.routing_engine.system_status.get_available_agents()),
-            system_load=workflow.routing_engine.system_status.system_load
+            available_agents=len(
+                workflow.routing_engine.system_status.get_available_agents()
+            ),
+            system_load=workflow.routing_engine.system_status.system_load,
         )
 
         logger.info(f"工作流统计获取完成，总路由数: {response.total_routes}")
@@ -363,7 +371,7 @@ async def test_intent_classification(
     query: str,
     session_id: str = "test_session",
     user_id: Optional[str] = None,
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     测试意图分类接口
@@ -383,19 +391,18 @@ async def test_intent_classification(
             recent_intents=[],
             uploaded_files=[],
             user_preferences={},
-            context_keywords=[]
+            context_keywords=[],
         )
 
         # 执行意图分类
         intent_result = await workflow.intent_classifier.classify_intent(
-            query=query,
-            context=test_context
+            query=query, context=test_context
         )
 
         return {
             "success": True,
             "intent_result": intent_result.to_dict(),
-            "test_timestamp": datetime.now().isoformat()
+            "test_timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
@@ -403,13 +410,13 @@ async def test_intent_classification(
         return {
             "success": False,
             "error": str(e),
-            "test_timestamp": datetime.now().isoformat()
+            "test_timestamp": datetime.now().isoformat(),
         }
 
 
 @router.get("/health")
 async def health_check(
-    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow)
+    workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
     """
     健康检查接口
@@ -422,11 +429,13 @@ async def health_check(
         context_health = await workflow.context_manager.health_check()
         routing_health = await workflow.routing_engine.health_check()
 
-        overall_health = all([
-            classifier_health.get("status") == "healthy",
-            context_health.get("status") == "healthy",
-            routing_health.get("status") == "healthy"
-        ])
+        overall_health = all(
+            [
+                classifier_health.get("status") == "healthy",
+                context_health.get("status") == "healthy",
+                routing_health.get("status") == "healthy",
+            ]
+        )
 
         return {
             "status": "healthy" if overall_health else "degraded",
@@ -435,9 +444,9 @@ async def health_check(
                 "intent_classifier": classifier_health,
                 "context_manager": context_health,
                 "routing_engine": routing_health,
-                "prompt_manager": "enabled" if workflow.prompt_manager else "disabled"
+                "prompt_manager": "enabled" if workflow.prompt_manager else "disabled",
             },
-            "workflow": workflow.get_workflow_stats()
+            "workflow": workflow.get_workflow_stats(),
         }
 
     except Exception as e:
@@ -445,16 +454,13 @@ async def health_check(
         return {
             "status": "unhealthy",
             "timestamp": datetime.now().isoformat(),
-            "error": str(e)
+            "error": str(e),
         }
 
 
 # 后台任务函数
 async def log_classification_usage(
-    session_id: str,
-    user_id: Optional[str],
-    query: str,
-    result: Dict[str, Any]
+    session_id: str, user_id: Optional[str], query: str, result: Dict[str, Any]
 ):
     """记录分类使用日志"""
     try:
@@ -468,7 +474,7 @@ async def log_classification_usage(
             "intent": result.get("intent_result", {}).get("intent"),
             "confidence": result.get("intent_result", {}).get("confidence"),
             "selected_agent": result.get("routing_decision", {}).get("selected_agent"),
-            "clarification_needed": result.get("clarification_needed", False)
+            "clarification_needed": result.get("clarification_needed", False),
         }
 
         logger.info(f"分类使用日志: {json.dumps(log_entry, ensure_ascii=False)}")
@@ -478,9 +484,7 @@ async def log_classification_usage(
 
 
 async def log_continuation_usage(
-    session_id: str,
-    user_response: str,
-    result: Dict[str, Any]
+    session_id: str, user_response: str, result: Dict[str, Any]
 ):
     """记录继续工作流使用日志"""
     try:
@@ -489,7 +493,7 @@ async def log_continuation_usage(
             "session_id": session_id,
             "user_response": user_response,
             "success": result["success"],
-            "clarification_needed": result.get("clarification_needed", False)
+            "clarification_needed": result.get("clarification_needed", False),
         }
 
         logger.info(f"继续工作流使用日志: {json.dumps(log_entry, ensure_ascii=False)}")

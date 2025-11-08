@@ -6,42 +6,43 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
-from typing import Dict, List, Any, Optional, TypedDict, Annotated, Literal
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
-from .intent_classifier import IntentClassifier, IntentResult, QueryContext
 from .context_manager import ContextManager, SessionContext
-from .routing_decision import RoutingDecisionEngine, RoutingDecision, AgentType
+from .intent_classifier import IntentClassifier, IntentResult, QueryContext
 from .prompt_manager import PromptManager
+from .routing_decision import AgentType, RoutingDecision, RoutingDecisionEngine
 
 logger = logging.getLogger(__name__)
 
 
 class WorkflowState(TypedDict):
     """工作流状态定义"""
+
     messages: Annotated[List, add_messages]  # 消息历史
-    session_id: str                          # 会话ID
-    user_id: Optional[str]                   # 用户ID
-    current_query: str                       # 当前用户查询
-    query_context: QueryContext             # 查询上下文
-    session_context: SessionContext         # 会话上下文
-    intent_result: Optional[IntentResult]   # 意图分类结果
+    session_id: str  # 会话ID
+    user_id: Optional[str]  # 用户ID
+    current_query: str  # 当前用户查询
+    query_context: QueryContext  # 查询上下文
+    session_context: SessionContext  # 会话上下文
+    intent_result: Optional[IntentResult]  # 意图分类结果
     routing_decision: Optional[RoutingDecision]  # 路由决策
-    clarification_needed: bool              # 是否需要澄清
-    clarification_response: Optional[str]   # 澄清回应
-    agent_response: Optional[str]           # Agent响应
-    workflow_complete: bool                 # 工作流是否完成
-    error: Optional[str]                    # 错误信息
-    metadata: Dict[str, Any]                # 元数据
+    clarification_needed: bool  # 是否需要澄清
+    clarification_response: Optional[str]  # 澄清回应
+    agent_response: Optional[str]  # Agent响应
+    workflow_complete: bool  # 工作流是否完成
+    error: Optional[str]  # 错误信息
+    metadata: Dict[str, Any]  # 元数据
 
 
 class IntentClassificationWorkflow:
@@ -52,7 +53,7 @@ class IntentClassificationWorkflow:
         intent_classifier: IntentClassifier,
         context_manager: ContextManager,
         routing_engine: RoutingDecisionEngine,
-        prompt_manager: Optional[PromptManager] = None
+        prompt_manager: Optional[PromptManager] = None,
     ):
         """
         初始化工作流
@@ -88,7 +89,9 @@ class IntentClassificationWorkflow:
         workflow.add_node("confidence_evaluation", self._confidence_evaluation_node)
         workflow.add_node("routing_decision", self._routing_decision_node)
         workflow.add_node("clarification_needed", self._clarification_needed_node)
-        workflow.add_node("clarification_processing", self._clarification_processing_node)
+        workflow.add_node(
+            "clarification_processing", self._clarification_processing_node
+        )
         workflow.add_node("agent_dispatch", self._agent_dispatch_node)
         workflow.add_node("response_processing", self._response_processing_node)
         workflow.add_node("error_handling", self._error_handling_node)
@@ -108,8 +111,8 @@ class IntentClassificationWorkflow:
             {
                 "high_confidence": "routing_decision",
                 "low_confidence": "clarification_needed",
-                "error": "error_handling"
-            }
+                "error": "error_handling",
+            },
         )
 
         workflow.add_edge("routing_decision", "agent_dispatch")
@@ -122,8 +125,8 @@ class IntentClassificationWorkflow:
             {
                 "retry_classification": "intent_classification",
                 "proceed_with_fallback": "routing_decision",
-                "await_user_input": END
-            }
+                "await_user_input": END,
+            },
         )
 
         workflow.add_edge("agent_dispatch", "response_processing")
@@ -168,16 +171,13 @@ class IntentClassificationWorkflow:
 
             # 获取会话上下文
             session_context = await self.context_manager.get_session_context(
-                session_id=session_id,
-                user_id=state.get("user_id")
+                session_id=session_id, user_id=state.get("user_id")
             )
             state["session_context"] = session_context
 
             # 获取增强的上下文信息
             enhanced_context = await self.context_manager.get_enhanced_context(
-                session_id=session_id,
-                max_history=5,
-                include_files=True
+                session_id=session_id, max_history=5, include_files=True
             )
 
             # 构建查询上下文
@@ -189,13 +189,17 @@ class IntentClassificationWorkflow:
                 recent_intents=session_context.get_recent_intents(3),
                 uploaded_files=session_context.uploaded_files,
                 user_preferences=session_context.user_preferences,
-                context_keywords=enhanced_context.get("context_keywords", [])
+                context_keywords=enhanced_context.get("context_keywords", []),
             )
             state["query_context"] = query_context
 
             # 更新元数据
-            state["metadata"]["context_enrichment_timestamp"] = datetime.now().isoformat()
-            state["metadata"]["context_quality"] = enhanced_context.get("context_quality", "medium")
+            state["metadata"][
+                "context_enrichment_timestamp"
+            ] = datetime.now().isoformat()
+            state["metadata"]["context_quality"] = enhanced_context.get(
+                "context_quality", "medium"
+            )
 
             logger.debug(f"上下文增强完成，上下文质量: {state['metadata']['context_quality']}")
             return state
@@ -212,8 +216,7 @@ class IntentClassificationWorkflow:
 
             # 执行意图分类
             intent_result = await self.intent_classifier.classify_intent(
-                query=state["current_query"],
-                context=state["query_context"]
+                query=state["current_query"], context=state["query_context"]
             )
             state["intent_result"] = intent_result
 
@@ -225,7 +228,7 @@ class IntentClassificationWorkflow:
                 agent_response="",  # 待Agent响应后填充
                 confidence=intent_result.confidence,
                 processing_time_ms=intent_result.processing_time_ms,
-                success=True
+                success=True,
             )
 
             # 更新元数据
@@ -233,7 +236,9 @@ class IntentClassificationWorkflow:
             state["metadata"]["intent"] = intent_result.intent
             state["metadata"]["confidence"] = intent_result.confidence
 
-            logger.info(f"意图分类完成: {intent_result.intent} (置信度: {intent_result.confidence:.2f})")
+            logger.info(
+                f"意图分类完成: {intent_result.intent} (置信度: {intent_result.confidence:.2f})"
+            )
             return state
 
         except Exception as e:
@@ -301,14 +306,14 @@ class IntentClassificationWorkflow:
                 "user_id": state.get("user_id"),
                 "query_count": state["session_context"].query_count,
                 "has_uploaded_files": len(state["session_context"].uploaded_files) > 0,
-                "session_stage": state["session_context"].session_stage
+                "session_stage": state["session_context"].session_stage,
             }
 
             # 执行路由决策
             routing_decision = await self.routing_engine.make_routing_decision(
                 intent_result=intent_result.to_dict(),
                 context=routing_context,
-                user_preferences=state["session_context"].user_preferences
+                user_preferences=state["session_context"].user_preferences,
             )
             state["routing_decision"] = routing_decision
 
@@ -341,12 +346,12 @@ class IntentClassificationWorkflow:
                     "possible_intents": [intent_result.intent],
                     "clarification_questions": [
                         f"关于'{intent_result.intent}'，您能提供更多细节吗？",
-                        "您的具体需求是什么？"
+                        "您的具体需求是什么？",
                     ],
                     "user_context": {
                         "current_query": state["current_query"],
-                        "confidence": intent_result.confidence
-                    }
+                        "confidence": intent_result.confidence,
+                    },
                 }
 
             # 如果有Prompt管理器，使用澄清Prompt
@@ -357,26 +362,37 @@ class IntentClassificationWorkflow:
                         category="Intent",
                         context={
                             "user_query": state["current_query"],
-                            "possible_intents": clarification_context["possible_intents"],
-                            "classification_result": intent_result.reasoning
+                            "possible_intents": clarification_context[
+                                "possible_intents"
+                            ],
+                            "classification_result": intent_result.reasoning,
                         },
                         variables={
                             "user_query": state["current_query"],
-                            "possible_intents": json.dumps(clarification_context["possible_intents"], ensure_ascii=False),
+                            "possible_intents": json.dumps(
+                                clarification_context["possible_intents"],
+                                ensure_ascii=False,
+                            ),
                             "classification_result": intent_result.reasoning,
-                            "language": "zh-CN"
-                        }
+                            "language": "zh-CN",
+                        },
                     )
 
                     # 使用LLM生成澄清消息
-                    clarification_message = await self._generate_clarification_with_prompt(
-                        prompt_content, clarification_context
+                    clarification_message = (
+                        await self._generate_clarification_with_prompt(
+                            prompt_content, clarification_context
+                        )
                     )
                 except Exception as e:
                     logger.warning(f"使用Prompt管理器生成澄清失败，使用默认方法: {str(e)}")
-                    clarification_message = self._generate_default_clarification(clarification_context)
+                    clarification_message = self._generate_default_clarification(
+                        clarification_context
+                    )
             else:
-                clarification_message = self._generate_default_clarification(clarification_context)
+                clarification_message = self._generate_default_clarification(
+                    clarification_context
+                )
 
             state["clarification_response"] = clarification_message
             state["metadata"]["clarification_timestamp"] = datetime.now().isoformat()
@@ -390,7 +406,9 @@ class IntentClassificationWorkflow:
             state["error"] = f"澄清需求处理失败: {str(e)}"
             return state
 
-    async def _clarification_processing_node(self, state: WorkflowState) -> WorkflowState:
+    async def _clarification_processing_node(
+        self, state: WorkflowState
+    ) -> WorkflowState:
         """澄清处理节点"""
         try:
             logger.info("处理澄清回应")
@@ -437,7 +455,7 @@ class IntentClassificationWorkflow:
                 agent_type=agent_type,
                 query=state["current_query"],
                 context=state["query_context"],
-                parameters=routing_decision.parameters
+                parameters=routing_decision.parameters,
             )
 
             state["agent_response"] = agent_response
@@ -453,7 +471,7 @@ class IntentClassificationWorkflow:
                 agent_response=agent_response,
                 confidence=intent_result.confidence,
                 processing_time_ms=intent_result.processing_time_ms,
-                success=True
+                success=True,
             )
 
             logger.info(f"Agent处理完成: {agent_type.value}")
@@ -518,9 +536,7 @@ class IntentClassificationWorkflow:
         return "proceed_with_fallback"
 
     async def _generate_clarification_with_prompt(
-        self,
-        prompt_content: str,
-        context: Dict[str, Any]
+        self, prompt_content: str, context: Dict[str, Any]
     ) -> str:
         """使用Prompt生成澄清消息"""
         try:
@@ -562,7 +578,7 @@ class IntentClassificationWorkflow:
         agent_type: AgentType,
         query: str,
         context: QueryContext,
-        parameters: Dict[str, Any]
+        parameters: Dict[str, Any],
     ) -> str:
         """调度到具体的Agent"""
         # 这里是模拟的Agent调用
@@ -573,7 +589,7 @@ class IntentClassificationWorkflow:
             AgentType.DATA_ANALYSIS_AGENT: f"针对您提到的数据分析需求，我建议采用以下方法：首先进行探索性数据分析，然后根据数据特征选择合适的分析方法...",
             AgentType.DOCUMENT_PROCESSING_AGENT: f"关于文档处理，我可以帮您提取文本内容、识别表格数据或进行OCR处理。请提供具体的文档信息...",
             AgentType.CODE_EXECUTION_AGENT: f"我将帮您执行相关代码任务。基于您的需求，建议使用Python来实现相应的计算或算法...",
-            AgentType.GENERAL_AGENT: f"我理解您的需求是'{query}'。让我为您提供一些有用的建议和信息..."
+            AgentType.GENERAL_AGENT: f"我理解您的需求是'{query}'。让我为您提供一些有用的建议和信息...",
         }
 
         return agent_responses.get(agent_type, "我正在处理您的请求，请稍候...")
@@ -583,7 +599,7 @@ class IntentClassificationWorkflow:
         query: str,
         session_id: str,
         user_id: Optional[str] = None,
-        thread_id: Optional[str] = None
+        thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         运行完整的工作流
@@ -613,7 +629,7 @@ class IntentClassificationWorkflow:
                 agent_response=None,
                 workflow_complete=False,
                 error=None,
-                metadata={"start_timestamp": datetime.now().isoformat()}
+                metadata={"start_timestamp": datetime.now().isoformat()},
             )
 
             # 创建可运行的工作流
@@ -627,13 +643,20 @@ class IntentClassificationWorkflow:
             return {
                 "success": not bool(result.get("error")),
                 "agent_response": result.get("agent_response"),
-                "intent_result": result["intent_result"].to_dict() if result.get("intent_result") else None,
-                "routing_decision": result["routing_decision"].to_dict() if result.get("routing_decision") else None,
+                "intent_result": result["intent_result"].to_dict()
+                if result.get("intent_result")
+                else None,
+                "routing_decision": result["routing_decision"].to_dict()
+                if result.get("routing_decision")
+                else None,
                 "clarification_needed": result.get("clarification_needed", False),
                 "clarification_response": result.get("clarification_response"),
-                "messages": [{"type": type(msg).__name__, "content": msg.content} for msg in result.get("messages", [])],
+                "messages": [
+                    {"type": type(msg).__name__, "content": msg.content}
+                    for msg in result.get("messages", [])
+                ],
                 "metadata": result.get("metadata", {}),
-                "error": result.get("error")
+                "error": result.get("error"),
             }
 
         except Exception as e:
@@ -641,14 +664,11 @@ class IntentClassificationWorkflow:
             return {
                 "success": False,
                 "error": f"工作流执行失败: {str(e)}",
-                "agent_response": "抱歉，处理您的请求时遇到了系统错误。请稍后重试。"
+                "agent_response": "抱歉，处理您的请求时遇到了系统错误。请稍后重试。",
             }
 
     async def continue_workflow(
-        self,
-        user_response: str,
-        session_id: str,
-        thread_id: Optional[str] = None
+        self, user_response: str, session_id: str, thread_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         继续工作流（例如在澄清后）
@@ -670,7 +690,7 @@ class IntentClassificationWorkflow:
             state_update = WorkflowState(
                 messages=[HumanMessage(content=user_response)],
                 current_query=user_response,
-                metadata={"continuation_timestamp": datetime.now().isoformat()}
+                metadata={"continuation_timestamp": datetime.now().isoformat()},
             )
 
             # 继续执行工作流
@@ -681,9 +701,12 @@ class IntentClassificationWorkflow:
                 "agent_response": result.get("agent_response"),
                 "clarification_needed": result.get("clarification_needed", False),
                 "clarification_response": result.get("clarification_response"),
-                "messages": [{"type": type(msg).__name__, "content": msg.content} for msg in result.get("messages", [])],
+                "messages": [
+                    {"type": type(msg).__name__, "content": msg.content}
+                    for msg in result.get("messages", [])
+                ],
                 "metadata": result.get("metadata", {}),
-                "error": result.get("error")
+                "error": result.get("error"),
             }
 
         except Exception as e:
@@ -691,7 +714,7 @@ class IntentClassificationWorkflow:
             return {
                 "success": False,
                 "error": f"工作流继续执行失败: {str(e)}",
-                "agent_response": "抱歉，处理您的回应时遇到了错误。请重新描述您的需求。"
+                "agent_response": "抱歉，处理您的回应时遇到了错误。请重新描述您的需求。",
             }
 
     def get_workflow_stats(self) -> Dict[str, Any]:
@@ -705,7 +728,7 @@ class IntentClassificationWorkflow:
                 "intent_classifier": "enabled",
                 "context_manager": "enabled",
                 "routing_engine": "enabled",
-                "prompt_manager": "enabled" if self.prompt_manager else "disabled"
+                "prompt_manager": "enabled" if self.prompt_manager else "disabled",
             },
-            "memory_checkpoints": "enabled"
+            "memory_checkpoints": "enabled",
         }

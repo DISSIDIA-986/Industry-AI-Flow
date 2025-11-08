@@ -7,16 +7,15 @@
 - process_document: 便捷处理函数
 """
 
+from backend.services.document_processing.document_extractor import (
+    DocumentExtractor,
+    process_document,
+)
 from backend.services.document_processing.ocr_processor import (
     OCRProcessor,
     OCRResult,
     process_image_with_ocr,
 )
-from backend.services.document_processing.document_extractor import (
-    DocumentExtractor,
-    process_document,
-)
-
 
 # 创建全局OCR处理器实例（延迟初始化）
 _global_ocr_processor = None
@@ -30,6 +29,7 @@ def get_ocr_processor() -> OCRProcessor:
             _global_ocr_processor = OCRProcessor()
         except Exception as e:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"无法初始化OCR处理器: {e}")
             _global_ocr_processor = None

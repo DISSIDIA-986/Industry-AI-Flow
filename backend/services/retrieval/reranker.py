@@ -1,7 +1,9 @@
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-import torch
-from backend.utils.device_manager import device_manager
 import logging
+
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+from backend.utils.device_manager import device_manager
 
 logger = logging.getLogger(__name__)
 

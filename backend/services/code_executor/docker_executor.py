@@ -17,9 +17,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import docker
-from docker.errors import ContainerError, ImageNotFound, APIError
+from docker.errors import APIError, ContainerError, ImageNotFound
 from docker.types import DeviceRequest
+
+import docker
 
 
 @dataclass
@@ -94,7 +95,9 @@ class DockerExecutor:
             self.client.images.get(f"{self.IMAGE_NAME}:{self.IMAGE_TAG}")
         except ImageNotFound:
             print(f"Building Docker image {self.IMAGE_NAME}:{self.IMAGE_TAG}...")
-            dockerfile_path = Path(__file__).parent.parent.parent.parent / "docker" / "data-analysis"
+            dockerfile_path = (
+                Path(__file__).parent.parent.parent.parent / "docker" / "data-analysis"
+            )
 
             if not dockerfile_path.exists():
                 raise FileNotFoundError(f"Dockerfile not found at {dockerfile_path}")
@@ -264,7 +267,7 @@ class DockerExecutor:
             if data_files:
                 for file_path in data_files:
                     try:
-                        with open(file_path, 'rb') as f:
+                        with open(file_path, "rb") as f:
                             input_files[Path(file_path).name] = f.read()
                     except Exception as e:
                         return {
@@ -282,8 +285,9 @@ class DockerExecutor:
 
             # 转换为旧格式
             visualizations = [
-                name for name in result.output_files.keys()
-                if name.endswith(('.png', '.jpg', '.svg', '.pdf', '.html'))
+                name
+                for name in result.output_files.keys()
+                if name.endswith((".png", ".jpg", ".svg", ".pdf", ".html"))
             ]
 
             return {
@@ -327,7 +331,7 @@ class DockerExecutor:
 
     def close(self):
         """Close Docker client connection."""
-        if hasattr(self, 'client'):
+        if hasattr(self, "client"):
             self.client.close()
 
     def __enter__(self):

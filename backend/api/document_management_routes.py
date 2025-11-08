@@ -2,22 +2,24 @@
 文档管理API路由
 """
 
-from fastapi import APIRouter, HTTPException, Body, UploadFile, File
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+import logging
 import os
 import tempfile
-import logging
+from typing import Any, Dict, List, Optional
 
-from backend.services.document_manager import DocumentManager, DocumentOperation
-from backend.services.core.vectorstore import VectorStore
+from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from pydantic import BaseModel
+
 from backend.config import settings
+from backend.services.core.vectorstore import VectorStore
+from backend.services.document_manager import DocumentManager, DocumentOperation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 全局文档管理器实例
 document_manager = None
+
 
 def get_document_manager():
     """获取文档管理器实例"""
@@ -30,12 +32,14 @@ def get_document_manager():
 
 class DocumentUpdateRequest(BaseModel):
     """文档更新请求模型"""
+
     doc_id: str
     reason: Optional[str] = None
 
 
 class DocumentDeleteRequest(BaseModel):
     """文档删除请求模型"""
+
     doc_id: str
     reason: Optional[str] = None
     soft_delete: bool = True
@@ -43,12 +47,14 @@ class DocumentDeleteRequest(BaseModel):
 
 class DocumentReplaceRequest(BaseModel):
     """文档替换请求模型"""
+
     doc_id: str
     reason: Optional[str] = None
 
 
 class DocumentVersionResponse(BaseModel):
     """文档版本响应模型"""
+
     doc_id: str
     version: int
     filename: str
@@ -60,7 +66,9 @@ class DocumentVersionResponse(BaseModel):
 
 
 @router.post("/documents/update")
-async def update_document(file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)):
+async def update_document(
+    file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)
+):
     """
     更新文档内容
 
@@ -77,29 +85,35 @@ async def update_document(file: UploadFile = File(...), doc_id: str = Body(...),
             raise HTTPException(status_code=403, detail="Document update is disabled")
 
         # 保存上传的文件到临时位置
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=os.path.splitext(file.filename)[1]
+        ) as temp_file:
             content = await file.read()
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
             doc_manager = get_document_manager()
-            success = doc_manager.update_document(doc_id=doc_id, new_filepath=temp_file_path, reason=reason)
+            success = doc_manager.update_document(
+                doc_id=doc_id, new_filepath=temp_file_path, reason=reason
+            )
 
             if success:
-                logger.info(f"Document {doc_id} updated successfully with file {file.filename}")
+                logger.info(
+                    f"Document {doc_id} updated successfully with file {file.filename}"
+                )
                 return {
                     "success": True,
                     "message": "Document updated successfully",
                     "doc_id": doc_id,
-                    "filename": file.filename
+                    "filename": file.filename,
                 }
             else:
                 logger.warning(f"Failed to update document {doc_id}")
                 return {
                     "success": False,
                     "message": "Failed to update document",
-                    "doc_id": doc_id
+                    "doc_id": doc_id,
                 }
 
         finally:
@@ -134,7 +148,9 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
             raise HTTPException(status_code=403, detail="Document deletion is disabled")
 
         doc_manager = get_document_manager()
-        success = doc_manager.delete_document(doc_id=doc_id, reason=reason, soft_delete=soft_delete)
+        success = doc_manager.delete_document(
+            doc_id=doc_id, reason=reason, soft_delete=soft_delete
+        )
 
         if success:
             delete_type = "soft deleted" if soft_delete else "permanently deleted"
@@ -143,14 +159,14 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
                 "success": True,
                 "message": f"Document {delete_type} successfully",
                 "doc_id": doc_id,
-                "delete_type": delete_type
+                "delete_type": delete_type,
             }
         else:
             logger.warning(f"Failed to delete document {doc_id}")
             return {
                 "success": False,
                 "message": "Failed to delete document",
-                "doc_id": doc_id
+                "doc_id": doc_id,
             }
 
     except HTTPException:
@@ -161,7 +177,9 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
 
 
 @router.post("/documents/replace")
-async def replace_document(file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)):
+async def replace_document(
+    file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)
+):
     """
     替换文档内容
 
@@ -175,29 +193,35 @@ async def replace_document(file: UploadFile = File(...), doc_id: str = Body(...)
     """
     try:
         # 保存上传的文件到临时位置
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=os.path.splitext(file.filename)[1]
+        ) as temp_file:
             content = await file.read()
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
             doc_manager = get_document_manager()
-            success = doc_manager.replace_document(doc_id=doc_id, new_filepath=temp_file_path, reason=reason)
+            success = doc_manager.replace_document(
+                doc_id=doc_id, new_filepath=temp_file_path, reason=reason
+            )
 
             if success:
-                logger.info(f"Document {doc_id} replaced successfully with file {file.filename}")
+                logger.info(
+                    f"Document {doc_id} replaced successfully with file {file.filename}"
+                )
                 return {
                     "success": True,
                     "message": "Document replaced successfully",
                     "doc_id": doc_id,
-                    "filename": file.filename
+                    "filename": file.filename,
                 }
             else:
                 logger.warning(f"Failed to replace document {doc_id}")
                 return {
                     "success": False,
                     "message": "Failed to replace document",
-                    "doc_id": doc_id
+                    "doc_id": doc_id,
                 }
 
         finally:
@@ -212,7 +236,9 @@ async def replace_document(file: UploadFile = File(...), doc_id: str = Body(...)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.get("/documents/{doc_id}/versions", response_model=List[DocumentVersionResponse])
+@router.get(
+    "/documents/{doc_id}/versions", response_model=List[DocumentVersionResponse]
+)
 async def get_document_versions(doc_id: str):
     """
     获取文档的所有版本
@@ -236,7 +262,7 @@ async def get_document_versions(doc_id: str):
                 chunk_count=version.chunk_count,
                 created_at=version.created_at.isoformat(),
                 operation=version.operation.value,
-                is_active=version.is_active
+                is_active=version.is_active,
             )
             for version in versions
         ]
@@ -262,12 +288,7 @@ async def get_operation_log(doc_id: str = None, limit: int = 50):
         doc_manager = get_document_manager()
         logs = doc_manager.get_operation_log(doc_id=doc_id, limit=limit)
 
-        return {
-            "logs": logs,
-            "count": len(logs),
-            "doc_id": doc_id,
-            "limit": limit
-        }
+        return {"logs": logs, "count": len(logs), "doc_id": doc_id, "limit": limit}
 
     except Exception as e:
         logger.error(f"Error getting operation log: {e}")
@@ -308,7 +329,9 @@ async def restore_document_version(doc_id: str, version: int, reason: str = None
     """
     try:
         doc_manager = get_document_manager()
-        success = doc_manager.restore_document_version(doc_id=doc_id, version=version, reason=reason)
+        success = doc_manager.restore_document_version(
+            doc_id=doc_id, version=version, reason=reason
+        )
 
         if success:
             logger.info(f"Document {doc_id} restored to version {version}")
@@ -316,7 +339,7 @@ async def restore_document_version(doc_id: str, version: int, reason: str = None
                 "success": True,
                 "message": "Document version restored successfully",
                 "doc_id": doc_id,
-                "version": version
+                "version": version,
             }
         else:
             logger.warning(f"Failed to restore document {doc_id} to version {version}")
@@ -324,7 +347,7 @@ async def restore_document_version(doc_id: str, version: int, reason: str = None
                 "success": False,
                 "message": "Failed to restore document version",
                 "doc_id": doc_id,
-                "version": version
+                "version": version,
             }
 
     except Exception as e:

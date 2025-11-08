@@ -1,15 +1,16 @@
 """Hybrid Retrieval Tool - 结合BM25和向量搜索"""
 
-from langchain_core.tools import tool
 from typing import Annotated
-from backend.services.retrieval.hybrid_search import HybridRetriever
+
+from langchain_core.tools import tool
+
 from backend.services.core.vectorstore import VectorStore
+from backend.services.retrieval.hybrid_search import HybridRetriever
 
 
 @tool
 def hybrid_retrieval_tool(
-    query: Annotated[str, "用户查询文本"],
-    top_k: Annotated[int, "返回的文档数量"] = 10
+    query: Annotated[str, "用户查询文本"], top_k: Annotated[int, "返回的文档数量"] = 10
 ) -> list[dict]:
     """
     混合检索工具 - 结合BM25和向量搜索检索相关文档
@@ -40,10 +41,7 @@ def hybrid_retrieval_tool(
 
     # 执行混合检索（向量权重0.7，BM25权重0.3）
     docs = retriever.search(
-        query=query,
-        top_k=top_k,
-        vector_weight=0.7,
-        bm25_weight=0.3
+        query=query, top_k=top_k, vector_weight=0.7, bm25_weight=0.3
     )
 
     return docs

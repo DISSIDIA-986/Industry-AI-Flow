@@ -8,13 +8,13 @@ import json
 import logging
 import re
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Any, Optional, Union, Tuple
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 
 logger = logging.getLogger(__name__)
@@ -22,43 +22,46 @@ logger = logging.getLogger(__name__)
 
 class IntentType(Enum):
     """意图类型枚举"""
+
     KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # 知识检索类
-    DATA_ANALYSIS = "data_analysis"                # 数据分析类
+    DATA_ANALYSIS = "data_analysis"  # 数据分析类
     DOCUMENT_PROCESSING = "document_processing"  # 文档处理类
-    CODE_EXECUTION = "code_execution"            # 代码执行类
-    UNCLEAR_INTENT = "unclear_intent"           # 意图不明确
+    CODE_EXECUTION = "code_execution"  # 代码执行类
+    UNCLEAR_INTENT = "unclear_intent"  # 意图不明确
 
 
 class SubIntentType(Enum):
     """子意图类型枚举"""
+
     # 知识检索子类
-    FACT_QUERY = "fact_query"                    # 事实查询
-    CONCEPT_EXPLANATION = "concept_explanation"   # 概念解释
-    COMPARISON_ANALYSIS = "comparison_analysis"   # 比较分析
-    HOW_TO_GUIDE = "how_to_guide"                # 操作指南
+    FACT_QUERY = "fact_query"  # 事实查询
+    CONCEPT_EXPLANATION = "concept_explanation"  # 概念解释
+    COMPARISON_ANALYSIS = "comparison_analysis"  # 比较分析
+    HOW_TO_GUIDE = "how_to_guide"  # 操作指南
 
     # 数据分析子类
-    EXPLORATORY_ANALYSIS = "exploratory_analysis" # 探索性分析
+    EXPLORATORY_ANALYSIS = "exploratory_analysis"  # 探索性分析
     STATISTICAL_ANALYSIS = "statistical_analysis"  # 统计分析
-    MACHINE_LEARNING = "machine_learning"         # 机器学习
-    VISUALIZATION = "visualization"               # 数据可视化
+    MACHINE_LEARNING = "machine_learning"  # 机器学习
+    VISUALIZATION = "visualization"  # 数据可视化
 
     # 文档处理子类
-    OCR_PROCESSING = "ocr_processing"             # OCR处理
-    TABLE_EXTRACTION = "table_extraction"         # 表格提取
-    IMAGE_ANALYSIS = "image_analysis"             # 图像分析
-    TEXT_EXTRACTION = "text_extraction"           # 文本提取
+    OCR_PROCESSING = "ocr_processing"  # OCR处理
+    TABLE_EXTRACTION = "table_extraction"  # 表格提取
+    IMAGE_ANALYSIS = "image_analysis"  # 图像分析
+    TEXT_EXTRACTION = "text_extraction"  # 文本提取
 
     # 代码执行子类
-    SCRIPT_EXECUTION = "script_execution"         # 脚本执行
-    COMPUTATION_TASK = "computation_task"         # 计算任务
+    SCRIPT_EXECUTION = "script_execution"  # 脚本执行
+    COMPUTATION_TASK = "computation_task"  # 计算任务
     ALGORITHM_IMPLEMENTATION = "algorithm_implementation"  # 算法实现
-    DEBUGGING = "debugging"                       # 调试任务
+    DEBUGGING = "debugging"  # 调试任务
 
 
 @dataclass
 class IntentResult:
     """意图分类结果"""
+
     intent: IntentType
     sub_intent: Optional[SubIntentType] = None
     confidence: float = 0.0
@@ -82,8 +85,10 @@ class IntentResult:
         """转换为字典"""
         return {
             **asdict(self),
-            "intent": self.intent.value if isinstance(self.intent, IntentType) else self.intent,
-            "sub_intent": self.sub_intent.value if self.sub_intent else None
+            "intent": self.intent.value
+            if isinstance(self.intent, IntentType)
+            else self.intent,
+            "sub_intent": self.sub_intent.value if self.sub_intent else None,
         }
 
     @property
@@ -105,6 +110,7 @@ class IntentResult:
 @dataclass
 class QueryContext:
     """查询上下文信息"""
+
     session_id: str
     user_id: Optional[str] = None
     session_topic: str = ""
@@ -149,7 +155,7 @@ class IntentClassifier:
         llm_client,
         confidence_threshold: float = 0.7,
         enable_cache: bool = True,
-        cache_ttl: int = 300
+        cache_ttl: int = 300,
     ):
         """
         初始化意图分类器
@@ -172,20 +178,16 @@ class IntentClassifier:
 
         # 统计信息
         self.stats = {
-            'total_classifications': 0,
-            'high_confidence_count': 0,
-            'clarification_count': 0,
-            'cache_hits': 0,
-            'avg_confidence': 0.0
+            "total_classifications": 0,
+            "high_confidence_count": 0,
+            "clarification_count": 0,
+            "cache_hits": 0,
+            "avg_confidence": 0.0,
         }
 
         logger.info("意图分类器初始化完成")
 
-    async def classify_intent(
-        self,
-        query: str,
-        context: QueryContext
-    ) -> IntentResult:
+    async def classify_intent(self, query: str, context: QueryContext) -> IntentResult:
         """
         分类用户意图
 
@@ -207,7 +209,7 @@ class IntentClassifier:
             if self.enable_cache:
                 cached_result = self._get_from_cache(cache_key)
                 if cached_result:
-                    self.stats['cache_hits'] += 1
+                    self.stats["cache_hits"] += 1
                     logger.debug(f"从缓存获取分类结果: {cached_result.intent}")
                     return cached_result
 
@@ -223,15 +225,23 @@ class IntentClassifier:
                 context={
                     "query_length": len(processed_query),
                     "has_uploaded_files": len(context.uploaded_files) > 0,
-                    "session_depth": context.query_count_in_session
+                    "session_depth": context.query_count_in_session,
                 },
                 variables={
                     "user_query": processed_query,
                     "session_topic": context.session_topic,
-                    "recent_intents": ", ".join(context.recent_intents[-3:]) if context.recent_intents else "",
-                    "uploaded_files": ", ".join([f["name"] for f in context.uploaded_files]) if context.uploaded_files else "无",
-                    "user_preferences": json.dumps(context.user_preferences, ensure_ascii=False)
-                }
+                    "recent_intents": ", ".join(context.recent_intents[-3:])
+                    if context.recent_intents
+                    else "",
+                    "uploaded_files": ", ".join(
+                        [f["name"] for f in context.uploaded_files]
+                    )
+                    if context.uploaded_files
+                    else "无",
+                    "user_preferences": json.dumps(
+                        context.user_preferences, ensure_ascii=False
+                    ),
+                },
             )
 
             # 5. 调用LLM进行分类
@@ -243,7 +253,9 @@ class IntentClassifier:
             intent_result = await self._parse_classification_result(llm_response)
 
             # 7. 后处理和验证
-            intent_result = await self._post_process_result(intent_result, query, context)
+            intent_result = await self._post_process_result(
+                intent_result, query, context
+            )
 
             # 8. 更新缓存
             if self.enable_cache:
@@ -258,7 +270,9 @@ class IntentClassifier:
             )
             intent_result.llm_response = llm_response
 
-            logger.info(f"意图分类完成: {intent_result.intent} (置信度: {intent_result.confidence:.2f})")
+            logger.info(
+                f"意图分类完成: {intent_result.intent} (置信度: {intent_result.confidence:.2f})"
+            )
             return intent_result
 
         except Exception as e:
@@ -270,7 +284,7 @@ class IntentClassifier:
                 reasoning=f"分类过程中出现错误: {str(e)}",
                 processing_time_ms=int(
                     (datetime.now() - start_time).total_seconds() * 1000
-                )
+                ),
             )
 
     async def _preprocess_input(self, query: str) -> str:
@@ -287,19 +301,24 @@ class IntentClassifier:
             return ""
 
         # 移除多余空白字符
-        processed = re.sub(r'\s+', ' ', query.strip())
+        processed = re.sub(r"\s+", " ", query.strip())
 
         # 处理特殊字符
-        processed = re.sub(r'[^\w\s\u4e00-\u9fff.,!?;:()[]{}"\'-]', '', processed)
+        processed = re.sub(r'[^\w\s\u4e00-\u9fff.,!?;:()[]{}"\'-]', "", processed)
 
         # 统一标点符号
-        processed = re.sub(r'[，。！？；：]', lambda m: {
-            '，': ',', '。': '.', '！': '!', '？': '?',
-            '；': ';', '：': ':'
-        }[m.group()], processed)
+        processed = re.sub(
+            r"[，。！？；：]",
+            lambda m: {"，": ",", "。": ".", "！": "!", "？": "?", "；": ";", "：": ":"}[
+                m.group()
+            ],
+            processed,
+        )
 
         # 处理英文大小写
-        processed = processed.lower() if self._is_english_heavy(processed) else processed
+        processed = (
+            processed.lower() if self._is_english_heavy(processed) else processed
+        )
 
         return processed.strip()
 
@@ -308,9 +327,9 @@ class IntentClassifier:
         if not text:
             return False
 
-        english_chars = len(re.findall(r'[a-zA-Z]', text))
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
-        total_chars = len(re.findall(r'\w', text))
+        english_chars = len(re.findall(r"[a-zA-Z]", text))
+        chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+        total_chars = len(re.findall(r"\w", text))
 
         return english_chars > chinese_chars and total_chars > 0
 
@@ -334,13 +353,11 @@ class IntentClassifier:
             user_preferences={},
             interaction_history=[],
             time_of_day=datetime.now().strftime("%H:%M"),
-            query_count_in_session=1
+            query_count_in_session=1,
         )
 
     async def _build_classification_request(
-        self,
-        query: str,
-        context: QueryContext
+        self, query: str, context: QueryContext
     ) -> str:
         """
         构建分类请求
@@ -374,7 +391,9 @@ class IntentClassifier:
 
         if context.user_preferences:
             request_parts.append(f"【用户偏好】")
-            request_parts.append(json.dumps(context.user_preferences, ensure_ascii=False))
+            request_parts.append(
+                json.dumps(context.user_preferences, ensure_ascii=False)
+            )
 
         return "\n\n".join(request_parts)
 
@@ -410,19 +429,23 @@ class IntentClassifier:
         query_lower = prompt.lower()
 
         # 检查各种分类的关键词
-        if any(keyword in query_lower for keyword in ['什么是', '如何', '告诉我', '解释', '定义']):
+        if any(keyword in query_lower for keyword in ["什么是", "如何", "告诉我", "解释", "定义"]):
             intent = "knowledge_retrieval"
             confidence = 0.85
             reasoning = "问题包含知识查询相关的关键词"
-        elif any(keyword in query_lower for keyword in ['分析', '统计', '图表', '数据', 'dataset']):
+        elif any(
+            keyword in query_lower for keyword in ["分析", "统计", "图表", "数据", "dataset"]
+        ):
             intent = "data_analysis"
             confidence = 0.90
             reasoning = "问题涉及数据分析相关操作"
-        elif any(keyword in query_lower for keyword in ['pdf', '图片', 'ocr', '提取', '文档']):
+        elif any(
+            keyword in query_lower for keyword in ["pdf", "图片", "ocr", "提取", "文档"]
+        ):
             intent = "document_processing"
             confidence = 0.88
             reasoning = "问题提到文档处理或OCR相关"
-        elif any(keyword in query_lower for keyword in ['运行', '执行', '代码', '计算', '程序']):
+        elif any(keyword in query_lower for keyword in ["运行", "执行", "代码", "计算", "程序"]):
             intent = "code_execution"
             confidence = 0.87
             reasoning = "问题涉及代码执行或计算任务"
@@ -433,24 +456,27 @@ class IntentClassifier:
 
         # 提取关键词
         keywords = []
-        if '数据' in query_lower:
-            keywords.append('数据')
-        if '分析' in query_lower:
-            keywords.append('分析')
-        if 'pdf' in query_lower:
-            keywords.append('PDF')
-        if '代码' in query_lower:
-            keywords.append('代码')
+        if "数据" in query_lower:
+            keywords.append("数据")
+        if "分析" in query_lower:
+            keywords.append("分析")
+        if "pdf" in query_lower:
+            keywords.append("PDF")
+        if "代码" in query_lower:
+            keywords.append("代码")
 
-        return json.dumps({
-            "intent": intent,
-            "confidence": confidence,
-            "reasoning": reasoning,
-            "keywords": keywords,
-            "context_clues": [],
-            "suggested_action": f"路由到{intent}处理模块",
-            "uncertainty_factors": [] if confidence > 0.7 else ["查询信息不够充分"]
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "intent": intent,
+                "confidence": confidence,
+                "reasoning": reasoning,
+                "keywords": keywords,
+                "context_clues": [],
+                "suggested_action": f"路由到{intent}处理模块",
+                "uncertainty_factors": [] if confidence > 0.7 else ["查询信息不够充分"],
+            },
+            ensure_ascii=False,
+        )
 
     async def _parse_classification_result(self, llm_response: str) -> IntentResult:
         """
@@ -464,11 +490,11 @@ class IntentClassifier:
         """
         try:
             # 尝试解析JSON响应
-            if llm_response.strip().startswith('{'):
+            if llm_response.strip().startswith("{"):
                 data = json.loads(llm_response)
             else:
                 # 如果不是JSON格式，尝试提取JSON部分
-                json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
+                json_match = re.search(r"\{.*\}", llm_response, re.DOTALL)
                 if json_match:
                     data = json.loads(json_match.group())
                 else:
@@ -476,11 +502,17 @@ class IntentClassifier:
 
             # 创建IntentResult
             intent_value = data.get("intent", "unclear_intent")
-            intent = IntentType(intent_value) if intent_value in [e.value for e in IntentType] else IntentType.UNCLEAR_INTENT
+            intent = (
+                IntentType(intent_value)
+                if intent_value in [e.value for e in IntentType]
+                else IntentType.UNCLEAR_INTENT
+            )
 
             sub_intent_value = data.get("sub_intent")
             sub_intent = None
-            if sub_intent_value and sub_intent_value in [e.value for e in SubIntentType]:
+            if sub_intent_value and sub_intent_value in [
+                e.value for e in SubIntentType
+            ]:
                 sub_intent = SubIntentType(sub_intent_value)
 
             return IntentResult(
@@ -491,7 +523,7 @@ class IntentClassifier:
                 keywords=data.get("keywords", []),
                 context_clues=data.get("context_clues", []),
                 suggested_action=data.get("suggested_action", ""),
-                uncertainty_factors=data.get("uncertainty_factors", [])
+                uncertainty_factors=data.get("uncertainty_factors", []),
             )
 
         except Exception as e:
@@ -500,14 +532,11 @@ class IntentClassifier:
             return IntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
-                reasoning=f"解析失败: {str(e)}"
+                reasoning=f"解析失败: {str(e)}",
             )
 
     async def _post_process_result(
-        self,
-        result: IntentResult,
-        original_query: str,
-        context: QueryContext
+        self, result: IntentResult, original_query: str, context: QueryContext
     ) -> IntentResult:
         """
         后处理和验证分类结果
@@ -524,7 +553,10 @@ class IntentClassifier:
         result.confidence = max(0.0, min(1.0, result.confidence))
 
         # 基于上下文调整置信度
-        if context.recent_intents and result.intent.value in context.recent_intents[-2:]:
+        if (
+            context.recent_intents
+            and result.intent.value in context.recent_intents[-2:]
+        ):
             # 如果与最近的意图一致，增加置信度
             result.confidence = min(1.0, result.confidence + 0.1)
             result.reasoning += f" (与最近意图 '{result.intent.value}' 一致，置信度提升)"
@@ -535,7 +567,10 @@ class IntentClassifier:
             if "data" in file_types and result.intent == IntentType.DATA_ANALYSIS:
                 result.confidence = min(1.0, result.confidence + 0.15)
                 result.reasoning += " (用户上传了数据文件，加强数据分析意图判断)"
-            elif any("pdf" in ft.lower() or "image" in ft.lower() for ft in file_types) and result.intent == IntentType.DOCUMENT_PROCESSING:
+            elif (
+                any("pdf" in ft.lower() or "image" in ft.lower() for ft in file_types)
+                and result.intent == IntentType.DOCUMENT_PROCESSING
+            ):
                 result.confidence = min(1.0, result.confidence + 0.15)
                 result.reasoning += " (用户上传了文档/图片，加强文档处理意图判断)"
 
@@ -555,7 +590,7 @@ class IntentClassifier:
             IntentType.DATA_ANALYSIS: "启动数据分析Agent处理数据任务",
             IntentType.DOCUMENT_PROCESSING: "启动OCR Agent处理文档提取任务",
             IntentType.CODE_EXECUTION: "启动代码执行Agent运行计算任务",
-            IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图"
+            IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图",
         }
         return actions.get(intent, "启动通用处理流程")
 
@@ -563,8 +598,10 @@ class IntentClassifier:
         """生成缓存键"""
         key_data = {
             "query": query,
-            "recent_intents": context.recent_intents[-2:] if context.recent_intents else [],
-            "has_files": len(context.uploaded_files) > 0
+            "recent_intents": context.recent_intents[-2:]
+            if context.recent_intents
+            else [],
+            "has_files": len(context.uploaded_files) > 0,
         }
         return hash(json.dumps(key_data, sort_keys=True)).hexdigest()
 
@@ -587,22 +624,24 @@ class IntentClassifier:
             # 删除最旧的缓存项
             oldest_key = min(
                 self._classification_cache.keys(),
-                key=lambda k: self._classification_cache[k][1]
+                key=lambda k: self._classification_cache[k][1],
             )
             del self._classification_cache[oldest_key]
 
     def _update_stats(self, result: IntentResult):
         """更新统计信息"""
-        self.stats['total_classifications'] += 1
+        self.stats["total_classifications"] += 1
         if result.is_high_confidence:
-            self.stats['high_confidence_count'] += 1
+            self.stats["high_confidence_count"] += 1
         if result.is_uncertain:
-            self.stats['clarification_count'] += 1
+            self.stats["clarification_count"] += 1
 
         # 更新平均置信度
-        total = self.stats['total_classifications']
-        current_avg = self.stats['avg_confidence']
-        self.stats['avg_confidence'] = ((current_avg * (total - 1)) + result.confidence) / total
+        total = self.stats["total_classifications"]
+        current_avg = self.stats["avg_confidence"]
+        self.stats["avg_confidence"] = (
+            (current_avg * (total - 1)) + result.confidence
+        ) / total
 
     async def get_clarification_prompt(self, query: str, result: IntentResult) -> str:
         """
@@ -622,13 +661,16 @@ class IntentClassifier:
                 context={"confidence": result.confidence},
                 variables={
                     "user_query": query,
-                    "possible_intents": json.dumps([
-                        {"type": "knowledge_retrieval", "desc": "知识查询和回答"},
-                        {"type": "data_analysis", "desc": "数据分析和可视化"},
-                        {"type": "document_processing", "desc": "文档处理和OCR"},
-                        {"type": "code_execution", "desc": "代码执行和计算"}
-                    ], ensure_ascii=False)
-                }
+                    "possible_intents": json.dumps(
+                        [
+                            {"type": "knowledge_retrieval", "desc": "知识查询和回答"},
+                            {"type": "data_analysis", "desc": "数据分析和可视化"},
+                            {"type": "document_processing", "desc": "文档处理和OCR"},
+                            {"type": "code_execution", "desc": "代码执行和计算"},
+                        ],
+                        ensure_ascii=False,
+                    ),
+                },
             )
 
             # 模拟LLM调用
@@ -638,7 +680,9 @@ class IntentClassifier:
             logger.error(f"获取澄清Prompt失败: {e}")
             return f"抱歉，我没有完全理解您的问题。您是想：1. 查询知识信息 2. 分析数据 3. 处理文档 4. 执行代码 请选择一个选项。"
 
-    async def _simulate_clarification_response(self, query: str, result: IntentResult) -> str:
+    async def _simulate_clarification_response(
+        self, query: str, result: IntentResult
+    ) -> str:
         """模拟澄清响应"""
         return f"""抱歉，我没有完全理解您的问题"{query}"。根据我的分析，您可能想要：
 
@@ -649,7 +693,9 @@ class IntentClassifier:
 
 请告诉我您想要哪种类型的帮助，这样我可以为您提供更准确的服务。"""
 
-    async def route_to_agent(self, result: IntentResult, context: QueryContext) -> Dict[str, Any]:
+    async def route_to_agent(
+        self, result: IntentResult, context: QueryContext
+    ) -> Dict[str, Any]:
         """
         路由到对应的Agent
 
@@ -668,28 +714,34 @@ class IntentClassifier:
             "agent_type": self._get_agent_type(result.intent),
             "routing_reason": result.reasoning,
             "requires_clarification": result.is_uncertain,
-            "suggested_action": result.suggested_action
+            "suggested_action": result.suggested_action,
         }
 
         # 添加特定的路由参数
         if result.intent == IntentType.DATA_ANALYSIS:
-            routing_info.update({
-                "requires_docker": True,
-                "supported_formats": ["csv", "excel", "json", "parquet"],
-                "default_visualization": True
-            })
+            routing_info.update(
+                {
+                    "requires_docker": True,
+                    "supported_formats": ["csv", "excel", "json", "parquet"],
+                    "default_visualization": True,
+                }
+            )
         elif result.intent == IntentType.DOCUMENT_PROCESSING:
-            routing_info.update({
-                "supported_formats": ["pdf", "jpg", "png", "tiff"],
-                "ocr_engines": ["pytesseract", "deepscan"],
-                "output_format": "text"
-            })
+            routing_info.update(
+                {
+                    "supported_formats": ["pdf", "jpg", "png", "tiff"],
+                    "ocr_engines": ["pytesseract", "deepscan"],
+                    "output_format": "text",
+                }
+            )
         elif result.intent == IntentType.CODE_EXECUTION:
-            routing_info.update({
-                "supported_languages": ["python", "javascript", "sql"],
-                "execution_timeout": 30,
-                "safety_checks": True
-            })
+            routing_info.update(
+                {
+                    "supported_languages": ["python", "javascript", "sql"],
+                    "execution_timeout": 30,
+                    "safety_checks": True,
+                }
+            )
 
         return routing_info
 
@@ -700,19 +752,21 @@ class IntentClassifier:
             IntentType.DATA_ANALYSIS: "DataAnalysisAgent",
             IntentType.DOCUMENT_PROCESSING: "OCRAgent",
             IntentType.CODE_EXECUTION: "CodeExecutorAgent",
-            IntentType.UNCLEAR_INTENT: "ClarificationAgent"
+            IntentType.UNCLEAR_INTENT: "ClarificationAgent",
         }
         return agent_mapping.get(intent, "GeneralAgent")
 
     def get_stats(self) -> Dict[str, Any]:
         """获取分类器统计信息"""
-        total = self.stats['total_classifications']
+        total = self.stats["total_classifications"]
         return {
             **self.stats,
-            "high_confidence_rate": (self.stats['high_confidence_count'] / max(total, 1)),
-            "clarification_rate": (self.stats['clarification_count'] / max(total, 1)),
-            "cache_hit_rate": (self.stats['cache_hits'] / max(total, 1)),
-            "cache_size": len(self._classification_cache)
+            "high_confidence_rate": (
+                self.stats["high_confidence_count"] / max(total, 1)
+            ),
+            "clarification_rate": (self.stats["clarification_count"] / max(total, 1)),
+            "cache_hit_rate": (self.stats["cache_hits"] / max(total, 1)),
+            "cache_size": len(self._classification_cache),
         }
 
     def clear_cache(self):
@@ -725,8 +779,7 @@ class IntentClassifier:
         try:
             # 测试Prompt管理器连接
             test_prompt, _ = await self.prompt_manager.get_prompt(
-                name="intent_classification",
-                category="Intent"
+                name="intent_classification", category="Intent"
             )
 
             return {
@@ -734,12 +787,12 @@ class IntentClassifier:
                 "prompt_manager": "connected",
                 "cache_size": len(self._classification_cache),
                 "confidence_threshold": self.confidence_threshold,
-                "stats": self.get_stats()
+                "stats": self.get_stats(),
             }
 
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "prompt_manager": "disconnected"
+                "prompt_manager": "disconnected",
             }

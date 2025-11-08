@@ -1,13 +1,14 @@
 """Code Analysis Agent - 具备 Python 代码执行和数据分析能力"""
 
 from langchain.agents import create_agent
-from langchain_ollama import ChatOllama
 from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
+
+from backend.agents.state import CodeAnalysisAgentState
+from backend.config import settings
 from backend.tools.code_execution import code_execution_tool
 from backend.tools.data_analysis import data_analysis_tool
 from backend.tools.visualization import visualization_tool
-from backend.agents.state import CodeAnalysisAgentState
-from backend.config import settings
 
 
 def _get_llm():
@@ -23,13 +24,11 @@ def _get_llm():
             api_key=settings.zhipu_api_key,
             base_url=settings.zhipu_base_url,
             timeout=settings.api_timeout_ms / 1000,
-            temperature=0
+            temperature=0,
         )
     else:
         return ChatOllama(
-            model=settings.ollama_model,
-            base_url=settings.ollama_host,
-            temperature=0
+            model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
 
 
@@ -92,8 +91,10 @@ def build_code_analysis_agent():
 - 内存限制为 {code_execution_memory_limit}
 - 如果代码无法在3次迭代内修复，请说明具体困难
 """.format(
-        code_execution_timeout=getattr(settings, 'code_execution_timeout', 300),
-        code_execution_memory_limit=getattr(settings, 'code_execution_memory_limit', '1G')
+        code_execution_timeout=getattr(settings, "code_execution_timeout", 300),
+        code_execution_memory_limit=getattr(
+            settings, "code_execution_memory_limit", "1G"
+        ),
     )
 
     # 3. 创建 Agent
@@ -102,7 +103,7 @@ def build_code_analysis_agent():
         tools=[code_execution_tool, data_analysis_tool, visualization_tool],
         system_prompt=system_prompt,
         # state_schema=CodeAnalysisAgentState,  # 暂时注释，先测试基础功能
-        max_iterations=3  # 最大迭代次数
+        max_iterations=3,  # 最大迭代次数
     )
 
     return agent
