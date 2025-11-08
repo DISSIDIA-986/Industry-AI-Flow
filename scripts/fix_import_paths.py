@@ -10,20 +10,24 @@ import sys
 from pathlib import Path
 
 # Colors for terminal output
-RED = '\033[91m'
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
+
 
 def log_info(msg):
     print(f"{BLUE}ℹ️  {msg}{RESET}")
 
+
 def log_success(msg):
     print(f"{GREEN}✅ {msg}{RESET}")
 
+
 def log_warning(msg):
     print(f"{YELLOW}⚠️  {msg}{RESET}")
+
 
 def log_error(msg):
     print(f"{RED}❌ {msg}{RESET}")
@@ -45,7 +49,7 @@ def fix_file_imports(filepath, replacements, dry_run=False):
         log_warning(f"File not found: {filepath}")
         return False
 
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
         original = content
 
@@ -64,11 +68,11 @@ def fix_file_imports(filepath, replacements, dry_run=False):
         else:
             # Backup original file
             backup_path = f"{filepath}.backup"
-            with open(backup_path, 'w', encoding='utf-8') as f:
+            with open(backup_path, "w", encoding="utf-8") as f:
                 f.write(original)
 
             # Write fixed content
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
 
             log_success(f"Fixed: {filepath}")
@@ -80,12 +84,12 @@ def fix_file_imports(filepath, replacements, dry_run=False):
 
 def main():
     """Main fix script"""
-    print("="*60)
+    print("=" * 60)
     print("Import Path Fix Script - Industry AI Flow")
-    print("="*60)
+    print("=" * 60)
 
     # Check for dry-run flag
-    dry_run = '--dry-run' in sys.argv or '-n' in sys.argv
+    dry_run = "--dry-run" in sys.argv or "-n" in sys.argv
     if dry_run:
         log_info("DRY RUN MODE - No files will be modified")
 
@@ -100,10 +104,10 @@ def main():
     log_info("\n[1/4] Fixing backend/services/rag_engine.py...")
     rag_engine_path = "backend/services/rag_engine.py"
     rag_engine_fixes = {
-        r'from backend\.services\.embedder import': 'from backend.services.core.embedder import',
-        r'from backend\.services\.vectorstore import': 'from backend.services.core.vectorstore import',
-        r'from backend\.services\.llm_client import': 'from backend.services.llm_integration.llm_client import',
-        r'from backend\.services\.feedback_manager import': 'from backend.services.feedback_system.feedback_manager import',
+        r"from backend\.services\.embedder import": "from backend.services.core.embedder import",
+        r"from backend\.services\.vectorstore import": "from backend.services.core.vectorstore import",
+        r"from backend\.services\.llm_client import": "from backend.services.llm_integration.llm_client import",
+        r"from backend\.services\.feedback_manager import": "from backend.services.feedback_system.feedback_manager import",
     }
     if fix_file_imports(rag_engine_path, rag_engine_fixes, dry_run):
         fixes_applied += 1
@@ -114,25 +118,29 @@ def main():
     # Find all Python files that might have incorrect imports
     for root, dirs, files in os.walk("backend"):
         # Skip virtual environments and cache
-        dirs[:] = [d for d in dirs if d not in ['venv', '__pycache__', '.git', 'venv_llamacpp']]
+        dirs[:] = [
+            d for d in dirs if d not in ["venv", "__pycache__", ".git", "venv_llamacpp"]
+        ]
 
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 filepath = os.path.join(root, file)
 
                 # Check for potential import issues
-                with open(filepath, 'r', encoding='utf-8') as f:
+                with open(filepath, "r", encoding="utf-8") as f:
                     content = f.read()
 
                 # Look for imports that might need fixing
                 potential_issues = []
 
-                if 'from backend.services.embedder import' in content:
-                    potential_issues.append('embedder import needs services.core')
-                if 'from backend.services.vectorstore import' in content:
-                    potential_issues.append('vectorstore import needs services.core')
-                if 'from backend.services.llm_client import' in content:
-                    potential_issues.append('llm_client import needs services.llm_integration')
+                if "from backend.services.embedder import" in content:
+                    potential_issues.append("embedder import needs services.core")
+                if "from backend.services.vectorstore import" in content:
+                    potential_issues.append("vectorstore import needs services.core")
+                if "from backend.services.llm_client import" in content:
+                    potential_issues.append(
+                        "llm_client import needs services.llm_integration"
+                    )
 
                 if potential_issues:
                     log_warning(f"Potential issues in {filepath}:")
@@ -158,7 +166,7 @@ def main():
             log_warning(f"Missing: {init_file}")
             if not dry_run:
                 os.makedirs(os.path.dirname(init_file), exist_ok=True)
-                with open(init_file, 'w', encoding='utf-8') as f:
+                with open(init_file, "w", encoding="utf-8") as f:
                     f.write('"""Package initialization"""\n')
                 log_success(f"Created: {init_file}")
                 fixes_applied += 1
@@ -206,16 +214,16 @@ sys.exit(0 if all_ok else 1)
 
     if not dry_run:
         validation_path = "scripts/validate_imports.py"
-        with open(validation_path, 'w', encoding='utf-8') as f:
+        with open(validation_path, "w", encoding="utf-8") as f:
             f.write(validation_script)
         os.chmod(validation_path, 0o755)
         log_success(f"Created: {validation_path}")
         fixes_applied += 1
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SUMMARY")
-    print("="*60)
+    print("=" * 60)
 
     if dry_run:
         log_info("Dry run completed - no changes made")
@@ -237,5 +245,6 @@ if __name__ == "__main__":
     except Exception as e:
         log_error(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

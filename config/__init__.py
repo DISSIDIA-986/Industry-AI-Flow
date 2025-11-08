@@ -7,12 +7,7 @@ for development, testing, and production environments.
 
 from .base import BaseConfig
 from .development import DevelopmentConfig
-from .testing import TestingConfig
 from .production import ProductionConfig
+from .testing import TestingConfig
 
-__all__ = [
-    'BaseConfig',
-    'DevelopmentConfig',
-    'TestingConfig',
-    'ProductionConfig'
-]
+__all__ = ["BaseConfig", "DevelopmentConfig", "TestingConfig", "ProductionConfig"]

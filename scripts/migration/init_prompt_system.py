@@ -14,12 +14,12 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import asyncpg
+
 from backend.config import get_database_url
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -29,15 +29,16 @@ async def create_database():
     try:
         # 连接到默认数据库
         conn = await asyncpg.connect(
-            host='localhost',
+            host="localhost",
             port=5432,
-            user='postgres',
-            password='password',
-            database='postgres'  # 默认数据库
+            user="postgres",
+            password="password",
+            database="postgres",  # 默认数据库
         )
 
         # 创建应用数据库
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE DATABASE industry_ai_flow_prompts
             WITH
             OWNER = postgres
@@ -46,7 +47,8 @@ async def create_database():
             LC_CTYPE = 'en_US.UTF-8'
             TABLESPACE = pg_default
             CONNECTION LIMIT = -1;
-        """)
+        """
+        )
 
         await conn.close()
         logger.info("✅ 数据库创建成功")
@@ -66,21 +68,23 @@ async def execute_migration():
     try:
         # 连接到应用数据库
         conn = await asyncpg.connect(
-            host='localhost',
+            host="localhost",
             port=5432,
-            user='postgres',
-            password='password',
-            database='industry_ai_flow_prompts'
+            user="postgres",
+            password="password",
+            database="industry_ai_flow_prompts",
         )
 
         # 读取迁移文件
-        migration_file = project_root / "backend" / "migrations" / "001_create_prompt_tables.sql"
+        migration_file = (
+            project_root / "backend" / "migrations" / "001_create_prompt_tables.sql"
+        )
 
         if not migration_file.exists():
             logger.error(f"❌ 迁移文件不存在: {migration_file}")
             return False
 
-        with open(migration_file, 'r', encoding='utf-8') as f:
+        with open(migration_file, "r", encoding="utf-8") as f:
             migration_sql = f.read()
 
         # 执行迁移
@@ -103,13 +107,13 @@ async def test_system():
 
         # 获取数据库连接池
         pool = await asyncpg.create_pool(
-            host='localhost',
+            host="localhost",
             port=5432,
-            user='postgres',
-            password='password',
-            database='industry_ai_flow_prompts',
+            user="postgres",
+            password="password",
+            database="industry_ai_flow_prompts",
             min_size=5,
-            max_size=20
+            max_size=20,
         )
 
         # 初始化Prompt管理器
@@ -122,23 +126,18 @@ async def test_system():
             content="这是一个测试Prompt，变量：{{test_var}}",
             variables=[
                 PromptVariable(
-                    name="test_var",
-                    type="string",
-                    required=True,
-                    description="测试变量"
+                    name="test_var", type="string", required=True, description="测试变量"
                 )
             ],
             tags=["test"],
-            created_by="init_script"
+            created_by="init_script",
         )
 
         logger.info(f"✅ 测试Prompt创建成功: {test_prompt.id}")
 
         # 测试获取和渲染Prompt
         prompt_info, rendered_content = await prompt_manager.get_prompt(
-            name="test_prompt",
-            category="Test",
-            variables={"test_var": "Hello World"}
+            name="test_prompt", category="Test", variables={"test_var": "Hello World"}
         )
 
         logger.info(f"✅ Prompt渲染成功: {rendered_content}")
@@ -149,7 +148,9 @@ async def test_system():
 
         # 清理测试数据
         async with pool.acquire() as conn:
-            await conn.execute("DELETE FROM prompts WHERE name = 'test_prompt' AND category = 'Test'")
+            await conn.execute(
+                "DELETE FROM prompts WHERE name = 'test_prompt' AND category = 'Test'"
+            )
 
         await pool.close()
         logger.info("✅ 系统测试完成")
@@ -187,13 +188,13 @@ async def run_migration_script():
 async def main():
     """主初始化流程"""
     print("🎯 Prompt管理系统初始化")
-    print("="*50)
+    print("=" * 50)
 
     steps = [
         ("创建数据库", create_database),
         ("执行数据库迁移", execute_migration),
         ("测试系统功能", test_system),
-        ("迁移现有Prompt", run_migration_script)
+        ("迁移现有Prompt", run_migration_script),
     ]
 
     success_count = 0
@@ -209,7 +210,7 @@ async def main():
         except Exception as e:
             print(f"❌ {step_name} 异常: {e}")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print(f"🎉 初始化完成: {success_count}/{len(steps)} 个步骤成功")
 
     if success_count == len(steps):
@@ -226,5 +227,6 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     exit_code = asyncio.run(main())
     sys.exit(exit_code)

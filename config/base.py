@@ -6,7 +6,7 @@ Contains common configuration settings shared across all environments.
 
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class BaseConfig:
@@ -25,7 +25,9 @@ class BaseConfig:
 
     # Vector database settings
     VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", DATABASE_URL)
-    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    EMBEDDING_MODEL = os.getenv(
+        "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+    )
     EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "384"))
 
     # LLM settings
@@ -46,7 +48,9 @@ class BaseConfig:
 
     # Logging settings
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    LOG_FORMAT = os.getenv("LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    LOG_FORMAT = os.getenv(
+        "LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
     # Security settings
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -67,5 +71,5 @@ class BaseConfig:
         return {
             key: getattr(cls, key)
             for key in dir(cls)
-            if not key.startswith('_') and not callable(getattr(cls, key))
+            if not key.startswith("_") and not callable(getattr(cls, key))
         }
