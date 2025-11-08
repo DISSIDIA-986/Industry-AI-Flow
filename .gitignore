@@ -1,9 +1,174 @@
-# Ignore local samples and artifacts
+# ==========================================
+# Environment and Configuration
+# ==========================================
+.env
+.env.*
+.venv/
+venv/
+env/
+test_env/
+
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==========================================
+# Testing and Coverage
+# ==========================================
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+coverage.xml
+*.cover
+.hypothesis/
+
+# ==========================================
+# Jupyter Notebook
+# ==========================================
+.ipynb_checkpoints
+
+# ==========================================
+# Documentation and Reports
+# ==========================================
+docs/_build/
+site/
+*.log
+reports/
+tests/reports/latest/*.html
+tests/reports/latest/*.json
+tests/reports/historical/
+
+# ==========================================
+# Data and Media Files
+# ==========================================
 samples/
 *.pdf
 *.docx
+*.doc
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.csv
 *.json
-__pycache__/
-*.pyc
-.env
-.env.*
+*.xml
+*.yaml
+*.yml
+data/
+datasets/
+temp/
+tmp/
+*.tmp
+*.temp
+
+# ==========================================
+# AI/ML Model Files
+# ==========================================
+models/
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.pb
+*.onnx
+*.tflite
+
+# ==========================================
+# Database and Storage
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+vector_db/
+embeddings/
+cache/
+
+# ==========================================
+# Docker and Containers
+# ==========================================
+.dockerignore
+docker-compose.override.yml
+
+# ==========================================
+# IDE and Editors
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==========================================
+# OS and System Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# Temporary Files and Outputs
+# ==========================================
+temp/
+tmp/
+*.tmp
+*.bak
+*.backup
+*.old
+output/
+outputs/
+test_output/
+logs/
+*.log
+
+# ==========================================
+# Workspace and Experimental Code
+# ==========================================
+workspace/experiments/*
+workspace/prototypes/*
+workspace/sandbox/*
+!workspace/experiments/.gitkeep
+!workspace/prototypes/.gitkeep
+!workspace/sandbox/.gitkeep
+
+# ==========================================
+# Performance and Monitoring
+# ==========================================
+*.prof
+*.profile
+benchmark_results/
+performance_logs/
+
+examples/
+datasets/
+chinese_docker_output/
+chinese_visualization_output/

@@ -1,0 +1,60 @@
+# 数据分析专用 Docker 镜像依赖 - Luncheon AI Flow 增强版
+# 核心数据处理库
+pandas==2.1.4
+numpy==1.26.4
+scipy==1.11.4
+
+# 可视化库
+matplotlib==3.8.2
+seaborn==0.13.1
+plotly==5.17.0
+bokeh==3.3.0
+altair==5.2.0
+
+# 机器学习库
+scikit-learn==1.4.0
+xgboost==2.0.3
+lightgbm==4.3.0
+catboost==1.2.2
+
+# 数据处理和存储
+openpyxl==3.1.2
+xlrd==2.0.1
+pyarrow==14.0.1
+fastparquet==2023.10.1
+
+# 统计和科学计算
+statsmodels==0.14.0
+pingouin==0.5.4
+
+# 图像处理（用于可视化）
+Pillow==10.1.0
+
+# 数据库连接
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+
+# 网络和API请求
+requests==2.31.0
+httpx==0.25.2
+
+# 工具库
+tqdm==4.66.1
+joblib==1.3.2
+jupyter==1.0.0
+ipywidgets==8.1.1
+
+# 时间序列分析
+prophet==1.1.5
+arch==6.2.0
+
+# 自然语言处理（可选）
+nltk==3.8.1
+wordcloud==1.9.2
+
+# 地理空间分析（可选，需要GDAL依赖，暂时注释以避免构建错误）
+# geopandas==0.14.1
+
+# 性能监控
+memory-profiler==0.61.0
+psutil==5.9.6
