@@ -4,10 +4,11 @@ Python 3.13 + PaddleOCR 专用解决方案演示
 专注于建筑图纸OCR识别的核心功能
 """
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
+
 
 def run_command(cmd, description, capture_output=True):
     """运行命令并显示结果"""
@@ -17,7 +18,9 @@ def run_command(cmd, description, capture_output=True):
 
     try:
         if capture_output:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=30
+            )
             if result.stdout:
                 print(result.stdout)
             if result.stderr:
@@ -32,6 +35,7 @@ def run_command(cmd, description, capture_output=True):
     except Exception as e:
         print(f"❌ 执行失败: {e}")
         return False
+
 
 def demo_python313_paddleocr_solution():
     """演示Python 3.13 + PaddleOCR专用解决方案"""
@@ -63,8 +67,9 @@ def demo_python313_paddleocr_solution():
     print(f"\n📋 步骤 3: 专用版本管理器")
     print("version_manager.py 的Python 3.13专用特性:")
 
-    success = run_command("python3 version_manager.py --check-deps paddleocr",
-                        "检查PaddleOCR依赖兼容性")
+    success = run_command(
+        "python3 version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
+    )
 
     if not success:
         print("✅ 版本管理器正确识别Python 3.14不兼容")
@@ -92,7 +97,7 @@ def demo_python313_paddleocr_solution():
     # 6. 项目配置更新
     print(f"\n📋 步骤 6: 项目配置更新")
     print("pyproject.toml 更新:")
-    print("  • requires-python = \">=3.13,<3.14\"")
+    print('  • requires-python = ">=3.13,<3.14"')
     print("  • Programming Language :: Python :: 3.13")
     print("  • Programming Language :: Python :: 3 :: Only")
     print("  • keywords: ['paddleocr', 'architecture', 'ocr', 'building-drawings']")
@@ -182,9 +187,11 @@ def demo_python313_paddleocr_solution():
     print("  3. 验证PaddleOCR功能")
     print("  4. 开始建筑图纸OCR开发")
 
+
 def main():
     """主函数"""
     demo_python313_paddleocr_solution()
+
 
 if __name__ == "__main__":
     main()
