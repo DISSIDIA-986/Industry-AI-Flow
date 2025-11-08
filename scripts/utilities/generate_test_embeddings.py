@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """为测试数据生成向量嵌入"""
 
-import sys
 import os
+import sys
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,11 +24,13 @@ def generate_embeddings():
     try:
         # 获取所有未生成向量的文档块
         print("\n🔍 查找未生成向量的文档块...")
-        cur.execute("""
+        cur.execute(
+            """
             SELECT id, content
             FROM document_chunks
             WHERE embedding IS NULL
-        """)
+        """
+        )
 
         chunks = cur.fetchall()
         print(f"找到 {len(chunks)} 个文档块需要生成向量")
@@ -48,23 +50,28 @@ def generate_embeddings():
         # 更新数据库
         print("\n💾 更新数据库...")
         for chunk_id, embedding in zip(chunk_ids, embeddings):
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE document_chunks
                 SET embedding = %s
                 WHERE id = %s
-            """, (embedding, chunk_id))
+            """,
+                (embedding, chunk_id),
+            )
 
         conn.commit()
         print("✅ 数据库更新完成")
 
         # 验证
         print("\n🔍 验证向量嵌入...")
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 COUNT(*) as total,
                 COUNT(embedding) as with_embedding
             FROM document_chunks
-        """)
+        """
+        )
 
         total, with_embedding = cur.fetchone()
         print(f"  - 总文档块数: {total}")
@@ -87,5 +94,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ 错误: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

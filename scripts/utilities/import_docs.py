@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """批量导入文档脚本"""
 
-import sys
 import os
+import sys
 import time
 from pathlib import Path
 
 # 添加backend目录到Python路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from backend.services.document_loader import load_document
+from backend.config import settings
 from backend.services.chunker import chunk_text
+from backend.services.document_loader import load_document
 from backend.services.embedder import embed_texts
 from backend.services.vectorstore import VectorStore
-from backend.config import settings
 
 
 def import_documents(directory: str):
@@ -26,7 +26,8 @@ def import_documents(directory: str):
     # 获取所有支持的文档
     supported_formats = [".pdf", ".txt"]
     files = [
-        f for f in directory_path.rglob("*")
+        f
+        for f in directory_path.rglob("*")
         if f.is_file() and f.suffix in supported_formats
     ]
 
@@ -64,7 +65,7 @@ def import_documents(directory: str):
                 filename=file_path.name,
                 filepath=str(file_path),
                 chunks=chunks,
-                embeddings=embeddings
+                embeddings=embeddings,
             )
             print(f"  ✓ 存储成功: doc_id={doc_id}")
 

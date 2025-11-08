@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """比较不同RAG配置的性能"""
 
-import sys
-import os
 import json
+import os
+import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from backend.services.rag_engine import SimpleRAG
 

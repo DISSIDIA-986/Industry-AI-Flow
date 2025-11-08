@@ -9,22 +9,21 @@ import json
 import logging
 import os
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
-import uuid
+from typing import Any, Dict, List
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from backend.services.prompt_manager import PromptManager, PromptVariable
 from backend.config import get_database_pool
+from backend.services.prompt_manager import PromptManager, PromptVariable
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -35,11 +34,11 @@ class PromptMigrator:
     def __init__(self, prompt_manager: PromptManager):
         self.prompt_manager = prompt_manager
         self.migration_stats = {
-            'total_prompts': 0,
-            'migrated_prompts': 0,
-            'failed_prompts': 0,
-            'skipped_prompts': 0,
-            'errors': []
+            "total_prompts": 0,
+            "migrated_prompts": 0,
+            "failed_prompts": 0,
+            "skipped_prompts": 0,
+            "errors": [],
         }
 
     async def migrate_all_prompts(self):
@@ -54,7 +53,7 @@ class PromptMigrator:
 
         # 3. 合并所有Prompt
         all_prompts = {**code_prompts, **config_prompts}
-        self.migration_stats['total_prompts'] = len(all_prompts)
+        self.migration_stats["total_prompts"] = len(all_prompts)
 
         logger.info(f"发现 {len(all_prompts)} 个待迁移Prompt")
 
@@ -113,31 +112,27 @@ class PromptMigrator:
                         name="context",
                         type="string",
                         required=True,
-                        description="检索到的文档内容"
+                        description="检索到的文档内容",
                     ),
                     PromptVariable(
-                        name="query",
-                        type="string",
-                        required=True,
-                        description="用户的问题"
+                        name="query", type="string", required=True, description="用户的问题"
                     ),
                     PromptVariable(
                         name="language",
                         type="string",
                         required=False,
                         default_value="中文",
-                        description="回答使用的语言"
-                    )
+                        description="回答使用的语言",
+                    ),
                 ],
                 "metadata": {
                     "description": "RAG检索增强生成的响应Prompt",
                     "purpose": "基于检索文档生成准确回答",
-                    "author": "system_migration"
+                    "author": "system_migration",
                 },
                 "priority": 100,
-                "tags": ["RAG", "Response", "Core"]
+                "tags": ["RAG", "Response", "Core"],
             },
-
             "rag_context_compression": {
                 "category": "RAG",
                 "subcategory": "processing",
@@ -163,29 +158,26 @@ class PromptMigrator:
                         name="raw_context",
                         type="string",
                         required=True,
-                        description="原始检索到的文档"
+                        description="原始检索到的文档",
                     ),
                     PromptVariable(
-                        name="query",
-                        type="string",
-                        required=True,
-                        description="用户问题"
+                        name="query", type="string", required=True, description="用户问题"
                     ),
                     PromptVariable(
                         name="max_length",
                         type="number",
                         required=False,
                         default_value=2000,
-                        description="最大输出长度"
-                    )
+                        description="最大输出长度",
+                    ),
                 ],
                 "metadata": {
                     "description": "RAG上下文压缩Prompt",
-                    "purpose": "压缩和整理检索到的文档内容"
+                    "purpose": "压缩和整理检索到的文档内容",
                 },
                 "priority": 80,
-                "tags": ["RAG", "Processing", "Compression"]
-            }
+                "tags": ["RAG", "Processing", "Compression"],
+            },
         }
 
     def _get_code_execution_prompts(self) -> Dict[str, Any]:
@@ -221,45 +213,38 @@ class PromptMigrator:
 ```""",
                 "variables": [
                     PromptVariable(
-                        name="code",
-                        type="string",
-                        required=True,
-                        description="要执行的代码"
+                        name="code", type="string", required=True, description="要执行的代码"
                     ),
                     PromptVariable(
                         name="language",
                         type="string",
                         required=True,
-                        description="编程语言"
+                        description="编程语言",
                     ),
                     PromptVariable(
                         name="task_type",
                         type="string",
                         required=True,
-                        description="任务类型"
+                        description="任务类型",
                     ),
                     PromptVariable(
                         name="description",
                         type="string",
                         required=True,
-                        description="任务描述"
+                        description="任务描述",
                     ),
                     PromptVariable(
                         name="timeout_limit",
                         type="number",
                         required=False,
                         default_value=30,
-                        description="执行超时限制（秒）"
-                    )
+                        description="执行超时限制（秒）",
+                    ),
                 ],
-                "metadata": {
-                    "description": "代码执行主要Prompt",
-                    "purpose": "安全执行代码并处理结果"
-                },
+                "metadata": {"description": "代码执行主要Prompt", "purpose": "安全执行代码并处理结果"},
                 "priority": 100,
-                "tags": ["Code-Execution", "Core", "Security"]
+                "tags": ["Code-Execution", "Core", "Security"],
             },
-
             "code_debugging": {
                 "category": "Code-Execution",
                 "subcategory": "debugging",
@@ -292,37 +277,31 @@ class PromptMigrator:
 5. 预防措施""",
                 "variables": [
                     PromptVariable(
-                        name="code",
-                        type="string",
-                        required=True,
-                        description="有问题的代码"
+                        name="code", type="string", required=True, description="有问题的代码"
                     ),
                     PromptVariable(
                         name="language",
                         type="string",
                         required=True,
-                        description="编程语言"
+                        description="编程语言",
                     ),
                     PromptVariable(
                         name="error_message",
                         type="string",
                         required=False,
-                        description="错误信息"
+                        description="错误信息",
                     ),
                     PromptVariable(
                         name="expected_behavior",
                         type="string",
                         required=False,
-                        description="期望的行为"
-                    )
+                        description="期望的行为",
+                    ),
                 ],
-                "metadata": {
-                    "description": "代码调试Prompt",
-                    "purpose": "分析和修复代码问题"
-                },
+                "metadata": {"description": "代码调试Prompt", "purpose": "分析和修复代码问题"},
                 "priority": 90,
-                "tags": ["Code-Execution", "Debugging", "Analysis"]
-            }
+                "tags": ["Code-Execution", "Debugging", "Analysis"],
+            },
         }
 
     def _get_data_analysis_prompts(self) -> Dict[str, Any]:
@@ -365,31 +344,30 @@ class PromptMigrator:
                         name="dataset_info",
                         type="string",
                         required=True,
-                        description="数据集信息"
+                        description="数据集信息",
                     ),
                     PromptVariable(
                         name="analysis_goals",
                         type="string",
                         required=True,
-                        description="分析目标"
+                        description="分析目标",
                     ),
                     PromptVariable(
                         name="language",
                         type="string",
                         required=False,
                         default_value="Python",
-                        description="分析语言"
-                    )
+                        description="分析语言",
+                    ),
                 ],
                 "metadata": {
                     "description": "探索性数据分析（EDA）Prompt",
                     "purpose": "全面的数据探索性分析",
-                    "version_notes": "v2.0增强中文字体支持和可视化"
+                    "version_notes": "v2.0增强中文字体支持和可视化",
                 },
                 "priority": 100,
-                "tags": ["Data-Analysis", "EDA", "Visualization"]
+                "tags": ["Data-Analysis", "EDA", "Visualization"],
             },
-
             "data_analysis_ml": {
                 "category": "Data-Analysis",
                 "subcategory": "ML-Model",
@@ -430,36 +408,32 @@ class PromptMigrator:
                         name="dataset_info",
                         type="string",
                         required=True,
-                        description="数据集信息"
+                        description="数据集信息",
                     ),
                     PromptVariable(
                         name="task_description",
                         type="string",
                         required=True,
-                        description="建模任务描述"
+                        description="建模任务描述",
                     ),
                     PromptVariable(
                         name="target_variable",
                         type="string",
                         required=True,
-                        description="目标变量名称"
+                        description="目标变量名称",
                     ),
                     PromptVariable(
                         name="language",
                         type="string",
                         required=False,
                         default_value="Python",
-                        description="建模语言"
-                    )
+                        description="建模语言",
+                    ),
                 ],
-                "metadata": {
-                    "description": "机器学习建模Prompt",
-                    "purpose": "构建和评估机器学习模型"
-                },
+                "metadata": {"description": "机器学习建模Prompt", "purpose": "构建和评估机器学习模型"},
                 "priority": 90,
-                "tags": ["Data-Analysis", "ML-Model", "Prediction"]
+                "tags": ["Data-Analysis", "ML-Model", "Prediction"],
             },
-
             "chinese_data_analysis": {
                 "category": "Data-Analysis",
                 "subcategory": "Chinese-Support",
@@ -501,16 +475,16 @@ except ImportError:
                         name="dataset_info",
                         type="string",
                         required=True,
-                        description="中文数据集信息"
+                        description="中文数据集信息",
                     )
                 ],
                 "metadata": {
                     "description": "中文数据分析专用Prompt",
-                    "purpose": "确保中文数据分析和可视化的正确显示"
+                    "purpose": "确保中文数据分析和可视化的正确显示",
                 },
                 "priority": 95,
-                "tags": ["Data-Analysis", "Chinese", "Visualization"]
-            }
+                "tags": ["Data-Analysis", "Chinese", "Visualization"],
+            },
         }
 
     def _get_system_prompts(self) -> Dict[str, Any]:
@@ -555,17 +529,13 @@ except ImportError:
                         type="string",
                         required=False,
                         default_value="中文",
-                        description="交互语言"
+                        description="交互语言",
                     )
                 ],
-                "metadata": {
-                    "description": "Agent系统Prompt",
-                    "purpose": "定义AI助手的身份和能力"
-                },
+                "metadata": {"description": "Agent系统Prompt", "purpose": "定义AI助手的身份和能力"},
                 "priority": 100,
-                "tags": ["System", "Agent", "Core"]
+                "tags": ["System", "Agent", "Core"],
             },
-
             "error_handling": {
                 "category": "System",
                 "subcategory": "error",
@@ -606,16 +576,13 @@ except ImportError:
                         type="string",
                         required=False,
                         default_value="中文",
-                        description="错误提示语言"
+                        description="错误提示语言",
                     )
                 ],
-                "metadata": {
-                    "description": "错误处理Prompt",
-                    "purpose": "标准化错误处理流程"
-                },
+                "metadata": {"description": "错误处理Prompt", "purpose": "标准化错误处理流程"},
                 "priority": 80,
-                "tags": ["System", "Error", "User-Experience"]
-            }
+                "tags": ["System", "Error", "User-Experience"],
+            },
         }
 
     async def _extract_prompts_from_config(self) -> Dict[str, Any]:
@@ -626,18 +593,20 @@ except ImportError:
         config_paths = [
             "config/prompts.json",
             "prompts.json",
-            "backend/config/prompts.json"
+            "backend/config/prompts.json",
         ]
 
         for config_path in config_paths:
             if os.path.exists(config_path):
                 try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                    with open(config_path, "r", encoding="utf-8") as f:
                         config_data = json.load(f)
 
-                    if 'prompts' in config_data:
-                        prompts.update(config_data['prompts'])
-                        logger.info(f"从 {config_path} 加载了 {len(config_data['prompts'])} 个Prompt")
+                    if "prompts" in config_data:
+                        prompts.update(config_data["prompts"])
+                        logger.info(
+                            f"从 {config_path} 加载了 {len(config_data['prompts'])} 个Prompt"
+                        )
 
                 except Exception as e:
                     logger.error(f"加载配置文件 {config_path} 失败: {e}")
@@ -650,11 +619,13 @@ except ImportError:
             # 检查是否已存在
             try:
                 existing_prompt = await self.prompt_manager._get_prompt_by_version(
-                    name, prompt_data['category'], prompt_data.get('version', '1.0.0')
+                    name, prompt_data["category"], prompt_data.get("version", "1.0.0")
                 )
                 if existing_prompt:
-                    logger.info(f"Prompt {name} v{prompt_data.get('version', '1.0.0')} 已存在，跳过")
-                    self.migration_stats['skipped_prompts'] += 1
+                    logger.info(
+                        f"Prompt {name} v{prompt_data.get('version', '1.0.0')} 已存在，跳过"
+                    )
+                    self.migration_stats["skipped_prompts"] += 1
                     return
             except:
                 pass  # Prompt不存在，继续创建
@@ -662,27 +633,24 @@ except ImportError:
             # 创建新Prompt
             prompt_info = await self.prompt_manager.create_prompt(
                 name=name,
-                category=prompt_data['category'],
-                content=prompt_data['content'],
-                subcategory=prompt_data.get('subcategory'),
-                version=prompt_data.get('version', '1.0.0'),
-                variables=prompt_data.get('variables', []),
-                metadata=prompt_data.get('metadata', {}),
-                priority=prompt_data.get('priority', 0),
-                tags=prompt_data.get('tags', []),
-                created_by="system_migration"
+                category=prompt_data["category"],
+                content=prompt_data["content"],
+                subcategory=prompt_data.get("subcategory"),
+                version=prompt_data.get("version", "1.0.0"),
+                variables=prompt_data.get("variables", []),
+                metadata=prompt_data.get("metadata", {}),
+                priority=prompt_data.get("priority", 0),
+                tags=prompt_data.get("tags", []),
+                created_by="system_migration",
             )
 
             logger.info(f"✅ 成功迁移Prompt: {name} (ID: {prompt_info.id})")
-            self.migration_stats['migrated_prompts'] += 1
+            self.migration_stats["migrated_prompts"] += 1
 
         except Exception as e:
             logger.error(f"❌ 迁移Prompt {name} 失败: {e}")
-            self.migration_stats['failed_prompts'] += 1
-            self.migration_stats['errors'].append({
-                'prompt': name,
-                'error': str(e)
-            })
+            self.migration_stats["failed_prompts"] += 1
+            self.migration_stats["errors"].append({"prompt": name, "error": str(e)})
 
     def _generate_migration_report(self):
         """生成迁移报告"""
@@ -731,41 +699,41 @@ except ImportError:
 
         # 保存报告
         report_path = "prompt_migration_report.md"
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(report)
 
         logger.info(f"📋 迁移报告已保存到: {report_path}")
 
         # 打印摘要
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎉 Prompt迁移完成!")
-        print("="*60)
+        print("=" * 60)
         print(f"总数量: {stats['total_prompts']}")
         print(f"成功: {stats['migrated_prompts']} ✅")
         print(f"跳过: {stats['skipped_prompts']} ⏭️")
         print(f"失败: {stats['failed_prompts']} ❌")
         print(f"成功率: {stats['migrated_prompts'] / max(stats['total_prompts'], 1):.1%}")
         print(f"报告: {report_path}")
-        print("="*60)
+        print("=" * 60)
 
     def _list_prompt_names(self, status: str) -> str:
         """列出指定状态的Prompt名称"""
-        if status == 'migrated':
+        if status == "migrated":
             return "已成功迁移到数据库"
-        elif status == 'skipped':
+        elif status == "skipped":
             return "已存在相同版本，跳过迁移"
-        elif status == 'failed':
-            names = [error['prompt'] for error in self.migration_stats['errors']]
-            return ', '.join(names) if names else "无"
+        elif status == "failed":
+            names = [error["prompt"] for error in self.migration_stats["errors"]]
+            return ", ".join(names) if names else "无"
         return ""
 
     def _format_errors(self) -> str:
         """格式化错误信息"""
-        if not self.migration_stats['errors']:
+        if not self.migration_stats["errors"]:
             return "无错误"
 
         error_text = ""
-        for error in self.migration_stats['errors']:
+        for error in self.migration_stats["errors"]:
             error_text += f"### {error['prompt']}\n"
             error_text += f"错误: {error['error']}\n\n"
 
@@ -789,7 +757,7 @@ async def main():
         # 执行迁移
         stats = await migrator.migrate_all_prompts()
 
-        return 0 if stats['failed_prompts'] == 0 else 1
+        return 0 if stats["failed_prompts"] == 0 else 1
 
     except Exception as e:
         logger.error(f"迁移过程失败: {e}")
@@ -799,5 +767,6 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     exit_code = asyncio.run(main())
     sys.exit(exit_code)
