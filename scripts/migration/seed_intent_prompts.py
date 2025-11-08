@@ -28,6 +28,7 @@ async def seed_intent_prompts():
 
         # 暂时使用模拟的PromptManager进行演示
         from backend.services.intent_classifier import MockPromptManager
+
         prompt_manager = MockPromptManager()
 
         # 1. 主分类Prompt
@@ -106,44 +107,41 @@ async def create_main_classification_prompt(prompt_manager):
 - 0.0-0.5: 非常不确定的分类""",
         variables=[
             PromptVariable(
-                name="user_query",
-                type="string",
-                required=True,
-                description="用户的问题文本"
+                name="user_query", type="string", required=True, description="用户的问题文本"
             ),
             PromptVariable(
                 name="session_topic",
                 type="string",
                 required=False,
-                description="当前会话主题"
+                description="当前会话主题",
             ),
             PromptVariable(
                 name="recent_intents",
                 type="string",
                 required=False,
-                description="最近的意图列表"
+                description="最近的意图列表",
             ),
             PromptVariable(
                 name="uploaded_files",
                 type="string",
                 required=False,
-                description="上传的文件列表"
+                description="上传的文件列表",
             ),
             PromptVariable(
                 name="user_preferences",
                 type="json",
                 required=False,
-                description="用户偏好设置"
-            )
+                description="用户偏好设置",
+            ),
         ],
         metadata={
             "description": "主意图分类Prompt",
             "purpose": "识别用户查询的主要意图类型",
             "llm_compatible": True,
-            "supported_llms": ["gpt-4", "gpt-3.5-turbo", "claude-3", "gemini-pro"]
+            "supported_llms": ["gpt-4", "gpt-3.5-turbo", "claude-3", "gemini-pro"],
         },
         priority=100,
-        tags=["Intent", "Classification", "Core"]
+        tags=["Intent", "Classification", "Core"],
     )
 
     print(f"✅ 主分类Prompt创建成功: {main_classification_prompt.id}")
@@ -200,37 +198,31 @@ async def create_clarification_prompt(prompt_manager):
 - 保持与用户提问语言一致""",
         variables=[
             PromptVariable(
-                name="user_query",
-                type="string",
-                required=True,
-                description="用户的问题"
+                name="user_query", type="string", required=True, description="用户的问题"
             ),
             PromptVariable(
                 name="possible_intents",
                 type="json",
                 required=True,
-                description="可能的意图列表"
+                description="可能的意图列表",
             ),
             PromptVariable(
                 name="classification_result",
                 type="string",
                 required=False,
-                description="分类结果分析"
+                description="分类结果分析",
             ),
             PromptVariable(
                 name="language",
                 type="string",
                 required=False,
                 default_value="中文",
-                description="澄清使用的语言"
-            )
+                description="澄清使用的语言",
+            ),
         ],
-        metadata={
-            "description": "意图澄清Prompt",
-            "purpose": "当用户意图不明确时进行澄清对话"
-        },
+        metadata={"description": "意图澄清Prompt", "purpose": "当用户意图不明确时进行澄清对话"},
         priority=90,
-        tags=["Intent", "Clarification", "UX"]
+        tags=["Intent", "Clarification", "UX"],
     )
 
     print(f"✅ 澄清Prompt创建成功: {clarification_prompt.id}")
@@ -276,18 +268,12 @@ async def create_sub_classification_prompts(prompt_manager):
 ```""",
         variables=[
             PromptVariable(
-                name="user_query",
-                type="string",
-                required=True,
-                description="用户查询"
+                name="user_query", type="string", required=True, description="用户查询"
             )
         ],
-        metadata={
-            "description": "数据分析子分类Prompt",
-            "purpose": "对数据分析请求进行细分子分类"
-        },
+        metadata={"description": "数据分析子分类Prompt", "purpose": "对数据分析请求进行细分子分类"},
         priority=80,
-        tags=["Intent", "Sub-Classification", "Data-Analysis"]
+        tags=["Intent", "Sub-Classification", "Data-Analysis"],
     )
 
     # 文档处理子分类
@@ -324,24 +310,18 @@ async def create_sub_classification_prompts(prompt_manager):
 ```""",
         variables=[
             PromptVariable(
-                name="user_query",
-                type="string",
-                required=True,
-                description="用户查询"
+                name="user_query", type="string", required=True, description="用户查询"
             ),
             PromptVariable(
                 name="document_info",
                 type="string",
                 required=False,
-                description="文档相关信息"
-            )
+                description="文档相关信息",
+            ),
         ],
-        metadata={
-            "description": "文档处理子分类Prompt",
-            "purpose": "对文档处理请求进行细分子分类"
-        },
+        metadata={"description": "文档处理子分类Prompt", "purpose": "对文档处理请求进行细分子分类"},
         priority=80,
-        tags=["Intent", "Sub-Classification", "Document-Processing"]
+        tags=["Intent", "Sub-Classification", "Document-Processing"],
     )
 
     # 代码执行子分类
@@ -379,24 +359,15 @@ async def create_sub_classification_prompts(prompt_manager):
 ```""",
         variables=[
             PromptVariable(
-                name="user_query",
-                type="string",
-                required=True,
-                description="用户查询"
+                name="user_query", type="string", required=True, description="用户查询"
             ),
             PromptVariable(
-                name="code_info",
-                type="string",
-                required=False,
-                description="代码相关信息"
-            )
+                name="code_info", type="string", required=False, description="代码相关信息"
+            ),
         ],
-        metadata={
-            "description": "代码执行子分类Prompt",
-            "purpose": "对代码执行请求进行细分子分类"
-        },
+        metadata={"description": "代码执行子分类Prompt", "purpose": "对代码执行请求进行细分子分类"},
         priority=80,
-        tags=["Intent", "Sub-Classification", "Code-Execution"]
+        tags=["Intent", "Sub-Classification", "Code-Execution"],
     )
 
     print(f"✅ 子分类Prompt创建完成")
@@ -452,30 +423,21 @@ async def create_context_enhancement_prompt(prompt_manager):
 ```""",
         variables=[
             PromptVariable(
-                name="session_info",
-                type="json",
-                required=True,
-                description="当前会话信息"
+                name="session_info", type="json", required=True, description="当前会话信息"
             ),
             PromptVariable(
-                name="file_status",
-                type="string",
-                required=False,
-                description="文件处理状态"
+                name="file_status", type="string", required=False, description="文件处理状态"
             ),
             PromptVariable(
                 name="behavior_pattern",
                 type="string",
                 required=False,
-                description="用户行为模式"
-            )
+                description="用户行为模式",
+            ),
         ],
-        metadata={
-            "description": "上下文增强Prompt",
-            "purpose": "增强意图分类的上下文信息"
-        },
+        metadata={"description": "上下文增强Prompt", "purpose": "增强意图分类的上下文信息"},
         priority=70,
-        tags=["Intent", "Context", "Enhancement"]
+        tags=["Intent", "Context", "Enhancement"],
     )
 
     print(f"✅ 上下文增强Prompt创建成功: {context_prompt.id}")
@@ -534,27 +496,21 @@ async def create_routing_decision_prompt(prompt_manager):
                 name="classification_result",
                 type="json",
                 required=True,
-                description="分类结果"
+                description="分类结果",
             ),
             PromptVariable(
-                name="system_status",
-                type="json",
-                required=True,
-                description="系统状态"
+                name="system_status", type="json", required=True, description="系统状态"
             ),
             PromptVariable(
                 name="agent_config",
                 type="json",
                 required=False,
-                description="Agent配置信息"
-            )
+                description="Agent配置信息",
+            ),
         ],
-        metadata={
-            "description": "路由决策Prompt",
-            "purpose": "基于分类结果做出智能路由决策"
-        },
+        metadata={"description": "路由决策Prompt", "purpose": "基于分类结果做出智能路由决策"},
         priority=90,
-        tags=["Intent", "Routing", "Decision"]
+        tags=["Intent", "Routing", "Decision"],
     )
 
     print(f"✅ 路由决策Prompt创建成功: {routing_prompt.id}")
@@ -562,11 +518,13 @@ async def create_routing_decision_prompt(prompt_manager):
 
 class MockPromptManager:
     """模拟Prompt管理器（用于演示）"""
+
     def __init__(self):
         self.next_id = 1
 
     async def create_prompt(self, **kwargs):
         """模拟创建Prompt"""
+
         class MockPromptInfo:
             def __init__(self, id, **kwargs):
                 self.id = id
