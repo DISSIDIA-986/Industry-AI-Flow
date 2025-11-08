@@ -1,17 +1,39 @@
-# AI 工作流平台 - 本地可行性验证
+# 🤖 Industry AI Flow
 
-**项目用途**: 一个基于本地 Mac 环境的 RAG (检索增强生成) 系统，用于从私人文档中智能问答，支持 PDF/TXT/图片等多种格式。
+**智能AI工作流平台** - 基于LangChain 1.0的企业级RAG系统，支持意图识别、智能路由和多种Agent协同工作。
 
-## 项目目标
+## 🎯 项目概述
 
-在 2 周内验证 Mac 本地 RAG 技术可行性，回答"是否继续投入"的决策问题。
+Industry AI Flow是一个现代化的AI工作流平台，集成了：
+- 🔍 **智能意图分类** - 自动识别用户查询意图并路由到合适Agent
+- 📚 **RAG知识检索** - 基于向量数据库的智能文档问答
+- 📊 **数据分析** - 自动化的数据处理和可视化分析
+- 📄 **文档处理** - OCR、PDF解析和内容提取
+- 💻 **代码执行** - 安全的沙箱代码执行环境
+- 🎛️ **Prompt管理** - 企业级的Prompt版本管理和优化
 
-### 验收标准
+## ✨ 核心特性
 
-- [x] 文档导入：1000份文档入库并向量化，耗时<10分钟
-- [x] RAG问答：单次查询响应时间<10秒（P95）
-- [x] 准确率：简单问答准确率>70%（基于20个测试问题）
-- [x] 稳定性：连续运行30分钟无崩溃，内存占用<80%
+### 🧠 智能意图分类系统
+- **4大类意图识别**：知识检索、数据分析、文档处理、代码执行
+- **置信度评估**：0.0-1.0的智能置信度评分机制
+- **上下文感知**：基于会话历史和用户偏好的智能分类
+- **澄清机制**：低置信度时的自动澄清对话
+- **LangChain 1.0集成**：基于State Graph的工作流编排
+
+### 🛠️ 企业级特性
+- **Prompt管理**：集中化Prompt数据库，版本控制，A/B测试
+- **高可用架构**：多层回退机制，负载均衡，容错处理
+- **可观测性**：完整的监控、日志和性能分析
+- **Docker支持**：容器化部署，Kubernetes集成
+- **API优先**：RESTful API设计，易于集成
+
+### 📊 技术栈优势
+- **LangChain 1.0**：现代化的Agent编排框架
+- **PostgreSQL + pgvector**：高性能向量数据库
+- **混合检索**：BM25 + 向量搜索 + 重排序
+- **异步架构**：高性能的异步I/O处理
+- **模块化设计**：清晰的责任分离和可扩展架构
 
 ## 项目运行流程
 
@@ -59,47 +81,61 @@ sequenceDiagram
 - Redis（通过 homebrew 安装）
 - Ollama
 
-## 快速开始
+## 🚀 快速开始
 
-### 方式一：使用 Miniconda（推荐）
+### 📋 环境要求
+
+- **Python**: 3.10+
+- **PostgreSQL**: 14+ (with pgvector extension)
+- **Node.js**: 16+ (可选，用于前端工具)
+- **Docker**: 20+ (可选，用于容器化部署)
+
+### 🔧 快速安装
 
 ```bash
-# 1. 创建虚拟环境
-conda create -n ai_workflow python=3.10
-conda activate ai_workflow
+# 1. 克隆项目
+git clone <repository-url>
+cd Industry-AI-Flow
 
-# 2. 运行环境搭建脚本
-make setup
+# 2. 快速启动 (推荐)
+make quick-start
 
-# 3. 验证环境
-bash scripts/verify_env.sh
+# 3. 或者手动安装
+make install-dev
+make db-setup
+make run
 ```
 
-### 方式二：使用 base 环境
+### 🎯 核心功能测试
 
 ```bash
-# 如果 base 环境已安装常用库，可直接使用
-conda activate base
+# 测试意图分类系统
+make test-intent
 
-# 运行环境搭建脚本
-make setup
+# 测试完整工作流
+make test-intent-full
+
+# 启动Web界面
+make streamlit
+
+# 启动Prompt管理界面
+make streamlit-prompt
 ```
 
-## 使用指南
-
-### 1. 启动 API 服务
+### 🐳 Docker 部署
 
 ```bash
-make start
-```
+# 构建镜像
+make docker-build
 
-访问 API 文档：http://localhost:8000/docs
+# 启动容器
+make docker-run
 
-### 2. 导入测试文档
+# 查看日志
+make logs
 
-```bash
-# 将测试文档放在 samples/ 目录
-python scripts/import_docs.py ./samples/
+# 停止服务
+make docker-stop
 ```
 
 **预期输出**：
@@ -143,37 +179,99 @@ curl -X POST "http://localhost:8000/rag/query" \
   -d '{"question": "什么是RAG系统?", "top_k": 3}'
 ```
 
-## 项目结构
+## 🏗️ 项目架构
 
 ```
 Industry-AI-Flow/
-├── backend/                    # 后端代码
-│   ├── config.py              # 配置管理
-│   ├── main.py                # FastAPI 应用
-│   ├── requirements.txt       # Python 依赖
-│   └── services/              # 业务逻辑
-│       ├── document_loader.py # 文档加载 (OCR支持)
-│       ├── chunker.py         # 文档分块
-│       ├── embedder.py        # 向量嵌入
-│       ├── vectorstore.py     # 向量存储
-│       ├── retrieval/         # 检索服务
-│       │   ├── hybrid_search.py # 混合检索
-│       │   └── reranker.py    # 重排序
-│       ├── ollama_client.py   # LLM 客户端
-│       └── rag_engine.py      # RAG 引擎
-├── scripts/                   # 工具脚本
-│   ├── setup_local.sh         # 环境搭建
-│   ├── verify_env.sh          # 环境验证
-│   ├── import_docs.py         # 批量导入
-│   └── test_rag.py            # RAG 测试
-├── infra/                     # 基础设施配置
-│   ├── init.sql               # 数据库初始化
-│   └── docker-compose.yaml    # Docker配置（可选）
-├── samples/                   # 测试数据
-│   └── test_questions.json    # 测试问题集
-├── .env.example               # 环境变量模板
-├── Makefile                   # 常用命令
-└── README.md                  # 项目文档
+├── 📁 backend/                          # 后端核心服务
+│   ├── agents/                         # AI Agent实现
+│   ├── api/                           # REST API接口
+│   ├── middleware/                    # 中间件层
+│   ├── migrations/                    # 数据库迁移
+│   ├── services/                      # 核心业务服务
+│   │   ├── intent_classifier.py      # 意图分类器
+│   │   ├── context_manager.py        # 上下文管理
+│   │   ├── routing_decision.py      # 路由决策引擎
+│   │   ├── intent_workflow.py        # 意图工作流
+│   │   ├── prompt_manager.py         # Prompt管理
+│   │   ├── rag_engine.py             # RAG检索引擎
+│   │   └── ...                       # 其他服务
+│   ├── tools/                         # 工具模块
+│   ├── utils/                         # 工具函数
+│   ├── main.py                        # 应用入口
+│   └── requirements.txt               # Python依赖
+│
+├── 📁 docs/                           # 项目文档
+│   ├── design/                       # 设计文档
+│   ├── implementation/               # 实现总结
+│   ├── api/                          # API文档
+│   ├── guides/                       # 使用指南
+│   └── research/                     # 研究文档
+│
+├── 📁 scripts/                        # 脚本工具
+│   ├── setup/                        # 环境设置
+│   ├── migration/                    # 数据迁移
+│   ├── testing/                      # 测试脚本
+│   └── deployment/                   # 部署脚本
+│
+├── 📁 tests/                          # 测试文件
+│   ├── unit/                         # 单元测试
+│   ├── integration/                  # 集成测试
+│   ├── performance/                  # 性能测试
+│   └── reports/                      # 测试报告
+│
+├── 📁 infrastructure/                 # 基础设施
+│   ├── docker/                       # Docker配置
+│   ├── kubernetes/                   # K8s配置
+│   └── monitoring/                   # 监控配置
+│
+├── 📁 tools/                          # 开发工具
+│   ├── data-generator/               # 数据生成工具
+│   ├── performance-monitor/          # 性能监控
+│   └── deployment-automation/        # 部署自动化
+│
+├── 📁 workspace/                      # 工作空间
+│   ├── experiments/                  # 实验性代码
+│   ├── prototypes/                   # 原型代码
+│   └── sandbox/                      # 沙盒测试
+│
+├── 📁 examples/                       # 示例代码
+├── 📄 README.md                        # 项目说明
+├── 📄 requirements.txt                 # 统一依赖文件
+├── 📄 .gitignore                       # Git忽略规则
+├── 📄 Makefile                         # 构建脚本
+└── 📄 .env.example                     # 环境变量示例
+```
+
+### 核心架构组件
+
+#### 🧠 意图分类工作流
+```mermaid
+graph TD
+    A[用户输入] --> B[输入预处理]
+    B --> C[上下文增强]
+    C --> D[意图分类]
+    D --> E[置信度评估]
+    E --> F{置信度≥0.8?}
+    F --> |是| G[直接路由]
+    F --> |否| H[澄清对话]
+    H --> I[用户确认]
+    I --> D
+    G --> J[RAG Agent]
+    G --> K[数据分析Agent]
+    G --> L[文档处理Agent]
+    G --> M[代码执行Agent]
+```
+
+#### 🔄 Prompt管理系统
+```mermaid
+graph LR
+    A[Prompt Designer] --> B[PostgreSQL Database]
+    B --> C[Prompt Manager]
+    C --> D[LangChain 1.0 Middleware]
+    D --> E[AI Agents]
+    C --> F[Web Interface]
+    C --> G[A/B Testing Engine]
 ```
 
 ## 配置说明
