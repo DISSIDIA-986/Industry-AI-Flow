@@ -1,0 +1,78 @@
+# 简化的中文支持测试 Docker 镜像
+FROM python:3.11-slim
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    MPLBACKEND=Agg
+
+# 安装系统依赖和中文字体
+RUN apt-get update && apt-get install -y \
+    # 基础依赖
+    gcc g++ \
+    # 中文字体支持
+    fonts-wqy-zenhei fonts-wqy-microhei \
+    fonts-arphic-ukai fonts-arphic-uming \
+    # 字体配置工具
+    fontconfig \
+    # 清理
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建工作目录
+WORKDIR /workspace
+
+# 复制简化的requirements文件
+COPY requirements-chinese-test.txt /tmp/
+
+# 安装 Python 依赖
+RUN pip install --no-cache-dir -r /tmp/requirements-chinese-test.txt
+
+# 创建中文字体支持模块
+RUN mkdir -p /app/utils && \
+    echo '#!/usr/bin/env python3' > /app/utils/matplotlib_chinese_support.py && \
+    echo '"""Docker环境中文字体支持"""' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import os' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import matplotlib' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'import matplotlib.font_manager as fm' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '' >> /app/utils/matplotlib_chinese_support.py && \
+    echo 'def setup_chinese_matplotlib():' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    """设置matplotlib支持中文显示"""' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    try:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # Docker环境中文字体路径' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        font_paths = [' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ]' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        for font_path in font_paths:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '            if os.path.exists(font_path):' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                font_prop = fm.FontProperties(fname=font_path)' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                matplotlib.rcParams["font.family"] = font_prop.get_name()' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                print(f"✓ 已设置中文字体: {font_prop.get_name()}")' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '                break' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # 备用方案' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        chinese_fonts = ["WenQuanYi Zen Hei", "WenQuanYi Micro Hei", "SimHei"]' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams["font.sans-serif"] = chinese_fonts' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams["font.family"] = "sans-serif"' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        # 解决负号显示问题' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        matplotlib.rcParams["axes.unicode_minus"] = False' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        ' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        return True' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '    except Exception as e:' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        print(f"⚠ 设置中文支持时出错: {e}")' >> /app/utils/matplotlib_chinese_support.py && \
+    echo '        return False' >> /app/utils/matplotlib_chinese_support.py
+
+# 创建输出目录
+RUN mkdir -p /workspace/output
+
+# 复制测试脚本
+COPY test_chinese_docker.py /workspace/
+
+# 验证安装和中文支持
+RUN python /workspace/test_chinese_docker.py
+
+# 设置默认命令
+CMD ["python", "--version"]
