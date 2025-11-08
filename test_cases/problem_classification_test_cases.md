@@ -18,7 +18,7 @@ This document provides test cases for the problem classification system, designe
 **Expected Intent**: Knowledge Retrieval
 **Confidence Threshold**: >0.85
 
-#### Test Set 1.2: Data Analysis Questions  
+#### Test Set 1.2: Data Analysis Questions
 **Test ID: PC-SQA-DA-001 to 005**
 - "Analyze this sales data"
 - "Show me the trend in customer acquisition"

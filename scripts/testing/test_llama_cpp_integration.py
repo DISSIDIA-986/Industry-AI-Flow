@@ -2,16 +2,17 @@
 llama.cpp 集成测试
 验证 llama.cpp 后端与 RAG 系统的完整集成
 """
-import sys
 import os
+import sys
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import time
-from backend.services.llm_client import get_llm_client, get_backend_status
-from backend.services.rag_engine import SimpleRAG
+
 from backend.config import settings
+from backend.services.llm_client import get_backend_status, get_llm_client
+from backend.services.rag_engine import SimpleRAG
 
 
 def test_backend_status():
@@ -28,8 +29,8 @@ def test_backend_status():
         print(f"   后端类型: {status.get('backend')}")
         print(f"   状态: {status.get('status')}")
 
-        if 'model_info' in status:
-            model_info = status['model_info']
+        if "model_info" in status:
+            model_info = status["model_info"]
             print(f"   模型: {model_info.get('model', 'unknown')}")
             print(f"   GPU加速: {model_info.get('gpu_acceleration', False)}")
             print(f"   上下文大小: {model_info.get('n_ctx', 'unknown')}")
@@ -39,6 +40,7 @@ def test_backend_status():
     except Exception as e:
         print(f"❌ 后端状态检查失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -53,11 +55,7 @@ def test_client_generation():
         print(f"   提示词: {test_prompt}")
 
         start_time = time.time()
-        response = client.generate(
-            prompt=test_prompt,
-            max_tokens=100,
-            temperature=0.7
-        )
+        response = client.generate(prompt=test_prompt, max_tokens=100, temperature=0.7)
         generation_time = time.time() - start_time
 
         print(f"✅ 文本生成成功")
@@ -69,6 +67,7 @@ def test_client_generation():
     except Exception as e:
         print(f"❌ 文本生成失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -87,6 +86,7 @@ def test_rag_initialization():
     except Exception as e:
         print(f"❌ RAG系统初始化失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, None
 
@@ -97,7 +97,7 @@ def test_memory_usage():
     try:
         client = get_llm_client()
 
-        if hasattr(client, 'get_memory_usage'):
+        if hasattr(client, "get_memory_usage"):
             memory_info = client.get_memory_usage()
             print(f"✅ 内存使用检查成功")
             print(f"   进程内存: {memory_info.get('memory_mb', 0):.2f} MB")
@@ -144,11 +144,7 @@ def performance_benchmark():
     try:
         client = get_llm_client()
 
-        test_prompts = [
-            "什么是RAG系统？",
-            "介绍一下向量数据库。",
-            "解释混合检索的工作原理。"
-        ]
+        test_prompts = ["什么是RAG系统？", "介绍一下向量数据库。", "解释混合检索的工作原理。"]
 
         total_time = 0
         total_tokens = 0
@@ -157,11 +153,7 @@ def performance_benchmark():
             print(f"[{i}/{len(test_prompts)}] 测试: {prompt}")
 
             start_time = time.time()
-            response = client.generate(
-                prompt=prompt,
-                max_tokens=50,
-                temperature=0.7
-            )
+            response = client.generate(prompt=prompt, max_tokens=50, temperature=0.7)
             generation_time = time.time() - start_time
 
             total_time += generation_time
@@ -186,6 +178,7 @@ def performance_benchmark():
     except Exception as e:
         print(f"❌ 性能测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

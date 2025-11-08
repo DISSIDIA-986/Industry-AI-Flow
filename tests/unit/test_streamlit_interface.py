@@ -7,26 +7,28 @@ Streamlit Interface Testing Suite
 包括前端交互完整性、用户体验验证、界面功能测试等
 """
 
-import pytest
-import time
 import asyncio
+import json
+import os
 import subprocess
 import sys
-import os
-import json
-import requests
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from unittest.mock import Mock, patch, AsyncMock
 import tempfile
 import threading
+import time
 import webbrowser
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+import requests
 
 
 class InterfaceComponent(Enum):
     """界面组件类型"""
+
     SIDEBAR = "sidebar"
     MAIN_CONTENT = "main_content"
     CHAT_INTERFACE = "chat_interface"
@@ -38,6 +40,7 @@ class InterfaceComponent(Enum):
 
 class UserInteractionType(Enum):
     """用户交互类型"""
+
     TEXT_INPUT = "text_input"
     BUTTON_CLICK = "button_click"
     FILE_UPLOAD = "file_upload"
@@ -50,6 +53,7 @@ class UserInteractionType(Enum):
 @dataclass
 class InterfaceTestCase:
     """界面测试用例"""
+
     name: str
     description: str
     component: InterfaceComponent
@@ -64,6 +68,7 @@ class InterfaceTestCase:
 @dataclass
 class InterfaceTestResult:
     """界面测试结果"""
+
     test_case: str
     component: str
     success: bool
@@ -98,18 +103,24 @@ class StreamlitInterfaceTester:
 
             # 启动Streamlit应用
             cmd = [
-                sys.executable, "-m", "streamlit", "run",
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
                 app_path,
-                "--server.headless", "true",
-                "--server.port", str(self.port),
-                "--server.address", self.host
+                "--server.headless",
+                "true",
+                "--server.port",
+                str(self.port),
+                "--server.address",
+                self.host,
             ]
 
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=os.environ.copy()
+                env=os.environ.copy(),
             )
 
             # 等待应用启动
@@ -262,8 +273,8 @@ with st.expander("❓ 帮助信息"):
     """)
 '''
 
-        os.makedirs(os.path.dirname(app_path) or '.', exist_ok=True)
-        with open(app_path, 'w', encoding='utf-8') as f:
+        os.makedirs(os.path.dirname(app_path) or ".", exist_ok=True)
+        with open(app_path, "w", encoding="utf-8") as f:
             f.write(mock_app_content)
 
     async def _check_app_health(self) -> bool:
@@ -279,7 +290,9 @@ with st.expander("❓ 帮助信息"):
             except:
                 return False
 
-    async def test_component_responsiveness(self, component: InterfaceComponent) -> InterfaceTestResult:
+    async def test_component_responsiveness(
+        self, component: InterfaceComponent
+    ) -> InterfaceTestResult:
         """测试组件响应性"""
         start_time = time.time()
 
@@ -292,7 +305,7 @@ with st.expander("❓ 帮助信息"):
                 InterfaceComponent.DOCUMENT_UPLOAD: self._test_document_upload,
                 InterfaceComponent.SETTINGS_PANEL: self._test_settings_panel,
                 InterfaceComponent.HELP_SECTION: self._test_help_section,
-                InterfaceComponent.STATUS_BAR: self._test_status_bar
+                InterfaceComponent.STATUS_BAR: self._test_status_bar,
             }
 
             if component in test_actions:
@@ -310,8 +323,8 @@ with st.expander("❓ 帮助信息"):
                     performance_metrics={
                         "load_time": response_time,
                         "interaction_delay": 0.1,
-                        "render_time": 0.05
-                    }
+                        "render_time": 0.05,
+                    },
                 )
             else:
                 raise ValueError(f"未知的组件类型: {component}")
@@ -323,7 +336,7 @@ with st.expander("❓ 帮助信息"):
                 component=component.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def _test_sidebar(self) -> Tuple[bool, Dict[str, Any]]:
@@ -334,7 +347,7 @@ with st.expander("❓ 帮助信息"):
                 "select_model_type",
                 "adjust_temperature",
                 "upload_file",
-                "check_system_status"
+                "check_system_status",
             ]
 
             results = {}
@@ -355,7 +368,7 @@ with st.expander("❓ 帮助信息"):
             content_tests = [
                 "title_display",
                 "layout_responsiveness",
-                "content_rendering"
+                "content_rendering",
             ]
 
             results = {}
@@ -376,7 +389,7 @@ with st.expander("❓ 帮助信息"):
                 "message_display",
                 "input_functionality",
                 "history_preservation",
-                "response_generation"
+                "response_generation",
             ]
 
             results = {}
@@ -397,7 +410,7 @@ with st.expander("❓ 帮助信息"):
                 "file_selection",
                 "upload_progress",
                 "file_validation",
-                "upload_confirmation"
+                "upload_confirmation",
             ]
 
             results = {}
@@ -416,7 +429,7 @@ with st.expander("❓ 帮助信息"):
             settings_tests = [
                 "parameter_adjustment",
                 "setting_persistence",
-                "reset_functionality"
+                "reset_functionality",
             ]
 
             results = {}
@@ -432,11 +445,7 @@ with st.expander("❓ 帮助信息"):
     async def _test_help_section(self) -> Tuple[bool, Dict[str, Any]]:
         """测试帮助部分"""
         try:
-            help_tests = [
-                "help_visibility",
-                "content_display",
-                "search_functionality"
-            ]
+            help_tests = ["help_visibility", "content_display", "search_functionality"]
 
             results = {}
             for test in help_tests:
@@ -451,11 +460,7 @@ with st.expander("❓ 帮助信息"):
     async def _test_status_bar(self) -> Tuple[bool, Dict[str, Any]]:
         """测试状态栏"""
         try:
-            status_tests = [
-                "status_display",
-                "progress_indication",
-                "error_handling"
-            ]
+            status_tests = ["status_display", "progress_indication", "error_handling"]
 
             results = {}
             for test in status_tests:
@@ -467,7 +472,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def test_user_interaction_flow(self, test_case: InterfaceTestCase) -> InterfaceTestResult:
+    async def test_user_interaction_flow(
+        self, test_case: InterfaceTestCase
+    ) -> InterfaceTestResult:
         """测试用户交互流程"""
         start_time = time.time()
 
@@ -480,11 +487,13 @@ with st.expander("❓ 帮助信息"):
                 UserInteractionType.SELECTION_CHANGE: self._simulate_selection_change,
                 UserInteractionType.TOGGLE_SWITCH: self._simulate_toggle_switch,
                 UserInteractionType.SLIDER_ADJUST: self._simulate_slider_adjust,
-                UserInteractionType.FORM_SUBMIT: self._simulate_form_submit
+                UserInteractionType.FORM_SUBMIT: self._simulate_form_submit,
             }
 
             if test_case.interaction_type in interaction_flows:
-                success, result = await interaction_flows[test_case.interaction_type](test_case.test_data)
+                success, result = await interaction_flows[test_case.interaction_type](
+                    test_case.test_data
+                )
                 response_time = time.time() - start_time
 
                 # 计算用户体验评分
@@ -501,8 +510,8 @@ with st.expander("❓ 帮助信息"):
                     performance_metrics={
                         "interaction_time": response_time,
                         "system_responsiveness": 0.95,
-                        "ui_smoothness": 0.9
-                    }
+                        "ui_smoothness": 0.9,
+                    },
                 )
             else:
                 raise ValueError(f"未知的交互类型: {test_case.interaction_type}")
@@ -514,10 +523,12 @@ with st.expander("❓ 帮助信息"):
                 component=test_case.component.value,
                 success=False,
                 response_time=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def _simulate_text_input(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_text_input(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟文本输入交互"""
         try:
             input_text = test_data.get("input_text", "测试输入")
@@ -531,7 +542,7 @@ with st.expander("❓ 帮助信息"):
                 "input_received": input_text,
                 "input_valid": len(input_text) > 0,
                 "response_generated": len(expected_response) > 0,
-                "processing_time": 0.5
+                "processing_time": 0.5,
             }
 
             return True, result
@@ -539,7 +550,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_button_click(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_button_click(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟按钮点击交互"""
         try:
             button_id = test_data.get("button_id", "test_button")
@@ -552,7 +565,7 @@ with st.expander("❓ 帮助信息"):
                 "button_clicked": button_id,
                 "action_executed": expected_action,
                 "click_registered": True,
-                "response_time": 0.2
+                "response_time": 0.2,
             }
 
             return True, result
@@ -560,7 +573,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_file_upload(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_file_upload(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟文件上传交互"""
         try:
             file_info = test_data.get("file_info", {"name": "test.txt", "size": 1024})
@@ -573,7 +588,7 @@ with st.expander("❓ 帮助信息"):
                 "file_size": file_info["size"],
                 "upload_success": True,
                 "validation_passed": True,
-                "upload_time": 1.0
+                "upload_time": 1.0,
             }
 
             return True, result
@@ -581,7 +596,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_selection_change(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_selection_change(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟选择变更交互"""
         try:
             selection_value = test_data.get("selection_value", "option1")
@@ -593,7 +610,7 @@ with st.expander("❓ 帮助信息"):
                 "selection_changed": selection_value,
                 "source": selection_source,
                 "change_registered": True,
-                "ui_updated": True
+                "ui_updated": True,
             }
 
             return True, result
@@ -601,7 +618,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_toggle_switch(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_toggle_switch(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟开关切换交互"""
         try:
             switch_id = test_data.get("switch_id", "test_switch")
@@ -613,7 +632,7 @@ with st.expander("❓ 帮助信息"):
                 "switch_id": switch_id,
                 "new_state": new_state,
                 "toggle_success": True,
-                "state_persisted": True
+                "state_persisted": True,
             }
 
             return True, result
@@ -621,7 +640,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_slider_adjust(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_slider_adjust(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟滑块调整交互"""
         try:
             slider_id = test_data.get("slider_id", "test_slider")
@@ -634,7 +655,7 @@ with st.expander("❓ 帮助信息"):
                 "new_value": new_value,
                 "adjustment_success": True,
                 "value_valid": True,
-                "real_time_update": True
+                "real_time_update": True,
             }
 
             return True, result
@@ -642,7 +663,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    async def _simulate_form_submit(self, test_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    async def _simulate_form_submit(
+        self, test_data: Dict[str, Any]
+    ) -> Tuple[bool, Dict[str, Any]]:
         """模拟表单提交交互"""
         try:
             form_data = test_data.get("form_data", {})
@@ -657,7 +680,7 @@ with st.expander("❓ 帮助信息"):
                 "form_data_received": form_data,
                 "validation_passed": is_valid,
                 "submit_success": is_valid,
-                "processing_time": 0.8
+                "processing_time": 0.8,
             }
 
             return True, result
@@ -665,7 +688,9 @@ with st.expander("❓ 帮助信息"):
         except Exception as e:
             return False, {"error": str(e)}
 
-    def _calculate_ux_score(self, test_case: InterfaceTestCase, result: Dict[str, Any], response_time: float) -> float:
+    def _calculate_ux_score(
+        self, test_case: InterfaceTestCase, result: Dict[str, Any], response_time: float
+    ) -> float:
         """计算用户体验评分"""
         base_score = 0.8
 
@@ -686,7 +711,9 @@ with st.expander("❓ 帮助信息"):
         accessibility_bonus = 0.05 if test_case.accessibility_check else 0
 
         # 计算最终评分，确保在0-1范围内
-        final_score = max(0.0, min(1.0, base_score + time_bonus + success_bonus + accessibility_bonus))
+        final_score = max(
+            0.0, min(1.0, base_score + time_bonus + success_bonus + accessibility_bonus)
+        )
 
         return final_score
 
@@ -698,29 +725,29 @@ with st.expander("❓ 帮助信息"):
                 description="测试键盘导航功能",
                 component=InterfaceComponent.MAIN_CONTENT,
                 interaction_type=UserInteractionType.BUTTON_CLICK,
-                accessibility_check=True
+                accessibility_check=True,
             ),
             InterfaceTestCase(
                 name="screen_reader_compatibility",
                 description="测试屏幕阅读器兼容性",
                 component=InterfaceComponent.CHAT_INTERFACE,
                 interaction_type=UserInteractionType.TEXT_INPUT,
-                accessibility_check=True
+                accessibility_check=True,
             ),
             InterfaceTestCase(
                 name="color_contrast_test",
                 description="测试颜色对比度",
                 component=InterfaceComponent.SIDEBAR,
                 interaction_type=UserInteractionType.SELECTION_CHANGE,
-                accessibility_check=True
+                accessibility_check=True,
             ),
             InterfaceTestCase(
                 name="focus_management_test",
                 description="测试焦点管理",
                 component=InterfaceComponent.DOCUMENT_UPLOAD,
                 interaction_type=UserInteractionType.FILE_UPLOAD,
-                accessibility_check=True
-            )
+                accessibility_check=True,
+            ),
         ]
 
         results = []
@@ -737,7 +764,7 @@ with st.expander("❓ 帮助信息"):
             ("侧边栏响应时间", InterfaceComponent.SIDEBAR),
             ("聊天界面响应时间", InterfaceComponent.CHAT_INTERFACE),
             ("文档上传处理时间", InterfaceComponent.DOCUMENT_UPLOAD),
-            ("设置面板响应时间", InterfaceComponent.SETTINGS_PANEL)
+            ("设置面板响应时间", InterfaceComponent.SETTINGS_PANEL),
         ]
 
         results = []
@@ -794,7 +821,7 @@ with st.expander("❓ 帮助信息"):
                 "component_results": component_results,
                 "interaction_results": interaction_results,
                 "accessibility_results": accessibility_results,
-                "performance_results": performance_results
+                "performance_results": performance_results,
             }
 
         finally:
@@ -809,7 +836,7 @@ with st.expander("❓ 帮助信息"):
                 component=InterfaceComponent.CHAT_INTERFACE,
                 interaction_type=UserInteractionType.TEXT_INPUT,
                 test_data={"input_text": "你好，我想了解人工智能", "expected_response": "问候回复"},
-                user_story="用户输入问候消息"
+                user_story="用户输入问候消息",
             ),
             InterfaceTestCase(
                 name="按钮点击测试",
@@ -817,7 +844,7 @@ with st.expander("❓ 帮助信息"):
                 component=InterfaceComponent.MAIN_CONTENT,
                 interaction_type=UserInteractionType.BUTTON_CLICK,
                 test_data={"button_id": "test_button", "expected_action": "功能执行"},
-                user_story="用户点击测试按钮"
+                user_story="用户点击测试按钮",
             ),
             InterfaceTestCase(
                 name="文档上传测试",
@@ -825,15 +852,18 @@ with st.expander("❓ 帮助信息"):
                 component=InterfaceComponent.DOCUMENT_UPLOAD,
                 interaction_type=UserInteractionType.FILE_UPLOAD,
                 test_data={"file_info": {"name": "test.pdf", "size": 2048}},
-                user_story="用户上传PDF文档"
+                user_story="用户上传PDF文档",
             ),
             InterfaceTestCase(
                 name="模型选择测试",
                 description="测试模型类型选择",
                 component=InterfaceComponent.SIDEBAR,
                 interaction_type=UserInteractionType.SELECTION_CHANGE,
-                test_data={"selection_value": "llama.cpp", "selection_source": "dropdown"},
-                user_story="用户选择llama.cpp模型"
+                test_data={
+                    "selection_value": "llama.cpp",
+                    "selection_source": "dropdown",
+                },
+                user_story="用户选择llama.cpp模型",
             ),
             InterfaceTestCase(
                 name="参数调整测试",
@@ -841,7 +871,7 @@ with st.expander("❓ 帮助信息"):
                 component=InterfaceComponent.SIDEBAR,
                 interaction_type=UserInteractionType.SLIDER_ADJUST,
                 test_data={"slider_id": "temperature", "new_value": 0.8},
-                user_story="用户调整温度参数"
+                user_story="用户调整温度参数",
             ),
             InterfaceTestCase(
                 name="开关切换测试",
@@ -849,8 +879,8 @@ with st.expander("❓ 帮助信息"):
                 component=InterfaceComponent.SETTINGS_PANEL,
                 interaction_type=UserInteractionType.TOGGLE_SWITCH,
                 test_data={"switch_id": "advanced_mode", "new_state": True},
-                user_story="用户开启高级模式"
-            )
+                user_story="用户开启高级模式",
+            ),
         ]
 
     def _generate_test_report(self) -> Dict[str, Any]:
@@ -860,13 +890,27 @@ with st.expander("❓ 帮助信息"):
         failed_tests = total_tests - successful_tests
 
         # 计算平均响应时间
-        avg_response_time = sum(result.response_time for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_response_time = (
+            sum(result.response_time for result in self.test_results) / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 计算平均可访问性评分
-        avg_accessibility = sum(result.accessibility_score for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_accessibility = (
+            sum(result.accessibility_score for result in self.test_results)
+            / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 计算平均用户体验评分
-        avg_ux_score = sum(result.user_experience_score for result in self.test_results) / total_tests if total_tests > 0 else 0
+        avg_ux_score = (
+            sum(result.user_experience_score for result in self.test_results)
+            / total_tests
+            if total_tests > 0
+            else 0
+        )
 
         # 性能分析
         performance_scores = {}
@@ -881,7 +925,7 @@ with st.expander("❓ 帮助信息"):
             component_performance[component] = {
                 "avg_response_time": sum(times) / len(times),
                 "max_response_time": max(times),
-                "min_response_time": min(times)
+                "min_response_time": min(times),
             }
 
         return {
@@ -893,7 +937,7 @@ with st.expander("❓ 帮助信息"):
             "average_accessibility_score": avg_accessibility,
             "average_user_experience_score": avg_ux_score,
             "component_performance": component_performance,
-            "recommendations": self._generate_recommendations()
+            "recommendations": self._generate_recommendations(),
         }
 
     def _generate_recommendations(self) -> List[str]:
@@ -901,16 +945,31 @@ with st.expander("❓ 帮助信息"):
         recommendations = []
 
         # 基于测试结果生成建议
-        avg_response_time = sum(result.response_time for result in self.test_results) / len(self.test_results) if self.test_results else 0
+        avg_response_time = (
+            sum(result.response_time for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
 
         if avg_response_time > 2.0:
             recommendations.append("考虑优化响应时间，当前平均响应时间超过2秒")
 
-        avg_accessibility = sum(result.accessibility_score for result in self.test_results) / len(self.test_results) if self.test_results else 0
+        avg_accessibility = (
+            sum(result.accessibility_score for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
         if avg_accessibility < 0.8:
             recommendations.append("改进可访问性支持，添加键盘导航和屏幕阅读器支持")
 
-        avg_ux = sum(result.user_experience_score for result in self.test_results) / len(self.test_results) if self.test_results else 0
+        avg_ux = (
+            sum(result.user_experience_score for result in self.test_results)
+            / len(self.test_results)
+            if self.test_results
+            else 0
+        )
         if avg_ux < 0.85:
             recommendations.append("优化用户体验，简化交互流程和界面设计")
 
@@ -976,15 +1035,15 @@ async def test_user_interaction_flows():
             description="测试聊天输入功能",
             component=InterfaceComponent.CHAT_INTERFACE,
             interaction_type=UserInteractionType.TEXT_INPUT,
-            test_data={"input_text": "测试消息"}
+            test_data={"input_text": "测试消息"},
         ),
         InterfaceTestCase(
             name="按钮点击测试",
             description="测试按钮点击",
             component=InterfaceComponent.MAIN_CONTENT,
             interaction_type=UserInteractionType.BUTTON_CLICK,
-            test_data={"button_id": "test_button"}
-        )
+            test_data={"button_id": "test_button"},
+        ),
     ]
 
     await tester.start_streamlit_app()
@@ -1012,7 +1071,9 @@ async def test_accessibility_compliance():
             assert result.success, f"可访问性测试 {result.test_case} 应该通过"
             assert result.accessibility_score >= 0.8, f"可访问性评分应该至少80%"
 
-        avg_accessibility = sum(result.accessibility_score for result in results) / len(results)
+        avg_accessibility = sum(result.accessibility_score for result in results) / len(
+            results
+        )
         assert avg_accessibility >= 0.85, "平均可访问性评分应该至少85%"
 
     finally:
@@ -1033,7 +1094,9 @@ async def test_interface_performance():
             assert result.success, f"性能测试 {result.test_case} 应该通过"
             assert result.response_time <= 3.0, f"响应时间应该少于3秒"
 
-        avg_response_time = sum(result.response_time for result in results) / len(results)
+        avg_response_time = sum(result.response_time for result in results) / len(
+            results
+        )
         assert avg_response_time <= 1.5, "平均响应时间应该少于1.5秒"
 
     finally:
@@ -1046,9 +1109,9 @@ if __name__ == "__main__":
         tester = StreamlitInterfaceTester()
         results = await tester.run_comprehensive_interface_tests()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎯 Streamlit接口测试完成")
-        print("="*60)
+        print("=" * 60)
 
         if results["success"]:
             summary = results["summary"]
@@ -1061,11 +1124,11 @@ if __name__ == "__main__":
             print(f"🤖 平均用户体验评分: {summary['average_user_experience_score']:.2f}")
 
             print("\n📈 组件性能:")
-            for component, perf in summary['component_performance'].items():
+            for component, perf in summary["component_performance"].items():
                 print(f"  {component}: {perf['avg_response_time']:.2f}s (平均)")
 
             print("\n💡 改进建议:")
-            for i, rec in enumerate(summary['recommendations'], 1):
+            for i, rec in enumerate(summary["recommendations"], 1):
                 print(f"  {i}. {rec}")
         else:
             print(f"❌ 测试失败: {results.get('error', '未知错误')}")

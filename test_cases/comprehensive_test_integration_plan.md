@@ -10,7 +10,7 @@ This document integrates all test cases created for the Industry AI Flow system,
 #### Phase 1: Component-Level Testing
 Execute individual component tests in parallel:
 - Problem Classification Tests
-- Vector Retrieval Tests  
+- Vector Retrieval Tests
 - Answer Generation Tests
 - OCR Integration Tests
 - Data Analysis & Code Execution Tests

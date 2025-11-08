@@ -1,16 +1,18 @@
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
 import warnings
-warnings.filterwarnings('ignore')
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+warnings.filterwarnings("ignore")
 
 # 设置matplotlib
-plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['savefig.dpi'] = 150
-plt.rcParams['figure.dpi'] = 100
+plt.rcParams["figure.figsize"] = (12, 8)
+plt.rcParams["savefig.dpi"] = 150
+plt.rcParams["figure.dpi"] = 100
+
 
 def analyze_housing_data():
     """分析房价数据"""
@@ -32,29 +34,31 @@ def analyze_housing_data():
 
     # 3. 相关性分析
     numeric_cols = df.select_dtypes(include=[np.number]).columns
-    correlation = df[numeric_cols].corr()['price'].sort_values(ascending=False)
+    correlation = df[numeric_cols].corr()["price"].sort_values(ascending=False)
     print("\n=== 价格相关性排名 ===")
     for feature, corr in correlation.items():
-        if feature != 'price':
+        if feature != "price":
             print(f"{feature}: {corr:.3f}")
 
     # 4. 创建分析结果
     results = {
         "total_records": len(df),
         "price_stats": {
-            "min": float(df['price'].min()),
-            "max": float(df['price'].max()),
-            "mean": float(df['price'].mean()),
-            "median": float(df['price'].median())
+            "min": float(df["price"].min()),
+            "max": float(df["price"].max()),
+            "mean": float(df["price"].mean()),
+            "median": float(df["price"].median()),
         },
         "area_stats": {
-            "min": float(df['area'].min()),
-            "max": float(df['area'].max()),
-            "mean": float(df['area'].mean()),
-            "median": float(df['area'].median())
+            "min": float(df["area"].min()),
+            "max": float(df["area"].max()),
+            "mean": float(df["area"].mean()),
+            "median": float(df["area"].median()),
         },
         "correlations": correlation.to_dict(),
-        "feature_importance": correlation.abs().sort_values(ascending=False)[1:].to_dict()
+        "feature_importance": correlation.abs()
+        .sort_values(ascending=False)[1:]
+        .to_dict(),
     }
 
     print("\n=== 分析完成 ===")
@@ -62,6 +66,7 @@ def analyze_housing_data():
     print(f"最重要的特征: {list(results['feature_importance'].keys())[:3]}")
 
     return results
+
 
 # 执行分析
 if __name__ == "__main__":

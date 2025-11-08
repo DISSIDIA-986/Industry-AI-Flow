@@ -5,24 +5,26 @@ Tests all major components: RAG, OCR, Data Analysis, Streamlit integration
 Supports both Ollama and GLM-4 API
 """
 
-import sys
-import os
 import json
+import os
+import sys
 import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
 class TestResult:
     """Test result container"""
+
     def __init__(self, test_name: str):
         self.test_name = test_name
         self.status = "pending"  # pending, running, passed, failed, skipped
@@ -65,7 +67,7 @@ class ComprehensiveSystemTest:
             "SUCCESS": "✅",
             "ERROR": "❌",
             "WARNING": "⚠️",
-            "TEST": "🧪"
+            "TEST": "🧪",
         }.get(level, "•")
         print(f"[{timestamp}] {prefix} {message}")
 
@@ -88,7 +90,12 @@ class ComprehensiveSystemTest:
             }
 
             # Check required variables
-            required_vars = ["POSTGRES_HOST", "POSTGRES_DB", "OLLAMA_HOST", "EMBEDDING_MODEL"]
+            required_vars = [
+                "POSTGRES_HOST",
+                "POSTGRES_DB",
+                "OLLAMA_HOST",
+                "EMBEDDING_MODEL",
+            ]
             missing_vars = [var for var in required_vars if not os.getenv(var)]
 
             if missing_vars:
@@ -120,7 +127,7 @@ class ComprehensiveSystemTest:
             details = {
                 "document_count": doc_count,
                 "chunk_count": chunk_count,
-                "connection": "success"
+                "connection": "success",
             }
 
             result.complete(True, details)
@@ -153,7 +160,7 @@ class ComprehensiveSystemTest:
                 "model": os.getenv("OLLAMA_MODEL"),
                 "response_length": len(response),
                 "latency_seconds": latency,
-                "sample_response": response[:100]
+                "sample_response": response[:100],
             }
 
             result.complete(True, details)
@@ -198,7 +205,7 @@ class ComprehensiveSystemTest:
                 "model": os.getenv("ZHIPU_MODEL"),
                 "response_length": len(response),
                 "latency_seconds": latency,
-                "sample_response": response[:100]
+                "sample_response": response[:100],
             }
 
             result.complete(True, details)
@@ -225,7 +232,7 @@ class ComprehensiveSystemTest:
             test_questions = [
                 "What is a RAG system?",
                 "How does vector search work?",
-                "What is LangChain?"
+                "What is LangChain?",
             ]
 
             query_results = []
@@ -237,18 +244,20 @@ class ComprehensiveSystemTest:
                 latency = time.time() - start
                 total_time += latency
 
-                query_results.append({
-                    "question": question,
-                    "latency": latency,
-                    "answer_length": len(response.get("answer", "")),
-                    "sources_count": len(response.get("sources", []))
-                })
+                query_results.append(
+                    {
+                        "question": question,
+                        "latency": latency,
+                        "answer_length": len(response.get("answer", "")),
+                        "sources_count": len(response.get("sources", [])),
+                    }
+                )
 
             details = {
                 "queries_tested": len(test_questions),
                 "avg_latency": total_time / len(test_questions),
                 "total_time": total_time,
-                "results": query_results
+                "results": query_results,
             }
 
             result.complete(True, details)
@@ -278,7 +287,7 @@ class ComprehensiveSystemTest:
 
             if samples_dir.exists():
                 # Look for test files
-                for ext in ['.txt', '.pdf', '.png', '.jpg']:
+                for ext in [".txt", ".pdf", ".png", ".jpg"]:
                     test_files.extend(list(samples_dir.glob(f"*{ext}")))
 
             if not test_files:
@@ -290,29 +299,36 @@ class ComprehensiveSystemTest:
             for test_file in test_files[:3]:  # Test first 3 files
                 try:
                     content = loader.load_document(str(test_file))
-                    processed_files.append({
-                        "filename": test_file.name,
-                        "content_length": len(content),
-                        "status": "success"
-                    })
+                    processed_files.append(
+                        {
+                            "filename": test_file.name,
+                            "content_length": len(content),
+                            "status": "success",
+                        }
+                    )
                 except Exception as e:
-                    processed_files.append({
-                        "filename": test_file.name,
-                        "status": "failed",
-                        "error": str(e)
-                    })
+                    processed_files.append(
+                        {
+                            "filename": test_file.name,
+                            "status": "failed",
+                            "error": str(e),
+                        }
+                    )
 
             details = {
                 "files_tested": len(processed_files),
                 "ocr_lang": os.getenv("OCR_LANG", "en"),
-                "results": processed_files
+                "results": processed_files,
             }
 
             success_count = sum(1 for f in processed_files if f["status"] == "success")
 
             if success_count > 0:
                 result.complete(True, details)
-                self.log(f"OCR OK - {success_count}/{len(processed_files)} files processed", "SUCCESS")
+                self.log(
+                    f"OCR OK - {success_count}/{len(processed_files)} files processed",
+                    "SUCCESS",
+                )
             else:
                 result.complete(False, details, "No files processed successfully")
                 self.log("OCR test failed - no successful processing", "ERROR")
@@ -331,8 +347,8 @@ class ComprehensiveSystemTest:
         try:
             self.log("Testing document import workflow...", "TEST")
 
-            from backend.services.document_loader import EnhancedDocumentLoader
             from backend.services.chunker import chunk_text
+            from backend.services.document_loader import EnhancedDocumentLoader
             from backend.services.embedder import embed_texts
             from backend.services.vectorstore import VectorStore
 
@@ -362,7 +378,7 @@ class ComprehensiveSystemTest:
                 "content_length": len(content),
                 "chunk_count": len(chunks),
                 "embedding_dim": len(embeddings[0]) if embeddings else 0,
-                "import_successful": True
+                "import_successful": True,
             }
 
             result.complete(True, details)
@@ -404,20 +420,19 @@ class ComprehensiveSystemTest:
                     query=test_query,
                     top_k=5,
                     vector_weight=test["vector_weight"],
-                    bm25_weight=test["bm25_weight"]
+                    bm25_weight=test["bm25_weight"],
                 )
                 latency = time.time() - start
 
-                search_results.append({
-                    "mode": test["name"],
-                    "results_count": len(results),
-                    "latency": latency
-                })
+                search_results.append(
+                    {
+                        "mode": test["name"],
+                        "results_count": len(results),
+                        "latency": latency,
+                    }
+                )
 
-            details = {
-                "query": test_query,
-                "search_results": search_results
-            }
+            details = {"query": test_query, "search_results": search_results}
 
             result.complete(True, details)
             self.log("Hybrid search OK", "SUCCESS")
@@ -458,7 +473,7 @@ print(result)
                 details = {
                     "execution_status": exec_result.get("status"),
                     "has_output": bool(exec_result.get("output")),
-                    "has_error": bool(exec_result.get("error"))
+                    "has_error": bool(exec_result.get("error")),
                 }
 
                 if exec_result.get("status") == "success":
@@ -470,7 +485,9 @@ print(result)
 
             except ImportError:
                 result.skip("Code executor service not found")
-                self.log("Data analysis test skipped - service not available", "WARNING")
+                self.log(
+                    "Data analysis test skipped - service not available", "WARNING"
+                )
 
         except Exception as e:
             result.complete(False, error=str(e))
@@ -529,11 +546,9 @@ print(result)
         print()
 
         for r in self.results:
-            status_icon = {
-                "passed": "✅",
-                "failed": "❌",
-                "skipped": "⏭️"
-            }.get(r.status, "•")
+            status_icon = {"passed": "✅", "failed": "❌", "skipped": "⏭️"}.get(
+                r.status, "•"
+            )
 
             print(f"{status_icon} {r.test_name}: {r.status.upper()}")
             if r.duration > 0:
@@ -555,7 +570,9 @@ print(result)
                 "passed": passed,
                 "failed": failed,
                 "skipped": skipped,
-                "success_rate": f"{success_rate:.1f}%" if total - skipped > 0 else "N/A"
+                "success_rate": f"{success_rate:.1f}%"
+                if total - skipped > 0
+                else "N/A",
             },
             "tests": [
                 {
@@ -563,13 +580,13 @@ print(result)
                     "status": r.status,
                     "duration": r.duration,
                     "error": r.error,
-                    "details": r.details
+                    "details": r.details,
                 }
                 for r in self.results
-            ]
+            ],
         }
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(report_data, f, indent=2, ensure_ascii=False)
 
         self.log(f"Detailed report saved to: {report_file}", "INFO")
@@ -582,7 +599,7 @@ print(result)
         """Generate report of issues found"""
         issues_file = self.output_dir / f"issues_{self.test_timestamp}.md"
 
-        with open(issues_file, 'w') as f:
+        with open(issues_file, "w") as f:
             f.write("# Issues Found During System Testing\n\n")
             f.write(f"**Test Run**: {self.test_timestamp}\n\n")
 
@@ -593,7 +610,9 @@ print(result)
                     if r.error:
                         f.write(f"**Error**:\n```\n{r.error}\n```\n\n")
                     if r.details:
-                        f.write(f"**Details**:\n```json\n{json.dumps(r.details, indent=2)}\n```\n\n")
+                        f.write(
+                            f"**Details**:\n```json\n{json.dumps(r.details, indent=2)}\n```\n\n"
+                        )
                     f.write("---\n\n")
 
         self.log(f"Issues report saved to: {issues_file}", "WARNING")

@@ -4,30 +4,33 @@
 包含高级分析和可视化功能
 """
 
-import sys
 import os
+import sys
+import warnings
 from pathlib import Path
-import pandas as pd
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # 设置matplotlib
-plt.style.use('default')
-plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['savefig.dpi'] = 150
-plt.rcParams['figure.dpi'] = 100
+plt.style.use("default")
+plt.rcParams["figure.figsize"] = (12, 8)
+plt.rcParams["savefig.dpi"] = 150
+plt.rcParams["figure.dpi"] = 100
+
 
 def test_complete_analysis():
     """完整的数据分析测试"""
     print("🚀 开始完整数据分析测试")
-    print("="*60)
+    print("=" * 60)
 
     # 1. 数据加载
     print("📊 1. 数据加载和预处理")
@@ -51,7 +54,7 @@ def test_complete_analysis():
     print("\n⚙️ 3. 特征工程")
 
     # 处理分类变量
-    categorical_cols = df.select_dtypes(include=['object']).columns
+    categorical_cols = df.select_dtypes(include=["object"]).columns
     print(f"   发现分类特征: {list(categorical_cols)}")
 
     df_processed = df.copy()
@@ -65,8 +68,8 @@ def test_complete_analysis():
     # 4. 机器学习建模
     print("\n🤖 4. 机器学习建模")
 
-    X = df_processed.drop('price', axis=1)
-    y = df_processed['price']
+    X = df_processed.drop("price", axis=1)
+    y = df_processed["price"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
@@ -94,10 +97,9 @@ def test_complete_analysis():
     # 5. 特征重要性分析
     print("\n📊 5. 特征重要性分析")
 
-    feature_importance = pd.DataFrame({
-        'feature': X.columns,
-        'importance': rf_model.feature_importances_
-    }).sort_values('importance', ascending=False)
+    feature_importance = pd.DataFrame(
+        {"feature": X.columns, "importance": rf_model.feature_importances_}
+    ).sort_values("importance", ascending=False)
 
     print("   前5个重要特征:")
     for i, (_, row) in enumerate(feature_importance.head().iterrows(), 1):
@@ -116,25 +118,27 @@ def test_complete_analysis():
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
-    plt.hist(df['price'], bins=30, alpha=0.7, color='skyblue', edgecolor='black')
-    plt.title('价格分布')
-    plt.xlabel('价格')
-    plt.ylabel('频次')
+    plt.hist(df["price"], bins=30, alpha=0.7, color="skyblue", edgecolor="black")
+    plt.title("价格分布")
+    plt.xlabel("价格")
+    plt.ylabel("频次")
 
     plt.subplot(1, 3, 2)
-    plt.boxplot(df['price'])
-    plt.title('价格箱线图')
-    plt.ylabel('价格')
+    plt.boxplot(df["price"])
+    plt.title("价格箱线图")
+    plt.ylabel("价格")
 
     plt.subplot(1, 3, 3)
-    plt.hist(np.log1p(df['price']), bins=30, alpha=0.7, color='lightgreen', edgecolor='black')
-    plt.title('价格对数分布')
-    plt.xlabel('log(价格)')
-    plt.ylabel('频次')
+    plt.hist(
+        np.log1p(df["price"]), bins=30, alpha=0.7, color="lightgreen", edgecolor="black"
+    )
+    plt.title("价格对数分布")
+    plt.xlabel("log(价格)")
+    plt.ylabel("频次")
 
     plt.tight_layout()
     chart1 = output_dir / "price_distribution_analysis.png"
-    plt.savefig(chart1, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(chart1, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart1)
     print("   ✅ 价格分布图已生成")
@@ -143,29 +147,39 @@ def test_complete_analysis():
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
-    plt.scatter(df['area'], df['price'], alpha=0.6, color='coral')
-    plt.xlabel('面积')
-    plt.ylabel('价格')
-    plt.title('面积-价格散点图')
+    plt.scatter(df["area"], df["price"], alpha=0.6, color="coral")
+    plt.xlabel("面积")
+    plt.ylabel("价格")
+    plt.title("面积-价格散点图")
 
     plt.subplot(1, 3, 2)
-    bedroom_groups = df.groupby('bedrooms')['price'].mean()
-    plt.bar(bedroom_groups.index, bedroom_groups.values, color='lightblue', edgecolor='black')
-    plt.xlabel('卧室数')
-    plt.ylabel('平均价格')
-    plt.title('卧室数-平均价格')
+    bedroom_groups = df.groupby("bedrooms")["price"].mean()
+    plt.bar(
+        bedroom_groups.index,
+        bedroom_groups.values,
+        color="lightblue",
+        edgecolor="black",
+    )
+    plt.xlabel("卧室数")
+    plt.ylabel("平均价格")
+    plt.title("卧室数-平均价格")
 
     plt.subplot(1, 3, 3)
-    furnish_groups = df.groupby('furnishingstatus')['price'].mean()
-    colors = ['gold', 'lightgreen', 'lightcoral']
-    plt.bar(range(len(furnish_groups)), furnish_groups.values, color=colors, edgecolor='black')
+    furnish_groups = df.groupby("furnishingstatus")["price"].mean()
+    colors = ["gold", "lightgreen", "lightcoral"]
+    plt.bar(
+        range(len(furnish_groups)),
+        furnish_groups.values,
+        color=colors,
+        edgecolor="black",
+    )
     plt.xticks(range(len(furnish_groups)), furnish_groups.index, rotation=45)
-    plt.ylabel('平均价格')
-    plt.title('装修状态-平均价格')
+    plt.ylabel("平均价格")
+    plt.title("装修状态-平均价格")
 
     plt.tight_layout()
     chart2 = output_dir / "feature_price_analysis.png"
-    plt.savefig(chart2, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(chart2, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart2)
     print("   ✅ 特征-价格分析图已生成")
@@ -176,13 +190,21 @@ def test_complete_analysis():
     correlation_matrix = numeric_df.corr()
 
     mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
-    sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='coolwarm',
-                center=0, square=True, linewidths=0.5, fmt='.2f')
-    plt.title('特征相关性热力图')
+    sns.heatmap(
+        correlation_matrix,
+        mask=mask,
+        annot=True,
+        cmap="coolwarm",
+        center=0,
+        square=True,
+        linewidths=0.5,
+        fmt=".2f",
+    )
+    plt.title("特征相关性热力图")
     plt.tight_layout()
 
     chart3 = output_dir / "correlation_heatmap.png"
-    plt.savefig(chart3, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(chart3, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart3)
     print("   ✅ 相关性热力图已生成")
@@ -191,29 +213,29 @@ def test_complete_analysis():
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
-    plt.scatter(y_test, y_pred, alpha=0.6, color='purple', edgecolor='black')
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
-    plt.xlabel('实际价格')
-    plt.ylabel('预测价格')
-    plt.title('预测vs实际价格')
+    plt.scatter(y_test, y_pred, alpha=0.6, color="purple", edgecolor="black")
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], "r--", lw=2)
+    plt.xlabel("实际价格")
+    plt.ylabel("预测价格")
+    plt.title("预测vs实际价格")
 
     plt.subplot(1, 3, 2)
     residuals = y_test - y_pred
-    plt.scatter(y_pred, residuals, alpha=0.6, color='orange')
-    plt.axhline(y=0, color='r', linestyle='--')
-    plt.xlabel('预测价格')
-    plt.ylabel('残差')
-    plt.title('残差分析')
+    plt.scatter(y_pred, residuals, alpha=0.6, color="orange")
+    plt.axhline(y=0, color="r", linestyle="--")
+    plt.xlabel("预测价格")
+    plt.ylabel("残差")
+    plt.title("残差分析")
 
     plt.subplot(1, 3, 3)
-    plt.hist(residuals, bins=30, alpha=0.7, color='lightgreen', edgecolor='black')
-    plt.xlabel('残差')
-    plt.ylabel('频次')
-    plt.title('残差分布')
+    plt.hist(residuals, bins=30, alpha=0.7, color="lightgreen", edgecolor="black")
+    plt.xlabel("残差")
+    plt.ylabel("频次")
+    plt.title("残差分布")
 
     plt.tight_layout()
     chart4 = output_dir / "model_prediction_analysis.png"
-    plt.savefig(chart4, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(chart4, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart4)
     print("   ✅ 模型预测分析图已生成")
@@ -223,19 +245,24 @@ def test_complete_analysis():
     top_features = feature_importance.head(10)
     colors = plt.cm.Set3(np.linspace(0, 1, len(top_features)))
 
-    plt.barh(range(len(top_features)), top_features['importance'], color=colors, edgecolor='black')
-    plt.yticks(range(len(top_features)), top_features['feature'])
-    plt.xlabel('重要性')
-    plt.title('特征重要性排名 (Top 10)')
+    plt.barh(
+        range(len(top_features)),
+        top_features["importance"],
+        color=colors,
+        edgecolor="black",
+    )
+    plt.yticks(range(len(top_features)), top_features["feature"])
+    plt.xlabel("重要性")
+    plt.title("特征重要性排名 (Top 10)")
     plt.gca().invert_yaxis()
 
     # 添加数值标签
-    for i, v in enumerate(top_features['importance']):
-        plt.text(v + 0.01, i, f'{v:.3f}', va='center')
+    for i, v in enumerate(top_features["importance"]):
+        plt.text(v + 0.01, i, f"{v:.3f}", va="center")
 
     plt.tight_layout()
     chart5 = output_dir / "feature_importance.png"
-    plt.savefig(chart5, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(chart5, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart5)
     print("   ✅ 特征重要性图已生成")
@@ -248,53 +275,56 @@ def test_complete_analysis():
             "shape": df.shape,
             "features": list(df.columns),
             "numeric_features": list(df.select_dtypes(include=[np.number]).columns),
-            "categorical_features": list(df.select_dtypes(include=['object']).columns),
-            "missing_values": int(total_missing)
+            "categorical_features": list(df.select_dtypes(include=["object"]).columns),
+            "missing_values": int(total_missing),
         },
         "statistical_summary": {
             "price_stats": {
-                "mean": float(df['price'].mean()),
-                "median": float(df['price'].median()),
-                "std": float(df['price'].std()),
-                "min": float(df['price'].min()),
-                "max": float(df['price'].max())
+                "mean": float(df["price"].mean()),
+                "median": float(df["price"].median()),
+                "std": float(df["price"].std()),
+                "min": float(df["price"].min()),
+                "max": float(df["price"].max()),
             },
             "area_stats": {
-                "mean": float(df['area'].mean()),
-                "median": float(df['area'].median()),
-                "std": float(df['area'].std()),
-                "min": float(df['area'].min()),
-                "max": float(df['area'].max())
-            }
+                "mean": float(df["area"].mean()),
+                "median": float(df["area"].median()),
+                "std": float(df["area"].std()),
+                "min": float(df["area"].min()),
+                "max": float(df["area"].max()),
+            },
         },
         "model_performance": {
             "mae": float(mae),
             "mse": float(mse),
             "rmse": float(rmse),
-            "r2_score": float(r2)
+            "r2_score": float(r2),
         },
-        "feature_importance": feature_importance.set_index('feature')['importance'].head(10).to_dict(),
+        "feature_importance": feature_importance.set_index("feature")["importance"]
+        .head(10)
+        .to_dict(),
         "key_insights": [
             f"数据集包含 {df.shape[0]} 条房屋记录和 {df.shape[1]} 个特征",
             f"价格范围: {df['price'].min():,.0f} - {df['price'].max():,.0f}",
             f"面积与价格相关性最高: {correlation_matrix.loc['area', 'price']:.3f}",
             f"机器学习模型R²分数: {r2:.3f}",
-            f"最重要的特征: {feature_importance.iloc[0]['feature']}"
-        ]
+            f"最重要的特征: {feature_importance.iloc[0]['feature']}",
+        ],
     }
 
     # 保存报告
     import json
+
     report_file = output_dir / "analysis_report.json"
-    with open(report_file, 'w', encoding='utf-8') as f:
+    with open(report_file, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
 
     print("   ✅ 分析报告已生成")
 
     # 8. 总结
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🎉 完整数据分析测试成功!")
-    print("="*60)
+    print("=" * 60)
 
     print(f"📊 数据分析结果:")
     print(f"   数据集: {report['dataset_info']['shape']}")
@@ -314,17 +344,18 @@ def test_complete_analysis():
 
     return {
         "success": True,
-        "data_stats": report['dataset_info'],
-        "model_performance": report['model_performance'],
+        "data_stats": report["dataset_info"],
+        "model_performance": report["model_performance"],
         "generated_charts": len(generated_charts),
-        "output_dir": str(output_dir.absolute())
+        "output_dir": str(output_dir.absolute()),
     }
+
 
 def test_code_generation_simulation():
     """模拟LLM代码生成和执行"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🤖 测试代码生成模拟")
-    print("="*60)
+    print("=" * 60)
 
     # 模拟生成的分析代码
     generated_code = '''
@@ -360,13 +391,15 @@ def generate_advanced_insights(df):
 
     try:
         # 模拟代码执行
-        df = pd.read_csv("/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv")
+        df = pd.read_csv(
+            "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+        )
 
         # 执行生成的洞察分析
         exec_locals = {}
-        exec(generated_code, {'df': df, 'pd': pd}, exec_locals)
+        exec(generated_code, {"df": df, "pd": pd}, exec_locals)
 
-        insights_func = exec_locals['generate_advanced_insights']
+        insights_func = exec_locals["generate_advanced_insights"]
         insights = insights_func(df)
 
         print("✅ 代码生成和执行成功!")
@@ -380,6 +413,7 @@ def generate_advanced_insights(df):
         print(f"❌ 代码生成测试失败: {e}")
         return False, []
 
+
 def main():
     """主函数"""
     print("🚀 开始 RAG 数据分析节点完整功能测试")
@@ -392,14 +426,11 @@ def main():
     code_success, insights = test_code_generation_simulation()
 
     # 最终总结
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("📊 最终测试总结")
-    print("="*60)
+    print("=" * 60)
 
-    tests = [
-        ("完整数据分析", result1['success']),
-        ("代码生成模拟", code_success)
-    ]
+    tests = [("完整数据分析", result1["success"]), ("代码生成模拟", code_success)]
 
     all_success = True
     for test_name, success in tests:
@@ -441,6 +472,7 @@ def main():
         print("🔧 需要进一步调试和优化")
 
     return all_success
+
 
 if __name__ == "__main__":
     success = main()

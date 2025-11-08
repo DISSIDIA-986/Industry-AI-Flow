@@ -2,11 +2,11 @@
 llama.cpp 简单测试
 验证 llama.cpp 客户端功能
 """
-import sys
 import os
+import sys
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import time
 
@@ -19,8 +19,8 @@ def test_llama_cpp_client():
     print()
 
     try:
-        from backend.services.llama_cpp_client import LlamaCppClient
         from backend.config import settings
+        from backend.services.llama_cpp_client import LlamaCppClient
 
         print(f"[1/4] 配置检查...")
         print(f"   模型路径: {settings.llama_model_path}")
@@ -36,21 +36,13 @@ def test_llama_cpp_client():
         print()
 
         print(f"[3/4] 测试文本生成...")
-        test_prompts = [
-            "你好",
-            "什么是人工智能？",
-            "解释一下RAG系统的工作原理。"
-        ]
+        test_prompts = ["你好", "什么是人工智能？", "解释一下RAG系统的工作原理。"]
 
         for i, prompt in enumerate(test_prompts, 1):
             print(f"   测试 {i}/{len(test_prompts)}: {prompt}")
 
             start_time = time.time()
-            response = client.generate(
-                prompt=prompt,
-                max_tokens=100,
-                temperature=0.7
-            )
+            response = client.generate(prompt=prompt, max_tokens=100, temperature=0.7)
             gen_time = time.time() - start_time
 
             token_count = len(response.split())
@@ -81,6 +73,7 @@ def test_llama_cpp_client():
     except Exception as e:
         print(f"❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
