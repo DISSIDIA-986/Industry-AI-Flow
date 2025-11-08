@@ -9,34 +9,38 @@ Streamlit RAG 系统测试页面
 4. 设备信息展示
 """
 
-import streamlit as st
+import os
+import sys
 import time
 from typing import Optional
-import sys
-import os
+
+import streamlit as st
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from dotenv import load_dotenv
+
 load_dotenv()
+
+from langchain_core.messages import AIMessage, HumanMessage
 
 from backend.agents.rag_agent import rag_agent
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.vectorstore import VectorStore
 from backend.utils.device_manager import device_manager
-from langchain_core.messages import HumanMessage, AIMessage
 
 # 页面配置
 st.set_page_config(
     page_title="LangChain 1.0 RAG 测试系统",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # 自定义 CSS
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main-header {
         font-size: 2.5rem;
@@ -66,7 +70,9 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # 初始化 session state
@@ -84,11 +90,13 @@ with st.sidebar:
 
     # 设备信息
     with st.expander("设备配置", expanded=True):
-        st.markdown(f"""
+        st.markdown(
+            f"""
         **当前设备**: {device_manager.device_name}
         **设备类型**: `{device_manager.device_type.value}`
         **PyTorch**: v{__import__('torch').__version__}
-        """)
+        """
+        )
 
         # 设备详情
         if device_manager.device_type.value == "mps":
@@ -101,17 +109,21 @@ with st.sidebar:
     # LLM 配置
     with st.expander("LLM 配置"):
         llm_provider = os.getenv("LLM_PROVIDER", "ollama")
-        st.markdown(f"""
+        st.markdown(
+            f"""
         **提供商**: {llm_provider}
         **模型**: {os.getenv('ZHIPU_MODEL' if llm_provider == 'zhipu' else 'OLLAMA_MODEL')}
-        """)
+        """
+        )
 
     # 嵌入模型配置
     with st.expander("嵌入模型配置"):
-        st.markdown(f"""
+        st.markdown(
+            f"""
         **模型**: {os.getenv('EMBEDDING_MODEL', 'nomic-ai/nomic-embed-text-v1.5')}
         **维度**: {os.getenv('EMBEDDING_DIM', '768')}
-        """)
+        """
+        )
 
     # 检索配置
     with st.expander("检索配置"):
@@ -119,10 +131,12 @@ with st.sidebar:
         bm25_weight = 1.0 - vector_weight
         top_k = st.slider("返回文档数量", 1, 20, 5, 1)
 
-        st.markdown(f"""
+        st.markdown(
+            f"""
         **BM25 权重**: {bm25_weight:.1f}
         **检索策略**: 混合检索 + 重排序
-        """)
+        """
+        )
 
     # 清空对话
     if st.button("🗑️ 清空对话历史", use_container_width=True):
@@ -131,7 +145,9 @@ with st.sidebar:
 
 
 # 主页面
-st.markdown('<div class="main-header">🤖 LangChain 1.0 RAG 测试系统</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="main-header">🤖 LangChain 1.0 RAG 测试系统</div>', unsafe_allow_html=True
+)
 
 # 统计信息
 col1, col2, col3, col4 = st.columns(4)
@@ -186,19 +202,19 @@ with tab1:
 
                 try:
                     # 调用 RAG Agent
-                    result = rag_agent.invoke({
-                        "messages": st.session_state.messages
-                    })
+                    result = rag_agent.invoke({"messages": st.session_state.messages})
 
                     # 提取响应
-                    assistant_message = result['messages'][-1]
+                    assistant_message = result["messages"][-1]
                     response_time = time.time() - start_time
 
                     # 更新平均响应时间
                     if "response_times" not in st.session_state:
                         st.session_state.response_times = []
                     st.session_state.response_times.append(response_time)
-                    st.session_state.avg_response_time = sum(st.session_state.response_times) / len(st.session_state.response_times)
+                    st.session_state.avg_response_time = sum(
+                        st.session_state.response_times
+                    ) / len(st.session_state.response_times)
 
                     # 显示回答
                     st.markdown(assistant_message.content)
@@ -212,6 +228,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"❌ 错误: {str(e)}")
                     import traceback
+
                     with st.expander("查看详细错误"):
                         st.code(traceback.format_exc())
 
@@ -233,18 +250,21 @@ with tab2:
                         query=search_query,
                         top_k=top_k,
                         vector_weight=vector_weight,
-                        bm25_weight=bm25_weight
+                        bm25_weight=bm25_weight,
                     )
 
                     retrieval_time = time.time() - start_time
 
                     # 显示结果
-                    st.success(f"✅ 检索完成！用时 {retrieval_time:.2f}秒，找到 {len(results)} 个相关文档")
+                    st.success(
+                        f"✅ 检索完成！用时 {retrieval_time:.2f}秒，找到 {len(results)} 个相关文档"
+                    )
 
                     # 显示每个文档
                     for i, doc in enumerate(results, 1):
                         with st.container():
-                            st.markdown(f"""
+                            st.markdown(
+                                f"""
                             <div class="doc-card">
                                 <h4>📄 文档 {i}</h4>
                                 <p><strong>来源:</strong> {doc.get('filename', 'Unknown')}</p>
@@ -252,11 +272,14 @@ with tab2:
                                 <p><strong>内容:</strong></p>
                                 <p style="color: #555;">{doc.get('content', '')}</p>
                             </div>
-                            """, unsafe_allow_html=True)
+                            """,
+                                unsafe_allow_html=True,
+                            )
 
                 except Exception as e:
                     st.error(f"❌ 检索失败: {str(e)}")
                     import traceback
+
                     with st.expander("查看详细错误"):
                         st.code(traceback.format_exc())
         else:
@@ -268,8 +291,8 @@ with tab3:
     st.markdown("### 📊 性能分析")
 
     if "response_times" in st.session_state and st.session_state.response_times:
-        import pandas as pd
         import numpy as np
+        import pandas as pd
 
         times = st.session_state.response_times
 
@@ -284,10 +307,7 @@ with tab3:
 
         with col2:
             st.markdown("#### 响应时间分布")
-            df = pd.DataFrame({
-                "轮次": range(1, len(times) + 1),
-                "响应时间(秒)": times
-            })
+            df = pd.DataFrame({"轮次": range(1, len(times) + 1), "响应时间(秒)": times})
             st.line_chart(df.set_index("轮次"))
 
         # 性能评级
@@ -328,7 +348,7 @@ with tab3:
             st.metric("内存使用率", f"{memory.percent}%")
 
         with col3:
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             st.metric("磁盘使用率", f"{disk.percent}%")
 
     except ImportError:
@@ -337,10 +357,15 @@ with tab3:
 
 # 页脚
 st.markdown("---")
-st.markdown("""
+st.markdown(
+    """
 <div style="text-align: center; color: #888; font-size: 0.9rem;">
     🤖 LangChain 1.0 RAG 系统 |
     使用 {device_name} 加速 |
     <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
 </div>
-""".format(device_name=device_manager.device_name), unsafe_allow_html=True)
+""".format(
+        device_name=device_manager.device_name
+    ),
+    unsafe_allow_html=True,
+)
