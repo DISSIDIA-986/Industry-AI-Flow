@@ -85,7 +85,7 @@ jinja2>=3.1.0                 # Template engine
 # Chinese NLP Support
 # ============================================
 jieba>=0.42.1                 # Chinese word segmentation
-einops>=0.7.0                 # Tensor operations (nomic-embed dependency)
+einops>=0.8.0                 # Tensor operations (nomic-embed-text-v1.5 dependency)
 
 # ============================================
 # Utilities and Development

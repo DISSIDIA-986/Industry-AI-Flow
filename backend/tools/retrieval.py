@@ -3,7 +3,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from backend.services.retrieval.hybrid_search import HybridRetriever
-from backend.services.vectorstore import VectorStore
+from backend.services.core.vectorstore import VectorStore
 
 
 @tool

@@ -9,7 +9,7 @@ from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
 import logging
-from backend.services.vectorstore import VectorStore
+from backend.services.core.vectorstore import VectorStore
 from backend.config import settings
 
 logger = logging.getLogger(__name__)

@@ -37,8 +37,8 @@ def create_test_image():
         y_offset += 70
 
     # 保存图片
-    output_path = "samples/test_ocr.png"
-    os.makedirs("samples", exist_ok=True)
+    output_path = "test_resources/images/test_ocr.png"
+    os.makedirs("test_resources/images", exist_ok=True)
     image.save(output_path)
     print(f"✅ 测试图片已创建: {output_path}")
 

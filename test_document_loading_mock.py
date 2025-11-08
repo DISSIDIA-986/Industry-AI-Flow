@@ -115,7 +115,7 @@ def test_sample_files():
         'samples/test_document_1.txt',
         'samples/test_document_2.txt',
         'samples/test_document_3.txt',
-        'samples/test_ocr.png',
+        'test_resources/images/test_ocr.png',
         'samples/test_text.txt'
     ]
 
@@ -170,7 +170,7 @@ def simulate_document_processing():
             print(f"✅ 文本文件处理: {len(content)} 字符")
 
         # 模拟图片处理（不需要实际OCR）
-        image_file = "samples/test_ocr.png"
+        image_file = "test_resources/images/test_ocr.png"
         if os.path.exists(image_file):
             size = os.path.getsize(image_file)
             print(f"✅ 图片文件准备: {size} bytes")

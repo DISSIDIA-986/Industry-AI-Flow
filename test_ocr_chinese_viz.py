@@ -48,7 +48,7 @@ def test_ocr_on_visualization():
         return False
 
     # 测试图片目录
-    viz_dir = project_root / "chinese_visualization_output"
+    viz_dir = project_root / "test_resources" / "images"
     if not viz_dir.exists():
         print(f"\n❌ 目录不存在: {viz_dir}")
         return False
@@ -188,7 +188,7 @@ def test_batch_processing():
     try:
         from backend.tools.document_processing import batch_extract_documents
 
-        viz_dir = project_root / "chinese_visualization_output"
+        viz_dir = project_root / "test_resources" / "images"
         image_files = [str(f) for f in viz_dir.glob("*.png")]
 
         if not image_files:
@@ -228,7 +228,7 @@ def test_integration_workflow():
         from backend.services.document_processing import process_document
 
         # 选择一张图片进行详细测试
-        viz_dir = project_root / "chinese_visualization_output"
+        viz_dir = project_root / "test_resources" / "images"
         test_image = viz_dir / "中文文本渲染测试.png"
 
         if not test_image.exists():

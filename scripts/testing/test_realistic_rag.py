@@ -22,7 +22,7 @@ from backend.services.rag_engine import SimpleRAG
 # 测试问题集 - 基于实际数据集设计
 TEST_QUESTIONS = {
     "housing_dataset": {
-        "description": "Housing.csv - 房价数据集",
+        "description": "Housing.csv - 房价数据集 (in test_resources/datasets/)",
         "questions": [
             {
                 "question": "What features are included in the housing dataset?",
@@ -57,7 +57,7 @@ TEST_QUESTIONS = {
         ]
     },
     "thyroid_dataset": {
-        "description": "Thyroid_Diff.csv - 甲状腺疾病数据集",
+        "description": "Thyroid_Diff.csv - 甲状腺疾病数据集 (in test_resources/datasets/)",
         "questions": [
             {
                 "question": "What medical information is captured in the thyroid dataset?",
@@ -92,7 +92,7 @@ TEST_QUESTIONS = {
         ]
     },
     "unemployment_dataset": {
-        "description": "Unemployment_Canada_1976_present.csv - 加拿大失业数据",
+        "description": "Unemployment_Canada_1976_present.csv - 加拿大失业数据 (in test_resources/datasets/)",
         "questions": [
             {
                 "question": "What time period does the Canada unemployment data cover?",

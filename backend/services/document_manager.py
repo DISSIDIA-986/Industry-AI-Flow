@@ -9,10 +9,10 @@ from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import logging
-from backend.services.vectorstore import VectorStore
-from backend.services.embedder import embed_single_text
+from backend.services.core.vectorstore import VectorStore
+from backend.services.core.embedder import embed_single_text
 from backend.services.document_loader import DocumentLoader
-from backend.services.chunker import DocumentChunker
+from backend.services.core.chunker import DocumentChunker
 from backend.config import settings
 
 logger = logging.getLogger(__name__)

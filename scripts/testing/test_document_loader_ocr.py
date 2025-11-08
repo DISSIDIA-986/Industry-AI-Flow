@@ -32,11 +32,11 @@ def test_ocr_image_loading():
 
     # 2. 测试图片加载
     print("[2/3] 测试图片OCR识别...")
-    test_image = Path("samples/test_ocr.png")
+    test_image = Path("test_resources/images/test_ocr.png")
 
     if not test_image.exists():
         print(f"⚠️  测试图片不存在: {test_image}")
-        print("   请先运行: python scripts/testing/create_test_image.py")
+        print("   测试图片已移动到: test_resources/images/test_ocr.png")
         return False
 
     try:

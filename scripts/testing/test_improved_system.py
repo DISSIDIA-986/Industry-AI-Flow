@@ -218,9 +218,9 @@ class ImprovedSystemTester:
     def test_document_router(self) -> Dict[str, Any]:
         """测试文档路由器"""
         test_files = [
-            {"path": "datasets/Housing.csv", "expected_strategy": "data_analysis"},
-            {"path": "datasets/Thyroid_Diff.csv", "expected_strategy": "data_analysis"},
-            {"path": "datasets/Unemployment_Canada.csv", "expected_strategy": "data_analysis"},
+            {"path": "test_resources/datasets/Housing.csv", "expected_strategy": "data_analysis"},
+            {"path": "test_resources/datasets/Thyroid_Diff.csv", "expected_strategy": "data_analysis"},
+            {"path": "test_resources/datasets/Unemployment_Canada_1976_present.csv", "expected_strategy": "data_analysis"},
             {"path": "samples/test_document_1.txt", "expected_strategy": "rag_retrieval"},
             {"path": "samples/test_document_2.txt", "expected_strategy": "rag_retrieval"},
         ]
@@ -287,7 +287,7 @@ class ImprovedSystemTester:
     def test_data_analysis_agent(self) -> Dict[str, Any]:
         """测试数据分析Agent"""
         # 测试数据集
-        test_dataset = "datasets/Housing.csv"
+        test_dataset = "test_resources/datasets/Housing.csv"
 
         if not os.path.exists(test_dataset):
             print(f"⚠️  测试数据集不存在: {test_dataset}")

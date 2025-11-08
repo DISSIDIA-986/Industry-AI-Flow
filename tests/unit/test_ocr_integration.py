@@ -57,7 +57,7 @@ class OCRIntegrationTester:
             # 简单图片文本测试
             OCRTestCase(
                 test_id="ocr_img_001",
-                document_path="samples/test_ocr.png",
+                document_path="test_resources/images/test_ocr.png",
                 document_type="image",
                 expected_text="这是一个测试文档，用于验证OCR功能。",
                 language="ch",
@@ -159,7 +159,7 @@ class OCRIntegrationTester:
         else:
             # 模拟OCR提取的文本
             base_texts = {
-                "samples/test_ocr.png": "这是一个测试文档，用于验证OCR功能。",
+                "test_resources/images/test_ocr.png": "这是一个测试文档，用于验证OCR功能。",
                 "samples/test_text.txt": "简单的测试文本，包含中文字符。",
                 "samples/test_document_1.txt": "这是第一份测试文档，包含技术文档的基本信息和详细说明。",
                 "samples/test_document_2.txt": "技术规范文档第二版，包含系统架构设计、数据库设计、接口规范等详细内容。",
@@ -401,7 +401,13 @@ class OCRIntegrationTester:
         for test_case in image_tests:
             if not os.path.exists(test_case.document_path):
                 print(f"  ⚠️  文件不存在: {test_case.document_path}")
-                continue
+                # Try alternative path in test_resources
+                alt_path = test_case.document_path.replace("samples/", "test_resources/")
+                if os.path.exists(alt_path):
+                    test_case.document_path = alt_path
+                    print(f"  ✅ Found at alternative path: {alt_path}")
+                else:
+                    continue
 
             print(f"  🔍 处理图片: {os.path.basename(test_case.document_path)}")
 
