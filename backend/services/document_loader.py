@@ -169,3 +169,43 @@ def load_document(file_path: str) -> str:
         return load_txt(file_path)
     else:
         raise ValueError(f"不支持的文件格式: {file_path}")
+
+
+class DocumentLoader:
+    """兼容新文档管理系统的文档加载器"""
+
+    def __init__(self):
+        self.enhanced_loader = EnhancedDocumentLoader(use_ocr=True)
+
+    def load_document(self, file_path: str) -> list:
+        """
+        加载文档并返回LangChain Document对象列表
+
+        Args:
+            file_path: 文档路径
+
+        Returns:
+            LangChain Document对象列表
+        """
+        try:
+            from langchain_core.documents import Document
+
+            # 使用增强加载器加载文本
+            text_content = self.enhanced_loader.load_document(file_path)
+
+            # 创建单个Document对象
+            return [Document(
+                page_content=text_content,
+                metadata={
+                    "source": file_path,
+                    "file_type": Path(file_path).suffix.lower()
+                }
+            )]
+
+        except Exception as e:
+            print(f"Error loading document {file_path}: {e}")
+            return []
+
+
+# 为了兼容性，在模块级别创建一个实例
+document_loader = DocumentLoader()
