@@ -78,7 +78,7 @@
           command: server /data --console-address ":9001"
           volumes:
             - minio_data:/data
-        
+
         volumes:
           minio_data:
         ```
@@ -216,7 +216,7 @@ graph TD
 **行动建议**:
 1.  **立即采纳该方案**: 将其作为系统存储模块的标准架构。
 2.  **本地开发使用 MinIO**: 在 `docker-compose.yaml` 中添加 MinIO 服务，并更新 `.env` 配置。
-3.  **分阶段实施智能归档**: 
+3.  **分阶段实施智能归档**:
     - **第一步**: 先实现基础的“元数据-对象分离”存储。
     - **第二步**: 引入任务队列和后台 Worker，实现上述**异步的、由 LLM 驱动的智能分类与重命名**流程。
 

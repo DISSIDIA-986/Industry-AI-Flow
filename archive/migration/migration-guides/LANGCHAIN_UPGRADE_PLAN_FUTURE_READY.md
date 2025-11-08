@@ -125,7 +125,7 @@ class EnhancedPGVector(PGVector):
     扩展PGVector以支持更复杂的元数据过滤功能
     预留接口以支持未来METADATA_RETRIEVAL_PROPOSAL.md中的功能
     """
-    
+
     def similarity_search_with_filter(
         self,
         query_embedding: list[float],
@@ -135,7 +135,7 @@ class EnhancedPGVector(PGVector):
     ) -> list[Document]:
         """
         带过滤的相似度搜索
-        
+
         Args:
             query_embedding: 查询向量
             top_k: 返回结果数量
@@ -154,7 +154,7 @@ class EnhancedPGVector(PGVector):
             FROM document_chunks dc
             JOIN documents d ON dc.doc_id = d.id
         """
-        
+
         # 构建WHERE子句
         where_clauses = ["1=1"]
         params = [query_embedding.tolist()]  # 确保向量参数正确传递，由驱动处理格式化
@@ -175,7 +175,7 @@ class EnhancedPGVector(PGVector):
         where_sql = ' AND '.join(where_clauses)
         full_sql = base_sql + " WHERE " + where_sql + " ORDER BY distance LIMIT %s"
         params.append(top_k)
-        
+
         # 执行查询（使用上下文管理器确保资源正确释放）
         try:
             with self.connection.cursor() as cur:
@@ -205,7 +205,7 @@ class EnhancedPGVector(PGVector):
         except Exception as e:
             logger.error(f"Database query failed: {e}")
             raise  # 重新抛出异常，不静默处理
-    
+
     def _build_metadata_filter(self, filters: dict) -> tuple[list[str], list]:
         """
         构建元数据过滤SQL子句
@@ -213,12 +213,12 @@ class EnhancedPGVector(PGVector):
         """
         where_clauses = []
         params = []
-        
+
         # 文档类型过滤
         if "document_type" in filters:
             where_clauses.append("d.document_type = %s")
             params.append(filters["document_type"])
-        
+
         # 日期范围过滤
         if "date_range" in filters:
             if "start" in filters["date_range"]:
@@ -227,28 +227,28 @@ class EnhancedPGVector(PGVector):
             if "end" in filters["date_range"]:
                 where_clauses.append("d.created_date <= %s")
                 params.append(filters["date_range"]["end"])
-        
+
         # 部门过滤
         if "department" in filters:
             where_clauses.append("d.department = %s")
             params.append(filters["department"])
-        
+
         # 标签过滤（包含任一标签）
         if "tags" in filters and filters["tags"]:
             where_clauses.append("d.tags && %s")  # PostgreSQL 数组overlap操作符
             params.append(filters["tags"])
-        
+
         # 安全级别过滤
         if "security_level" in filters:
             where_clauses.append("d.security_level = %s")
             params.append(filters["security_level"])
-        
+
         # JSONB元数据过滤
         if "custom_fields" in filters:
             for field, value in filters["custom_fields"].items():
                 where_clauses.append(f"d.metadata->>%s = %s")
                 params.extend([field, json.dumps(value) if isinstance(value, (dict, list)) else str(value)])
-        
+
         return where_clauses, params
 
 # 建立连接
@@ -301,7 +301,7 @@ class EnhancedHybridRetriever(BaseRetriever):
     k: int = 5
     vector_weight: float = 0.7
     bm25_weight: float = 0.3
-    
+
     def __init__(
         self,
         vectorstore: EnhancedPGVector,
@@ -314,7 +314,7 @@ class EnhancedHybridRetriever(BaseRetriever):
         self.k = k
         self.vector_weight = vector_weight
         self.bm25_weight = bm25_weight
-    
+
     def _get_relevant_documents(
         self,
         query: str,
@@ -324,7 +324,7 @@ class EnhancedHybridRetriever(BaseRetriever):
     ) -> List[Document]:
         """
         获取相关文档（支持元数据过滤）
-        
+
         Args:
             query: 查询文本
             filters: 元数据过滤条件
@@ -333,7 +333,7 @@ class EnhancedHybridRetriever(BaseRetriever):
         # 从PostgreSQL获取文档用于BM25分词
         # 为简化实现，这里使用PostgreSQL的内置全文搜索功能
         # 实际实现可能需要更复杂的集成
-        
+
         # 应用元数据过滤（获取符合条件的文档ID）
         filtered_doc_ids = None
         if filters:
@@ -341,7 +341,7 @@ class EnhancedHybridRetriever(BaseRetriever):
             # 注意：这里我们预留了接口，实际实现可能需要更复杂的方法
             # 临时实现：通过向量查询执行元数据过滤
             filtered_doc_ids = self._get_filtered_doc_ids(filters)
-        
+
         # 1. 向量检索（使用过滤后的文档ID）
         query_embedding = self.vectorstore.embedding_function.embed_query(query)
         vector_results = self.vectorstore.similarity_search_with_filter(
@@ -372,7 +372,7 @@ class EnhancedHybridRetriever(BaseRetriever):
         # 5. 构建最终结果（仅返回最高分的文档）
         final_results = []
         chunk_id_to_doc = {doc.metadata.get("chunk_id") or doc.metadata.get("doc_id"): doc for doc in vector_results}
-        
+
         for chunk_id, fusion_score in sorted_chunks:
             if chunk_id in chunk_id_to_doc:
                 doc = chunk_id_to_doc[chunk_id]
@@ -381,7 +381,7 @@ class EnhancedHybridRetriever(BaseRetriever):
                 final_results.append(doc)
 
         return final_results
-    
+
     def _get_filtered_doc_ids(self, filters: dict) -> List[str]:
         """
         根据过滤条件获取文档ID列表
@@ -389,7 +389,7 @@ class EnhancedHybridRetriever(BaseRetriever):
         # 这里应该查询数据库获取符合条件的文档ID
         # 由于PostgreSQL支持复杂的查询，直接在数据库层面过滤会更高效
         # 为了与METADATA_RETRIEVAL_PROPOSAL.md保持一致，我们构建SQL查询
-        
+
         conn = self.vectorstore.connection
 
         try:
@@ -447,7 +447,7 @@ class EnhancedHybridRetriever(BaseRetriever):
         except Exception as e:
             logger.error(f"Metadata filtering failed: {e}")
             raise
-    
+
     def _bm25_search(self, query: str, doc_ids: Optional[List[str]], top_k: int) -> List[tuple]:
         """
         BM25检索（使用PostgreSQL全文搜索，支持中英文）
@@ -512,7 +512,7 @@ class EnhancedHybridRetriever(BaseRetriever):
             vector_weight = self.vector_weight
         if bm25_weight is None:
             bm25_weight = self.bm25_weight
-            
+
         # 创建临时增强检索器以支持参数覆盖
         temp_retriever = EnhancedHybridRetriever(
             vectorstore=self.vectorstore,
@@ -520,10 +520,10 @@ class EnhancedHybridRetriever(BaseRetriever):
             vector_weight=vector_weight,
             bm25_weight=bm25_weight
         )
-        
+
         # 执行检索
         docs = temp_retriever.get_relevant_documents(query, filters=filters)
-        
+
         # 转换为METADATA_RETRIEVAL_PROPOSAL.md中定义的格式
         results = []
         for doc in docs:
@@ -534,7 +534,7 @@ class EnhancedHybridRetriever(BaseRetriever):
                 "score": doc.metadata.get("fusion_score", 0.0),
                 "metadata": doc.metadata.get("document_metadata", {})
             })
-        
+
         return results
 ```
 
@@ -563,7 +563,7 @@ class CrossEncoderReranker(BaseDocumentCompressor):
     """
     model_name: str = "BAAI/bge-reranker-base"
     top_k: int = 5
-    
+
     def __init__(self, model_name: str = "BAAI/bge-reranker-base", top_k: int = 5):
         super().__init__()
         self.model_name = model_name
@@ -571,7 +571,7 @@ class CrossEncoderReranker(BaseDocumentCompressor):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
         self.model.eval()
-        
+
         # 使用MPS (Apple Silicon) 或 CPU
         if torch.backends.mps.is_available():
             self.device = torch.device("mps")
@@ -605,7 +605,7 @@ class CrossEncoderReranker(BaseDocumentCompressor):
 
         # 将分数和原始文档关联
         docs_with_scores = [(doc, float(score)) for doc, score in zip(documents, scores)]
-        
+
         # 按分数降序排序
         reranked_docs = sorted(docs_with_scores, key=lambda x: x[1], reverse=True)
 
@@ -688,7 +688,7 @@ class LangChainRAG:
             self.rag_chain = self.rag_chain.with_config(
                 run_name="final-rag-chain"
             )
-    
+
     def _format_docs(self, docs):
         """格式化文档用于提示词"""
         context_parts = []
@@ -696,22 +696,22 @@ class LangChainRAG:
             content = doc.page_content
             context_parts.append(f"[文档{i}]\n{content}")
         return "\n\n".join(context_parts)
-    
+
     def query(
-        self, 
-        question: str, 
+        self,
+        question: str,
         top_k: int = None,
         filters: dict = None  # 元数据过滤参数，对应METADATA_RETRIEVAL_PROPOSAL.md
     ) -> dict:
         """
         执行RAG查询（支持元数据过滤）
-        
+
         Args:
             question: 用户问题
             top_k: 返回结果数量
             filters: 元数据过滤条件，格式同METADATA_RETRIEVAL_PROPOSAL.md
         """
-        
+
         # 使用增强的检索器，支持过滤参数
         if hasattr(self.retriever, 'search'):
             # 使用增强检索器的search方法，支持过滤
@@ -741,7 +741,7 @@ class LangChainRAG:
                 self.prompt.format(context=context, question=question),
                 config={"run_name": "query-generation"}
             )
-            
+
             return {
                 "question": question,
                 "answer": answer,
@@ -761,10 +761,10 @@ class LangChainRAG:
             # 降级到基本实现（如果检索器不支持search方法）
             # 这里可以实现一个兼容性方案
             docs = self.retriever.get_relevant_documents(question)
-            
+
             # 执行RAG查询
             answer = self.rag_chain.invoke(question)
-            
+
             return {
                 "question": question,
                 "answer": answer,
@@ -864,14 +864,14 @@ class LangChainDocumentProcessor:
             "file_hash": self.compute_file_hash(file_path),
             "file_extension": os.path.splitext(file_path)[1].lower()
         }
-        
+
         # 合并用户提供的元数据
         if metadata:
             file_metadata.update(metadata)
-        
+
         # 根据文件类型选择加载器
         file_ext = os.path.splitext(file_path)[1].lower()
-        
+
         if file_ext == ".pdf":
             loader = PyMuPDFLoader(file_path)
         elif file_ext == ".txt":
@@ -879,10 +879,10 @@ class LangChainDocumentProcessor:
         else:
             # 使用通用加载器
             loader = UnstructuredFileLoader(file_path)
-        
+
         # 加载文档
         documents = loader.load()
-        
+
         # 分块处理
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=settings.chunk_size,
@@ -890,19 +890,19 @@ class LangChainDocumentProcessor:
             length_function=len,
             is_separator_regex=False,
         )
-        
+
         chunks = text_splitter.split_documents(documents)
-        
+
         # 添加元数据
         doc_id = str(uuid.uuid4())
         filename = os.path.basename(file_path)
-        
+
         for chunk in chunks:
             chunk.metadata["doc_id"] = doc_id
             chunk.metadata["filename"] = filename
             chunk.metadata["source"] = file_path
             chunk.metadata["file_metadata"] = file_metadata
-            
+
             # 添加提案中提到的元数据字段（预留）
             chunk.metadata["document_type"] = file_metadata.get("file_extension", "unknown")
             chunk.metadata["created_date"] = file_metadata.get("created_date", datetime.now().isoformat())
@@ -910,11 +910,11 @@ class LangChainDocumentProcessor:
             chunk.metadata["department"] = file_metadata.get("department", "general")
             chunk.metadata["security_level"] = file_metadata.get("security_level", "public")
             chunk.metadata["tags"] = file_metadata.get("tags", [])
-        
+
         # 存储到向量数据库
         # 使用batch模式以提高性能
         chunk_ids = self.vectorstore.add_documents(chunks)
-        
+
         return {
             "doc_id": doc_id,
             "filename": filename,
@@ -922,11 +922,11 @@ class LangChainDocumentProcessor:
             "chunk_ids": chunk_ids,
             "metadata": file_metadata
         }
-    
+
     def process_documents_batch(self, file_paths: list[str], metadata_list: list[dict] = None):
         """
         批量处理文档
-        
+
         Args:
             file_paths: 文件路径列表
             metadata_list: 对应的元数据列表（可选）
@@ -936,7 +936,7 @@ class LangChainDocumentProcessor:
             meta = metadata_list[i] if metadata_list and i < len(metadata_list) else None
             result = self.process_document(file_path, meta)
             results.append(result)
-        
+
         return results
 ```
 
@@ -1032,17 +1032,17 @@ def run_benchmark_test(rag_system, test_dataset: List[Dict[str, str]], iteration
         'throughput': 0,
         'memory_usage': []
     }
-    
+
     start_time = time.time()
-    
+
     for i in range(iterations):
         for test_case in test_dataset:
             question = test_case['question']
             expected_answer = test_case.get('expected_answer')
-            
+
             # 记录查询开始时间
             query_start = time.time()
-            
+
             # 执行查询（包含元数据过滤测试）
             if 'filters' in test_case:
                 # 测试带过滤的查询
@@ -1050,27 +1050,27 @@ def run_benchmark_test(rag_system, test_dataset: List[Dict[str, str]], iteration
             else:
                 # 测试普通查询
                 response = rag_system.query(question)
-            
+
             # 记录查询结束时间
             query_end = time.time()
             query_time = query_end - query_start
-            
+
             results['query_times'].append(query_time)
-            
+
             # 简单准确性评估 (可以根据需要扩展)
             if expected_answer:
                 accuracy = calculate_accuracy(response['answer'], expected_answer)
                 results['accuracies'].append(accuracy)
-    
+
     total_time = time.time() - start_time
     results['throughput'] = (iterations * len(test_dataset)) / total_time
-    
+
     # 计算统计指标
     results['p50_time'] = statistics.median(results['query_times'])
     results['p95_time'] = statistics.quantiles(results['query_times'], n=20)[19]  # 95th percentile
     results['avg_time'] = statistics.mean(results['query_times'])
     results['accuracy_avg'] = statistics.mean(results['accuracies']) if results['accuracies'] else 0
-    
+
     return results
 ```
 
@@ -1112,7 +1112,7 @@ config = RunnableConfig(
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS
     document_type TEXT,
     created_date DATE,
-    modified_date DATE, 
+    modified_date DATE,
     author TEXT,
     department TEXT,
     tags TEXT[],
@@ -1151,7 +1151,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_metadata ON documents USING GIN(metadat
 ## 实施时间估算
 
 - **第1-3阶段 (环境准备、LLM、Embedder)**: 3-4天
-- **第4阶段 (VectorStore增强)**: 3-4天 (略长因为预留元数据功能) 
+- **第4阶段 (VectorStore增强)**: 3-4天 (略长因为预留元数据功能)
 - **第5阶段 (HybridRetriever增强)**: 4-5天 (最长，需要完整实现)
 - **第6-8阶段 (Reranker、RAG、DocumentProcessor)**: 4-5天
 - **全面测试和优化**: 4-5天
