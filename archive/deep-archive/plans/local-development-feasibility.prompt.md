@@ -232,16 +232,16 @@ class Settings(BaseSettings):
     pgvector_db: str = os.getenv("PGVECTOR_DB", "ai_workflow_local")
     pgvector_user: str = os.getenv("PGVECTOR_USER", "dev")
     pgvector_password: str = os.getenv("PGVECTOR_PASSWORD", "dev123")
-    
+
     # LLM
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-    
+
     # 性能
     max_docs_per_batch: int = int(os.getenv("MAX_DOCS_PER_BATCH", "50"))
     chunk_size: int = int(os.getenv("CHUNK_SIZE", "500"))
     max_retrieval_results: int = int(os.getenv("MAX_RETRIEVAL_RESULTS", "5"))
-    
+
     # 文档处理
     supported_formats: str = os.getenv("SUPPORTED_FORMATS", "pdf,txt,md")
     max_file_size_mb: int = int(os.getenv("MAX_FILE_SIZE_MB", "10"))

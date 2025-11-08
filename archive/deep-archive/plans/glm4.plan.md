@@ -15,7 +15,7 @@ graph TB
         C[移动端] --> B
         D[第三方集成] --> B
     end
-    
+
     subgraph "服务层"
         B --> E[工作流编排服务]
         B --> F[RAG服务]
@@ -24,7 +24,7 @@ graph TB
         B --> I[用户管理]
         B --> J[监控审计]
     end
-    
+
     subgraph "模型层"
         E --> K[LangGraph编排引擎]
         F --> L[检索与生成]
@@ -35,21 +35,21 @@ graph TB
         M --> O
         N --> O
     end
-    
+
     subgraph "数据层"
         P[向量数据库]
         Q[关系数据库]
         R[对象存储]
         S[缓存层]
     end
-    
+
     subgraph "基础设施层"
         T[Kubernetes集群]
         U[GPU节点]
         V[存储集群]
         W[网络与安全]
     end
-    
+
     O --> P
     O --> Q
     O --> R
@@ -120,18 +120,18 @@ workflow.set_finish_point("generate")
 def process_document(file_path):
     # 1. 文档解析
     raw_content = parse_document(file_path)
-    
+
     # 2. OCR处理(如需要)
     if contains_images(raw_content):
         ocr_content = deepseek_ocr_process(raw_content)
         raw_content = merge_text_and_ocr(raw_content, ocr_content)
-    
+
     # 3. 清洗和预处理
     clean_content = clean_and_normalize(raw_content)
-    
+
     # 4. 智能分段
     chunks = semantic_chunking(clean_content, chunk_size=512, overlap=50)
-    
+
     return chunks
 ```
 
@@ -288,7 +288,7 @@ def get_contextual_memory(query):
 def query_router(query):
     # 查询意图分类
     intent = classify_intent(query)
-    
+
     if intent == "factual_query":
         return "vector_search"
     elif intent == "analytical_query":

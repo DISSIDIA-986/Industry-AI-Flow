@@ -45,7 +45,7 @@
    pydantic==1.10.13
    psutil==5.9.6
    python-multipart==0.0.6
-   
+
    # llama.cpp 相关依赖 - **VERSION SPECIFIED**
    llama-cpp-python==0.2.50  # 指定稳定版本
    huggingface-hub==0.20.3    # 模型管理需要
@@ -126,15 +126,15 @@ class LlamaCppClient:
         if not os.path.exists(self.model_path):
             logging.error(f"模型文件不存在: {self.model_path}")
             return False
-        
+
         if not os.access(self.model_path, os.R_OK):
             logging.error(f"模型文件不可读: {self.model_path}")
             return False
-        
+
         file_size = os.path.getsize(self.model_path)
         if file_size < 1024 * 1024:  # 小于1MB可能不完整
             logging.warning(f"模型文件过小，可能不完整: {file_size} bytes")
-        
+
         logging.info(f"模型文件验证通过: {self.model_path} ({file_size / (1024**3):.2f} GB)")
         return True
 
@@ -173,7 +173,7 @@ class LlamaCppClient:
         try:
             logging.info(f"开始加载模型: {os.path.basename(self.model_path)}")
             logging.info(f"配置 - 上下文: {self.n_ctx}, 线程: {self.n_threads}, GPU层: {self.n_gpu_layers}")
-            
+
             start_time = time.time()
             self.model = Llama(
                 model_path=self.model_path,
@@ -186,13 +186,13 @@ class LlamaCppClient:
                 logits_all=False,
                 embedding=False
             )
-            
+
             load_time = time.time() - start_time
             logging.info(f"✅ 模型加载成功，耗时: {load_time:.2f}秒")
-            
+
             # **ENHANCED**: 检查模型是否可以正常工作
             self._test_model()
-            
+
         except Exception as e:
             logging.error(f"模型加载失败: {e}")
             raise RuntimeError(f"无法加载模型 {self.model_path}: {e}")
@@ -238,14 +238,14 @@ class LlamaCppClient:
         try:
             # **ENHANCED**: 超时处理
             import signal
-            
+
             def timeout_handler(signum, frame):
                 raise TimeoutError("模型生成超时")
-            
+
             if timeout > 0:
                 old_handler = signal.signal(signal.SIGALRM, timeout_handler)
                 signal.alarm(timeout)
-            
+
             try:
                 # llama.cpp generate 方法参数映射
                 response = self.model(
@@ -259,19 +259,19 @@ class LlamaCppClient:
                     echo=False,  # 不回显输入
                     stream=False
                 )
-                
+
                 result = response["choices"][0]["text"]
-                
+
                 if timeout > 0:
                     signal.alarm(0)  # 取消超时
-                
+
                 return result
-                
+
             except Exception as e:
                 if timeout > 0:
                     signal.alarm(0)  # 确保取消超时
                 raise e
-                
+
         except TimeoutError:
             logging.error(f"模型生成超时 ({timeout}秒)")
             raise TimeoutError(f"模型生成超时，已取消请求")
@@ -324,7 +324,7 @@ class LlamaCppClient:
             "cpu_percent": process.cpu_percent(),
             "model_memory_mb": self._estimate_model_memory()  # **ENHANCED**
         }
-    
+
     def _estimate_model_memory(self) -> float:
         """估算模型内存使用"""
         # 粗略估算: 模型文件大小 * 1.5 (考虑加载后的内存开销)
@@ -341,7 +341,7 @@ class LlamaCppClient:
             del self.model
             self.model = None
             logging.info("✅ 模型已卸载，内存已释放")
-    
+
     def is_loaded(self) -> bool:
         """检查模型是否已加载"""
         return self.model is not None
@@ -404,34 +404,34 @@ class Settings(BaseSettings):
     def _validate_config(self):
         """验证配置参数的有效性"""
         errors = []
-        
+
         # 验证路径
         if not Path(self.llama_model_path).exists():
             errors.append(f"模型文件不存在: {self.llama_model_path}")
-        
+
         # 验证数值参数
         if self.llama_context_size <= 0:
             errors.append(f"上下文大小必须大于0: {self.llama_context_size}")
-        
+
         if self.llama_threads <= 0:
             errors.append(f"线程数必须大于0: {self.llama_threads}")
-        
+
         if self.llama_batch_size <= 0:
             errors.append(f"批处理大小必须大于0: {self.llama_batch_size}")
-        
+
         if self.llama_max_tokens <= 0:
             errors.append(f"最大token数必须大于0: {self.llama_max_tokens}")
-        
+
         # 验证浮点参数
         if not (0.0 <= self.llama_temperature <= 2.0):
             errors.append(f"temperature应在0.0-2.0之间: {self.llama_temperature}")
-        
+
         if not (0.0 <= self.llama_top_p <= 1.0):
             errors.append(f"top_p应在0.0-1.0之间: {self.llama_top_p}")
-        
+
         if not (0.0 <= self.llama_repeat_penalty <= 2.0):
             errors.append(f"repeat_penalty应在0.0-2.0之间: {self.llama_repeat_penalty}")
-        
+
         if errors:
             error_msg = "配置验证失败:\n" + "\n".join(errors)
             logging.error(error_msg)
@@ -619,10 +619,10 @@ class SimpleRAG:
     def query(self, question: str, top_k: int = None) -> Dict[str, Any]:
         """RAG查询流程"""
         start_time = time.time()
-        
+
         # **ENHANCED**: 记录查询开始
         logging.info(f"开始RAG查询: {question[:50]}...")
-        
+
         if top_k is None:
             top_k = settings.top_k
 
@@ -640,7 +640,7 @@ class SimpleRAG:
                 retrieve_k = top_k * 2 if self.use_reranker else top_k
                 query_embedding = embed_single_text(question)
                 similar_chunks = self.vectorstore.similarity_search(query_embedding, top_k=retrieve_k)
-            
+
             retrieve_time = time.time() - retrieve_start
 
             # Phase 2 Step 3: 使用重排序器精排
@@ -661,7 +661,7 @@ class SimpleRAG:
 
             # 4. LLM生成答案
             llm_start = time.time()
-            
+
             # **ENHANCED**: 使用配置中的参数
             answer = self.llm_client.generate(
                 context + f"\n\n用户问题：{question}\n\n你的回答：",
@@ -697,7 +697,7 @@ class SimpleRAG:
                 f"重排序: {result['timing']['rerank']:.2f}s, "
                 f"LLM: {result['timing']['llm']:.2f}s"
             )
-            
+
             return result
 
         except Exception as e:
@@ -754,7 +754,7 @@ import time
 
 class LLMRequestQueue:
     """LLM请求队列，处理并发请求"""
-    
+
     def __init__(self, max_workers: int = 1, queue_size: int = 10):
         self.max_workers = max_workers
         self.queue_size = queue_size
@@ -762,7 +762,7 @@ class LLMRequestQueue:
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.is_running = False
         self.worker_thread = None
-        
+
     def start(self):
         """启动队列处理器"""
         if not self.is_running:
@@ -770,7 +770,7 @@ class LLMRequestQueue:
             self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
             self.worker_thread.start()
             logging.info(f"LLM请求队列启动: {self.max_workers} 工作线程, 队列大小: {self.queue_size}")
-    
+
     def stop(self):
         """停止队列处理器"""
         self.is_running = False
@@ -778,12 +778,12 @@ class LLMRequestQueue:
             self.worker_thread.join(timeout=5)
         self.executor.shutdown(wait=True)
         logging.info("LLM请求队列已停止")
-    
+
     def submit_request(self, func: Callable, *args, **kwargs) -> asyncio.Future:
         """提交请求到队列"""
         future = self.executor.submit(func, *args, **kwargs)
         return future
-    
+
     def _process_queue(self):
         """处理队列中的请求"""
         while self.is_running:
@@ -805,7 +805,7 @@ class LLMRequestQueue:
                     time.sleep(0.1)  # 避免CPU占用过高
             except Exception as e:
                 logging.error(f"队列处理异常: {e}")
-    
+
     def get_queue_status(self) -> dict:
         """获取队列状态"""
         return {
@@ -845,18 +845,18 @@ import os
 
 class LlamaCppClientTest(unittest.TestCase):
     """llama.cpp 客户端单元测试"""
-    
+
     def setUp(self):
         """测试前准备"""
         self.client = get_llm_client()
-    
+
     def test_model_info(self):
         """测试模型信息获取"""
         info = self.client.get_model_info()
         self.assertIn('model_path', info)
         self.assertIn('model_type', info)
         self.assertIsNotNone(info['model_path'])
-    
+
     def test_generate_text(self):
         """测试文本生成"""
         response = self.client.generate(
@@ -866,17 +866,17 @@ class LlamaCppClientTest(unittest.TestCase):
         )
         self.assertIsInstance(response, str)
         self.assertGreater(len(response), 0)
-    
+
     def test_tokenization(self):
         """测试token化功能"""
         text = "Hello world"
         tokens = self.client.tokenize(text)
         self.assertIsInstance(tokens, list)
         self.assertGreater(len(tokens), 0)
-        
+
         decoded = self.client.detokenize(tokens)
         self.assertEqual(decoded.strip(), text)
-    
+
     def test_token_count(self):
         """测试token计数"""
         text = "Hello world"
@@ -887,22 +887,22 @@ class LlamaCppClientTest(unittest.TestCase):
 
 class RAGIntegrationTest(unittest.TestCase):
     """RAG系统集成测试"""
-    
+
     def setUp(self):
         """测试前准备"""
         self.rag = SimpleRAG()
-    
+
     def test_backend_status(self):
         """测试后端状态"""
         status = get_backend_status()
         self.assertIn('status', status)
         self.assertIn('backend', status)
-    
+
     def test_memory_usage(self):
         """测试内存使用获取"""
         memory_info = self.rag.get_memory_usage()
         self.assertIsInstance(memory_info, dict)
-    
+
     @patch('backend.services.vectorstore.VectorStore.similarity_search')
     def test_query_with_mock_retrieval(self, mock_search):
         """测试查询功能（模拟检索）"""
@@ -916,27 +916,27 @@ class RAGIntegrationTest(unittest.TestCase):
             }
         ]
         mock_search.return_value = mock_chunks
-        
+
         result = self.rag.query("测试问题")
-        
+
         self.assertIn('question', result)
         self.assertIn('answer', result)
         self.assertIn('timing', result)
         self.assertEqual(result['question'], "测试问题")
         self.assertIsInstance(result['timing'], dict)
-    
+
     def test_performance_monitoring(self):
         """测试性能监控"""
         start_time = time.time()
         result = self.rag.query("性能测试问题")
         end_time = time.time()
-        
+
         # 验证时间记录
         self.assertIn('timing', result)
         timing = result['timing']
         self.assertIn('total', timing)
         self.assertGreaterEqual(timing['total'], 0)
-        
+
         # 验证总时间与实际时间的合理关系
         actual_time = end_time - start_time
         self.assertLessEqual(timing['total'], actual_time + 1)  # 允许1秒误差
@@ -945,10 +945,10 @@ class RAGIntegrationTest(unittest.TestCase):
 def run_performance_benchmark():
     """性能基准测试"""
     print("\n📊 性能基准测试...")
-    
+
     try:
         rag = SimpleRAG()
-        
+
         # 准备测试数据
         test_prompts = [
             "什么是人工智能?",
@@ -957,41 +957,41 @@ def run_performance_benchmark():
             "向量数据库有什么优势?",
             "如何优化大语言模型的性能?"
         ]
-        
+
         total_time = 0
         total_tokens = 0
         success_count = 0
-        
+
         for i, prompt in enumerate(test_prompts):
             print(f"  测试 {i+1}/5: {prompt[:30]}...")
-            
+
             start_time = time.time()
             try:
                 result = rag.query(prompt)
                 end_time = time.time()
-                
+
                 response_time = end_time - start_time
                 total_time += response_time
                 if 'answer' in result:
                     total_tokens += len(result['answer'].split())
-                
+
                 success_count += 1
                 print(f"    耗时: {response_time:.2f}秒, 生成 {len(result.get('answer', '').split())} 个词")
-                
+
             except Exception as e:
                 print(f"    ❌ 失败: {e}")
-        
+
         if success_count > 0:
             avg_time = total_time / success_count
             avg_tokens_per_sec = total_tokens / total_time if total_time > 0 else 0
-            
+
             print(f"\n📈 性能统计:")
             print(f"  成功请求: {success_count}/{len(test_prompts)}")
             print(f"  平均响应时间: {avg_time:.2f}秒")
             print(f"  平均吞吐量: {avg_tokens_per_sec:.2f} 词/秒")
             print(f"  总生成词数: {total_tokens}")
-        
-        return success_count == len(test_prom        
+
+        return success_count == len(test_prom
     except Exception as e:
         print(f"❌ 性能测试失败: {e}")
         return False
@@ -1000,15 +1000,15 @@ def run_performance_benchmark():
 def run_stress_test():
     """压力测试"""
     print("\n💪 压力测试...")
-    
+
     try:
         import threading
         import time
-        
+
         rag = SimpleRAG()
         results = []
         errors = []
-        
+
         def worker(prompt, worker_id):
             start_time = time.time()
             try:
@@ -1026,7 +1026,7 @@ def run_stress_test():
                     'error': str(e),
                     'response_time': end_time - start_time
                 })
-        
+
         # 创建多个线程并发请求
         threads = []
         test_prompts = ["测试"] * 5  # 5个并发请求
@@ -1034,21 +1034,21 @@ def run_stress_test():
             thread = threading.Thread(target=worker, args=(prompt, i))
             threads.append(thread)
             thread.start()
-        
+
         # 等待所有线程完成
         for thread in threads:
             thread.join()
-        
+
         print(f"  总请求: {len(test_prompts)}")
         print(f"  成功: {len(results)}")
         print(f"  失败: {len(errors)}")
-        
+
         if results:
             avg_time = sum(r['response_time'] for r in results) / len(results)
             print(f"  平均响应时间: {avg_time:.2f}秒")
-        
+
         return len(errors) == 0
-        
+
     except Exception as e:
         print(f"❌ 压力测试失败: {e}")
         return False
@@ -1059,54 +1059,54 @@ def main():
     print("🚀 llama.cpp 增强版集成测试开始")
     print(f"📊 当前后端配置: {settings.llama_backend}")
     print(f"📂 模型路径: {settings.llama_model_path}")
-    
+
     # 运行单元测试
     print("\n🧪 运行单元测试...")
     loader = unittest.TestLoader()
-    
+
     # 创建测试套件
     suite = unittest.TestSuite()
-    
+
     # 添加客户端测试
     try:
         client_tests = loader.loadTestsFromTestCase(LlamaCppClientTest)
         suite.addTests(client_tests)
     except Exception as e:
         print(f"❌ 客户端测试加载失败: {e}")
-    
+
     # 添加集成测试
     try:
         integration_tests = loader.loadTestsFromTestCase(RAGIntegrationTest)
         suite.addTests(integration_tests)
     except Exception as e:
         print(f"❌ 集成测试加载失败: {e}")
-    
+
     # 运行测试
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
-    
+
     # 运行性能测试
     print(f"\n{'='*50}")
     performance_passed = run_performance_benchmark()
-    
+
     # 运行压力测试
     print(f"\n{'='*50}")
     stress_passed = run_stress_test()
-    
+
     # 汇总结果
     print(f"\n{'='*50}")
     print("📋 测试结果汇总:")
     print(f"  单元测试: {'✅ 通过' if result.wasSuccessful() else '❌ 失败'} ({result.testsRun} 个测试)")
     print(f"  性能测试: {'✅ 通过' if performance_passed else '❌ 失败'}")
     print(f"  压力测试: {'✅ 通过' if stress_passed else '❌ 失败'}")
-    
+
     all_passed = result.wasSuccessful() and performance_passed and stress_passed
-    
+
     if all_passed:
         print("\n🎉 所有测试通过！llama.cpp 集成成功")
     else:
         print("\n⚠️  部分测试失败，请检查实现")
-    
+
     return all_passed
 
 
@@ -1157,14 +1157,14 @@ class ModelMetrics:
 
 class SystemMonitor:
     """系统监控器"""
-    
+
     def __init__(self, monitor_interval: int = 5):
         self.monitor_interval = monitor_interval
         self.metrics_history: List[SystemMetrics] = []
         self.is_monitoring = False
         self.monitor_thread = None
         self._lock = threading.Lock()
-    
+
     def start_monitoring(self):
         """开始监控"""
         if not self.is_monitoring:
@@ -1172,14 +1172,14 @@ class SystemMonitor:
             self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
             self.monitor_thread.start()
             logging.info(f"系统监控启动，间隔: {self.monitor_interval}秒")
-    
+
     def stop_monitoring(self):
         """停止监控"""
         self.is_monitoring = False
         if self.monitor_thread:
             self.monitor_thread.join(timeout=2)
         logging.info("系统监控已停止")
-    
+
     def _monitor_loop(self):
         """监控循环"""
         while self.is_monitoring:
@@ -1194,11 +1194,11 @@ class SystemMonitor:
             except Exception as e:
                 logging.error(f"系统监控收集数据失败: {e}")
                 time.sleep(self.monitor_interval)
-    
+
     def _collect_system_metrics(self) -> SystemMetrics:
         """收集系统指标"""
         net_io = psutil.net_io_counters()
-        
+
         return SystemMetrics(
             timestamp=datetime.now(),
             cpu_percent=psutil.cpu_percent(interval=1),
@@ -1209,57 +1209,57 @@ class SystemMonitor:
             network_sent_mb=net_io.bytes_sent / (1024**2),
             network_recv_mb=net_io.bytes_recv / (1024**2)
         )
-    
+
     def get_current_metrics(self) -> SystemMetrics:
         """获取当前系统指标"""
         return self._collect_system_metrics()
-    
+
     def get_average_metrics(self, minutes: int = 5) -> Dict[str, float]:
         """获取指定时间内的平均指标"""
         cutoff_time = datetime.now() - timedelta(minutes=minutes)
         recent_metrics = [
-            m for m in self.metrics_history 
+            m for m in self.metrics_history
             if m.timestamp >= cutoff_time
         ]
-        
+
         if not recent_metrics:
             return {}
-        
+
         avg_metrics = {
             'cpu_percent': sum(m.cpu_percent for m in recent_metrics) / len(recent_metrics),
             'memory_percent': sum(m.memory_percent for m in recent_metrics) / len(recent_metrics),
             'disk_percent': sum(m.disk_percent for m in recent_metrics) / len(recent_metrics)
         }
-        
+
         return avg_metrics
-    
+
     def get_alerts(self) -> List[str]:
         """检查是否需要告警"""
         alerts = []
         current = self.get_current_metrics()
-        
+
         # CPU使用率告警
         if current.cpu_percent > 90:
             alerts.append(f"⚠️ CPU使用率过高: {current.cpu_percent}%")
-        
+
         # 内存使用率告警
         if current.memory_percent > 90:
             alerts.append(f"⚠️ 内存使用率过高: {current.memory_percent}%")
-        
+
         # 磁盘使用率告警
         if current.disk_percent > 90:
             alerts.append(f"⚠️ 磁盘使用率过高: {current.disk_percent}%")
-        
+
         return alerts
 
 
 class ModelMonitor:
     """模型监控器"""
-    
+
     def __init__(self):
         self.metrics_history: List[ModelMetrics] = []
         self._lock = threading.Lock()
-    
+
     def record_generation(
         self,
         generation_time: float,
@@ -1271,7 +1271,7 @@ class ModelMonitor:
         # 获取内存使用情况
         process = psutil.Process()
         memory_used_mb = process.memory_info().rss / (1024**2)
-        
+
         metrics = ModelMetrics(
             timestamp=datetime.now(),
             backend=backend,
@@ -1281,13 +1281,13 @@ class ModelMonitor:
             memory_used_mb=memory_used_mb,
             gpu_utilization=self._get_gpu_utilization() if self._gpu_available() else 0
         )
-        
+
         with self._lock:
             self.metrics_history.append(metrics)
             # 保留最近100条记录
             if len(self.metrics_history) > 100:
                 self.metrics_history = self.metrics_history[-100:]
-    
+
     def _gpu_available(self) -> bool:
         """检查GPU是否可用"""
         try:
@@ -1295,7 +1295,7 @@ class ModelMonitor:
             return torch.cuda.is_available() or torch.backends.mps.is_available()
         except ImportError:
             return False
-    
+
     def _get_gpu_utilization(self) -> float:
         """获取GPU利用率"""
         try:
@@ -1307,23 +1307,23 @@ class ModelMonitor:
                 return 0  # MPS没有直接的利用率API
         except Exception:
             return 0
-    
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """获取性能指标"""
         if not self.metrics_history:
             return {}
-        
+
         # 计算平均值
         avg_gen_time = sum(m.generation_time for m in self.metrics_history) / len(self.metrics_history)
         avg_input_tokens = sum(m.input_tokens for m in self.metrics_history) / len(self.metrics_history)
         avg_output_tokens = sum(m.output_tokens for m in self.metrics_history) / len(self.metrics_history)
         avg_memory = sum(m.memory_used_mb for m in self.metrics_history) / len(self.metrics_history)
-        
+
         # 计算吞吐量 (tokens/second)
         total_time = sum(m.generation_time for m in self.metrics_history)
         total_tokens = sum(m.output_tokens for m in self.metrics_history)
         throughput = total_tokens / total_time if total_time > 0 else 0
-        
+
         return {
             'avg_generation_time': round(avg_gen_time, 2),
             'avg_input_tokens': round(avg_input_tokens),
@@ -1333,22 +1333,22 @@ class ModelMonitor:
             'total_requests': len(self.metrics_history),
             'time_window_minutes': (datetime.now() - self.metrics_history[0].timestamp).total_seconds() / 60
         }
-    
+
     def get_alerts(self) -> List[str]:
         """检查模型性能告警"""
         alerts = []
         if not self.metrics_history:
             return alerts
-        
+
         # 检查生成时间是否异常
         recent_metrics = self.metrics_history[-10:]  # 最近10次请求
         if recent_metrics:
             avg_recent_time = sum(m.generation_time for m in recent_metrics) / len(recent_metrics)
             overall_avg_time = sum(m.generation_time for m in self.metrics_history) / len(self.metrics_history)
-            
+
             if avg_recent_time > overall_avg_time * 2:  # 如果最近平均时间是总体平均时间的2倍以上
                 alerts.append(f"⚠️ 生成时间异常增加: 最近平均 {avg_recent_time:.2f}s vs 总体平均 {overall_avg_time:.2f}s")
-        
+
         return alerts
 
 
@@ -1466,7 +1466,7 @@ LLAMA_GENERATION_TIMEOUT=300  # 5分钟超时
 ## 预期实施时间
 
 - **阶段1-4 (基础实现)**: 3-4天
-- **阶段5-6 (适配和并发)**: 2-3天  
+- **阶段5-6 (适配和并发)**: 2-3天
 - **阶段7-8 (测试和监控)**: 3-4天
 - **整体测试和优化**: 2-3天
 - **总计**: 10-14天 (比原计划稍长，但系统更健壮)
