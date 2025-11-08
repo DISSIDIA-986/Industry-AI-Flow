@@ -10,9 +10,19 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv("POSTGRES_USER", "")  # 本地PostgreSQL留空使用当前用户
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # 本地PostgreSQL无密码
 
-    # Ollama
+    # Ollama (备用后端)
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+
+    # llama.cpp (主要后端)
+    llama_model_path: str = os.getenv("LLAMA_MODEL_PATH", "models/qwen2.5-7b-instruct.gguf")
+    llama_context_size: int = int(os.getenv("LLAMA_CONTEXT_SIZE", "4096"))
+    llama_threads: int = int(os.getenv("LLAMA_THREADS", str(os.cpu_count() or 8)))
+    llama_batch_size: int = int(os.getenv("LLAMA_BATCH_SIZE", "512"))
+    llama_gpu_layers: int = int(os.getenv("LLAMA_GPU_LAYERS", "-1"))  # -1 = 全部使用GPU
+
+    # LLM后端选择
+    llm_backend: str = os.getenv("LLM_BACKEND", "llama_cpp")  # llama_cpp | ollama | zhipu
 
     # 智谱AI（支持Anthropic兼容接口）
     zhipu_api_key: str = os.getenv("ZHIPU_API_KEY", "")
@@ -20,7 +30,7 @@ class Settings(BaseSettings):
     zhipu_model: str = os.getenv("ZHIPU_MODEL", "glm-4-plus")
     api_timeout_ms: int = int(os.getenv("API_TIMEOUT_MS", "3000000"))
 
-    # LLM提供商选择
+    # LLM提供商选择（保持兼容）
     llm_provider: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | zhipu
 
     # 向量化 (Phase 2: 升级到 nomic-embed-text-v1.5)

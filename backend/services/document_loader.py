@@ -33,13 +33,13 @@ class EnhancedDocumentLoader:
             ocr_lang = settings.ocr_lang
         self.use_ocr = use_ocr and OCR_AVAILABLE
 
-        # Phase 2 Step 4: 初始化 PaddleOCR
+        # Phase 2 Step 4: 初始化 PaddleOCR (3.3.1 新API)
         if self.use_ocr:
             self.ocr = PaddleOCR(
-                use_angle_cls=True,  # 启用文字方向检测
+                use_textline_orientation=True,  # 启用文本行方向检测 (替代use_angle_cls)
                 lang=ocr_lang,  # 语言
             )
-            print(f"✅ OCR 模块已启用 (语言: {ocr_lang})")
+            print(f"✅ OCR 模块已启用 (PaddleOCR 3.3.1, 语言: {ocr_lang})")
         else:
             self.ocr = None
             if use_ocr and not OCR_AVAILABLE:
@@ -126,7 +126,7 @@ class EnhancedDocumentLoader:
 
     def _ocr_image(self, image_path: str) -> str:
         """
-        使用 PaddleOCR 识别图片文本
+        使用 PaddleOCR 3.3.1 识别图片文本
 
         Args:
             image_path: 图片路径
@@ -134,14 +134,15 @@ class EnhancedDocumentLoader:
         Returns:
             识别的文本
         """
-        result = self.ocr.ocr(image_path, cls=True)
+        # PaddleOCR 3.3.1 新API: 使用predict()而非ocr()
+        result = self.ocr.predict(image_path)
 
-        # 提取文本内容
+        # 提取文本内容 (新格式)
         text_lines = []
-        if result and result[0]:
-            for line in result[0]:
-                text = line[1][0]  # (bbox, (text, confidence))
-                text_lines.append(text)
+        if result and len(result) > 0:
+            page_result = result[0]
+            if 'rec_texts' in page_result:
+                text_lines = page_result['rec_texts']
 
         return "\n".join(text_lines)
 
