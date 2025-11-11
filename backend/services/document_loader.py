@@ -1,6 +1,7 @@
 """
 文档加载器：支持 PDF、TXT、图片 (Phase 2: 增加 OCR 支持)
 """
+import logging
 import os
 from pathlib import Path
 from typing import Optional, Union
@@ -8,6 +9,8 @@ from typing import Optional, Union
 import fitz  # PyMuPDF
 
 from backend.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Phase 2 Step 4: OCR 支持（可选）
 try:
@@ -41,11 +44,11 @@ class EnhancedDocumentLoader:
                 use_textline_orientation=True,  # 启用文本行方向检测 (替代use_angle_cls)
                 lang=ocr_lang,  # 语言
             )
-            print(f"✅ OCR 模块已启用 (PaddleOCR 3.3.1, 语言: {ocr_lang})")
+            logger.info("OCR 模块已启用 (PaddleOCR 3.3.1, 语言: %s)", ocr_lang)
         else:
             self.ocr = None
             if use_ocr and not OCR_AVAILABLE:
-                print("⚠️ PaddleOCR 未安装，OCR 功能不可用")
+                logger.warning("PaddleOCR 未安装，OCR 功能不可用")
 
     def load_document(self, file_path: Union[str, Path]) -> str:
         """
@@ -98,7 +101,7 @@ class EnhancedDocumentLoader:
 
             # 如果文本很少（可能是扫描件），使用 OCR
             if self.use_ocr and len(page_text.strip()) < 50:
-                print(f"  页面 {page_num + 1}: 检测到扫描内容，使用 OCR...")
+                logger.debug("页面 %s: 检测到扫描内容，使用 OCR", page_num + 1)
                 page_image = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2倍分辨率
                 img_bytes = page_image.tobytes("png")
 
@@ -208,7 +211,7 @@ class DocumentLoader:
             ]
 
         except Exception as e:
-            print(f"Error loading document {file_path}: {e}")
+            logger.error("Error loading document %s: %s", file_path, e)
             return []
 
 

@@ -28,9 +28,7 @@ class Reranker:
         self.device = device_manager.get_torch_device()
         self.model.to(self.device)
 
-        logger.info(f"✅ Reranker 模型加载完成")
-        logger.info(f"   使用设备: {device_manager.device_name}")
-        print(f"✅ Reranker 模型加载完成，使用设备: {self.device}")
+        logger.info("✅ Reranker 模型加载完成，使用设备: %s", self.device)
 
     def rerank(self, query: str, documents: list[dict], top_k: int = 5) -> list[dict]:
         """

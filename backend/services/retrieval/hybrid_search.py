@@ -1,8 +1,12 @@
+import logging
+
 import jieba
 from rank_bm25 import BM25Okapi
 
 from backend.services.core.embedder import embed_single_text
 from backend.services.core.vectorstore import VectorStore
+
+logger = logging.getLogger(__name__)
 
 
 class HybridRetriever:
@@ -53,7 +57,7 @@ class HybridRetriever:
             # 构建 BM25 索引
             self.bm25 = BM25Okapi(tokenized_corpus)
 
-            print(f"✅ BM25 索引构建完成，共 {len(self.doc_chunks)} 个文档块")
+            logger.info("BM25 索引构建完成，共 %s 个文档块", len(self.doc_chunks))
 
         finally:
             cur.close()

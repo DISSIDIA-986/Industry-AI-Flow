@@ -10,6 +10,7 @@ Features:
 """
 
 import io
+import logging
 import os
 import tempfile
 import time
@@ -37,6 +38,9 @@ class ExecutionResult:
     def __post_init__(self):
         if self.output_files is None:
             self.output_files = {}
+
+
+logger = logging.getLogger(__name__)
 
 
 class DockerExecutor:
@@ -94,7 +98,7 @@ class DockerExecutor:
         try:
             self.client.images.get(f"{self.IMAGE_NAME}:{self.IMAGE_TAG}")
         except ImageNotFound:
-            print(f"Building Docker image {self.IMAGE_NAME}:{self.IMAGE_TAG}...")
+            logger.info("Building Docker image %s:%s", self.IMAGE_NAME, self.IMAGE_TAG)
             dockerfile_path = (
                 Path(__file__).parent.parent.parent.parent / "docker" / "data-analysis"
             )
@@ -108,7 +112,11 @@ class DockerExecutor:
                     tag=f"{self.IMAGE_NAME}:{self.IMAGE_TAG}",
                     rm=True,
                 )
-                print(f"Successfully built {self.IMAGE_NAME}:{self.IMAGE_TAG}")
+                logger.info(
+                    "Successfully built Docker image %s:%s",
+                    self.IMAGE_NAME,
+                    self.IMAGE_TAG,
+                )
             except Exception as e:
                 raise RuntimeError(f"Failed to build Docker image: {e}")
 
