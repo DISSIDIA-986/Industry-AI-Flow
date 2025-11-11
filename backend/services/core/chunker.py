@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def chunk_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> list[dict]:
     """
     简单分块：按字符数切分，带重叠
@@ -79,5 +84,5 @@ class DocumentChunker:
             return chunks
 
         except Exception as e:
-            print(f"Error chunking document: {e}")
+            logger.error("Error chunking document: %s", e)
             return []

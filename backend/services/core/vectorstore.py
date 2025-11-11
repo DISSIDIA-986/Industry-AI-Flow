@@ -1,14 +1,22 @@
+import logging
+import time
 import uuid
 
 import psycopg2
 from pgvector.psycopg2 import register_vector
 
 from backend.config import settings
+from backend.observability.performance_metrics import record_db_query_duration
 
 
 class VectorStore:
+    _indexes_ready = False
+
     def __init__(self):
         self.database_url = settings.database_url
+        if not VectorStore._indexes_ready:
+            self._ensure_indexes()
+            VectorStore._indexes_ready = True
 
     def get_connection(self):
         """获取数据库连接"""
@@ -21,6 +29,42 @@ class VectorStore:
             pass
         return conn
 
+    def _ensure_indexes(self) -> None:
+        """Create helpful indexes if they do not exist."""
+        try:
+            conn = psycopg2.connect(self.database_url)
+            cur = conn.cursor()
+            register_vector(conn)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents(filename);"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_document_chunks_docid ON document_chunks(doc_id);"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_document_chunks_filename ON document_chunks(content text_pattern_ops);"
+            )
+            try:
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops);"
+                )
+            except Exception:
+                # pgvector not available, skip ivfflat index
+                conn.rollback()
+            conn.commit()
+        except Exception as exc:
+            if "conn" in locals():
+                conn.rollback()
+            # Do not crash app if indexes cannot be created
+            import logging
+
+            logging.getLogger(__name__).warning("无法创建向量索引: %s", exc)
+        finally:
+            if "cur" in locals():
+                cur.close()
+            if "conn" in locals():
+                conn.close()
+
     def store_document_with_chunks(
         self,
         filename: str,
@@ -31,6 +75,8 @@ class VectorStore:
         """存储文档及其分块向量"""
         conn = self.get_connection()
         cur = conn.cursor()
+        start_time = time.monotonic()
+        query_type = "store_document"
 
         try:
             # 1. 插入文档记录
@@ -62,6 +108,7 @@ class VectorStore:
         finally:
             cur.close()
             conn.close()
+            self._record_duration(query_type, start_time)
 
     def similarity_search(
         self, query_embedding: list[float], top_k: int = 3
@@ -69,6 +116,8 @@ class VectorStore:
         """向量相似度搜索（兼容无pgvector的环境）"""
         conn = self.get_connection()
         cur = conn.cursor()
+        start_time = time.monotonic()
+        query_type = "similarity_search"
 
         try:
             # 检查是否安装了 pgvector 扩展
@@ -162,11 +211,13 @@ class VectorStore:
         finally:
             cur.close()
             conn.close()
+            self._record_duration(query_type, start_time)
 
     def get_document_count(self) -> int:
         """获取文档总数"""
         conn = self.get_connection()
         cur = conn.cursor()
+        start_time = time.monotonic()
 
         try:
             cur.execute("SELECT COUNT(*) FROM documents")
@@ -174,11 +225,13 @@ class VectorStore:
         finally:
             cur.close()
             conn.close()
+            self._record_duration("documents_count", start_time)
 
     def get_chunk_count(self) -> int:
         """获取文档块总数"""
         conn = self.get_connection()
         cur = conn.cursor()
+        start_time = time.monotonic()
 
         try:
             cur.execute("SELECT COUNT(*) FROM document_chunks")
@@ -186,3 +239,15 @@ class VectorStore:
         finally:
             cur.close()
             conn.close()
+            self._record_duration("chunks_count", start_time)
+
+    def _record_duration(self, query_type: str, start_time: float) -> None:
+        duration = time.monotonic() - start_time
+        record_db_query_duration(query_type, duration)
+        threshold = settings.db_query_slow_threshold_ms / 1000
+        if duration > threshold:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Slow DB query (%s) %.2fms", query_type, duration * 1000
+            )
