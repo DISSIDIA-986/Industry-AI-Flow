@@ -17,7 +17,6 @@ import pandas as pd
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
 
 print("=== Architecture and Construction Industry Test Suite ===")
 print("Testing RAG system with architecture and construction domain data")

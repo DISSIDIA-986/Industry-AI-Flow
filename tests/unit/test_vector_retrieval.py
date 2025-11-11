@@ -18,13 +18,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, List, Set, Tuple
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-backend_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"
-)
-sys.path.insert(0, backend_path)
-
 
 @dataclass
 class Document:

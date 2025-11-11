@@ -163,7 +163,7 @@ class CodeFixer:
                 "numpy": "import numpy as np",
                 "matplotlib": "import matplotlib.pyplot as plt",
                 "seaborn": "import seaborn as sns",
-                "sklearn": "from sklearn import *",
+                "sklearn": "import sklearn",
                 "plotly": "import plotly.express as px",
             },
             "fix_syntax": [

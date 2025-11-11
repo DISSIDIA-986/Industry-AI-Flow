@@ -149,6 +149,8 @@ outputs/
 test_output/
 logs/
 *.log
+.claude/
+*.md
 
 # ==========================================
 # Workspace and Experimental Code

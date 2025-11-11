@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 # Add backend to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 
 # Test results storage
 test_results = []

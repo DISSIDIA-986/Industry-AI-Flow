@@ -4,15 +4,9 @@ pytest configuration for Industry AI Flow tests.
 This file provides common fixtures and configuration for all test suites.
 """
 
-import os
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add the backend directory to the Python path
-backend_dir = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_dir))
 
 
 @pytest.fixture(scope="session")
