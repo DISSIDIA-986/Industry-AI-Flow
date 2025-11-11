@@ -42,7 +42,7 @@ class VectorStore:
                 "CREATE INDEX IF NOT EXISTS idx_document_chunks_docid ON document_chunks(doc_id);"
             )
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_document_chunks_filename ON document_chunks(content text_pattern_ops);"
+                "CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING gin (to_tsvector('simple', content));"
             )
             try:
                 cur.execute(

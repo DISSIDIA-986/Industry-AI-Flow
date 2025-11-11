@@ -77,6 +77,19 @@ def init_database():
             """
             )
 
+        # 文本搜索索引（无论是否有pgvector均可创建）
+        try:
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_chunks_content_fts
+                ON document_chunks USING gin (to_tsvector('simple', content))
+                """
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to create GIN index on document_chunks.content: {e}"
+            )
+
         # 创建反馈表
         cur.execute(
             """
@@ -105,6 +118,7 @@ def init_database():
                 helpful_count INTEGER DEFAULT 0,
                 not_helpful_count INTEGER DEFAULT 0,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (doc_id, chunk_id) REFERENCES document_chunks(doc_id, chunk_id) ON DELETE CASCADE,
                 PRIMARY KEY (doc_id, chunk_id)
             )
         """
@@ -158,26 +172,65 @@ def init_database():
                 error_message TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """
+            """
         )
+
+        # 长期记忆表（给对话记忆系统使用）
+        # 会话记忆表（独立于 user_sessions，避免外键依赖）
+        if pgvector_available:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_memories (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    session_id VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255),
+                    memory_type VARCHAR(50) NOT NULL,
+                    content JSONB NOT NULL,
+                    embedding vector(768),
+                    metadata JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        else:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_memories (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    session_id VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255),
+                    memory_type VARCHAR(50) NOT NULL,
+                    content JSONB NOT NULL,
+                    embedding JSONB,
+                    metadata JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
 
         # 创建索引
         indexes = [
             "CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents(filename)",
             "CREATE INDEX IF NOT EXISTS idx_documents_created ON documents(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks(doc_id)",
+            "CREATE INDEX IF NOT EXISTS idx_doc_quality_docid_score ON document_quality_scores(doc_id, quality_score)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_created ON query_feedback(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_doc_quality ON document_quality_scores(quality_score)",
             "CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)",
             "CREATE INDEX IF NOT EXISTS idx_doc_versions_active ON document_versions(is_active)",
             "CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_conversation_memories_session ON conversation_memories(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_conversation_memories_type ON conversation_memories(memory_type)",
         ]
 
         # 只有pgvector可用时才创建向量索引
         if pgvector_available:
             indexes.append(
                 "CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops)"
+            )
+            indexes.append(
+                "CREATE INDEX IF NOT EXISTS idx_conversation_memories_embedding ON conversation_memories USING ivfflat (embedding vector_cosine_ops)"
             )
 
         for index_sql in indexes:

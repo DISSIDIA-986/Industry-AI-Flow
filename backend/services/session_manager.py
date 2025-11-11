@@ -188,6 +188,7 @@ class SessionManager:
                 "CREATE INDEX IF NOT EXISTS idx_sessions_last_activity ON user_sessions(last_activity)",
                 "CREATE INDEX IF NOT EXISTS idx_messages_session_id ON session_messages(session_id)",
                 "CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON session_messages(timestamp)",
+                "CREATE INDEX IF NOT EXISTS idx_messages_session_ts ON session_messages(session_id, timestamp)",
                 "CREATE INDEX IF NOT EXISTS idx_rag_state_session_id ON rag_system_state(session_id)",
                 "CREATE INDEX IF NOT EXISTS idx_rag_state_query_id ON rag_system_state(query_id)",
                 "CREATE INDEX IF NOT EXISTS idx_opt_triggers_status ON feedback_optimization_triggers(status)",
