@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+from typing import Set
 
 from pydantic_settings import BaseSettings
 
@@ -116,6 +118,71 @@ class Settings(BaseSettings):
         os.getenv("ENABLE_ERROR_LEARNING", "true").lower() == "true"
     )  # 错误模式学习
 
+    # API & Security
+    require_api_key: bool = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
+    api_keys_raw: str = os.getenv("API_KEYS", "")
+    api_key_header: str = os.getenv("API_KEY_HEADER", "X-API-Key")
+    tenant_header: str = os.getenv("TENANT_HEADER", "X-Tenant-ID")
+    multi_tenant_mode: bool = os.getenv("MULTI_TENANT_MODE", "true").lower() == "true"
+    default_tenant_id: str = os.getenv("DEFAULT_TENANT_ID", "public")
+    allow_anonymous_tenants: bool = (
+        os.getenv("ALLOW_ANONYMOUS_TENANTS", "false").lower() == "true"
+    )
+    api_rate_limit_per_minute: int = int(os.getenv("API_RATE_LIMIT_PER_MINUTE", "120"))
+    api_rate_limit_burst: int = int(os.getenv("API_RATE_LIMIT_BURST", "20"))
+    audit_log_path: str = os.getenv("AUDIT_LOG_PATH", str(Path("logs") / "audit.log"))
+    max_upload_size_bytes: int = int(
+        os.getenv("MAX_UPLOAD_SIZE_BYTES", str(10 * 1024 * 1024))
+    )
+    allowed_upload_extensions: str = os.getenv(
+        "ALLOWED_UPLOAD_EXTENSIONS",
+        ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,.json,.xlsx,.xls",
+    )
+    secret_encryption_key: str = os.getenv("SECRET_ENCRYPTION_KEY", "")
+    api_keys_encrypted: str = os.getenv("API_KEYS_ENCRYPTED", "")
+    api_key_hashes_raw: str = os.getenv("API_KEY_HASHES", "")
+    secret_hash_salt: str = os.getenv("SECRET_HASH_SALT", "")
+    secret_hash_iterations: int = int(os.getenv("SECRET_HASH_ITERATIONS", "120000"))
+    memory_guard_limit_mb: int = int(os.getenv("MEMORY_GUARD_LIMIT_MB", "4096"))
+    memory_guard_soft_limit_mb: int = int(
+        os.getenv("MEMORY_GUARD_SOFT_LIMIT_MB", "3072")
+    )
+    require_user_auth: bool = os.getenv("REQUIRE_USER_AUTH", "false").lower() == "true"
+    auth_jwt_secret: str = os.getenv("AUTH_JWT_SECRET", "")
+    auth_jwt_algorithm: str = os.getenv("AUTH_JWT_ALGORITHM", "HS256")
+    auth_jwt_issuer: str = os.getenv("AUTH_JWT_ISSUER", "")
+    auth_jwt_audience: str = os.getenv("AUTH_JWT_AUDIENCE", "")
+    default_user_roles: str = os.getenv("DEFAULT_USER_ROLES", "user")
+    log_format_json: bool = os.getenv("LOG_FORMAT_JSON", "true").lower() == "true"
+    enable_metrics: bool = (
+        os.getenv("ENABLE_PROMETHEUS_METRICS", "true").lower() == "true"
+    )
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+    log_format: str = os.getenv(
+        "LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    enable_conversation_memory: bool = (
+        os.getenv("ENABLE_CONVERSATION_MEMORY", "true").lower() == "true"
+    )
+    memory_short_term_window: int = int(os.getenv("MEMORY_SHORT_TERM_WINDOW", "6"))
+    memory_summary_trigger_messages: int = int(
+        os.getenv("MEMORY_SUMMARY_TRIGGER_MESSAGES", "4")
+    )
+    memory_summary_backend: str = os.getenv("MEMORY_SUMMARY_BACKEND", "")
+    memory_summary_max_tokens: int = int(os.getenv("MEMORY_SUMMARY_MAX_TOKENS", "512"))
+    memory_long_term_top_k: int = int(os.getenv("MEMORY_LONG_TERM_TOP_K", "5"))
+    memory_long_term_min_relevance: float = float(
+        os.getenv("MEMORY_LONG_TERM_MIN_RELEVANCE", "0.45")
+    )
+    query_cache_enabled: bool = (
+        os.getenv("QUERY_CACHE_ENABLED", "true").lower() == "true"
+    )
+    query_cache_ttl_seconds: int = int(os.getenv("QUERY_CACHE_TTL_SECONDS", "120"))
+    query_cache_maxsize: int = int(os.getenv("QUERY_CACHE_MAXSIZE", "256"))
+    db_query_slow_threshold_ms: int = int(
+        os.getenv("DB_QUERY_SLOW_THRESHOLD_MS", "750")
+    )
+
     @property
     def database_url(self) -> str:
         # 本地PostgreSQL: postgresql://localhost:5432/ai_workflow
@@ -124,6 +191,89 @@ class Settings(BaseSettings):
             return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         else:
             return f"postgresql://{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+
+    @property
+    def api_key_set(self) -> Set[str]:
+        """Return allowed API keys as a cached set."""
+        if not hasattr(self, "_api_key_cache"):
+            tokens = [
+                token.strip() for token in self.api_keys_raw.split(",") if token.strip()
+            ]
+            if self.api_keys_encrypted:
+                from backend.security.secret_manager import SecretManager
+
+                manager = self.secret_manager
+                tokens.extend(manager.decrypt_list(self.api_keys_encrypted))
+            self._api_key_cache = set(tokens)
+        return self._api_key_cache
+
+    @property
+    def api_key_hashes(self) -> Set[str]:
+        if not hasattr(self, "_api_key_hash_cache"):
+            hashes = {
+                token.strip()
+                for token in self.api_key_hashes_raw.split(",")
+                if token.strip()
+            }
+            self._api_key_hash_cache = hashes
+        return self._api_key_hash_cache
+
+    @property
+    def audit_log_file(self) -> Path:
+        """Return audit log path, creating directory if needed."""
+        path = Path(self.audit_log_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def upload_extension_whitelist(self) -> Set[str]:
+        """Allowed upload extensions as a cached set."""
+        if not hasattr(self, "_upload_ext_cache"):
+            tokens = []
+            for raw in self.allowed_upload_extensions.split(","):
+                token = raw.strip().lower()
+                if not token:
+                    continue
+                if not token.startswith("."):
+                    token = f".{token}"
+                tokens.append(token)
+            self._upload_ext_cache = set(tokens)
+        return self._upload_ext_cache
+
+    @property
+    def default_roles_list(self):
+        if not hasattr(self, "_default_roles"):
+            roles = [
+                role.strip()
+                for role in self.default_user_roles.split(",")
+                if role.strip()
+            ]
+            self._default_roles = roles or ["user"]
+        return self._default_roles
+
+    @property
+    def secret_manager(self):
+        if not hasattr(self, "_secret_manager"):
+            from backend.security.secret_manager import SecretManager
+
+            self._secret_manager = SecretManager(
+                encryption_key=self.secret_encryption_key or None,
+                hash_salt=self.secret_hash_salt or None,
+                hash_iterations=self.secret_hash_iterations,
+            )
+        return self._secret_manager
+
+    def is_api_key_allowed(self, api_key: str) -> bool:
+        """Check plaintext and hashed API keys in constant time."""
+        if not api_key:
+            return False
+        if api_key in self.api_key_set:
+            return True
+        if self.api_key_hashes:
+            return self.secret_manager.verify_against_hashes(
+                api_key, self.api_key_hashes
+            )
+        return False
 
 
 settings = Settings()

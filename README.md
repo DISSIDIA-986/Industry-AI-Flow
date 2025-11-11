@@ -35,6 +35,24 @@ Industry AI Flow是一个现代化的AI工作流平台，集成了：
 - **异步架构**：高性能的异步I/O处理
 - **模块化设计**：清晰的责任分离和可扩展架构
 
+## 🔐 安全与多租户配置
+
+- **API认证**：设置 `REQUIRE_API_KEY=true` 并在 `API_KEYS` 中维护允许的密钥（逗号分隔），默认为可选模式便于本地开发。
+- **用户认证**：启用 `REQUIRE_USER_AUTH=true` 并配置 `AUTH_JWT_SECRET`/`AUTH_JWT_ALGORITHM` 后即可使用 Bearer Token（JWT）进行身份与角色校验，令牌中的 `roles`/`permissions` 会自动注入上下文。
+- **密钥加密/哈希**：通过 `SECRET_ENCRYPTION_KEY` + `API_KEYS_ENCRYPTED` 存储Fernet加密后的密钥，或使用 `API_KEY_HASHES`（配合 `SECRET_HASH_SALT`）保存PBKDF2哈希，配套脚本 `python tools/secure_config.py`。
+- **租户隔离**：通过 `X-Tenant-ID`（`TENANT_HEADER` 可自定义）声明租户，未提供时回落到 `DEFAULT_TENANT_ID`。
+- **限流保护**：`API_RATE_LIMIT_PER_MINUTE` 和 `API_RATE_LIMIT_BURST` 控制每个租户+IP 的滑动窗口限速，超限返回 429。
+- **输入/上传安全**：关键API请求字段会自动做 XSS/SQL 关键字检测并清洗；文件上传通过 `MAX_UPLOAD_SIZE_BYTES` 与 `ALLOWED_UPLOAD_EXTENSIONS` 统一限制，并强制文件名消毒。
+- **对话记忆**：默认开启「短期 + 摘要 + 长期」三层记忆体系（`ENABLE_CONVERSATION_MEMORY` 等变量可调），记忆摘要和结构化事实自动写入 `conversation_memories` 表，详情见 `docs/MEMORY_SYSTEM.md`。
+- **智能缓存**：`QUERY_CACHE_ENABLED` + `QUERY_CACHE_TTL_SECONDS`/`QUERY_CACHE_MAXSIZE` 可缓存多租户 RAG 查询结果，降低响应延迟。
+- **可观测性**：启用 `ENABLE_PROMETHEUS_METRICS=true` 暴露 `/metrics` 供 Prometheus/Alertmanager 抓取；`LOG_FORMAT_JSON=true` 提供结构化JSON日志，便于集中化分析。
+- **友好错误**：所有 HTTP 异常会统一返回 `{success: false, error_code, message, detail}`，便于前端展示用户可读提示。
+- **数据库性能**：系统启动时自动为 `documents` / `document_chunks` 创建关键索引，并通过 Prometheus 直方图和慢查询日志（`DB_QUERY_SLOW_THRESHOLD_MS`）观察检索瓶颈。
+- **内存护栏**：`MEMORY_GUARD_LIMIT_MB`（可配 `MEMORY_GUARD_SOFT_LIMIT_MB`）限制单进程内存峰值，超过后自动短路请求并返回结构化错误。
+- **合规审计**：所有敏感操作都会写入 `logs/audit.log`（`AUDIT_LOG_PATH` 可覆盖），便于对接 SIEM/监控。
+
+参考 `docs/SECURITY_AND_TENANT_GUIDE.md` 获取更加详细的配置说明与调用示例。
+
 ## 项目运行流程
 
 ```mermaid

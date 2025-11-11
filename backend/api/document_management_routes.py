@@ -4,21 +4,43 @@
 
 import logging
 import os
-import tempfile
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from backend.config import settings
+from backend.security.context import TenantContext
+from backend.security.dependencies import get_current_tenant, secure_endpoint
+from backend.services.audit_logger import audit_logger
 from backend.services.core.vectorstore import VectorStore
 from backend.services.document_manager import DocumentManager, DocumentOperation
+from backend.services.security import persist_temp_file, validate_and_buffer_upload
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
 # 全局文档管理器实例
 document_manager = None
+ALLOWED_DOC_EXTENSIONS = tuple(settings.upload_extension_whitelist)
+MAX_UPLOAD_BYTES = settings.max_upload_size_bytes
+
+
+def _log_document_event(
+    action: str,
+    tenant: Optional[TenantContext],
+    status: str,
+    detail: Optional[Dict[str, Any]] = None,
+) -> None:
+    tenant_id = tenant.tenant_id if tenant else settings.default_tenant_id
+    audit_logger.log_event(
+        action=action,
+        tenant_id=tenant_id,
+        status=status,
+        user_id=tenant.user_id if tenant else None,
+        ip_address=tenant.ip_address if tenant else None,
+        detail=detail,
+    )
 
 
 def get_document_manager():
@@ -67,7 +89,10 @@ class DocumentVersionResponse(BaseModel):
 
 @router.post("/documents/update")
 async def update_document(
-    file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)
+    file: UploadFile = File(...),
+    doc_id: str = Body(...),
+    reason: str = Body(None),
+    tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
     更新文档内容
@@ -84,13 +109,12 @@ async def update_document(
         if not settings.enable_document_update:
             raise HTTPException(status_code=403, detail="Document update is disabled")
 
-        # 保存上传的文件到临时位置
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=os.path.splitext(file.filename)[1]
-        ) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+        content, safe_name = await validate_and_buffer_upload(
+            file,
+            allowed_extensions=ALLOWED_DOC_EXTENSIONS,
+            max_bytes=MAX_UPLOAD_BYTES,
+        )
+        temp_file_path = persist_temp_file(content, safe_name, prefix="doc_update")
 
         try:
             doc_manager = get_document_manager()
@@ -102,6 +126,12 @@ async def update_document(
                 logger.info(
                     f"Document {doc_id} updated successfully with file {file.filename}"
                 )
+                _log_document_event(
+                    action="document.update",
+                    tenant=tenant,
+                    status="success",
+                    detail={"doc_id": doc_id, "filename": safe_name},
+                )
                 return {
                     "success": True,
                     "message": "Document updated successfully",
@@ -110,6 +140,12 @@ async def update_document(
                 }
             else:
                 logger.warning(f"Failed to update document {doc_id}")
+                _log_document_event(
+                    action="document.update",
+                    tenant=tenant,
+                    status="error",
+                    detail={"doc_id": doc_id, "reason": "update_failed"},
+                )
                 return {
                     "success": False,
                     "message": "Failed to update document",
@@ -117,21 +153,37 @@ async def update_document(
                 }
 
         finally:
-            # 清理临时文件
             try:
                 os.unlink(temp_file_path)
             except OSError:
                 pass
 
     except HTTPException:
+        _log_document_event(
+            action="document.update",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "reason": "validation_failed"},
+        )
         raise
     except Exception as e:
         logger.error(f"Error updating document: {e}")
+        _log_document_event(
+            action="document.update",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "error": str(e)},
+        )
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = True):
+async def delete_document(
+    doc_id: str,
+    reason: str = None,
+    soft_delete: bool = True,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
     """
     删除文档
 
@@ -155,6 +207,12 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
         if success:
             delete_type = "soft deleted" if soft_delete else "permanently deleted"
             logger.info(f"Document {doc_id} {delete_type} successfully")
+            _log_document_event(
+                action="document.delete",
+                tenant=tenant,
+                status="success",
+                detail={"doc_id": doc_id, "soft_delete": soft_delete},
+            )
             return {
                 "success": True,
                 "message": f"Document {delete_type} successfully",
@@ -163,6 +221,12 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
             }
         else:
             logger.warning(f"Failed to delete document {doc_id}")
+            _log_document_event(
+                action="document.delete",
+                tenant=tenant,
+                status="error",
+                detail={"doc_id": doc_id, "reason": "delete_failed"},
+            )
             return {
                 "success": False,
                 "message": "Failed to delete document",
@@ -170,15 +234,30 @@ async def delete_document(doc_id: str, reason: str = None, soft_delete: bool = T
             }
 
     except HTTPException:
+        _log_document_event(
+            action="document.delete",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "reason": "validation_failed"},
+        )
         raise
     except Exception as e:
         logger.error(f"Error deleting document: {e}")
+        _log_document_event(
+            action="document.delete",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "error": str(e)},
+        )
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("/documents/replace")
 async def replace_document(
-    file: UploadFile = File(...), doc_id: str = Body(...), reason: str = Body(None)
+    file: UploadFile = File(...),
+    doc_id: str = Body(...),
+    reason: str = Body(None),
+    tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
     替换文档内容
@@ -192,13 +271,12 @@ async def replace_document(
         替换结果
     """
     try:
-        # 保存上传的文件到临时位置
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=os.path.splitext(file.filename)[1]
-        ) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+        content, safe_name = await validate_and_buffer_upload(
+            file,
+            allowed_extensions=ALLOWED_DOC_EXTENSIONS,
+            max_bytes=MAX_UPLOAD_BYTES,
+        )
+        temp_file_path = persist_temp_file(content, safe_name, prefix="doc_replace")
 
         try:
             doc_manager = get_document_manager()
@@ -210,6 +288,12 @@ async def replace_document(
                 logger.info(
                     f"Document {doc_id} replaced successfully with file {file.filename}"
                 )
+                _log_document_event(
+                    action="document.replace",
+                    tenant=tenant,
+                    status="success",
+                    detail={"doc_id": doc_id, "filename": safe_name},
+                )
                 return {
                     "success": True,
                     "message": "Document replaced successfully",
@@ -218,6 +302,12 @@ async def replace_document(
                 }
             else:
                 logger.warning(f"Failed to replace document {doc_id}")
+                _log_document_event(
+                    action="document.replace",
+                    tenant=tenant,
+                    status="error",
+                    detail={"doc_id": doc_id, "reason": "replace_failed"},
+                )
                 return {
                     "success": False,
                     "message": "Failed to replace document",
@@ -225,14 +315,27 @@ async def replace_document(
                 }
 
         finally:
-            # 清理临时文件
             try:
                 os.unlink(temp_file_path)
             except OSError:
                 pass
 
+    except HTTPException:
+        _log_document_event(
+            action="document.replace",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "reason": "validation_failed"},
+        )
+        raise
     except Exception as e:
         logger.error(f"Error replacing document: {e}")
+        _log_document_event(
+            action="document.replace",
+            tenant=tenant,
+            status="error",
+            detail={"doc_id": doc_id, "error": str(e)},
+        )
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
