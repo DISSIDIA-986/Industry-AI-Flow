@@ -17,11 +17,11 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
-
 import numpy as np
 import pandas as pd
+
+# Add project root to path
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

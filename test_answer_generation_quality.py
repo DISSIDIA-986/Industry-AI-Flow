@@ -27,7 +27,6 @@ import pytest
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from backend.services.answer_generator import AnswerGenerator
 from backend.services.rag_engine import RAGEngine
