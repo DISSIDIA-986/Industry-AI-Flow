@@ -5,14 +5,15 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.config import settings
+from backend.security.dependencies import secure_endpoint
 from backend.services.rag_engine import SimpleRAG
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
 # 全局RAG实例
 rag_instance = None

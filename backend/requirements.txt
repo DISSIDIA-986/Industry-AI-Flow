@@ -28,6 +28,12 @@ requests==2.31.0
 pydantic==1.10.13
 psutil==5.9.6
 python-multipart==0.0.6
+cryptography>=41.0.0
+PyJWT>=2.8.0
+prometheus-fastapi-instrumentator>=6.1.0
+bleach>=6.1.0
+cachetools>=5.3.1
+pytest-asyncio>=0.23.0
 
 # ============================================================================
 # PaddlePaddle & PaddleOCR
