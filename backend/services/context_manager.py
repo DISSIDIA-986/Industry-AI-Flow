@@ -12,6 +12,9 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.config import settings
+from backend.services.memory.manager import ConversationMemoryManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -75,6 +78,10 @@ class SessionContext:
     context_keywords: List[str] = field(default_factory=list)
     completion_rate: float = 0.0
     satisfaction_score: Optional[float] = None
+    summary_memory: str = ""
+    last_summary_time: Optional[datetime] = None
+    last_summary_record_index: int = 0
+    long_term_memory_refs: List[str] = field(default_factory=list)
 
     def add_interaction(self, record: InteractionRecord):
         """添加交互记录"""
@@ -165,6 +172,10 @@ class ContextManager:
             "cache_hits": 0,
         }
 
+        self.memory_manager = (
+            ConversationMemoryManager() if settings.enable_conversation_memory else None
+        )
+
         logger.info(f"上下文管理器初始化完成，后端: {storage_backend}")
 
     async def get_session_context(
@@ -233,6 +244,17 @@ class ContextManager:
 
         return session
 
+    async def get_memory_snapshot(
+        self, session_id: str, user_query: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        获取会话的记忆层摘要
+        """
+        if not self.memory_manager:
+            return {}
+        session = await self.get_session_context(session_id)
+        return self.memory_manager.build_memory_payload(session, user_query)
+
     async def add_interaction_record(
         self,
         session_id: str,
@@ -283,6 +305,9 @@ class ContextManager:
                 session.satisfaction_score = (
                     session.satisfaction_score * 0.8 + user_feedback * 0.2
                 )
+
+        if self.memory_manager:
+            await self.memory_manager.process_interaction(session, record)
 
         await self._save_session_to_storage(session)
         self._session_cache[session_id] = session
@@ -335,7 +360,11 @@ class ContextManager:
         self._session_cache[session_id] = session
 
     async def get_enhanced_context(
-        self, session_id: str, max_history: int = 10, include_files: bool = True
+        self,
+        session_id: str,
+        max_history: int = 10,
+        include_files: bool = True,
+        current_query: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         获取增强的上下文信息
@@ -344,6 +373,7 @@ class ContextManager:
             session_id: 会话ID
             max_history: 最大历史记录数
             include_files: 是否包含文件信息
+            current_query: 当前用户提问，用于检索相关记忆
 
         Returns:
             Dict[str, Any]: 增强的上下文信息
@@ -439,6 +469,11 @@ class ContextManager:
         )[
             :20
         ]  # 限制关键词数量
+
+        if self.memory_manager:
+            context["memory_layers"] = self.memory_manager.build_memory_payload(
+                session, current_query
+            )
 
         return context
 
