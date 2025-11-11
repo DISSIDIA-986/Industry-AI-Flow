@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Dict, List, Set
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

@@ -6,11 +6,7 @@ llama.cpp 客户端测试脚本
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 # 添加路径以便导入backend模块
-backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
-sys.path.insert(0, backend_path)
 
 
 def test_imports():
