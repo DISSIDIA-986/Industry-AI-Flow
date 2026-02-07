@@ -406,7 +406,7 @@ def show_prompt_list(prompt_manager):
 
                 <div style="margin-top: 1rem;">
                     <strong>变量:</strong>
-                    {' '.join([f'<span class="variable-tag">{{{{{var["name"]}}}}</span>' for var in prompt.get('variables', [])[:5]])}
+                    {' '.join([f'<span class="variable-tag">{{{{{{{var["name"]}}}}}}}</span>' for var in prompt.get('variables', [])[:5]])}
                     {'...' if len(prompt.get('variables', [])) > 5 else ''}
                 </div>
 
