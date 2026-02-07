@@ -184,3 +184,6 @@ chinese_visualization_output/
 
 # Ensure research markdown files are tracked
 !research/*.md
+
+# Deprecated files (kept for reference, not scanned)
+docs/deprecated/
