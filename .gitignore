@@ -63,6 +63,7 @@ reports/
 tests/reports/latest/*.html
 tests/reports/latest/*.json
 tests/reports/historical/
+!research/*.md
 
 # ==========================================
 # Data and Media Files
