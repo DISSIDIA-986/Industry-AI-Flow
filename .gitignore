@@ -63,7 +63,6 @@ reports/
 tests/reports/latest/*.html
 tests/reports/latest/*.json
 tests/reports/historical/
-!research/*.md
 
 # ==========================================
 # Data and Media Files
@@ -182,3 +181,6 @@ chinese_visualization_output/
 =0.104.1
 =1.0.0
 =2.0.0
+
+# Ensure research markdown files are tracked
+!research/*.md
