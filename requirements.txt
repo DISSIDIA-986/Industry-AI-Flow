@@ -15,6 +15,15 @@ numpy==1.24.3
 pandas==1.5.3
 matplotlib==3.7.2
 
+# NLP和文本处理（用于英文建筑文档分词）
+nltk==3.8.1
+# 修复jieba对英文分词bug，替换为NLTK word_tokenize + PorterStemmer
+
+# RAG评估框架（P0优先级：Week 1首要任务）
+ragas==0.1.8
+datasets>=2.14.0
+# 用于测量faithfulness, context_precision, context_recall, answer_relevancy, MRR
+
 # 网络和配置
 requests==2.31.0
 pyyaml==6.0.1
