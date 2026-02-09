@@ -1,202 +1,58 @@
-# Industry AI Flow 调研总结与下一步行动（纠偏版）
+# research/implementation-plan-corrected.md（细化版草案）
 
-## 1. 结论摘要
+## Summary
+本计划是对上一版纠偏方案的工程化细化，重点补齐“可直接开发”的实现细节，尤其是关键代码落点、接口契约、数据库增量策略与测试门槛。  
+一期目标不变：在现有基线下交付 `local-first + hybrid fallback + privacy guard + cost control` 的后端闭环。
 
-基于当前仓库现状与新增调研文档（提交 `7371c10`）的交叉复核，一期实施建议采用 **现有技术基线增量落地**：
+## Public API / Interface Changes
+1. 新增 `POST /api/v1/query/dispatch`
+2. 新增 `GET /api/v1/llm/usage`
+3. 新增 `GET /api/v1/llm/budget/{tenant_id}`
+4. 新增 `POST /api/v1/llm/budget/{tenant_id}`
+5. 保留 `POST /api/v1/query`，内部适配至 dispatch，兼容旧调用方
+6. 新增统一响应结构字段：`provider_used`、`route_mode`、`latency_ms`、`usage`、`cost`、`trace_id`
 
-- 保持现有基线：`Python 3.13 + PostgreSQL/pgvector + llama.cpp/ollama(+zhipu)`
-- 一期聚焦后端闭环：`local-first + hybrid fallback + privacy guard + cost control`
-- 暂不做高成本迁移：不在一期切换到 `ChromaDB`、不强行降级到 `Python 3.11`
+## 实施步骤建议（细化）
+1. **Step 0: 基线可运行性修复（P0）**
+- 先补齐 `backend/services/cache/query_cache.py`，修复 `backend/main.py:24` 依赖缺失问题。
+- 校正失效测试入口（例如 `scripts/testing/test_llama_cpp_integration.py:14` 的错误 import）。
+- 在 `backend/init_database.py` 补充 `CREATE EXTENSION IF NOT EXISTS pgcrypto` 的显式检查。
+- 产出：服务可启动、核心路由可请求、测试入口可执行。
 
-### 为什么需要纠偏
+2. **Step 1: LLM 调度控制平面统一（P0）**
+- 新增 `backend/services/llm_integration/types.py`，定义统一请求/响应类型。
+- 新增 `backend/services/llm_integration/dispatch_service.py`，封装 `local_only` / `hybrid_auto` / `cloud_only`。
+- 统一 `llm_backend` 与 `llm_provider` 的优先级解析（`backend/config.py`）。
+- 产出：一个入口管理所有 LLM 路由与回退。
 
-调研文档中的部分建议与仓库当前实现存在差异：
+3. **Step 2: 隐私脱敏与出站守卫（P1）**
+- 新增 `backend/services/security/redaction_service.py`。
+- 新增 `backend/services/security/egress_guard.py`，强制云端只接收脱敏文本。
+- 扩展审计日志 detail 字段（provider、redaction_applied、sensitive_hit_count、policy_decision）。
+- 产出：敏感字段不上云且有审计证据链。
 
-- 文档建议：DeepSeek + ChromaDB + Python 3.11+
-- 仓库现状：qwen2.5/llama.cpp/ollama + pgvector + Python 3.13
-
-若直接按文档技术栈迁移，会显著增加风险与周期，不利于一期快速形成可上线能力。
-
----
-
-## 2. 当前关键发现（影响实施优先级）
-
-### P0 问题（必须先修）
-
-1. `backend/main.py` 依赖 `backend.services.cache.query_cache`，但仓库缺失该模块实现。
-2. LLM 路由存在双控制面：`llm_backend` 与 `llm_provider` 并存，若不统一会导致调度行为不可预测。
-
-### P1 问题（一期内必须纳入）
-
-1. 数据库初始化里使用 `gen_random_uuid()`，应显式确保 `pgcrypto` 扩展可用。
-2. 当前迁移机制主要依赖 `init_database.py` 幂等建表，不适合直接引入未落地的 Alembic 流程。
-3. 测试脚本存在部分失效引用（例如 `scripts/testing/test_llama_cpp_integration.py` 的模块路径）。
-
----
-
-## 3. 一期目标（4-6 周）
-
-1. 统一 LLM 调度：支持 `local_only` / `hybrid_auto` / `cloud_only`
-2. 云端出站数据 100% 脱敏，且具备可审计证据
-3. 可观测成本与预算策略：按租户统计 token/cost，预算超阈值触发策略
-4. 保持现有接口兼容，避免业务调用方回归
-
----
-
-## 4. 实施步骤（纠偏后）
-
-## Step 0（Week 1）：基线稳定化（P0）
-
-### 目标
-
-先把“可运行性”与“最小正确性”拉齐，避免后续迭代建立在不稳定底座上。
-
-### 改动点
-
-1. 补齐缓存模块：新增 `backend/services/cache/query_cache.py`
-2. 修复失效测试入口：`scripts/testing/test_llama_cpp_integration.py`
-3. 增加基线健康检查脚本（启动、核心路由探活）
-
-### 关键验收
-
-- `backend/main.py` 能启动并可访问 `/health`
-- `/rag/query` 缓存路径可正常 hit/miss
-
-## Step 1（Week 1-2）：统一 LLM 调度控制平面（P0）
-
-### 目标
-
-建立单一调度入口，解决双控制面冲突。
-
-### 改动点
-
-1. 新增 `backend/services/llm_integration/types.py`
-2. 新增 `backend/services/llm_integration/dispatch_service.py`
-3. 扩展 `backend/config.py`，新增调度策略配置：
-- `HYBRID_MODE`
-- `LOCAL_PRIMARY_BACKEND`
-- `CLOUD_PROVIDER`
-- `FALLBACK_ON_ERROR`
-- `LOCAL_CONFIDENCE_THRESHOLD`
-
-### 关键验收
-
-- 三种路由模式可切换
-- 本地失败可按策略回退云端
-
-## Step 2（Week 2-3）：隐私脱敏与出站守卫（P1）
-
-### 目标
-
-严格保证“先脱敏，再出站，再审计”。
-
-### 改动点
-
-1. 新增 `backend/services/security/redaction_service.py`
-2. 新增 `backend/services/security/egress_guard.py`
-3. 扩展审计日志 detail 字段：
-- `redaction_applied`
-- `sensitive_hit_count`
-- `sensitive_categories`
-- `provider`
-
-### 关键验收
-
-- 云端请求中不含敏感明文
-- 审计日志可追溯脱敏决策
-
-## Step 3（Week 3-4）：成本与预算治理（P1）
-
-### 目标
-
-建立可计量、可告警、可降级的成本闭环。
-
-### 改动点
-
-1. `backend/init_database.py` 幂等新增：
-- `CREATE EXTENSION IF NOT EXISTS pgcrypto`
+4. **Step 3: 成本与预算治理（P1）**
+- 在 `backend/init_database.py` 幂等新增：
 - `llm_usage_logs`
 - `llm_budget_policies`
-- `schema_migrations`
-2. 新增 `backend/services/llm_integration/cost_tracker.py`
-3. 增加 LLM 指标（请求量、token、cost、fallback）
+- `schema_migrations`（轻量版本记录）
+- 新增 `backend/services/llm_integration/cost_tracker.py`。
+- 指标落地到 `backend/observability/performance_metrics.py` 或新增 `backend/observability/llm_metrics.py`，包括请求数、token数、成本、fallback次数。
+- 产出：租户维度成本归集、预算阈值告警、超限策略（仅本地/拒绝云端）。
 
-### 关键验收
+5. **Step 4: API 收敛与兼容适配（P1）**
+- 实现 `backend/api/llm_dispatch_routes.py`、`backend/api/llm_cost_routes.py` 并在 `backend/main.py` 注册。
+- 旧接口透传到新调度接口，保持响应兼容。
+- 更新 `README.md` 与运维文档（配置矩阵、回退策略、预算策略、告警说明）。
 
-- 每次 LLM 请求可追踪 usage/cost
-- 租户预算超阈值能触发策略
+6. **Step 5: 测试与发布门禁（P0）**
+- 新增单元与集成测试（调度、脱敏、预算、兼容接口）。
+- 设定发布门槛并固化到 CI 命令。
+- 产出：上线前可量化通过标准。
 
-## Step 4（Week 4-5）：API 收敛与兼容发布（P1）
-
-### 目标
-
-统一对外接口，同时保证历史接口无破坏。
-
-### 改动点
-
-1. 新增 `backend/api/llm_dispatch_routes.py`
-2. 新增 `backend/api/llm_cost_routes.py`
-3. 在 `backend/main.py` 注册新路由
-4. 现有 `POST /api/v1/query` 内部透传到新 dispatch 服务
-
-### 关键验收
-
-- 新老接口均可用
-- 老调用方无改造即可继续工作
-
-## Step 5（Week 5-6）：测试、门禁与发布准备（P0）
-
-### 目标
-
-形成可重复验证的质量门禁。
-
-### 改动点
-
-1. 新增单元测试：调度、脱敏、成本、预算
-2. 新增集成测试：dispatch 全链路、审计链路
-3. 更新发布前检查清单与回滚清单
-
-### 关键验收
-
-- 核心测试通过率 100%
-- 性能、安全、成本指标达到门槛
-
----
-
-## 5. 关键文件改动建议
-
-1. `backend/main.py`
-- 保留现有业务路由
-- 新增 dispatch/cost 路由注册
-- 将旧查询接口适配到统一调度
-
-2. `backend/config.py`
-- 增加混合调度配置项
-- 明确 `llm_backend` 与 `llm_provider` 解释优先级
-
-3. `backend/services/llm_integration/llm_client.py`
-- 保留工厂能力
-- 新增/扩展统一响应结构（文本、usage、latency、provider）
-
-4. `backend/init_database.py`
-- 采用幂等 SQL 增量演进
-- 增加成本与预算表
-
-5. `backend/services/audit_logger.py`
-- 接口保持不破坏
-- 在 `detail` 中落地脱敏与路由审计字段
-
-6. `backend/observability/performance_metrics.py`
-- 增加 LLM 请求/成本/fallback 指标
-
----
-
-## 6. 关键代码片段（建议实现）
-
-### 6.1 查询缓存（修复 P0）
-
+## 关键文件改动点与关键代码片段（最关键）
+### 1) `backend/services/cache/query_cache.py`（新增，先修复 P0）
 ```python
-# backend/services/cache/query_cache.py
 from cachetools import TTLCache
 from backend.config import settings
 
@@ -210,8 +66,8 @@ class QueryCache:
         )
 
     def _key(self, tenant_id: str, question: str, top_k: int) -> str:
-        normalized = " ".join((question or "").strip().split())
-        return f"{tenant_id}:{top_k}:{normalized}"
+        q = " ".join((question or "").strip().split())
+        return f"{tenant_id}:{top_k}:{q}"
 
     def get(self, tenant_id: str, question: str, top_k: int):
         if not self.enabled:
@@ -227,10 +83,20 @@ class QueryCache:
 query_cache = QueryCache()
 ```
 
-### 6.2 调度服务（统一控制平面）
-
+### 2) `backend/config.py`（新增调度配置，避免双控制面冲突）
 ```python
-# backend/services/llm_integration/dispatch_service.py
+hybrid_mode: str = os.getenv("HYBRID_MODE", "local_only")
+# local_only | hybrid_auto | cloud_only
+
+local_primary_backend: str = os.getenv("LOCAL_PRIMARY_BACKEND", "llama_cpp")
+cloud_provider: str = os.getenv("CLOUD_PROVIDER", "zhipu")
+fallback_on_error: bool = os.getenv("FALLBACK_ON_ERROR", "true").lower() == "true"
+local_confidence_threshold: float = float(os.getenv("LOCAL_CONFIDENCE_THRESHOLD", "0.75"))
+max_cloud_calls_per_minute: int = int(os.getenv("MAX_CLOUD_CALLS_PER_MINUTE", "120"))
+```
+
+### 3) `backend/services/llm_integration/dispatch_service.py`（新增，统一调度核心）
+```python
 class DispatchService:
     def __init__(self, local_client, cloud_client, redactor, cost_tracker):
         self.local_client = local_client
@@ -239,10 +105,11 @@ class DispatchService:
         self.cost_tracker = cost_tracker
 
     def generate(self, req):
-        if req.route_mode == "local_only":
+        route_mode = req.route_mode
+        if route_mode == "local_only":
             return self._run_local(req)
 
-        if req.route_mode == "cloud_only":
+        if route_mode == "cloud_only":
             redacted = self.redactor.redact(req.prompt)
             return self._run_cloud(req, redacted_prompt=redacted.text, redaction=redacted)
 
@@ -255,10 +122,8 @@ class DispatchService:
         return self._run_cloud(req, redacted_prompt=redacted.text, redaction=redacted)
 ```
 
-### 6.3 脱敏服务（先脱敏后出站）
-
+### 4) `backend/services/security/redaction_service.py`（新增，先脱敏后出站）
 ```python
-# backend/services/security/redaction_service.py
 import re
 from dataclasses import dataclass
 
@@ -272,127 +137,91 @@ class RedactionResult:
 
 class RedactionService:
     PATTERNS = {
-        "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
-        "phone": re.compile(r"\b(?:\+?86[- ]?)?1[3-9]\d{9}\b"),
-        "id_like": re.compile(r"\b\d{15,18}[0-9Xx]?\b"),
+        "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"),
+        "phone": re.compile(r"\\b(?:\\+?86[- ]?)?1[3-9]\\d{9}\\b"),
+        "id_like": re.compile(r"\\b\\d{15,18}[0-9Xx]?\\b"),
     }
 
     def redact(self, text: str) -> RedactionResult:
-        out = text
-        hit_count = 0
-        categories = []
-
-        for name, pattern in self.PATTERNS.items():
-            out, n = pattern.subn(f"<REDACTED_{name.upper()}>", out)
+        hit, cats, out = 0, [], text
+        for name, pat in self.PATTERNS.items():
+            out2, n = pat.subn(f"<REDACTED_{name.upper()}>", out)
             if n > 0:
-                hit_count += n
-                categories.append(name)
-
-        return RedactionResult(text=out, hit_count=hit_count, categories=categories)
+                hit += n
+                cats.append(name)
+                out = out2
+        return RedactionResult(text=out, hit_count=hit, categories=cats)
 ```
 
-### 6.4 数据库增量（成本治理）
-
+### 5) `backend/init_database.py`（增量幂等 SQL，避免迁移框架缺位）
 ```python
-# backend/init_database.py 中增加
+# before UUID defaults
 cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
-cur.execute(
-    """
-    CREATE TABLE IF NOT EXISTS llm_usage_logs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        tenant_id VARCHAR(128) NOT NULL,
-        provider VARCHAR(64) NOT NULL,
-        model VARCHAR(128) NOT NULL,
-        prompt_tokens INTEGER DEFAULT 0,
-        completion_tokens INTEGER DEFAULT 0,
-        total_tokens INTEGER DEFAULT 0,
-        estimated_cost_usd NUMERIC(12,6) DEFAULT 0,
-        latency_ms INTEGER DEFAULT 0,
-        status VARCHAR(32) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """
+cur.execute("""
+CREATE TABLE IF NOT EXISTS llm_usage_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id VARCHAR(128) NOT NULL,
+    provider VARCHAR(64) NOT NULL,
+    model VARCHAR(128) NOT NULL,
+    prompt_tokens INTEGER DEFAULT 0,
+    completion_tokens INTEGER DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    estimated_cost_usd NUMERIC(12,6) DEFAULT 0,
+    latency_ms INTEGER DEFAULT 0,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
+""")
 ```
 
----
+### 6) `backend/api/llm_dispatch_routes.py`（新增统一接口）
+```python
+@router.post("/query/dispatch")
+async def dispatch_query(req: DispatchQueryRequest, tenant: TenantContext = Depends(get_current_tenant)):
+    trace_id = str(uuid.uuid4())
+    result = dispatch_service.generate(
+        DispatchRequest(
+            prompt=req.question,
+            route_mode=req.route_mode or settings.hybrid_mode,
+            tenant_id=tenant.tenant_id,
+            trace_id=trace_id,
+        )
+    )
+    return {
+        "trace_id": trace_id,
+        "answer": result.text,
+        "provider_used": result.provider,
+        "route_mode": result.route_mode,
+        "usage": result.usage,
+        "cost": result.cost,
+    }
+```
 
-## 7. 影响范围
+## 测试与验证计划（开发结束后）
+1. 单元测试
+- `query_cache`: key 稳定性、TTL 失效、tenant 隔离。
+- `dispatch_service`: 三种 route_mode、fallback 条件、错误处理。
+- `redaction_service`: 中英文样本、命中统计、误伤控制。
+- `cost_tracker`: token 统计、费率映射、预算阈值判定。
 
-### 代码影响
+2. 集成测试
+- API：`/query/dispatch` 三模式行为正确。
+- 脱敏链路：审计日志确认“无敏感明文出站”。
+- 数据库：`llm_usage_logs`、`llm_budget_policies` 写入与查询通过。
 
-- 核心服务：`backend/services/llm_integration/*`
-- 安全链路：`backend/services/security/*`
-- API 层：`backend/api/*` 与 `backend/main.py`
-- 数据层：`backend/init_database.py`
-- 观测层：`backend/observability/*`
+3. 回归与非功能
+- 回归现有 RAG/文档管理/代码执行主链路不退化。
+- 性能：P95 延迟、fallback率、错误率。
+- 安全：注入/越权/租户隔离/上传约束。
 
-### 业务影响
+4. 验收门槛
+- 功能通过率 100%（核心用例）。
+- 安全：抽检云端请求敏感泄露 0。
+- 性能：本地优先场景 P95 <= 5s。
+- 成本：账单估算误差 <= 5%。
 
-- 接口兼容：保持历史接口可用
-- 风险降低：避免一次性底层迁移
-- 成本可见：从“估算”升级到“可监控+可告警”
-
----
-
-## 8. 开发结束后的测试与验证计划
-
-## 8.1 单元测试
-
-1. 调度逻辑测试：三种 route_mode、fallback 条件、错误降级
-2. 脱敏测试：中英文样本、边界文本、误杀控制
-3. 成本测试：token 统计、费率映射、预算触发
-4. 缓存测试：tenant 隔离、TTL、key 稳定性
-
-## 8.2 集成测试
-
-1. `POST /api/v1/query/dispatch` 全链路
-2. 审计链路验证（脱敏摘要存在，敏感明文不存在）
-3. 数据库写入验证（usage、budget）
-
-## 8.3 回归测试
-
-1. `/rag/query` 与 `/unified/query` 不回归
-2. 文档管理、代码执行、意图路由不回归
-
-## 8.4 验收门槛
-
-1. 核心功能通过率：100%
-2. 本地优先场景 P95 延迟：`<= 5s`
-3. 敏感明文出站：0
-4. 成本估算误差：`<= 5%`
-
----
-
-## 9. 风险与回滚策略
-
-### 主要风险
-
-1. 本地模型质量波动导致 fallback 频率升高
-2. 脱敏过严影响回答质量
-3. 成本统计与真实账单偏差
-
-### 回滚策略
-
-1. 开关回滚：`HYBRID_MODE=local_only`
-2. 路由回滚：关闭新 dispatch，切回旧查询实现
-3. 数据回滚：保留旧表结构，新增表不影响旧逻辑
-
----
-
-## 10. 一期里程碑（建议）
-
-1. M1（Week 1 末）：基线稳定化完成（可启动、可测试）
-2. M2（Week 2 末）：调度控制平面统一上线
-3. M3（Week 3 末）：脱敏出站守卫生效
-4. M4（Week 4 末）：成本与预算可观测
-5. M5（Week 5-6）：回归通过并具备发布条件
-
----
-
-## 11. 默认假设
-
-1. 一期不新增前端管理台
-2. 云 provider 一期默认沿用仓库已有能力（zhipu）
-3. 迁移方式采用幂等 SQL 增量，不引入 Alembic 作为一期前置
+## Assumptions / Defaults
+- 一期不新增前端。
+- 云 provider 首期默认 zhipu（因仓库已有实现），OpenAI 放二期扩展。
+- 迁移机制采用幂等 SQL + `schema_migrations`，不引入 Alembic。
