@@ -18,6 +18,10 @@ matplotlib==3.7.2
 # NLP和文本处理（用于英文建筑文档分词）
 nltk==3.8.1
 rank-bm25>=0.2.2
+
+# 异步数据库驱动（P0修复：支持Prompt API连接池）
+asyncpg==0.29.0
+# 用于FastAPI异步数据库访问，替代psycopg2
 # 修复jieba对英文分词bug，替换为NLTK word_tokenize + PorterStemmer
 
 # RAG评估框架（P0优先级：Week 1首要任务）

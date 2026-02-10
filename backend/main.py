@@ -15,6 +15,7 @@ from backend.api.enhanced_query_routes import router as enhanced_query_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
+from backend.api.prompt_routes import router as prompt_router  # P0修复：注册Prompt路由
 from backend.middleware.error_handler import register_error_handlers
 from backend.observability.logging_config import configure_logging
 from backend.observability.metrics import setup_metrics
@@ -124,8 +125,9 @@ app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
 )
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
-app.include_router(llm_dispatch_router, prefix="/api/v1", tags=["llm-dispatch"])
-app.include_router(llm_cost_router, prefix="/api/v1", tags=["llm-cost"])
+app.include_router(llm_dispatch_router)  # llm_dispatch_routes已包含prefix
+app.include_router(llm_cost_router)  # llm_cost_routes已包含prefix
+app.include_router(prompt_router, prefix="/api/v1", tags=["prompts"])  # P0修复：注册Prompt路由
 
 # RAG引擎将通过lazy loading初始化
 # rag_engine = SimpleRAG()  # 移除直接初始化，使用lazy loading
