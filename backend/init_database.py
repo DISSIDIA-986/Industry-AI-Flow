@@ -218,12 +218,108 @@ def init_database():
             """
         )
 
+        # Prompt核心表（P0修复：统一schema到init_database.py）
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version VARCHAR(64) PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS prompts (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                subcategory VARCHAR(100),
+                version VARCHAR(50) NOT NULL,
+                content TEXT NOT NULL,
+                variables JSONB DEFAULT '{}'::jsonb,
+                metadata JSONB DEFAULT '{}'::jsonb,
+                is_active BOOLEAN DEFAULT true,
+                is_latest BOOLEAN DEFAULT false,
+                priority INTEGER DEFAULT 0,
+                performance_score NUMERIC(5, 4) DEFAULT 0,
+                usage_count INTEGER DEFAULT 0,
+                success_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(255),
+                updated_by VARCHAR(255),
+                UNIQUE (name, category, version)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_versions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                prompt_id UUID NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
+                version VARCHAR(50) NOT NULL,
+                content TEXT NOT NULL,
+                variables JSONB DEFAULT '{}'::jsonb,
+                metadata JSONB DEFAULT '{}'::jsonb,
+                change_description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(255),
+                UNIQUE (prompt_id, version)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_usage_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                prompt_id UUID NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
+                session_id VARCHAR(255),
+                context JSONB DEFAULT '{}'::jsonb,
+                variables_used JSONB DEFAULT '{}'::jsonb,
+                execution_time_ms INTEGER NOT NULL,
+                success BOOLEAN NOT NULL,
+                error_message TEXT,
+                user_feedback INTEGER CHECK (user_feedback >= 1 AND user_feedback <= 5),
+                llm_response JSONB,
+                tokens_used INTEGER DEFAULT 0,
+                model_name VARCHAR(255),
+                temperature NUMERIC(4, 2),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_tags (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(100) NOT NULL UNIQUE,
                 description TEXT,
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_tag_relations (
+                prompt_id UUID NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
+                tag_id UUID NOT NULL REFERENCES prompt_tags(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (prompt_id, tag_id)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompt_experiments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                prompt_a_id UUID NOT NULL REFERENCES prompts(id),
+                prompt_b_id UUID NOT NULL REFERENCES prompts(id),
+                traffic_split NUMERIC(4, 3) NOT NULL DEFAULT 0.5,
+                status VARCHAR(50) NOT NULL DEFAULT 'active',
+                metrics JSONB DEFAULT '{}'::jsonb,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(255),
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (name)
             )
             """
         )
@@ -287,6 +383,15 @@ def init_database():
             "CREATE INDEX IF NOT EXISTS idx_llm_usage_tenant_created ON llm_usage_logs(tenant_id, created_at DESC)",
             "CREATE INDEX IF NOT EXISTS idx_llm_usage_provider ON llm_usage_logs(provider)",
             "CREATE INDEX IF NOT EXISTS idx_llm_usage_trace ON llm_usage_logs(trace_id)",
+            # Prompt相关索引（P0修复）
+            "CREATE INDEX IF NOT EXISTS idx_prompts_category_name ON prompts(category, name)",
+            "CREATE INDEX IF NOT EXISTS idx_prompts_is_active_latest ON prompts(is_active, is_latest)",
+            "CREATE INDEX IF NOT EXISTS idx_prompts_performance ON prompts(performance_score DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_prompts_created_at ON prompts(created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_versions_prompt_id ON prompt_versions(prompt_id)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_usage_prompt_created ON prompt_usage_logs(prompt_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_usage_session ON prompt_usage_logs(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_experiments_status ON prompt_experiments(status)",
         ]
 
         # 只有pgvector可用时才创建向量索引
