@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,26 +31,45 @@ class RedactionService:
     }
 
     def redact(self, text: str) -> RedactionResult:
+        """
+        脱敏处理，包含异常处理和降级策略
+        
+        Args:
+            text: 需要脱敏的文本
+            
+        Returns:
+            RedactionResult: 脱敏结果，异常时返回原始文本
+        """
         if not text:
             return RedactionResult(text="", hit_count=0, categories=[], replacements={})
 
-        out = text
-        hit_count = 0
-        categories: List[str] = []
-        replacements: Dict[str, int] = {}
+        try:
+            out = text
+            hit_count = 0
+            categories: List[str] = []
+            replacements: Dict[str, int] = {}
 
-        for category, pattern in self.PATTERNS.items():
-            token = f"<REDACTED_{category.upper()}>"
-            updated, count = pattern.subn(token, out)
-            if count > 0:
-                out = updated
-                hit_count += count
-                categories.append(category)
-                replacements[category] = count
+            for category, pattern in self.PATTERNS.items():
+                token = f"<REDACTED_{category.upper()}>"
+                updated, count = pattern.subn(token, out)
+                if count > 0:
+                    out = updated
+                    hit_count += count
+                    categories.append(category)
+                    replacements[category] = count
 
-        return RedactionResult(
-            text=out,
-            hit_count=hit_count,
-            categories=categories,
-            replacements=replacements,
-        )
+            return RedactionResult(
+                text=out,
+                hit_count=hit_count,
+                categories=categories,
+                replacements=replacements,
+            )
+        except Exception as e:
+            # 降级策略：脱敏失败时返回原始文本并记录警告
+            logger.warning(f"Redaction failed: {e}, returning original text")
+            return RedactionResult(
+                text=text,
+                hit_count=0,
+                categories=[],
+                replacements={}
+            )
