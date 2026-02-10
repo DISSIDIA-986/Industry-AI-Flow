@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv("POSTGRES_USER", "")  # 本地PostgreSQL留空使用当前用户
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # 本地PostgreSQL无密码
 
+    # 数据库连接池配置（P0修复：支持Prompt API）
+    db_pool_min_size: int = int(os.getenv("DB_POOL_MIN_SIZE", "2"))
+    db_pool_max_size: int = int(os.getenv("DB_POOL_MAX_SIZE", "10"))
+    db_command_timeout: int = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
+
     # Ollama (备用后端)
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
