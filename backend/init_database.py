@@ -333,6 +333,16 @@ def init_database():
             ("2026_02_10_llm_dispatch_foundation", "Add llm usage/budget governance"),
         )
 
+        # Prompt schema migration（P0修复：添加schema版本记录）
+        cur.execute(
+            """
+            INSERT INTO schema_migrations (version, description)
+            VALUES (%s, %s)
+            ON CONFLICT (version) DO NOTHING
+            """,
+            ("2026_02_10_prompt_schema_unify_v1", "Unify prompt schema to init_database.py with core tables and indexes"),
+        )
+
         # 长期记忆表（给对话记忆系统使用）
         # 会话记忆表（独立于 user_sessions，避免外键依赖）
         if pgvector_available:
@@ -454,6 +464,27 @@ def init_database():
                 AFTER INSERT ON document_versions
                 FOR EACH ROW
                 EXECUTE FUNCTION update_document_versions();
+        """
+        )
+
+        # Prompt表updated_at触发器（P0修复）
+        cur.execute(
+            """
+            DROP TRIGGER IF EXISTS update_prompts_updated_at ON prompts;
+            CREATE TRIGGER update_prompts_updated_at
+                BEFORE UPDATE ON prompts
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        """
+        )
+
+        cur.execute(
+            """
+            DROP TRIGGER IF EXISTS update_prompt_experiments_updated_at ON prompt_experiments;
+            CREATE TRIGGER update_prompt_experiments_updated_at
+                BEFORE UPDATE ON prompt_experiments
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
         """
         )
 
