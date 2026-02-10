@@ -1,0 +1,12 @@
+{"ts":"2026-02-10T08:00:00Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":900}}
+{"ts":"2026-02-10T08:00:01Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":920}}
+{"ts":"2026-02-10T08:00:02Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":930}}
+{"ts":"2026-02-10T08:00:03Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":940}}
+{"ts":"2026-02-10T08:00:04Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":960}}
+{"ts":"2026-02-10T08:00:05Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":980}}
+{"ts":"2026-02-10T08:00:06Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":1000}}
+{"ts":"2026-02-10T08:00:07Z","action":"workflow.query","tenant_id":"public","status":"success","detail":{"latency_ms":1010}}
+{"ts":"2026-02-10T08:00:08Z","action":"llm.dispatch","tenant_id":"public","status":"success","detail":{"sensitive_hit_count":0}}
+{"ts":"2026-02-10T08:00:09Z","action":"llm.dispatch","tenant_id":"public","status":"success","detail":{"sensitive_hit_count":0}}
+{"ts":"2026-02-10T08:00:10Z","action":"workflow.query","tenant_id":"tenant-x","status":"success","detail":{"latency_ms":5000}}
+{"ts":"2026-02-10T08:00:11Z","action":"llm.dispatch","tenant_id":"tenant-x","status":"success","detail":{"sensitive_hit_count":9}}
