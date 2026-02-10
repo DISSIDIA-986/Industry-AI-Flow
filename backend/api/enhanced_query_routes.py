@@ -5,7 +5,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.config import settings
@@ -50,6 +50,12 @@ class QueryResponse(BaseModel):
     sources: List[str]
     retrieved_chunks: List[Dict]
     search_weights: Dict[str, float]
+    provider_used: Optional[str] = None
+    route_mode: Optional[str] = None
+    latency_ms: Optional[int] = None
+    usage: Optional[Dict[str, int]] = None
+    cost: Optional[Dict[str, float]] = None
+    trace_id: Optional[str] = None
 
 
 class LLMConfigUpdateRequest(BaseModel):
@@ -88,7 +94,7 @@ async def enhanced_query(request: QueryRequest):
                 status_code=400, detail="Top_p must be between 0.0 and 1.0"
             )
 
-        # 执行查询
+        # 保留 legacy /query 的 RAG 检索 + 生成语义，避免无声退化
         result = rag.query(
             question=request.question,
             top_k=request.top_k,

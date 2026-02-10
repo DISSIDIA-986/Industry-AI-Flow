@@ -11,7 +11,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 import time
 
 from backend.config import settings
-from backend.services.llm_client import get_backend_status, get_llm_client
+from backend.services.llm_integration.llm_client import (
+    get_backend_status,
+    get_llm_client,
+)
 from backend.services.rag_engine import SimpleRAG
 
 

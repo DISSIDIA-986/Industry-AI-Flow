@@ -5,12 +5,11 @@ Week 1修复验证脚本（无pytest依赖）
 快速验证所有P0修复是否正确实现
 """
 
-import sys
 import logging
+import sys
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -22,16 +21,18 @@ def verify_nltk_tokenization():
 
     try:
         from backend.services.retrieval.hybrid_search import HybridRetriever
-        from backend.services.core.vectorstore import VectorStore
 
-        vectorstore = VectorStore()
-        retriever = HybridRetriever(vectorstore)
+        class DummyVectorStore:
+            def get_connection(self):
+                raise RuntimeError("Dummy vector store should not open database")
+
+        retriever = HybridRetriever(DummyVectorStore())
 
         # 测试建筑术语分词
         test_text = "reinforced-concrete load-bearing CSA-A23.1-19 HVAC OSHA-compliant"
         tokens = retriever._tokenize_english(test_text)
 
-        print(f"✅ NLTK分词方法存在")
+        print(f"✅ 英文分词方法存在（NLTK/Regex fallback）")
         print(f"   输入: {test_text}")
         print(f"   Tokens: {tokens[:10]}...")  # 显示前10个
 
@@ -46,6 +47,7 @@ def verify_nltk_tokenization():
     except Exception as e:
         print(f"❌ NLTK分词验证失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -80,8 +82,7 @@ def verify_semantic_chunking():
                 print(f"   - 包含Section引用: ✓")
 
         assert all(
-            c["metadata"]["chunking_method"] == "semantic_construction"
-            for c in chunks
+            c["metadata"]["chunking_method"] == "semantic_construction" for c in chunks
         ), "应使用语义分块"
 
         print(f"\n✅ 语义分块优化验证通过")
@@ -90,6 +91,7 @@ def verify_semantic_chunking():
     except Exception as e:
         print(f"❌ 语义分块验证失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -105,12 +107,11 @@ def verify_ragas_framework():
         evaluator = RAGASEvaluator()
 
         # 检查方法存在
-        assert hasattr(eval_uator, 'create_construction_evaluation_dataset'), \
-            "应存在create_construction_evaluation_dataset方法"
-        assert hasattr(eval_uator, 'run_evaluation'), \
-            "应存在run_evaluation方法"
-        assert hasattr(eval_uator, 'calculate_mrr'), \
-            "应存在calculate_mrr方法"
+        assert hasattr(
+            evaluator, "create_construction_evaluation_dataset"
+        ), "应存在create_construction_evaluation_dataset方法"
+        assert hasattr(evaluator, "run_evaluation"), "应存在run_evaluation方法"
+        assert hasattr(evaluator, "calculate_mrr"), "应存在calculate_mrr方法"
 
         print(f"✅ RAGASEvaluator类存在")
         print(f"✅ 所有必需方法存在")
@@ -136,6 +137,7 @@ def verify_ragas_framework():
     except Exception as e:
         print(f"❌ RAGAS框架验证失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -151,7 +153,9 @@ def verify_safety_guard():
         safety_guard = SafetyGuard(confidence_threshold=0.80)
 
         # 测试安全关键问题
-        answer1 = "Scaffolding above 3 meters requires guardrails per Alberta OHS Part 23."
+        answer1 = (
+            "Scaffolding above 3 meters requires guardrails per Alberta OHS Part 23."
+        )
         context1 = ["Alberta OHS Part 23: Scaffolds"]
 
         result1 = safety_guard.process_response(answer1, context1)
@@ -159,10 +163,15 @@ def verify_safety_guard():
         print(f"✅ SafetyGuard类存在")
         print(f"✅ 安全等级: {result1['safety_level'].value}")
         print(f"✅ 置信度: {result1['confidence']:.2f}")
-        print(f"✅ 包含免责声明: {'disclaimer' in result1['enhanced_answer'].lower() or '免责声明' in result1['enhanced_answer']}")
+        has_disclaimer = (
+            "disclaimer" in result1["enhanced_answer"].lower()
+            or "免责声明" in result1["enhanced_answer"]
+        )
+        print(f"✅ 包含免责声明: {has_disclaimer}")
+        print(f"✅ 是否拒绝回答: {result1['refused']}")
 
-        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, \
-            "应识别为安全关键问题"
+        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, "应识别为安全关键问题"
+        assert result1["refused"] or has_disclaimer, "安全关键回答应被拒绝或附加免责声明"
 
         print(f"\n✅ 安全防护层验证通过")
         return True
@@ -170,6 +179,7 @@ def verify_safety_guard():
     except Exception as e:
         print(f"❌ 安全防护层验证失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -181,17 +191,18 @@ def verify_imports():
 
     success = True
 
-    # 验证NLTK
+    # 验证NLTK（可选，缺失时由regex fallback兜底）
     try:
         import nltk
+
         print(f"✅ NLTK已安装 (版本: {nltk.__version__})")
     except ImportError:
-        print(f"❌ NLTK未安装")
-        success = False
+        print(f"⚠️ NLTK未安装，将使用regex fallback")
 
     # 验证RAGAS（可选）
     try:
         import ragas
+
         print(f"✅ RAGAS已安装")
     except ImportError:
         print(f"⚠️ RAGAS未安装（可选）")
@@ -199,6 +210,7 @@ def verify_imports():
     # 验证项目模块
     try:
         from backend.services.retrieval.hybrid_search import HybridRetriever
+
         print(f"✅ hybrid_search模块可导入")
     except Exception as e:
         print(f"❌ hybrid_search模块导入失败: {e}")
@@ -206,6 +218,7 @@ def verify_imports():
 
     try:
         from backend.services.core.chunker import chunk_text
+
         print(f"✅ chunker模块可导入")
     except Exception as e:
         print(f"❌ chunker模块导入失败: {e}")
@@ -213,6 +226,7 @@ def verify_imports():
 
     try:
         from backend.services.safety import SafetyGuard
+
         print(f"✅ safety模块可导入")
     except Exception as e:
         print(f"❌ safety模块导入失败: {e}")
@@ -220,10 +234,10 @@ def verify_imports():
 
     try:
         from tests.evaluation.ragas_evaluation import RAGASEvaluator
+
         print(f"✅ ragas_evaluation模块可导入")
     except Exception as e:
-        print(f"❌ ragas_evaluation模块导入失败: {e}")
-        success = False
+        print(f"⚠️ ragas_evaluation模块导入失败（可选依赖缺失）: {e}")
 
     if success:
         print(f"\n✅ 所有必需模块导入成功")

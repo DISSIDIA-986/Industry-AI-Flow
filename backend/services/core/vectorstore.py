@@ -136,6 +136,7 @@ class VectorStore:
                 cur.execute(
                     """
                     SELECT
+                        dc.id,
                         dc.doc_id,
                         dc.content,
                         dc.embedding <=> %s::vector AS distance,
@@ -152,6 +153,7 @@ class VectorStore:
                 cur.execute(
                     """
                     SELECT
+                        dc.id,
                         dc.doc_id,
                         dc.content,
                         dc.embedding,
@@ -171,7 +173,7 @@ class VectorStore:
 
                 for row in cur.fetchall():
                     # 解析存储的向量（PostgreSQL 数组格式 {x,y,z}）
-                    embedding_str = row[2]
+                    embedding_str = row[3]
                     if embedding_str.startswith("{") and embedding_str.endswith("}"):
                         # PostgreSQL 数组格式
                         embedding_str = embedding_str[1:-1]  # 去除首尾的 {}
@@ -184,10 +186,11 @@ class VectorStore:
 
                     all_results.append(
                         {
-                            "doc_id": row[0],
-                            "content": row[1],
+                            "chunk_id": row[0],
+                            "doc_id": row[1],
+                            "content": row[2],
                             "distance": distance,
-                            "filename": row[3],
+                            "filename": row[4],
                         }
                     )
 
@@ -199,10 +202,11 @@ class VectorStore:
             for row in cur.fetchall():
                 results.append(
                     {
-                        "doc_id": row[0],
-                        "content": row[1],
-                        "distance": float(row[2]),
-                        "filename": row[3],
+                        "chunk_id": row[0],
+                        "doc_id": row[1],
+                        "content": row[2],
+                        "distance": float(row[3]),
+                        "filename": row[4],
                     }
                 )
 

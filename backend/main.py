@@ -13,6 +13,8 @@ from backend.api.enhanced_query_routes import router as enhanced_query_router
 
 # 导入新的API路由
 from backend.api.feedback_routes import router as feedback_router
+from backend.api.llm_cost_routes import router as llm_cost_router
+from backend.api.llm_dispatch_routes import router as llm_dispatch_router
 from backend.middleware.error_handler import register_error_handlers
 from backend.observability.logging_config import configure_logging
 from backend.observability.metrics import setup_metrics
@@ -122,6 +124,8 @@ app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
 )
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
+app.include_router(llm_dispatch_router, prefix="/api/v1", tags=["llm-dispatch"])
+app.include_router(llm_cost_router, prefix="/api/v1", tags=["llm-cost"])
 
 # RAG引擎将通过lazy loading初始化
 # rag_engine = SimpleRAG()  # 移除直接初始化，使用lazy loading

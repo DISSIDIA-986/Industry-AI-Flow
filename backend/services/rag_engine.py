@@ -17,6 +17,7 @@ from backend.services.llm_integration.llm_client import (
 )
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
+from backend.services.safety import create_safety_guard
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,17 @@ class SimpleRAG:
             self.feedback_manager = FeedbackManager(self.vectorstore, self.reranker)
         else:
             self.feedback_manager = None
+
+        self.safety_guard = None
+        if getattr(settings, "enable_safety_guard", True):
+            try:
+                self.safety_guard = create_safety_guard(
+                    confidence_threshold=getattr(
+                        settings, "safety_confidence_threshold", 0.8
+                    )
+                )
+            except Exception as exc:
+                logger.warning("Failed to initialize safety guard: %s", exc)
 
     def query(
         self,
@@ -119,6 +131,18 @@ class SimpleRAG:
             prompt, temperature=temperature, max_tokens=max_tokens
         )
 
+        safety_result = None
+        if self.safety_guard is not None:
+            context_texts = [chunk.get("content", "") for chunk in similar_chunks]
+            safety_result = self.safety_guard.process_response(
+                answer=answer,
+                context=context_texts,
+                llm_client=self.llm_client,
+            )
+            answer = safety_result.get("enhanced_answer", answer)
+            if hasattr(safety_result.get("safety_level"), "value"):
+                safety_result["safety_level"] = safety_result["safety_level"].value
+
         # 5. 返回结果
         return {
             "query_id": query_id,
@@ -130,6 +154,7 @@ class SimpleRAG:
                 "vector_weight": vector_weight,
                 "bm25_weight": bm25_weight,
             },
+            "safety": safety_result,
         }
 
     def _get_adaptive_search_weights(self) -> tuple:

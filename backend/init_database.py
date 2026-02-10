@@ -20,6 +20,14 @@ def init_database():
         # 首先尝试启用pgvector扩展
         pgvector_available = False
         try:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+            conn.commit()
+            logger.info("pgcrypto extension enabled")
+        except Exception as e:
+            logger.warning(f"Failed to enable pgcrypto extension: {e}")
+            conn.rollback()
+
+        try:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
             conn.commit()
             logger.info("pgvector extension enabled")
@@ -175,6 +183,60 @@ def init_database():
             """
         )
 
+        # LLM使用日志与预算策略（Phase 1 corrected plan）
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS llm_usage_logs (
+                id UUID PRIMARY KEY,
+                tenant_id VARCHAR(128) NOT NULL,
+                provider VARCHAR(64) NOT NULL,
+                model VARCHAR(128) NOT NULL,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                estimated_cost_usd NUMERIC(12, 6) DEFAULT 0,
+                latency_ms INTEGER DEFAULT 0,
+                status VARCHAR(32) NOT NULL,
+                trace_id VARCHAR(128),
+                route_mode VARCHAR(32),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS llm_budget_policies (
+                tenant_id VARCHAR(128) PRIMARY KEY,
+                monthly_budget_usd NUMERIC(12, 6) NOT NULL DEFAULT 0,
+                soft_limit_ratio NUMERIC(5, 4) NOT NULL DEFAULT 0.8,
+                hard_limit_ratio NUMERIC(5, 4) NOT NULL DEFAULT 1.0,
+                policy_mode VARCHAR(32) NOT NULL DEFAULT 'local_only',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version VARCHAR(64) PRIMARY KEY,
+                description TEXT,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            INSERT INTO schema_migrations (version, description)
+            VALUES (%s, %s)
+            ON CONFLICT (version) DO NOTHING
+            """,
+            ("2026_02_10_llm_dispatch_foundation", "Add llm usage/budget governance"),
+        )
+
         # 长期记忆表（给对话记忆系统使用）
         # 会话记忆表（独立于 user_sessions，避免外键依赖）
         if pgvector_available:
@@ -222,6 +284,9 @@ def init_database():
             "CREATE INDEX IF NOT EXISTS idx_doc_operations_created ON document_operations_log(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_conversation_memories_session ON conversation_memories(session_id)",
             "CREATE INDEX IF NOT EXISTS idx_conversation_memories_type ON conversation_memories(memory_type)",
+            "CREATE INDEX IF NOT EXISTS idx_llm_usage_tenant_created ON llm_usage_logs(tenant_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_llm_usage_provider ON llm_usage_logs(provider)",
+            "CREATE INDEX IF NOT EXISTS idx_llm_usage_trace ON llm_usage_logs(trace_id)",
         ]
 
         # 只有pgvector可用时才创建向量索引
