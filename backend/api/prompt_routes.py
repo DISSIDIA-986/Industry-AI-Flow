@@ -11,7 +11,6 @@ from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from backend.services.prompt_manager import (
@@ -62,6 +61,18 @@ class PromptListResponse(BaseModel):  # P0修复：添加列表响应模型
     tags: List[str]
 
 
+class PaginationInfo(BaseModel):
+    page: int
+    size: int
+    total: int
+    pages: int
+
+
+class PromptListPageResponse(BaseModel):
+    data: List[PromptListResponse]
+    pagination: PaginationInfo
+
+
 class PromptCreate(BaseModel):
     name: str = Field(..., description="Prompt名称")
     category: str = Field(..., description="Prompt分类")
@@ -96,9 +107,17 @@ class ExperimentCreate(BaseModel):
     description: Optional[str] = Field(None, description="实验描述")
     prompt_a_id: UUID = Field(..., description="A版本Prompt ID")
     prompt_b_id: UUID = Field(..., description="B版本Prompt ID")
-    traffic_split: float = Field(default=0.5, description="A版本流量比例")
+    traffic_split: float = Field(default=0.5, gt=0, lt=1, description="A版本流量比例")
     metrics: Optional[Dict[str, Any]] = Field(None, description="评估指标")
     created_by: Optional[str] = Field(None, description="创建者")
+
+
+class ExperimentTrafficUpdate(BaseModel):
+    traffic_split: float = Field(..., gt=0, lt=1, description="A版本流量比例")
+
+
+class ExperimentStatusUpdate(BaseModel):
+    status: str = Field(..., description="实验状态: active/paused/completed/cancelled")
 
 
 class UsageLogCreate(BaseModel):
@@ -126,7 +145,7 @@ async def get_prompt_manager() -> PromptManager:
     return PromptManager(pool)
 
 
-@router.get("/", response_model=List[PromptListResponse])  # P0修复：使用正确的响应模型
+@router.get("/", response_model=PromptListPageResponse)
 async def list_prompts(
     category: Optional[str] = Query(None, description="按分类筛选"),
     is_active: Optional[bool] = Query(None, description="是否激活"),
@@ -193,28 +212,28 @@ async def list_prompts(
             for row in rows:
                 prompt_data = dict(row)
                 # 转换variables
-                if prompt_data["variables"]:
+                if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
+                if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
+                    prompt_data["metadata"] = json.loads(prompt_data["metadata"])
                 prompts.append(prompt_data)
 
-            return JSONResponse(
-                {
-                    "data": prompts,
-                    "pagination": {
-                        "page": page,
-                        "size": size,
-                        "total": total_count,
-                        "pages": (total_count + size - 1) // size,
-                    },
-                }
-            )
+            return {
+                "data": prompts,
+                "pagination": {
+                    "page": page,
+                    "size": size,
+                    "total": total_count,
+                    "pages": (total_count + size - 1) // size,
+                },
+            }
 
     except Exception as e:
         logger.error(f"获取Prompt列表失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{prompt_id}", response_model=Dict[str, Any])
+@router.get("/{prompt_id:uuid}", response_model=Dict[str, Any])
 async def get_prompt(
     prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
@@ -295,7 +314,7 @@ async def create_prompt(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/{prompt_id}", response_model=Dict[str, Any])
+@router.put("/{prompt_id:uuid}", response_model=Dict[str, Any])
 async def update_prompt(
     prompt_id: UUID,
     prompt_data: PromptUpdate,
@@ -336,7 +355,7 @@ async def update_prompt(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{prompt_id}", response_model=Dict[str, Any])
+@router.delete("/{prompt_id:uuid}", response_model=Dict[str, Any])
 async def delete_prompt(
     prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
@@ -358,7 +377,7 @@ async def delete_prompt(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{prompt_id}/test", response_model=Dict[str, Any])
+@router.post("/{prompt_id:uuid}/test", response_model=Dict[str, Any])
 async def test_prompt(
     prompt_id: UUID,
     test_data: PromptTest,
@@ -404,7 +423,7 @@ async def test_prompt(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{prompt_id}/performance", response_model=Dict[str, Any])
+@router.get("/{prompt_id:uuid}/performance", response_model=Dict[str, Any])
 async def get_prompt_performance(
     prompt_id: UUID,
     days: int = Query(7, ge=1, le=365, description="统计天数"),
@@ -496,6 +515,128 @@ async def record_usage_log(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/experiments", response_model=Dict[str, Any])
+async def create_experiment(
+    experiment: ExperimentCreate,
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+):
+    """创建A/B实验。"""
+    try:
+        created = await prompt_manager.create_experiment(
+            name=experiment.name,
+            description=experiment.description,
+            prompt_a_id=experiment.prompt_a_id,
+            prompt_b_id=experiment.prompt_b_id,
+            traffic_split=experiment.traffic_split,
+            metrics=experiment.metrics,
+            created_by=experiment.created_by,
+        )
+        return {"success": True, "experiment": created}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"创建Prompt实验失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/experiments", response_model=Dict[str, Any])
+async def list_experiments(
+    status: Optional[str] = Query(None, description="状态筛选"),
+    category: Optional[str] = Query(None, description="分类筛选"),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+):
+    """分页获取实验列表。"""
+    try:
+        data, total = await prompt_manager.list_experiments(
+            status=status,
+            category=category,
+            limit=size,
+            offset=(page - 1) * size,
+        )
+        return {
+            "success": True,
+            "data": data,
+            "pagination": {
+                "page": page,
+                "size": size,
+                "total": total,
+                "pages": (total + size - 1) // size,
+            },
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取Prompt实验列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/experiments/{experiment_id:uuid}", response_model=Dict[str, Any])
+async def get_experiment(
+    experiment_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
+):
+    """获取实验详情。"""
+    try:
+        experiment = await prompt_manager.get_experiment(experiment_id)
+        if not experiment:
+            raise HTTPException(status_code=404, detail="Experiment不存在")
+        return {"success": True, "experiment": experiment}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取Prompt实验详情失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/experiments/{experiment_id:uuid}/traffic", response_model=Dict[str, Any])
+async def update_experiment_traffic(
+    experiment_id: UUID,
+    payload: ExperimentTrafficUpdate,
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+):
+    """更新实验流量比例。"""
+    try:
+        experiment = await prompt_manager.update_experiment_traffic(
+            experiment_id=experiment_id,
+            traffic_split=payload.traffic_split,
+        )
+        if not experiment:
+            raise HTTPException(status_code=404, detail="Experiment不存在")
+        return {"success": True, "experiment": experiment}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新Prompt实验流量失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/experiments/{experiment_id:uuid}/status", response_model=Dict[str, Any])
+async def update_experiment_status(
+    experiment_id: UUID,
+    payload: ExperimentStatusUpdate,
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+):
+    """更新实验状态。"""
+    try:
+        experiment = await prompt_manager.update_experiment_status(
+            experiment_id=experiment_id,
+            status=payload.status,
+        )
+        if not experiment:
+            raise HTTPException(status_code=404, detail="Experiment不存在")
+        return {"success": True, "experiment": experiment}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新Prompt实验状态失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/categories/list", response_model=List[str])
 async def list_categories(prompt_manager: PromptManager = Depends(get_prompt_manager)):
     """
@@ -537,6 +678,27 @@ async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager))
 
     except Exception as e:
         logger.error(f"获取标签列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/metrics/summary", response_model=Dict[str, Any])
+async def get_prompt_metrics_summary(
+    days: int = Query(7, ge=1, le=365, description="统计窗口天数"),
+    category: Optional[str] = Query(None, description="分类筛选"),
+    top_limit: int = Query(10, ge=1, le=50, description="热门Prompt返回数量"),
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+):
+    """
+    获取Prompt使用汇总指标（窗口统计、热门Prompt、按日趋势）。
+    """
+    try:
+        return await prompt_manager.get_usage_summary(
+            days=days,
+            category=category,
+            top_limit=top_limit,
+        )
+    except Exception as e:
+        logger.error(f"获取Prompt汇总指标失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -584,15 +746,14 @@ async def search_prompts(
 
             params.append(limit)
             rows = await conn.fetch(query, *params)
-            params[-1] = limit
-
-            rows = await conn.fetch(query, *params)
 
             results = []
             for row in rows:
                 prompt_data = dict(row)
-                if prompt_data["variables"]:
+                if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
+                if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
+                    prompt_data["metadata"] = json.loads(prompt_data["metadata"])
                 results.append(prompt_data)
 
             return results
@@ -602,7 +763,7 @@ async def search_prompts(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{prompt_id}/clone", response_model=Dict[str, Any])
+@router.post("/{prompt_id:uuid}/clone", response_model=Dict[str, Any])
 async def clone_prompt(
     prompt_id: UUID,
     new_name: str = Query(..., description="新Prompt名称"),

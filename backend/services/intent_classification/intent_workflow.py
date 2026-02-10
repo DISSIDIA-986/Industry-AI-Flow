@@ -8,6 +8,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -18,10 +19,14 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
+from backend.config import settings
+
 from .context_manager import ContextManager, SessionContext
 from .intent_classifier import IntentClassifier, IntentResult, QueryContext
 from .prompt_manager import PromptManager
 from .routing_decision import AgentType, RoutingDecision, RoutingDecisionEngine
+from backend.services.workflows.nodes.prompt_node import prompt_node
+from backend.services.workflows.prompting.template_selector import TemplateSelector
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +47,8 @@ class WorkflowState(TypedDict):
     agent_response: Optional[str]  # Agent响应
     workflow_complete: bool  # 工作流是否完成
     error: Optional[str]  # 错误信息
+    system_prompt: Optional[str]  # Prompt模板渲染结果
+    prompt_meta: Optional[Dict[str, Any]]  # Prompt元信息
     metadata: Dict[str, Any]  # 元数据
 
 
@@ -68,6 +75,7 @@ class IntentClassificationWorkflow:
         self.context_manager = context_manager
         self.routing_engine = routing_engine
         self.prompt_manager = prompt_manager
+        self.template_selector = TemplateSelector()
 
         # 创建工作流图
         self.workflow = self._create_workflow()
@@ -88,6 +96,7 @@ class IntentClassificationWorkflow:
         workflow.add_node("intent_classification", self._intent_classification_node)
         workflow.add_node("confidence_evaluation", self._confidence_evaluation_node)
         workflow.add_node("routing_decision", self._routing_decision_node)
+        workflow.add_node("prompt_preparation", self._prompt_preparation_node)
         workflow.add_node("clarification_needed", self._clarification_needed_node)
         workflow.add_node(
             "clarification_processing", self._clarification_processing_node
@@ -115,7 +124,8 @@ class IntentClassificationWorkflow:
             },
         )
 
-        workflow.add_edge("routing_decision", "agent_dispatch")
+        workflow.add_edge("routing_decision", "prompt_preparation")
+        workflow.add_edge("prompt_preparation", "agent_dispatch")
         workflow.add_edge("clarification_needed", "clarification_processing")
 
         # 澄清处理后的路由
@@ -330,6 +340,53 @@ class IntentClassificationWorkflow:
             state["error"] = f"路由决策失败: {str(e)}"
             return state
 
+    async def _prompt_preparation_node(self, state: WorkflowState) -> WorkflowState:
+        """Prompt准备节点（将模板选择前置到Agent执行前）"""
+        if not self.prompt_manager:
+            state["metadata"]["prompt_status"] = "disabled"
+            return state
+
+        try:
+            intent_value = None
+            if state.get("intent_result") is not None:
+                intent = state["intent_result"].intent
+                intent_value = intent.value if hasattr(intent, "value") else str(intent)
+
+            prompt_state = {
+                "query": state.get("current_query", ""),
+                "intent": intent_value,
+                "retrieved_context": state.get("query_context").interaction_history
+                if state.get("query_context")
+                else [],
+                "metadata": {
+                    **state.get("metadata", {}),
+                    "session_id": state.get("session_id"),
+                    "user_id": state.get("user_id"),
+                    "prompt_experiments_enabled": False,
+                },
+            }
+            services = SimpleNamespace(
+                prompt_manager=self.prompt_manager,
+                template_selector=self.template_selector,
+            )
+            prompt_state = await prompt_node(prompt_state, services)
+            if prompt_state.get("error"):
+                state["metadata"]["prompt_status"] = "error"
+                state["metadata"]["prompt_error"] = prompt_state["error"]
+                return state
+
+            state["system_prompt"] = prompt_state.get("system_prompt")
+            state["prompt_meta"] = prompt_state.get("prompt_meta")
+            state["metadata"]["prompt_status"] = "ok"
+            if state.get("prompt_meta"):
+                state["metadata"]["prompt_meta"] = state["prompt_meta"]
+            return state
+        except Exception as e:
+            logger.warning(f"Prompt准备失败，降级到默认执行: {e}")
+            state["metadata"]["prompt_status"] = "error"
+            state["metadata"]["prompt_error"] = str(e)
+            return state
+
     async def _clarification_needed_node(self, state: WorkflowState) -> WorkflowState:
         """澄清需求节点"""
         try:
@@ -456,6 +513,8 @@ class IntentClassificationWorkflow:
                 query=state["current_query"],
                 context=state["query_context"],
                 parameters=routing_decision.parameters,
+                system_prompt=state.get("system_prompt"),
+                prompt_meta=state.get("prompt_meta"),
             )
 
             state["agent_response"] = agent_response
@@ -579,6 +638,8 @@ class IntentClassificationWorkflow:
         query: str,
         context: QueryContext,
         parameters: Dict[str, Any],
+        system_prompt: Optional[str] = None,
+        prompt_meta: Optional[Dict[str, Any]] = None,
     ) -> str:
         """调度到具体的Agent"""
         # 这里是模拟的Agent调用
@@ -592,7 +653,11 @@ class IntentClassificationWorkflow:
             AgentType.GENERAL_AGENT: f"我理解您的需求是'{query}'。让我为您提供一些有用的建议和信息...",
         }
 
-        return agent_responses.get(agent_type, "我正在处理您的请求，请稍候...")
+        response = agent_responses.get(agent_type, "我正在处理您的请求，请稍候...")
+        if system_prompt:
+            prompt_name = (prompt_meta or {}).get("name", "unknown_prompt")
+            response = f"{response}\n\n[模板已应用: {prompt_name}]"
+        return response
 
     async def run_workflow(
         self,
@@ -620,7 +685,7 @@ class IntentClassificationWorkflow:
                 session_id=session_id,
                 user_id=user_id,
                 current_query=query,
-                query_context=QueryContext(session_id=session_id, current_query=query),
+                query_context=QueryContext(session_id=session_id, user_id=user_id),
                 session_context=SessionContext(session_id=session_id),
                 intent_result=None,
                 routing_decision=None,
@@ -629,7 +694,14 @@ class IntentClassificationWorkflow:
                 agent_response=None,
                 workflow_complete=False,
                 error=None,
-                metadata={"start_timestamp": datetime.now().isoformat()},
+                system_prompt=None,
+                prompt_meta=None,
+                metadata={
+                    "start_timestamp": datetime.now().isoformat(),
+                    "prompt_experiments_enabled": bool(
+                        settings.prompt_experiments_enabled
+                    ),
+                },
             )
 
             # 创建可运行的工作流
@@ -690,7 +762,12 @@ class IntentClassificationWorkflow:
             state_update = WorkflowState(
                 messages=[HumanMessage(content=user_response)],
                 current_query=user_response,
-                metadata={"continuation_timestamp": datetime.now().isoformat()},
+                metadata={
+                    "continuation_timestamp": datetime.now().isoformat(),
+                    "prompt_experiments_enabled": bool(
+                        settings.prompt_experiments_enabled
+                    ),
+                },
             )
 
             # 继续执行工作流
