@@ -341,3 +341,14 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# 数据库连接池工厂（P0修复）
+# 导入到config模块以便prompt_routes等模块使用
+async def get_database_pool():
+    """
+    数据库连接池工厂函数
+    修复prompt_routes依赖断裂问题
+    """
+    from backend.services.database.pool import get_database_pool as _get_pool
+    return await _get_pool()
