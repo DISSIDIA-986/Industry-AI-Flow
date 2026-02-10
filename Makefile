@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
 
 # Default target
 .DEFAULT_GOAL := help
@@ -144,11 +144,17 @@ test-observability-replay: ## Run workflow observability replay gate
 	fi; \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_run_observability_replay_script.py
 
-test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay)
+test-legacy-regression: ## Run legacy /api/v1/query and /query/dispatch regression
+	@echo "🧪 Running legacy API regression..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN -m pytest -q tests/unit/test_llm_api_routes.py
+
+test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
 	@$(MAKE) test-kpi-gate
 	@$(MAKE) test-rollback-rehearsal
 	@$(MAKE) test-schema-rehearsal
 	@$(MAKE) test-observability-replay
+	@$(MAKE) test-legacy-regression
 
 export-prompt-catalog: ## Export prompt catalog YAML mirrors to research/prompt-catalog
 	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \

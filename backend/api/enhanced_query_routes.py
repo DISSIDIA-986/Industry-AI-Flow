@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.security.dependencies import secure_endpoint
-from backend.services.rag_engine import SimpleRAG
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
@@ -23,6 +22,8 @@ def get_rag_instance():
     """获取RAG实例"""
     global rag_instance
     if rag_instance is None:
+        from backend.services.rag_engine import SimpleRAG
+
         rag_instance = SimpleRAG(
             use_hybrid_search=True,
             use_reranker=True,
