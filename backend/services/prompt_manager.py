@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import asyncpg
 import jinja2
-from jinja2 import Environment, Template, meta
+from jinja2 import SandboxedEnvironment, Template, meta
 from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
@@ -125,7 +125,12 @@ class PromptManager:
         self.db_pool = db_pool
         self.cache_ttl = cache_ttl
         self._cache: Dict[str, Tuple[PromptInfo, datetime]] = {}
-        self._jinja_env = Environment(autoescape=True)
+        self._jinja_env = SandboxedEnvironment(
+            autoescape=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        self._jinja_env.policies['ext.require_sandboxed'] = True
 
         # 预编译正则表达式
         self._variable_pattern = re.compile(r"\{\{\s*(\w+)\s*\}\}")
