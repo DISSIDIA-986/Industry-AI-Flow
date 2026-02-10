@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
 
 # Default target
 .DEFAULT_GOAL := help
@@ -91,7 +91,43 @@ test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 		tests/unit/test_llm_api_routes.py \
 		tests/unit/test_cost_tracker_budget_logic.py \
 		tests/unit/test_llm_config_resolution.py \
-		tests/integration/test_week1_fixes.py
+	tests/integration/test_week1_fixes.py
+
+test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
+	@echo "📈 Running workflow KPI gate..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/build_kpi_payload.py \
+		--audit-log tests/evaluation/fixtures/audit_sample.jsonl \
+		--evaluation-json tests/evaluation/fixtures/ragas_sample_metrics.json \
+		--ab-json tests/evaluation/fixtures/prompt_ab_sample_metrics.json \
+		--monthly-cost-cad 360 \
+		--output /tmp/kpi_gate_payload.json \
+		--pretty; \
+	$$PYTHON_BIN scripts/testing/run_kpi_gate.py --input /tmp/kpi_gate_payload.json --pretty; \
+	if $$PYTHON_BIN scripts/testing/run_kpi_gate.py --input tests/evaluation/fixtures/kpi_gate_sample_fail.json; then \
+		echo "Expected KPI gate failure did not happen"; \
+		exit 1; \
+	fi; \
+	$$PYTHON_BIN -m pytest -q \
+		tests/unit/test_kpi_payload_builder.py \
+		tests/unit/test_build_kpi_payload_script.py \
+		tests/unit/test_workflow_kpi_gate.py \
+		tests/unit/test_run_kpi_gate_script.py
+
+test-rollback-rehearsal: ## Run rollback rehearsal checks and unit tests
+	@echo "🔁 Running rollback rehearsal..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	PROMPT_EXPERIMENTS_ENABLED=false CODE_EXECUTION_PROVIDER=docker \
+	$$PYTHON_BIN scripts/testing/run_rollback_rehearsal.py --pretty; \
+	$$PYTHON_BIN -m pytest -q tests/unit/test_run_rollback_rehearsal_script.py
+
+test-release-gate: ## Run end-to-end release gates (KPI + rollback rehearsal)
+	@$(MAKE) test-kpi-gate
+	@$(MAKE) test-rollback-rehearsal
+
+export-prompt-catalog: ## Export prompt catalog YAML mirrors to research/prompt-catalog
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/migration/export_prompt_catalog.py --clean --pretty
 
 lint: ## Run code linting
 	@echo "🔍 Running linting..."
@@ -198,7 +234,15 @@ streamlit: ## Run Streamlit demo application
 
 streamlit-prompt: ## Run Streamlit prompt manager
 	@echo "📝 Running Streamlit prompt manager..."
-	streamlit run tools/data-generator/streamlit_prompt_manager.py
+	streamlit run tools/prompt-admin/app.py
+
+prompt-admin: ## Run Streamlit prompt-admin (real API management)
+	@echo "🧭 Running prompt-admin..."
+	streamlit run tools/prompt-admin/app.py
+
+prompt-admin-demo: ## Run prompt-admin demo API checks
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_prompt_admin_demo.py --base-url $${PROMPT_API_BASE_URL:-http://localhost:8000} --pretty
 
 # ==========================================
 # Testing Intent Classification System

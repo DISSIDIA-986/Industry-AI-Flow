@@ -14,8 +14,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from backend.services.context_manager import ContextManager
-from backend.services.intent_classifier import IntentClassifier, QueryContext
-from backend.services.intent_workflow import IntentClassificationWorkflow
+from backend.services.intent_classification.intent_classifier import IntentClassifier
+from backend.services.intent_classification.intent_workflow import (
+    IntentClassificationWorkflow,
+)
 from backend.services.prompt_manager import PromptManager
 from backend.services.routing_decision import RoutingDecisionEngine
 
@@ -105,7 +107,8 @@ async def initialize_intent_workflow():
     try:
         # 这里应该从配置或依赖注入获取服务实例
         # 为了演示，我们创建模拟实例
-        from backend.config import get_database_pool, get_llm_client
+        from backend.config import get_database_pool
+        from backend.services.llm_integration.llm_client import get_llm_client
 
         pool = await get_database_pool()
         llm_client = get_llm_client()
@@ -113,7 +116,10 @@ async def initialize_intent_workflow():
         # 创建核心服务
         prompt_manager = PromptManager(pool)
         context_manager = ContextManager(storage_backend="memory")
-        intent_classifier = IntentClassifier(llm_client, prompt_manager)
+        intent_classifier = IntentClassifier(
+            prompt_manager=prompt_manager,
+            llm_client=llm_client,
+        )
         routing_engine = RoutingDecisionEngine()
 
         # 创建工作流

@@ -254,6 +254,8 @@ def init_database():
                 content TEXT NOT NULL,
                 variables JSONB DEFAULT '{}'::jsonb,
                 metadata JSONB DEFAULT '{}'::jsonb,
+                performance_metrics JSONB DEFAULT '{}'::jsonb,
+                usage_stats JSONB DEFAULT '{}'::jsonb,
                 change_description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_by VARCHAR(255),
@@ -266,7 +268,7 @@ def init_database():
             """
             CREATE TABLE IF NOT EXISTS prompt_usage_logs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                prompt_id UUID NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
+                prompt_id UUID REFERENCES prompts(id) ON DELETE SET NULL,
                 session_id VARCHAR(255),
                 context JSONB DEFAULT '{}'::jsonb,
                 variables_used JSONB DEFAULT '{}'::jsonb,
@@ -289,6 +291,7 @@ def init_database():
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(100) NOT NULL UNIQUE,
                 description TEXT,
+                color VARCHAR(7) DEFAULT '#007bff',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -315,12 +318,93 @@ def init_database():
                 prompt_b_id UUID NOT NULL REFERENCES prompts(id),
                 traffic_split NUMERIC(4, 3) NOT NULL DEFAULT 0.5,
                 status VARCHAR(50) NOT NULL DEFAULT 'active',
+                winner_prompt_id UUID REFERENCES prompts(id),
+                confidence_level NUMERIC(4, 3),
+                sample_size BIGINT DEFAULT 0,
                 metrics JSONB DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ended_at TIMESTAMP,
                 created_by VARCHAR(255),
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (name)
+                UNIQUE (name),
+                UNIQUE (prompt_a_id, prompt_b_id)
             )
+            """
+        )
+
+        # Schema drift compatibility: ensure required columns exist for older deployments.
+        cur.execute(
+            """
+            ALTER TABLE prompt_versions
+            ADD COLUMN IF NOT EXISTS performance_metrics JSONB DEFAULT '{}'::jsonb
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_versions
+            ADD COLUMN IF NOT EXISTS usage_stats JSONB DEFAULT '{}'::jsonb
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_tags
+            ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#007bff'
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_experiments
+            ADD COLUMN IF NOT EXISTS winner_prompt_id UUID REFERENCES prompts(id)
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_experiments
+            ADD COLUMN IF NOT EXISTS confidence_level NUMERIC(4, 3)
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_experiments
+            ADD COLUMN IF NOT EXISTS sample_size BIGINT DEFAULT 0
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_experiments
+            ADD COLUMN IF NOT EXISTS ended_at TIMESTAMP
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_usage_logs
+            ALTER COLUMN prompt_id DROP NOT NULL
+            """
+        )
+        cur.execute(
+            """
+            DO $$
+            DECLARE fk RECORD;
+            BEGIN
+              FOR fk IN
+                SELECT c.conname
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+                WHERE t.relname = 'prompt_usage_logs'
+                  AND c.contype = 'f'
+                  AND a.attname = 'prompt_id'
+              LOOP
+                EXECUTE format('ALTER TABLE prompt_usage_logs DROP CONSTRAINT IF EXISTS %I', fk.conname);
+              END LOOP;
+            END $$;
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE prompt_usage_logs
+            ADD CONSTRAINT fk_prompt_usage_prompt_id
+            FOREIGN KEY (prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
             """
         )
 

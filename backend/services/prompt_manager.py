@@ -15,7 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import asyncpg
 import jinja2
-from jinja2 import SandboxedEnvironment, Template, meta
+from jinja2 import Template, meta
+from jinja2.sandbox import SandboxedEnvironment
 from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
@@ -264,10 +265,16 @@ class PromptManager:
                 # 没有活跃实验，获取最佳Prompt
                 return await self._get_best_prompt(name, category, context)
 
-            # A/B测试逻辑：根据流量分配选择版本
-            import random
-
-            use_a = random.random() < float(experiment_row["traffic_split"])
+            # A/B测试逻辑：使用确定性分配，避免同一会话在短窗口内抖动。
+            use_a = (
+                self._allocate_experiment_bucket(
+                    name=name,
+                    category=category,
+                    context=context,
+                    traffic_split=float(experiment_row["traffic_split"]),
+                )
+                == "A"
+            )
 
             selected_id = experiment_row["a_id"] if use_a else experiment_row["b_id"]
 
@@ -675,8 +682,8 @@ class PromptManager:
                 "performance_score": float(row["performance_score"]),
                 "total_logs": row["total_logs"],
                 "avg_execution_time_ms": float(row["avg_execution_time"] or 0),
-                "min_execution_time_ms": row["min_execution_time_ms"],
-                "max_execution_time_ms": row["max_execution_time_ms"],
+                "min_execution_time_ms": row["min_execution_time"],
+                "max_execution_time_ms": row["max_execution_time"],
                 "avg_user_feedback": float(row["avg_user_feedback"] or 0),
                 "total_tokens": row["total_tokens"],
                 "recent_success_count": row["recent_success_count"],
@@ -690,6 +697,326 @@ class PromptManager:
             }
 
             return stats
+
+    async def get_usage_summary(
+        self,
+        *,
+        days: int = 7,
+        category: Optional[str] = None,
+        top_limit: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        获取Prompt使用汇总统计（按时间窗口）。
+
+        Args:
+            days: 统计窗口天数
+            category: 可选分类过滤
+            top_limit: 热门Prompt返回数量
+        """
+        days = max(1, int(days))
+        top_limit = max(1, int(top_limit))
+
+        async with self.db_pool.acquire() as conn:
+            base_params: List[Any] = [days]
+            category_clause = ""
+            if category:
+                base_params.append(category)
+                category_clause = f" AND p.category = ${len(base_params)}"
+
+            totals_query = f"""
+                SELECT
+                    COUNT(DISTINCT p.id) AS prompt_count,
+                    COUNT(pul.id) AS usage_logs,
+                    COUNT(CASE WHEN pul.success = true THEN 1 END) AS success_logs,
+                    AVG(pul.execution_time_ms) AS avg_execution_time_ms,
+                    SUM(pul.tokens_used) AS total_tokens,
+                    AVG(pul.user_feedback) AS avg_feedback
+                FROM prompts p
+                LEFT JOIN prompt_usage_logs pul
+                  ON p.id = pul.prompt_id
+                 AND pul.created_at >= NOW() - INTERVAL '1 day' * $1
+                WHERE p.is_active = true
+                {category_clause}
+            """
+            totals_row = await conn.fetchrow(totals_query, *base_params)
+
+            top_query = f"""
+                SELECT
+                    p.id,
+                    p.name,
+                    p.category,
+                    COUNT(pul.id) AS usage_count,
+                    COUNT(CASE WHEN pul.success = true THEN 1 END) AS success_count,
+                    AVG(pul.execution_time_ms) AS avg_execution_time_ms,
+                    SUM(pul.tokens_used) AS total_tokens
+                FROM prompts p
+                LEFT JOIN prompt_usage_logs pul
+                  ON p.id = pul.prompt_id
+                 AND pul.created_at >= NOW() - INTERVAL '1 day' * $1
+                WHERE p.is_active = true
+                {category_clause}
+                GROUP BY p.id, p.name, p.category
+                ORDER BY usage_count DESC, p.name ASC
+                LIMIT ${len(base_params) + 1}
+            """
+            top_rows = await conn.fetch(top_query, *(base_params + [top_limit]))
+
+            daily_query = f"""
+                SELECT
+                    DATE(pul.created_at) AS date,
+                    COUNT(*) AS usage_count,
+                    COUNT(CASE WHEN pul.success = true THEN 1 END) AS success_count,
+                    AVG(pul.execution_time_ms) AS avg_execution_time_ms,
+                    SUM(pul.tokens_used) AS total_tokens
+                FROM prompt_usage_logs pul
+                JOIN prompts p ON p.id = pul.prompt_id
+                WHERE pul.created_at >= NOW() - INTERVAL '1 day' * $1
+                  AND p.is_active = true
+                  {category_clause}
+                GROUP BY DATE(pul.created_at)
+                ORDER BY date DESC
+            """
+            daily_rows = await conn.fetch(daily_query, *base_params)
+
+        totals_data = dict(totals_row) if totals_row else {}
+        prompt_count = int(totals_data.get("prompt_count") or 0)
+        usage_logs = int(totals_data.get("usage_logs") or 0)
+        success_logs = int(totals_data.get("success_logs") or 0)
+        avg_execution_time_ms = float(totals_data.get("avg_execution_time_ms") or 0.0)
+        total_tokens = int(totals_data.get("total_tokens") or 0)
+        avg_feedback = float(totals_data.get("avg_feedback") or 0.0)
+
+        top_prompts = []
+        for row in top_rows:
+            usage_count = int(row["usage_count"] or 0)
+            success_count = int(row["success_count"] or 0)
+            top_prompts.append(
+                {
+                    "prompt_id": str(row["id"]),
+                    "name": row["name"],
+                    "category": row["category"],
+                    "usage_count": usage_count,
+                    "success_count": success_count,
+                    "success_rate": (
+                        float(success_count / usage_count) if usage_count > 0 else 0.0
+                    ),
+                    "avg_execution_time_ms": float(
+                        row["avg_execution_time_ms"] or 0.0
+                    ),
+                    "total_tokens": int(row["total_tokens"] or 0),
+                }
+            )
+
+        daily = []
+        for row in daily_rows:
+            usage_count = int(row["usage_count"] or 0)
+            success_count = int(row["success_count"] or 0)
+            day_value = row["date"]
+            daily.append(
+                {
+                    "date": (
+                        day_value.isoformat()
+                        if hasattr(day_value, "isoformat")
+                        else str(day_value)
+                    ),
+                    "usage_count": usage_count,
+                    "success_count": success_count,
+                    "success_rate": (
+                        float(success_count / usage_count) if usage_count > 0 else 0.0
+                    ),
+                    "avg_execution_time_ms": float(
+                        row["avg_execution_time_ms"] or 0.0
+                    ),
+                    "total_tokens": int(row["total_tokens"] or 0),
+                }
+            )
+
+        return {
+            "window_days": days,
+            "category": category,
+            "totals": {
+                "prompt_count": prompt_count,
+                "usage_logs": usage_logs,
+                "success_logs": success_logs,
+                "success_rate": (
+                    float(success_logs / usage_logs) if usage_logs > 0 else 0.0
+                ),
+                "avg_execution_time_ms": avg_execution_time_ms,
+                "total_tokens": total_tokens,
+                "avg_feedback": avg_feedback,
+            },
+            "top_prompts": top_prompts,
+            "daily": daily,
+        }
+
+    async def create_experiment(
+        self,
+        *,
+        name: str,
+        prompt_a_id: uuid.UUID,
+        prompt_b_id: uuid.UUID,
+        traffic_split: float = 0.5,
+        description: Optional[str] = None,
+        metrics: Optional[Dict[str, Any]] = None,
+        created_by: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """创建Prompt A/B实验。"""
+        if prompt_a_id == prompt_b_id:
+            raise ValueError("prompt_a_id and prompt_b_id must be different")
+        if traffic_split <= 0 or traffic_split >= 1:
+            raise ValueError("traffic_split must be between 0 and 1")
+
+        async with self.db_pool.acquire() as conn:
+            prompt_check_query = """
+                SELECT id, name, category
+                FROM prompts
+                WHERE id = $1 AND is_active = true
+            """
+            prompt_a = await conn.fetchrow(prompt_check_query, prompt_a_id)
+            prompt_b = await conn.fetchrow(prompt_check_query, prompt_b_id)
+            if not prompt_a or not prompt_b:
+                raise ValueError("Prompt not found or inactive")
+
+            if (
+                prompt_a["name"] != prompt_b["name"]
+                or prompt_a["category"] != prompt_b["category"]
+            ):
+                raise ValueError(
+                    "Experiment prompts must share same name and category"
+                )
+
+            insert_query = """
+                INSERT INTO prompt_experiments (
+                    name, description, prompt_a_id, prompt_b_id, traffic_split, metrics, created_by
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, name, description, prompt_a_id, prompt_b_id,
+                          traffic_split, status, metrics, created_at, created_by, updated_at
+            """
+            try:
+                row = await conn.fetchrow(
+                    insert_query,
+                    name,
+                    description,
+                    prompt_a_id,
+                    prompt_b_id,
+                    traffic_split,
+                    json.dumps(metrics or {}),
+                    created_by,
+                )
+            except asyncpg.UniqueViolationError as exc:
+                raise ValueError(f"Experiment already exists: {name}") from exc
+
+        return self._experiment_row_to_dict(row)
+
+    async def list_experiments(
+        self,
+        *,
+        status: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """分页查询实验列表。"""
+        limit = max(1, int(limit))
+        offset = max(0, int(offset))
+
+        where_parts: List[str] = []
+        params: List[Any] = []
+
+        if status:
+            status_value = status.lower()
+            self._validate_experiment_status(status_value)
+            params.append(status_value)
+            where_parts.append(f"pe.status = ${len(params)}")
+        if category:
+            params.append(category)
+            where_parts.append(f"pa.category = ${len(params)}")
+
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+        async with self.db_pool.acquire() as conn:
+            list_query = f"""
+                SELECT
+                    pe.id, pe.name, pe.description, pe.prompt_a_id, pe.prompt_b_id,
+                    pe.traffic_split, pe.status, pe.metrics, pe.created_at, pe.created_by, pe.updated_at,
+                    pa.name AS prompt_name, pa.category AS prompt_category,
+                    pa.version AS prompt_a_version, pb.version AS prompt_b_version
+                FROM prompt_experiments pe
+                JOIN prompts pa ON pe.prompt_a_id = pa.id
+                JOIN prompts pb ON pe.prompt_b_id = pb.id
+                {where_clause}
+                ORDER BY pe.created_at DESC
+                LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+            """
+            rows = await conn.fetch(list_query, *(params + [limit, offset]))
+
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM prompt_experiments pe
+                JOIN prompts pa ON pe.prompt_a_id = pa.id
+                {where_clause}
+            """
+            total = int(await conn.fetchval(count_query, *params) or 0)
+
+        return [self._experiment_row_to_dict(row) for row in rows], total
+
+    async def get_experiment(self, experiment_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """获取单个实验详情。"""
+        async with self.db_pool.acquire() as conn:
+            query = """
+                SELECT
+                    pe.id, pe.name, pe.description, pe.prompt_a_id, pe.prompt_b_id,
+                    pe.traffic_split, pe.status, pe.metrics, pe.created_at, pe.created_by, pe.updated_at,
+                    pa.name AS prompt_name, pa.category AS prompt_category,
+                    pa.version AS prompt_a_version, pb.version AS prompt_b_version
+                FROM prompt_experiments pe
+                JOIN prompts pa ON pe.prompt_a_id = pa.id
+                JOIN prompts pb ON pe.prompt_b_id = pb.id
+                WHERE pe.id = $1
+                LIMIT 1
+            """
+            row = await conn.fetchrow(query, experiment_id)
+
+        return self._experiment_row_to_dict(row) if row else None
+
+    async def update_experiment_traffic(
+        self, experiment_id: uuid.UUID, traffic_split: float
+    ) -> Optional[Dict[str, Any]]:
+        """更新实验流量比例。"""
+        if traffic_split <= 0 or traffic_split >= 1:
+            raise ValueError("traffic_split must be between 0 and 1")
+
+        async with self.db_pool.acquire() as conn:
+            query = """
+                UPDATE prompt_experiments
+                SET traffic_split = $2
+                WHERE id = $1
+                RETURNING id, name, description, prompt_a_id, prompt_b_id,
+                          traffic_split, status, metrics, created_at, created_by, updated_at
+            """
+            row = await conn.fetchrow(query, experiment_id, traffic_split)
+
+        return self._experiment_row_to_dict(row) if row else None
+
+    async def update_experiment_status(
+        self, experiment_id: uuid.UUID, status: str
+    ) -> Optional[Dict[str, Any]]:
+        """更新实验状态。"""
+        normalized = status.lower().strip()
+        self._validate_experiment_status(normalized)
+
+        async with self.db_pool.acquire() as conn:
+            query = """
+                UPDATE prompt_experiments
+                SET status = $2
+                WHERE id = $1
+                RETURNING id, name, description, prompt_a_id, prompt_b_id,
+                          traffic_split, status, metrics, created_at, created_by, updated_at
+            """
+            row = await conn.fetchrow(query, experiment_id, normalized)
+
+        return self._experiment_row_to_dict(row) if row else None
 
     # 私有方法实现...
     async def _get_prompt_by_version(
@@ -921,3 +1248,87 @@ class PromptManager:
                 }
         except Exception as e:
             return {"status": "unhealthy", "error": str(e), "database": "disconnected"}
+
+    def _allocate_experiment_bucket(
+        self,
+        *,
+        name: str,
+        category: str,
+        context: Optional[Dict[str, Any]],
+        traffic_split: float,
+    ) -> str:
+        """Deterministic experiment bucket allocation."""
+        from backend.services.workflows.prompting.ab_allocator import ABAllocator
+
+        allocator = ABAllocator()
+        allocation_key = self._build_experiment_allocation_key(
+            name=name,
+            category=category,
+            context=context,
+        )
+        return allocator.allocate(allocation_key, split=traffic_split)
+
+    def _build_experiment_allocation_key(
+        self,
+        *,
+        name: str,
+        category: str,
+        context: Optional[Dict[str, Any]],
+    ) -> str:
+        """Build stable key for A/B allocation."""
+        context = context or {}
+        identity = (
+            context.get("session_id")
+            or context.get("tenant_id")
+            or context.get("user_id")
+            or context.get("trace_id")
+            or "anonymous"
+        )
+        return f"{category}:{name}:{identity}"
+
+    def _experiment_row_to_dict(self, row: Any) -> Dict[str, Any]:
+        """实验查询记录标准化。"""
+        if not row:
+            return {}
+        metrics = row["metrics"] if "metrics" in row else {}
+        if isinstance(metrics, str):
+            metrics = json.loads(metrics) if metrics else {}
+
+        data = {
+            "id": str(row["id"]),
+            "name": row["name"],
+            "description": row["description"],
+            "prompt_a_id": str(row["prompt_a_id"]),
+            "prompt_b_id": str(row["prompt_b_id"]),
+            "traffic_split": float(row["traffic_split"]),
+            "status": row["status"],
+            "metrics": metrics or {},
+            "created_at": row["created_at"].isoformat()
+            if hasattr(row["created_at"], "isoformat")
+            else row["created_at"],
+            "created_by": row["created_by"],
+            "updated_at": row["updated_at"].isoformat()
+            if hasattr(row["updated_at"], "isoformat")
+            else row["updated_at"],
+        }
+        if "prompt_name" in row:
+            data["prompt_name"] = row["prompt_name"]
+        if "prompt_category" in row:
+            data["prompt_category"] = row["prompt_category"]
+        if "prompt_a_version" in row:
+            data["prompt_a_version"] = row["prompt_a_version"]
+        if "prompt_b_version" in row:
+            data["prompt_b_version"] = row["prompt_b_version"]
+        return data
+
+    def _validate_experiment_status(self, status: str) -> None:
+        valid = {
+            ExperimentStatus.ACTIVE.value,
+            ExperimentStatus.PAUSED.value,
+            ExperimentStatus.COMPLETED.value,
+            ExperimentStatus.CANCELLED.value,
+        }
+        if status not in valid:
+            raise ValueError(
+                f"Invalid experiment status: {status}. Allowed: {', '.join(sorted(valid))}"
+            )
