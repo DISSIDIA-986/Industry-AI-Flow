@@ -226,6 +226,12 @@ make streamlit
 
 # 启动Prompt管理界面
 make streamlit-prompt
+
+# 启动新的Prompt Admin（真实 API 联调）
+make prompt-admin
+
+# 运行 Prompt Admin 演示脚本（API 探活 + 可选实验流量演练）
+make prompt-admin-demo
 ```
 
 ### 🐳 Docker 部署
@@ -447,7 +453,7 @@ Industry-AI-Flow/
 ├── 📄 README.md                        # 📖 项目主页
 ├── 📄 QUICK_START_GUIDE.md             # 🚀 快速开始指南
 ├── 📄 INSTALLATION_GUIDE.md            # ⚙️ 详细安装指南
-├── 📄 PROJECT_STRUCTURE_OPTIMIZATION_PLAN.md # 📋 项目结构优化计划
+├── 📁 Temp/reports/PROJECT_STRUCTURE_OPTIMIZATION_PLAN.md # 📋 项目结构优化计划（归档）
 ├── 📄 Makefile                         # 🔨 优化的构建脚本
 ├── 📄 .globalignore                    # 🚫 忽略归档和临时文件
 └── 📄 .env.example                     # 📝 环境变量示例

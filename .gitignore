@@ -187,3 +187,10 @@ chinese_visualization_output/
 
 # Deprecated files (kept for reference, not scanned)
 docs/deprecated/
+
+# Cleanup archives and manifests
+Deprecated/
+Temp/
+CN Docs/
+cleanup_manifest.log
+cleanup_scan_report.tsv
