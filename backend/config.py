@@ -112,6 +112,21 @@ class Settings(BaseSettings):
     enable_docker_sandbox: bool = (
         os.getenv("ENABLE_DOCKER_SANDBOX", "true").lower() == "true"
     )  # 是否启用Docker沙箱
+    code_execution_provider: str = os.getenv(
+        "CODE_EXECUTION_PROVIDER", "docker"
+    )  # docker | auto | ppio
+    enable_ppio_code_execution: bool = (
+        os.getenv("ENABLE_PPIO_CODE_EXECUTION", "false").lower() == "true"
+    )
+    ppio_base_url: str = os.getenv("PPIO_BASE_URL", "")
+    ppio_api_key: str = os.getenv("PPIO_API_KEY", "")
+    ppio_execute_path: str = os.getenv("PPIO_EXECUTE_PATH", "/v1/code/execute")
+    ppio_health_path: str = os.getenv("PPIO_HEALTH_PATH", "/health")
+    ppio_model: str = os.getenv("PPIO_MODEL", "")
+    ppio_timeout_seconds: int = int(os.getenv("PPIO_TIMEOUT_SECONDS", "60"))
+    ppio_failure_threshold: int = int(os.getenv("PPIO_FAILURE_THRESHOLD", "3"))
+    ppio_cooldown_seconds: int = int(os.getenv("PPIO_COOLDOWN_SECONDS", "30"))
+    ppio_verify_tls: bool = os.getenv("PPIO_VERIFY_TLS", "true").lower() == "true"
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
     )  # Docker镜像名
@@ -136,6 +151,9 @@ class Settings(BaseSettings):
     enable_error_learning: bool = (
         os.getenv("ENABLE_ERROR_LEARNING", "true").lower() == "true"
     )  # 错误模式学习
+    prompt_experiments_enabled: bool = (
+        os.getenv("PROMPT_EXPERIMENTS_ENABLED", "false").lower() == "true"
+    )
 
     # API & Security
     require_api_key: bool = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"

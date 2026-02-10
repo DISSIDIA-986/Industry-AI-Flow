@@ -5,7 +5,12 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from langchain_core.tools import tool
 
-from backend.services.code_executor import CodeExecutionError, code_executor
+from backend.config import settings
+from backend.services.code_executor import (
+    CodeExecutionError,
+    code_executor,
+    get_code_execution_manager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +62,10 @@ def code_execution_tool(
         >>> print(f"输出: {result['stdout']}")
     """
 
+    manager = get_code_execution_manager()
+
     # 检查代码执行器是否可用
-    if code_executor is None:
+    if code_executor is None and manager is None:
         return {
             "success": False,
             "error": "代码执行器不可用，请检查 Docker 环境",
@@ -70,10 +77,18 @@ def code_execution_tool(
         }
 
     try:
-        # 执行代码
-        result = code_executor.execute_code(
-            code=code, data_files=data_files, timeout=timeout
-        )
+        if manager is not None:
+            result = manager.execute_code(
+                code=code,
+                data_files=data_files,
+                timeout=timeout,
+                mode=settings.code_execution_provider,
+            )
+        else:
+            # 回退到历史执行器实现（仅docker）
+            result = code_executor.execute_code(
+                code=code, data_files=data_files, timeout=timeout
+            )
 
         # 记录执行日志
         if result["success"]:
@@ -128,12 +143,22 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
     """
 
     if code_executor is None:
+        from backend.services.code_executor import validate_code
+
+        validation_result = validate_code(code, strict_mode=True)
+        syntax_errors = []
+        security_errors = []
+        if validation_result.error:
+            if "syntax" in validation_result.error.lower() or "语法" in validation_result.error:
+                syntax_errors.append(validation_result.error)
+            else:
+                security_errors.append(validation_result.error)
         return {
-            "valid": False,
-            "syntax_errors": ["代码执行器不可用"],
-            "security_errors": [],
-            "warnings": [],
-            "suggestions": ["请检查 Docker 环境"],
+            "valid": validation_result.is_valid,
+            "syntax_errors": syntax_errors,
+            "security_errors": security_errors,
+            "warnings": validation_result.warnings,
+            "suggestions": ["可在启用 Docker 后进行完整执行前校验"],
         }
 
     try:
@@ -200,8 +225,6 @@ def get_execution_environment_info() -> Dict[str, Any]:
         >>> print(f"Docker 可用: {info['docker_available']}")
     """
 
-    from backend.config import settings
-
     # 基础配置信息
     config_info = {
         "timeout": settings.code_execution_timeout,
@@ -209,6 +232,8 @@ def get_execution_environment_info() -> Dict[str, Any]:
         "cpu_limit": settings.code_execution_cpu_limit,
         "docker_image": settings.docker_image_name,
         "temp_dir": settings.temp_data_dir,
+        "provider_mode": settings.code_execution_provider,
+        "ppio_enabled": settings.enable_ppio_code_execution,
     }
 
     # 安全特性
