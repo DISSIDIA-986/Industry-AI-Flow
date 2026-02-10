@@ -39,6 +39,29 @@ class PromptVariableCreate(BaseModel):
     options: List[Any] = Field(default=None, description="可选值列表")
 
 
+class PromptListResponse(BaseModel):  # P0修复：添加列表响应模型
+    """Prompt列表响应模型"""
+    id: UUID
+    name: str
+    category: str
+    subcategory: Optional[str]
+    version: str
+    content: str
+    variables: List[Dict[str, Any]]
+    metadata: Dict[str, Any]
+    is_active: bool
+    is_latest: bool
+    priority: int
+    performance_score: float
+    usage_count: int
+    success_count: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[str]
+    updated_by: Optional[str]
+    tags: List[str]
+
+
 class PromptCreate(BaseModel):
     name: str = Field(..., description="Prompt名称")
     category: str = Field(..., description="Prompt分类")
@@ -59,6 +82,7 @@ class PromptUpdate(BaseModel):
     priority: Optional[int] = Field(None, description="优先级")
     tags: Optional[List[str]] = Field(None, description="标签列表")
     change_description: Optional[str] = Field(None, description="变更描述")
+    updated_by: Optional[str] = Field(None, description="更新者")  # P0修复：添加updated_by字段
     create_new_version: bool = Field(default=True, description="是否创建新版本")
 
 
@@ -102,7 +126,7 @@ async def get_prompt_manager() -> PromptManager:
     return PromptManager(pool)
 
 
-@router.get("/", response_model=List[Dict[str, Any]])
+@router.get("/", response_model=List[PromptListResponse])  # P0修复：使用正确的响应模型
 async def list_prompts(
     category: Optional[str] = Query(None, description="按分类筛选"),
     is_active: Optional[bool] = Query(None, description="是否激活"),
@@ -286,7 +310,7 @@ async def update_prompt(
         if prompt_data.variables:
             variables = [PromptVariable(**var.dict()) for var in prompt_data.variables]
 
-        # 更新Prompt
+        # 更新Prompt（P0修复：使用正确的updated_by字段）
         prompt_info = await prompt_manager.update_prompt(
             prompt_id=prompt_id,
             content=prompt_data.content,
@@ -295,7 +319,7 @@ async def update_prompt(
             priority=prompt_data.priority,
             tags=prompt_data.tags,
             change_description=prompt_data.change_description,
-            updated_by=prompt_data.created_by,
+            updated_by=prompt_data.updated_by,  # 修复：使用updated_by而不是created_by
             create_new_version=prompt_data.create_new_version,
         )
 
@@ -395,7 +419,7 @@ async def get_prompt_performance(
         if not performance:
             raise HTTPException(status_code=404, detail="Prompt不存在")
 
-        # 详细使用日志统计
+        # 详细使用日志统计（P0修复：参数化days）
         async with prompt_manager.db_pool.acquire() as conn:
             detailed_query = """
                 SELECT
@@ -407,12 +431,12 @@ async def get_prompt_performance(
                     SUM(tokens_used) as total_tokens
                 FROM prompt_usage_logs
                 WHERE prompt_id = $1
-                  AND created_at >= NOW() - INTERVAL '{days} days'
+                  AND created_at >= NOW() - INTERVAL '1 day' * $2
                 GROUP BY DATE(created_at)
                 ORDER BY date DESC
             """
 
-            daily_stats = await conn.fetch(detailed_query, prompt_id)
+            daily_stats = await conn.fetch(detailed_query, prompt_id, days)
 
             # 最近的使用记录
             recent_logs_query = """
@@ -516,7 +540,7 @@ async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager))
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/search", response_model=List[Dict[str, Any]])
+@router.get("/search", response_model=List[PromptListResponse])  # P0修复：使用正确的响应模型
 async def search_prompts(
     q: str = Query(..., description="搜索关键词"),
     category: Optional[str] = Query(None, description="分类筛选"),
@@ -528,19 +552,16 @@ async def search_prompts(
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # 构建搜索查询
-            search_conditions = [
-                "(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"
-            ]
-            params = [f"%{q}%"]
-            param_count = 1
+            # 构建搜索查询（P0修复：正确的参数绑定）
+            params = [f"%{q}%"]  # $1: 模糊搜索参数
+            conditions = ["(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"]
 
             if category:
-                param_count += 1
-                search_conditions.append(f"p.category = ${param_count}")
+                conditions.append(f"p.category = ${len(params)+1}")
                 params.append(category)
 
-            where_clause = " AND ".join(search_conditions)
+            where_clause = " AND ".join(conditions)
+            limit_idx = len(params) + 1
 
             query = f"""
                 SELECT p.*,
@@ -558,11 +579,11 @@ async def search_prompts(
                 WHERE {where_clause} AND p.is_active = true
                 GROUP BY p.id
                 ORDER BY search_rank DESC, p.performance_score DESC
-                LIMIT ${param_count + 1}
+                LIMIT ${limit_idx}
             """
 
-            # 添加搜索参数
-            params.insert(0, q)
+            params.append(limit)
+            rows = await conn.fetch(query, *params)
             params[-1] = limit
 
             rows = await conn.fetch(query, *params)
