@@ -10,8 +10,9 @@ Week 1修复验证测试
 创建时间: 2026-02-09
 """
 
-import pytest
 import logging
+
+import pytest
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +20,22 @@ logger = logging.getLogger(__name__)
 class TestWeek1Fixes:
     """Week 1修复集成测试"""
 
+    class _DummyVectorStore:
+        """用于不依赖数据库的轻量测试桩。"""
+
+        def get_connection(
+            self,
+        ):  # pragma: no cover - should not be called in tokenizer test
+            raise RuntimeError(
+                "Dummy vector store should not open database connections"
+            )
+
     def test_nltk_english_tokenization(self):
         """测试NLTK英文分词（替代jieba）"""
         from backend.services.retrieval.hybrid_search import HybridRetriever
-        from backend.services.core.vectorstore import VectorStore
 
-        # 创建HybridRetriever实例
-        vectorstore = VectorStore()
-        retriever = HybridRetriever(vectorstore)
+        # 使用Dummy存储避免数据库依赖，此测试只验证分词行为
+        retriever = HybridRetriever(self._DummyVectorStore())
 
         # 测试建筑英文术语分词
         test_text = "reinforced-concrete load-bearing CSA-A23.1-19 HVAC OSHA-compliant"
@@ -84,7 +93,7 @@ class TestWeek1Fixes:
             # 如果包含Section引用，应该是完整的
             if "Section" in content:
                 # 简单检查：不应在Section中间切断
-                #（更复杂的检查需要解析引用格式）
+                # （更复杂的检查需要解析引用格式）
                 assert "Section" in content, "Section引用应完整"
 
         logger.info(f"语义分块测试通过: 生成{len(chunks)}个分块")
@@ -120,16 +129,18 @@ class TestWeek1Fixes:
         safety_guard = SafetyGuard(confidence_threshold=0.80)
 
         # 测试案例1：安全关键问题
-        answer1 = "Scaffolding above 3 meters requires guardrails per Alberta OHS Part 23."
+        answer1 = (
+            "Scaffolding above 3 meters requires guardrails per Alberta OHS Part 23."
+        )
         context1 = ["Alberta OHS Part 23: Scaffolds"]
 
         result1 = safety_guard.process_response(answer1, context1)
 
-        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, \
-            "应识别为安全关键问题"
-        assert "免责声明" in result1["enhanced_answer"] or \
-               "disclaimer" in result1["enhanced_answer"].lower(), \
-            "应添加免责声明"
+        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, "应识别为安全关键问题"
+        assert result1["refused"] or (
+            "免责声明" in result1["enhanced_answer"]
+            or "disclaimer" in result1["enhanced_answer"].lower()
+        ), "安全关键回答应被拒绝或附加免责声明"
 
         # 测试案例2：低置信度拒绝
         answer2 = "Use about 30-40 MPa concrete."
@@ -138,14 +149,14 @@ class TestWeek1Fixes:
         result2 = safety_guard.process_response(answer2, context2)
 
         assert result2["confidence"] < 0.80, "低置信度应被检测"
-        # 注意：当前实现可能不拒绝，而是返回低置信度警告
+        assert result2["refused"] is True, "低置信度应触发拒绝回答"
 
         logger.info("安全防护层测试通过")
 
     def test_end_to_end_retrieval_with_nltk(self):
         """端到端测试：使用NLTK分词的检索"""
-        from backend.services.retrieval.hybrid_search import HybridRetriever
         from backend.services.core.vectorstore import VectorStore
+        from backend.services.retrieval.hybrid_search import HybridRetriever
 
         # 跳过如果数据库中没有数据
         pytest.skip("需要数据库中的测试数据")
@@ -183,7 +194,7 @@ if __name__ == "__main__":
     # 运行所有测试
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     print("🧪 Week 1修复验证测试")
