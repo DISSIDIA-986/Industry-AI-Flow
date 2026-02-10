@@ -12,14 +12,16 @@
 """
 
 import logging
-from typing import Dict, Tuple, Optional
+import re
 from enum import Enum
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class SafetyLevel(Enum):
     """安全等级分类"""
+
     INFORMATIONAL = "informational"  # 信息性回答（低风险）
     ADVISORY = "advisory"  # 建议性回答（中风险）
     SAFETY_CRITICAL = "safety_critical"  # 安全关键回答（高风险）
@@ -56,18 +58,29 @@ class GroundednessChecker:
 
         # 安全关键关键词
         safety_critical_keywords = [
-            "ohs", "occupational health and safety",
-            "building code", "regulation", "compliance",
-            "scaffold", "fall protection", "excavation",
-            "concrete strength", "structural",
-            "fire resistance", "load bearing",
-            "electrical safety", "hazardous",
+            "ohs",
+            "occupational health and safety",
+            "building code",
+            "regulation",
+            "compliance",
+            "scaffold",
+            "fall protection",
+            "excavation",
+            "concrete strength",
+            "structural",
+            "fire resistance",
+            "load bearing",
+            "electrical safety",
+            "hazardous",
         ]
 
         # 建议性关键词
         advisory_keywords = [
-            "recommend", "suggest", "should consider",
-            "best practice", "guideline",
+            "recommend",
+            "suggest",
+            "should consider",
+            "best practice",
+            "guideline",
         ]
 
         # 检查是否包含安全关键关键词
@@ -103,22 +116,38 @@ class GroundednessChecker:
             logger.warning("No context provided for groundedness check")
             return 0.0, False
 
-        # TODO: 实现完整的NLI接地度检查
-        # 当前为简化版本：检查答案是否包含上下文中的关键信息
+        # 轻量词级接地度检查：比 split() 更稳健（处理中英文标点和连字符）
+        answer_tokens = self._tokenize(answer)
+        context_tokens = self._tokenize(" ".join(context))
 
-        # 简化版本：检查答案长度和上下文覆盖率
-        answer_words = set(answer.lower().split())
-        context_combined = " ".join(context).lower()
-        context_words = set(context_combined.split())
+        if not answer_tokens or not context_tokens:
+            return 0.0, False
 
-        # 计算答案中有多少词在上下文中出现
-        overlap = answer_words & context_words
-        coverage = len(overlap) / len(answer_words) if answer_words else 0.0
+        answer_vocab = set(answer_tokens)
+        context_vocab = set(context_tokens)
+        overlap = answer_vocab & context_vocab
 
-        # 置信度 = 上下文覆盖率 * (1 - 幻觉惩罚)
-        # 如果答案包含大量不在上下文中的词，可能存在幻觉
-        hallucination_penalty = (len(answer_words) - len(overlap)) / len(answer_words)
-        confidence = coverage * (1 - hallucination_penalty * 0.5)
+        # 回答支撑率：回答中的关键token有多少被上下文覆盖（核心指标）
+        support_ratio = len(overlap) / len(answer_vocab)
+        # 上下文命中率：仅做轻度加成，避免长上下文被过度惩罚
+        context_hit_ratio = len(overlap) / len(context_vocab)
+
+        # 长回答在短上下文下易幻觉，增加轻度长度惩罚
+        length_penalty = 0.0
+        if len(answer_tokens) > len(context_tokens) * 2:
+            length_penalty = min(
+                0.20, (len(answer_tokens) - len(context_tokens) * 2) / 100.0
+            )
+
+        confidence = max(
+            0.0,
+            min(
+                1.0,
+                support_ratio * 0.95
+                + min(0.05, context_hit_ratio * 0.10)
+                - length_penalty,
+            ),
+        )
 
         passed = confidence >= self.confidence_threshold
 
@@ -129,6 +158,13 @@ class GroundednessChecker:
         )
 
         return confidence, passed
+
+    @staticmethod
+    def _tokenize(text: str) -> list[str]:
+        """Simple tokenizer that keeps words, hyphenated terms and CJK blocks."""
+        return re.findall(
+            r"[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*|[\u4e00-\u9fff]+", text.lower()
+        )
 
     def add_disclaimer(self, answer: str, safety_level: SafetyLevel) -> str:
         """
@@ -149,9 +185,7 @@ class GroundednessChecker:
                 "不替代专业工程建议或官方法规解读。"
             ),
             SafetyLevel.ADVISORY: (
-                "\n\n---\n"
-                "💡 **建议**: 此回答基于建筑行业最佳实践，"
-                "具体应用请参考项目相关规范和标准。"
+                "\n\n---\n" "💡 **建议**: 此回答基于建筑行业最佳实践，" "具体应用请参考项目相关规范和标准。"
             ),
             SafetyLevel.INFORMATIONAL: "",  # 信息性回答无需免责声明
         }
@@ -176,15 +210,11 @@ class GroundednessChecker:
         """
         # 如果置信度过低，拒绝回答
         if confidence < self.confidence_threshold:
-            return True, (
-                "抱歉，我无法基于现有文档找到足够准确的信息来回答此问题。"
-                "请尝试重新表述问题，或查阅官方建筑规范文档。"
-            )
+            return True, ("抱歉，我无法基于现有文档找到足够准确的信息来回答此问题。" "请尝试重新表述问题，或查阅官方建筑规范文档。")
 
         # 如果是安全关键问题但置信度不够高，拒绝回答
-        if (
-            safety_level == SafetyLevel.SAFETY_CRITICAL
-            and confidence < self.confidence_threshold + 0.10  # 更高阈值
+        if safety_level == SafetyLevel.SAFETY_CRITICAL and confidence < max(
+            0.85, self.confidence_threshold + 0.05
         ):
             return True, (
                 "此问题涉及建筑安全规范，需要更高的准确性。"
@@ -264,7 +294,7 @@ class SafetyGuard:
         answer: str,
         context: list[str],
         llm_client=None,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         处理LLM响应，添加安全防护
 
@@ -290,9 +320,10 @@ class SafetyGuard:
         )
 
         # 判断是否拒绝回答
-        should_refuse, refusal_message = self.groundedness_checker.should_refuse_to_answer(
-            confidence, safety_level
-        )
+        (
+            should_refuse,
+            refusal_message,
+        ) = self.groundedness_checker.should_refuse_to_answer(confidence, safety_level)
 
         if should_refuse:
             return {
@@ -304,9 +335,7 @@ class SafetyGuard:
             }
 
         # 添加免责声明
-        enhanced_answer = self.groundedness_checker.add_disclaimer(
-            answer, safety_level
-        )
+        enhanced_answer = self.groundedness_checker.add_disclaimer(answer, safety_level)
 
         return {
             "enhanced_answer": enhanced_answer,

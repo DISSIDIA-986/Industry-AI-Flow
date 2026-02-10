@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate
 
 # Default target
 .DEFAULT_GOAL := help
@@ -67,6 +67,31 @@ test-rag: ## Run RAG system tests
 test-llama: ## Run llama.cpp integration tests
 	@echo "🦙 Running llama.cpp tests..."
 	python scripts/testing/test_llama_cpp_simple.py
+
+test-phase1-gate: ## Run phase-1 corrected-plan quality gate
+	@echo "🛡️ Running phase-1 quality gate..."
+	python -m py_compile \
+		backend/config.py \
+		backend/main.py \
+		backend/init_database.py \
+		backend/api/enhanced_query_routes.py \
+		backend/api/llm_dispatch_routes.py \
+		backend/api/llm_cost_routes.py \
+		backend/services/llm_integration/llm_client.py \
+		backend/services/llm_integration/zhipu_client.py \
+		backend/services/llm_integration/types.py \
+		backend/services/llm_integration/cost_tracker.py \
+		backend/services/llm_integration/dispatch_service.py \
+		backend/services/security/redaction_service.py \
+		backend/services/security/egress_guard.py \
+		backend/observability/llm_metrics.py
+	pytest -q \
+		tests/unit/test_dispatch_service.py \
+		tests/unit/test_redaction_service.py \
+		tests/unit/test_llm_api_routes.py \
+		tests/unit/test_cost_tracker_budget_logic.py \
+		tests/unit/test_llm_config_resolution.py \
+		tests/integration/test_week1_fixes.py
 
 lint: ## Run code linting
 	@echo "🔍 Running linting..."

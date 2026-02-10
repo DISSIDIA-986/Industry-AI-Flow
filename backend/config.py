@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Set
+from typing import Optional, Set
 
 from pydantic_settings import BaseSettings
 
@@ -41,6 +41,20 @@ class Settings(BaseSettings):
 
     # LLM提供商选择（保持兼容）
     llm_provider: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | zhipu
+
+    # Hybrid dispatch control-plane (Phase 1 corrected plan)
+    hybrid_mode: str = os.getenv(
+        "HYBRID_MODE", "local_only"
+    )  # local_only | hybrid_auto | cloud_only
+    local_primary_backend: str = os.getenv("LOCAL_PRIMARY_BACKEND", "llama_cpp")
+    cloud_provider: str = os.getenv("CLOUD_PROVIDER", "zhipu")
+    fallback_on_error: bool = os.getenv("FALLBACK_ON_ERROR", "true").lower() == "true"
+    local_confidence_threshold: float = float(
+        os.getenv("LOCAL_CONFIDENCE_THRESHOLD", "0.75")
+    )
+    max_cloud_calls_per_minute: int = int(
+        os.getenv("MAX_CLOUD_CALLS_PER_MINUTE", "120")
+    )
 
     # 向量化 (Phase 2: 升级到 nomic-embed-text-v1.5)
     embedding_model: str = os.getenv(
@@ -179,6 +193,12 @@ class Settings(BaseSettings):
     )
     query_cache_ttl_seconds: int = int(os.getenv("QUERY_CACHE_TTL_SECONDS", "120"))
     query_cache_maxsize: int = int(os.getenv("QUERY_CACHE_MAXSIZE", "256"))
+    enable_safety_guard: bool = (
+        os.getenv("ENABLE_SAFETY_GUARD", "true").lower() == "true"
+    )
+    safety_confidence_threshold: float = float(
+        os.getenv("SAFETY_CONFIDENCE_THRESHOLD", "0.8")
+    )
     db_query_slow_threshold_ms: int = int(
         os.getenv("DB_QUERY_SLOW_THRESHOLD_MS", "750")
     )
@@ -274,6 +294,45 @@ class Settings(BaseSettings):
                 api_key, self.api_key_hashes
             )
         return False
+
+    @staticmethod
+    def _normalize_token(value: Optional[str]) -> str:
+        return (value or "").strip().lower()
+
+    @property
+    def resolved_hybrid_mode(self) -> str:
+        mode = self._normalize_token(self.hybrid_mode)
+        if mode in {"local_only", "hybrid_auto", "cloud_only"}:
+            return mode
+        return "local_only"
+
+    @property
+    def resolved_local_backend(self) -> str:
+        # Prefer dedicated local setting, then legacy backend/provider knobs.
+        candidates = (
+            self.local_primary_backend,
+            self.llm_backend,
+            self.llm_provider,
+        )
+        for candidate in candidates:
+            value = self._normalize_token(candidate)
+            if value in {"llama_cpp", "ollama"}:
+                return value
+        return "llama_cpp"
+
+    @property
+    def resolved_cloud_provider(self) -> str:
+        # Prefer dedicated cloud setting, then legacy provider/backend knobs.
+        candidates = (
+            self.cloud_provider,
+            self.llm_provider,
+            self.llm_backend,
+        )
+        for candidate in candidates:
+            value = self._normalize_token(candidate)
+            if value in {"zhipu"}:
+                return value
+        return "zhipu"
 
 
 settings = Settings()

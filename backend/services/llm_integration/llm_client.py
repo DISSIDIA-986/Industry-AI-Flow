@@ -36,6 +36,17 @@ class LLMClientFactory:
     """LLM客户端工厂类"""
 
     @staticmethod
+    def _normalize_backend(backend: Optional[str]) -> str:
+        value = (backend or "").strip().lower()
+        if value in {"llama_cpp", "ollama", "zhipu"}:
+            return value
+        # 兼容旧配置：当未显式给出backend时，优先取统一控制平面解析结果
+        local_backend = getattr(settings, "resolved_local_backend", "llama_cpp")
+        return (
+            local_backend if local_backend in {"llama_cpp", "ollama"} else "llama_cpp"
+        )
+
+    @staticmethod
     def create_client(backend: str = None) -> BaseLLMClient:
         """
         创建LLM客户端
@@ -46,7 +57,9 @@ class LLMClientFactory:
         Returns:
             LLM客户端实例
         """
-        backend = backend or getattr(settings, "llm_backend", "llama_cpp")
+        backend = LLMClientFactory._normalize_backend(
+            backend or getattr(settings, "llm_backend", "llama_cpp")
+        )
 
         try:
             if backend == "ollama":
@@ -59,6 +72,11 @@ class LLMClientFactory:
 
                 logger.info("✅ 使用 llama.cpp 后端")
                 return LlamaCppClient()
+            elif backend == "zhipu":
+                from .zhipu_client import ZhipuClient
+
+                logger.info("✅ 使用 智谱云端后端")
+                return ZhipuClient()
             else:
                 raise ValueError(f"不支持的后端: {backend}")
 
@@ -71,6 +89,8 @@ class LLMClientFactory:
                 from .ollama_client import OllamaClient
 
                 return OllamaClient()
+            if backend == "zhipu":
+                raise RuntimeError("智谱客户端不可用，请检查 requests 依赖与配置")
             else:
                 raise RuntimeError(f"缺少必要的依赖，请检查安装: {e}")
 

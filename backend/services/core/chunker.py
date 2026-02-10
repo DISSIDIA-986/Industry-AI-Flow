@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Dict
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,8 @@ def chunk_text(
         for i, split in enumerate(splits):
             if i > 0 and separator:
                 split = separator + split  # 保留分隔符
-            if separators[1:]:
+            # 仅在片段仍然过大时继续递归，避免无意义拆到字符级
+            if len(split) > chunk_size and separators[1:]:
                 sub_splits = split_text_by_separators(split, separators[1:])
                 final_splits.extend(sub_splits)
             else:
@@ -106,28 +107,32 @@ def chunk_text(
                 # 延长当前chunk以包含完整引用
                 current_chunk += split
             else:
+                saved_chunk = current_chunk
+                saved_length = len(saved_chunk)
                 # 保存当前chunk
                 chunks.append(
                     {
-                        "content": current_chunk.strip(),
+                        "content": saved_chunk.strip(),
                         "metadata": {
                             "chunk_id": chunk_id,
                             "start_pos": start_pos,
-                            "end_pos": start_pos + len(current_chunk),
-                            "length": len(current_chunk.strip()),
+                            "end_pos": start_pos + saved_length,
+                            "length": len(saved_chunk.strip()),
                             "chunking_method": "semantic_construction",
                         },
                     }
                 )
                 chunk_id += 1
-                start_pos += len(current_chunk)
 
                 # 计算重叠（保留chunk_overlap字符）
-                if len(current_chunk) > chunk_overlap:
-                    overlap_start = len(current_chunk) - chunk_overlap
-                    current_chunk = current_chunk[overlap_start:]
+                if saved_length > chunk_overlap:
+                    overlap_start = saved_length - chunk_overlap
+                    current_chunk = saved_chunk[overlap_start:]
+                    # 下一个chunk的起点应该回退到重叠开始处
+                    start_pos += overlap_start
                 else:
                     current_chunk = ""
+                    start_pos += saved_length
 
         # 添加新split到当前chunk
         current_chunk += split
