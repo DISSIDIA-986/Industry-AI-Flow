@@ -5,6 +5,8 @@
 .env.*
 .venv/
 venv/
+venv_test/
+.venv_test/
 env/
 test_env/
 
@@ -150,7 +152,8 @@ test_output/
 logs/
 *.log
 .claude/
-*.md
+# 注意：不要使用 *.md，这会错误地忽略所有Markdown文件
+# 应该使用更具体的模式，如 docs/_build/*.md 等
 
 # ==========================================
 # Workspace and Experimental Code
