@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
 
 # Default target
 .DEFAULT_GOAL := help
@@ -121,9 +121,34 @@ test-rollback-rehearsal: ## Run rollback rehearsal checks and unit tests
 	$$PYTHON_BIN scripts/testing/run_rollback_rehearsal.py --pretty; \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_run_rollback_rehearsal_script.py
 
-test-release-gate: ## Run end-to-end release gates (KPI + rollback rehearsal)
+test-schema-rehearsal: ## Run prompt schema migration rehearsal checks
+	@echo "🧱 Running schema migration rehearsal..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_schema_migration_rehearsal.py --pretty; \
+	$$PYTHON_BIN -m pytest -q tests/unit/test_run_schema_migration_rehearsal_script.py
+
+test-observability-replay: ## Run workflow observability replay gate
+	@echo "📊 Running observability replay..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_observability_replay.py \
+		--audit-log tests/evaluation/fixtures/audit_sample.jsonl \
+		--evaluation-json tests/evaluation/fixtures/ragas_sample_metrics.json \
+		--ab-json tests/evaluation/fixtures/prompt_ab_sample_metrics.json \
+		--monthly-cost-cad 360 \
+		--min-workflow-events 5 \
+		--min-dispatch-events 2 \
+		--pretty; \
+	if $$PYTHON_BIN scripts/testing/run_observability_replay.py --audit-log tests/evaluation/fixtures/does_not_exist.jsonl --min-workflow-events 1 --min-dispatch-events 1 --monthly-cost-cad 0; then \
+		echo "Expected observability replay failure did not happen"; \
+		exit 1; \
+	fi; \
+	$$PYTHON_BIN -m pytest -q tests/unit/test_run_observability_replay_script.py
+
+test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay)
 	@$(MAKE) test-kpi-gate
 	@$(MAKE) test-rollback-rehearsal
+	@$(MAKE) test-schema-rehearsal
+	@$(MAKE) test-observability-replay
 
 export-prompt-catalog: ## Export prompt catalog YAML mirrors to research/prompt-catalog
 	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
