@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -143,6 +143,17 @@ test-demo-smoke: ## Run capstone demo smoke preflight + API sanity checks
 	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/testing/run_demo_smoke.py --pretty --train-model-if-missing $${DEMO_SMOKE_ARGS:-}
 
+test-demo-smoke-gate: ## Run CI-friendly demo smoke gate (skip external Postgres/Ollama)
+	@echo "🧪 Running demo smoke gate (CI-friendly)..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_demo_smoke.py \
+		--pretty \
+		--train-model-if-missing \
+		--skip-postgres-check \
+		--skip-ollama-check \
+		--dataset-path datasets/unified_construction_projects_enhanced.csv \
+		--model-path /tmp/industry_ai_flow_smoke_model.json
+
 test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
 	@echo "📈 Running workflow KPI gate..."
 	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
@@ -202,6 +213,7 @@ test-legacy-regression: ## Run legacy /api/v1/query and /query/dispatch regressi
 test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
 	@$(MAKE) test-cost-estimation-gate
 	@$(MAKE) test-demo-mode-gate
+	@$(MAKE) test-demo-smoke-gate
 	@$(MAKE) test-kpi-gate
 	@$(MAKE) test-rollback-rehearsal
 	@$(MAKE) test-schema-rehearsal
