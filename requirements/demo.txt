@@ -1,0 +1,6 @@
+# Demo-day extras (UI and notebooks)
+-r base.txt
+
+streamlit>=1.35.0,<1.41.0
+jupyter==1.0.0
+notebook==6.5.4

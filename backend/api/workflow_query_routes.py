@@ -16,6 +16,7 @@ from backend.observability.workflow_metrics import (
     record_workflow_request,
 )
 from backend.services.audit_logger import audit_logger
+from backend.services.demo_mode_service import get_demo_mode_service
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["workflow"])
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class WorkflowRunner(Protocol):
         session_id: str,
         user_id: Optional[str] = None,
         thread_id: Optional[str] = None,
+        route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         ...
 
@@ -150,6 +152,13 @@ async def _initialize_fallback_runner() -> WorkflowRunner:
     except Exception as exc:
         logger.warning("Fallback runner without dispatch response builder: %s", exc)
 
+    try:
+        from backend.services.cost_estimation_service import CostEstimationService
+
+        services.cost_estimation_service = CostEstimationService()
+    except Exception as exc:
+        logger.warning("Fallback runner without cost estimation service: %s", exc)
+
     orchestrator = WorkflowOrchestrator(services=services)
     return DefaultWorkflowRunner(orchestrator=orchestrator)
 
@@ -167,17 +176,70 @@ async def workflow_query(
     started = asyncio.get_running_loop().time()
     trace_id = str(uuid4())
     session_id = request.session_id or trace_id
+    demo_mode_service = get_demo_mode_service()
+    demo_state = demo_mode_service.get_state()
+    effective_route_mode = demo_mode_service.resolve_route_mode(request.route_mode)
+
+    replay = demo_mode_service.replay_response(request.query)
+    if replay is not None:
+        metadata: Dict[str, Any] = {
+            "trace_id": trace_id,
+            "session_id": session_id,
+            "tenant_id": settings.default_tenant_id,
+            "workflow_runner": "scripted_replay",
+            "demo_mode": demo_state["mode"],
+            "effective_route_mode": effective_route_mode,
+            "replay_scenario": replay["id"],
+        }
+        response = WorkflowQueryResponse(
+            success=True,
+            trace_id=trace_id,
+            session_id=session_id,
+            intent=str(replay.get("intent") or "knowledge_retrieval"),
+            route_mode="scripted_replay",
+            provider_used="scripted_replay",
+            response=str(replay.get("response") or ""),
+            prompt_meta=None,
+            metadata=metadata,
+            error=None,
+        )
+        record_workflow_request(
+            route_mode="scripted_replay",
+            provider="scripted_replay",
+            status="success",
+            latency_seconds=max(0.0, (asyncio.get_running_loop().time() - started)),
+        )
+        audit_logger.log_event(
+            action="workflow.query",
+            tenant_id=settings.default_tenant_id,
+            status="success",
+            user_id=request.user_id,
+            detail={
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "intent": response.intent,
+                "route_mode": response.route_mode,
+                "provider_used": response.provider_used,
+                "latency_ms": 0,
+                "workflow_runner": "scripted_replay",
+                "demo_mode": demo_state["mode"],
+            },
+        )
+        return response
 
     result = await workflow.run_workflow(
         query=request.query,
         session_id=session_id,
         user_id=request.user_id,
         thread_id=request.thread_id or session_id,
+        route_mode=effective_route_mode,
     )
 
     metadata = result.get("metadata") or {}
     metadata["trace_id"] = trace_id
     metadata["session_id"] = session_id
+    metadata["demo_mode"] = demo_state["mode"]
+    metadata["effective_route_mode"] = effective_route_mode
     intent_result = result.get("intent_result") or {}
     if not isinstance(intent_result, dict):
         intent_result = {}
@@ -191,14 +253,14 @@ async def workflow_query(
             select_provider,
         )
 
-        normalized_mode = resolve_route_mode(request.route_mode, "local_only")
+        normalized_mode = resolve_route_mode(effective_route_mode, "local_only")
         budget_eval = metadata.get("budget_evaluation")
         cloud_allowed = can_use_cloud(budget_eval) if isinstance(budget_eval, dict) else False
         metadata["route_mode"] = normalized_mode
         metadata["provider_used"] = select_provider(normalized_mode, cloud_allowed)
 
     route_mode = (
-        request.route_mode
+        effective_route_mode
         or metadata.get("route_mode")
         or metadata.get("routing_path")
         or "local_only"

@@ -35,15 +35,13 @@
 
 ## Archive Layout
 ```text
-Deprecated/
+.deprecated/
 ├── root-scripts/
 ├── artifacts/
 └── env-backups/
 
-Temp/
+temp/
 ├── reports/
 ├── guides/
 └── session-work/
-
-CN Docs/
 ```

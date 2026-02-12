@@ -665,6 +665,7 @@ class IntentClassificationWorkflow:
         session_id: str,
         user_id: Optional[str] = None,
         thread_id: Optional[str] = None,
+        route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         运行完整的工作流
@@ -701,6 +702,7 @@ class IntentClassificationWorkflow:
                     "prompt_experiments_enabled": bool(
                         settings.prompt_experiments_enabled
                     ),
+                    "requested_route_mode": route_mode,
                 },
             )
 

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { type RouteMode, useAppConfig } from "@/components/app-config-context";
+import { getDemoMode, updateDemoMode } from "@/lib/api-client";
 
 const navItems = [
   { href: "/overview", label: "Overview", floor: "L1" },
@@ -20,8 +21,45 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { config, setApiKey, setRouteMode, setTenantId, setUserId } = useAppConfig();
+  const [demoMode, setDemoMode] = useState<
+    "live_hybrid" | "local_safe" | "scripted_replay"
+  >("live_hybrid");
+  const [cloudOverride, setCloudOverride] = useState(false);
+  const [demoStatus, setDemoStatus] = useState<string>("");
 
   const current = navItems.find((item) => pathname.startsWith(item.href));
+
+  useEffect(() => {
+    let active = true;
+    getDemoMode(config)
+      .then((payload) => {
+        if (!active) {
+          return;
+        }
+        setDemoMode(payload.mode);
+        setCloudOverride(payload.allow_cloud_override);
+      })
+      .catch(() => {
+        if (active) {
+          setDemoStatus("demo mode api unavailable");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [config]);
+
+  async function applyDemoMode() {
+    try {
+      const payload = await updateDemoMode(config, {
+        mode: demoMode,
+        allow_cloud_override: cloudOverride,
+      });
+      setDemoStatus(`demo mode: ${payload.mode}`);
+    } catch {
+      setDemoStatus("failed to update demo mode (admin role required)");
+    }
+  }
 
   return (
     <div className="shell-root">
@@ -99,6 +137,40 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 onChange={(event) => setApiKey(event.target.value)}
               />
             </label>
+            <label>
+              Demo Mode
+              <select
+                value={demoMode}
+                onChange={(event) =>
+                  setDemoMode(
+                    event.target.value as
+                      | "live_hybrid"
+                      | "local_safe"
+                      | "scripted_replay",
+                  )
+                }
+              >
+                <option value="live_hybrid">live_hybrid</option>
+                <option value="local_safe">local_safe</option>
+                <option value="scripted_replay">scripted_replay</option>
+              </select>
+            </label>
+            <label>
+              Cloud Override
+              <select
+                value={cloudOverride ? "true" : "false"}
+                onChange={(event) => setCloudOverride(event.target.value === "true")}
+              >
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+          </div>
+          <div className="chip-row">
+            <button className="secondary-button" type="button" onClick={applyDemoMode}>
+              Apply Demo Mode
+            </button>
+            {demoStatus ? <span className="chip">{demoStatus}</span> : null}
           </div>
         </header>
 

@@ -24,8 +24,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -192,8 +192,12 @@ chinese_visualization_output/
 docs/deprecated/
 
 # Cleanup archives and manifests
-Deprecated/
-Temp/
-CN Docs/
+temp/
 cleanup_manifest.log
 cleanup_scan_report.tsv
+
+# Track capstone dependency specs and demo fixtures
+!requirements/
+!requirements/**/*.txt
+!test_resources/demo/
+!test_resources/demo/**/*.json

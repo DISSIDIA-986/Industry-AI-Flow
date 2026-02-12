@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -77,13 +77,16 @@ test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 		backend/api/enhanced_query_routes.py \
 		backend/api/llm_dispatch_routes.py \
 		backend/api/llm_cost_routes.py \
+		backend/api/cost_estimation_routes.py \
 		backend/services/llm_integration/llm_client.py \
 		backend/services/llm_integration/zhipu_client.py \
 		backend/services/llm_integration/types.py \
 		backend/services/llm_integration/cost_tracker.py \
 		backend/services/llm_integration/dispatch_service.py \
+		backend/services/cost_estimation_service.py \
 		backend/services/security/redaction_service.py \
 		backend/services/security/egress_guard.py \
+		backend/services/workflows/nodes/cost_estimation_node.py \
 		backend/observability/llm_metrics.py
 	pytest -q \
 		tests/unit/test_dispatch_service.py \
@@ -91,7 +94,45 @@ test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 		tests/unit/test_llm_api_routes.py \
 		tests/unit/test_cost_tracker_budget_logic.py \
 		tests/unit/test_llm_config_resolution.py \
+		tests/unit/test_cost_estimation_service.py \
+		tests/unit/test_cost_estimation_workflow_intent.py \
+		tests/unit/test_workflow_orchestrator_pipeline.py \
+		tests/unit/test_main_cost_estimation_router_mount_contract.py \
+		tests/integration/test_cost_estimation_api.py \
+		tests/integration/test_workflow_cost_estimation_query_api.py \
 	tests/integration/test_week1_fixes.py
+
+test-cost-estimation-gate: ## Run cost-estimation API/workflow gate
+	@echo "💰 Running cost-estimation gate..."
+	python -m py_compile \
+		backend/api/cost_estimation_routes.py \
+		backend/services/cost_estimation_service.py \
+		backend/services/workflows/nodes/cost_estimation_node.py
+	pytest -q \
+		tests/integration/test_cost_estimation_api.py \
+		tests/integration/test_workflow_cost_estimation_query_api.py \
+		tests/unit/test_cost_estimation_service.py \
+		tests/unit/test_cost_estimation_workflow_intent.py \
+		tests/unit/test_workflow_orchestrator_pipeline.py \
+		tests/unit/test_main_cost_estimation_router_mount_contract.py
+
+test-demo-mode-gate: ## Run demo-mode workflow/dispatch gate
+	@echo "🎬 Running demo-mode gate..."
+	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN -m py_compile \
+		backend/config.py \
+		backend/api/demo_mode_routes.py \
+		backend/services/demo_mode_service.py \
+		backend/api/workflow_query_routes.py \
+		backend/api/llm_dispatch_routes.py \
+		backend/services/llm_integration/dispatch_service.py; \
+	$$PYTHON_BIN -m pytest -q \
+		tests/unit/test_demo_mode_service.py \
+		tests/integration/test_demo_mode_api.py \
+		tests/unit/test_workflow_query_routes.py \
+		tests/unit/test_dispatch_service.py \
+		tests/unit/test_llm_config_resolution.py \
+		tests/unit/test_main_demo_mode_router_mount_contract.py
 
 test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
 	@echo "📈 Running workflow KPI gate..."
@@ -150,6 +191,8 @@ test-legacy-regression: ## Run legacy /api/v1/query and /query/dispatch regressi
 	$$PYTHON_BIN -m pytest -q tests/unit/test_llm_api_routes.py
 
 test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
+	@$(MAKE) test-cost-estimation-gate
+	@$(MAKE) test-demo-mode-gate
 	@$(MAKE) test-kpi-gate
 	@$(MAKE) test-rollback-rehearsal
 	@$(MAKE) test-schema-rehearsal
@@ -254,6 +297,30 @@ import-docs: ## Import sample documents
 run: ## Run the application locally
 	@echo "🏃 Running application..."
 	uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+capstone-env-check: ## Check Capstone Python/dependency baseline (advisory by default)
+	@echo "🧭 Checking Capstone environment..."
+	python3 scripts/setup/check_capstone_env.py --lock requirements/lock/py313-capstone.txt
+
+capstone-env-setup: ## Create Python 3.13 venv and install locked Capstone dependencies
+	@echo "🏗️ Setting up Capstone environment..."
+	bash scripts/setup/setup_capstone_env.sh
+
+frontend-install: ## Install frontend dependencies
+	@echo "🧩 Installing frontend dependencies..."
+	cd frontend && npm install
+
+frontend-dev: ## Run Next.js frontend locally
+	@echo "🎨 Running Next.js frontend..."
+	cd frontend && npm run dev
+
+frontend-lint: ## Run frontend lint checks
+	@echo "🧪 Running frontend lint..."
+	cd frontend && npm run lint
+
+frontend-build: ## Build frontend for production
+	@echo "🏗️ Building frontend..."
+	cd frontend && npm run build
 
 run-prod: ## Run application in production mode
 	@echo "🏭 Running application in production mode..."
