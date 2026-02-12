@@ -12,6 +12,7 @@ _COST_PATTERNS = (
     re.compile(r"(estimate|estimating|predict|forecast).{0,24}(cost|budget|overrun)"),
     re.compile(r"(cost|budget|overrun).{0,24}(estimate|estimation|predict|forecast)"),
     re.compile(r"(成本|预算).{0,20}(估算|预测|超支|预估)"),
+    re.compile(r"(估算|预测|预估).{0,20}(成本|预算|超支)"),
 )
 
 
@@ -35,10 +36,8 @@ def _heuristic_intent(query: str) -> str:
             "cost risk",
             "预算估算",
             "成本估算",
-            "预算",
-            "成本",
-            "估算",
-            "超支",
+            "成本预测",
+            "预算预测",
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"
