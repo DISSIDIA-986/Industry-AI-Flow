@@ -32,6 +32,11 @@ Completed in this iteration:
 10. Pydantic v2 startup compatibility:
 - migrated `backend/main.py` request validators to `field_validator` style
 - removed unused `langchain_core` import from `backend/services/prompt_manager.py`
+11. Added CI-safe demo smoke gate:
+- Make target `test-demo-smoke-gate` (skips external Postgres/Ollama checks, keeps API smoke)
+- wired into `test-release-gate`
+12. Added smoke-script API-path regression:
+- `tests/unit/test_run_demo_smoke_script.py::test_demo_smoke_script_runs_api_smoke_with_trained_model`
 
 Remaining operator actions on local machine:
 1. Start PostgreSQL server process (client exists, server currently not running).
