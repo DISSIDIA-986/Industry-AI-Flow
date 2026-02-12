@@ -5,8 +5,8 @@
   - `research/README.md`
   - `research/implementation-roadmap.md`
   - `research/summary-and-next-steps.md`
-  - `research/rag-workflow-deep-optimization-plan.md`
-  - `research/rag-workflow-implementation-details.md`
+  - `research/plans/rag-workflow-deep-optimization-plan.md`
+  - `research/architecture/rag-workflow-implementation-details.md`
 - Recent commits (latest stream):
   - `4fda465` docs audit report additions
   - `229fc68` release gate legacy regression
@@ -90,12 +90,28 @@ Moved to `.deprecated/reports/2026-02-12/`:
 3. `UNTRACKED_FILES_RESOLUTION_REPORT.md`
 4. `UNTRACKED_FILES_ANALYSIS.md`
 
+Moved to `.deprecated/reports/2026-02-12-batch2/`:
+1. `CLAUDE.md`
+2. `FINAL_RAG_UPGRADE_CONSENSUS.md`
+3. `QUICK_FIX_GUIDE.md`
+4. `WEEK1_FIXES_README.md`
+5. `CHANGELOG_WEEK1_FIXES.md`
+
+Moved to `.deprecated/guides/2026-02-12-batch3/`:
+1. `QUICK_START_GUIDE.md`
+2. `INSTALLATION_GUIDE.md`
+
+Directory normalization:
+1. Legacy uppercase archive directory contents merged into `.deprecated/`
+2. Legacy uppercase temp directory renamed to `temp/`
+3. `scripts/scan_cleanup_targets.sh` destinations updated to `.deprecated/` and `temp/`
+
 Traceability:
 - All move records appended to `cleanup_manifest.log` with UTC timestamp.
 
 ## 4.3 Verification
 1. Reference scan for moved files: no runtime/docs references found in scoped scan.
-2. Root markdown count reduced from **13** to **9**.
+2. Root markdown count reduced from **13** to **2**.
 3. Gates:
    - `make test-cost-estimation-gate` passed.
    - `make test-phase1-gate` passed.

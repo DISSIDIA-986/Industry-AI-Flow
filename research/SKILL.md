@@ -30,12 +30,12 @@ Automated project structure cleanup with multi-agent analysis, soft-delete archi
 
 | Principle | Implementation |
 |-----------|---------------|
-| Zero Hard Deletes | All files soft-moved to `Deprecated/`, `Temp/`, `CN Docs/` |
+| Zero Hard Deletes | All files soft-moved to `.deprecated/`, `temp/`, `CN Docs/` |
 | Core Files Untouchable | `app.py`, `services/`, `routes/`, `models/`, `middleware/`, `handlers/` never moved |
 | Rollback Ready | Auto-generated `scripts/rollback_cleanup.sh` with absolute paths |
 | Manifest Logging | Every move logged to `cleanup_manifest.log` |
 | Human Confirmation | Each phase requires explicit approval before proceeding |
-| macOS Safe | Handles APFS case-insensitive filesystem (temp/ == Temp/) |
+| macOS Safe | Handles APFS case-insensitive filesystem and case-only rename pitfalls |
 
 ## Execution Workflow
 
@@ -43,7 +43,7 @@ Automated project structure cleanup with multi-agent analysis, soft-delete archi
 
 ```
 Agent 1 (Architect):  Directory structure analysis, architectural layer mapping
-Agent 2 (Code Manager): Deprecated/temp file inventory, cleanup target identification
+Agent 2 (Code Manager): archive/temp file inventory, cleanup target identification
 Agent 3 (Developer):  Core dependency mapping, import chains, DO-NOT-TOUCH list
 ```
 
@@ -118,48 +118,48 @@ webhook-simulator/              # Docker-compose dependency
 prompts/                        # Referenced by core code
 ```
 
-### Category 1: Root Test Files → `Deprecated/root-tests/`
+### Category 1: Root Test Files → `.deprecated/root-tests/`
 ```
 Pattern: test_*.py at project root
 Example: test_l2_btc.py, test_l2_comprehensive.py
 Safety:  Verified zero imports from core code
 ```
 
-### Category 2: Status/Completion Reports → `Temp/reports/`
+### Category 2: Status/Completion Reports → `temp/reports/`
 ```
 Pattern: *_COMPLETE.md, *_STATUS*.md, *_FIXES*.md, PHASE*_*.md
 Example: DEPLOYMENT_STATUS_FINAL.md, PHASE1_FIXES_COMPLETE.md
 Safety:  Documentation only, no code references
 ```
 
-### Category 3: Reference Guides → `Temp/guides/`
+### Category 3: Reference Guides → `temp/guides/`
 ```
 Pattern: *_GUIDE*.md, *_REFERENCE*.md (at root)
 Example: DATA_COLLECTION_GUIDE.md
 Safety:  No imports or CI references
 ```
 
-### Category 4: Artifact Directories → `Deprecated/artifacts/`
+### Category 4: Artifact Directories → `.deprecated/artifacts/`
 ```
 Pattern: Directories with host:port names, temp build artifacts
 Example: localhost:5001/, VPS:31.97.58.77/
 Safety:  Never imported, no docker-compose references
 ```
 
-### Category 5: Test Results → `Temp/test-results/`
+### Category 5: Test Results → `temp/test-results/`
 ```
 Pattern: test-results/ directory (can be 50MB+)
 Safety:  Historical data, not referenced by pytest
 ```
 
-### Category 6: Temp Session Work → `Temp/session-work/` (macOS special handling)
+### Category 6: Temp Session Work → `temp/session-work/` (macOS special handling)
 ```
 Pattern: temp/ directory contents
-Safety:  On macOS APFS, temp/ == Temp/ (case-insensitive)
+Safety:  On macOS APFS, prefer lowercase `temp/` naming consistently
          Uses in-place reorganization instead of cross-directory move
 ```
 
-### Category 7: Side Projects → `Deprecated/side-projects/`
+### Category 7: Side Projects → `.deprecated/side-projects/`
 ```
 Pattern: Standalone utility directories (l2-simulator/, etc.)
 EXCLUDE: webhook-simulator/ (docker-compose.multi-user.yml dependency!)
@@ -172,7 +172,7 @@ Pattern: cnDocs/ directory
 Safety:  Only referenced by utility scripts, not core code
 ```
 
-### Category 9: Environment Backups → `Deprecated/env-backups/`
+### Category 9: Environment Backups → `.deprecated/env-backups/`
 ```
 Pattern: .env.*.bak, .gitignore.bak, coverage.json, .coverage
 Safety:  Backup files, no code references
@@ -181,13 +181,13 @@ Safety:  Backup files, no code references
 ## Archive Directory Structure
 
 ```
-Deprecated/                     # Gitignored
+.deprecated/                     # Archived soft-delete area
 ├── root-tests/                 # test_*.py from root
 ├── artifacts/                  # Build/debug artifact dirs
 ├── side-projects/              # Standalone utility projects
 └── env-backups/                # Environment file backups
 
-Temp/                           # Gitignored (== temp/ on macOS)
+temp/                           # Gitignored
 ├── reports/                    # Status/completion reports
 ├── guides/                     # Reference guide documents
 ├── test-results/               # Archived test output
@@ -211,8 +211,8 @@ After each cleanup execution, verify:
 ## macOS APFS Filesystem Warning
 
 macOS uses a case-insensitive filesystem by default:
-- `temp/` and `Temp/` are the SAME directory
-- `mv temp/ Temp/session-work/` fails with "cannot move to subdirectory of itself"
+- keep only lowercase `temp/` as canonical archive directory
+- `mv temp/ temp/session-work/` fails with "cannot move to subdirectory of itself"
 - **Solution**: Create `session-work/` subdirectory, then move individual files into it
 
 This is handled automatically by the cleanup script's Category 6 logic.
@@ -228,7 +228,7 @@ This is handled automatically by the cleanup script's Category 6 logic.
 
 ## Integration with CI/CD
 
-The cleanup skill does NOT modify CI/CD pipelines. All archive directories (`Deprecated/`, `Temp/`, `CN Docs/`) are gitignored, so:
+The cleanup skill does NOT modify CI/CD pipelines. Archive directories (`.deprecated/`, `temp/`, `CN Docs/`) are isolated from runtime paths, so:
 - No impact on git history size
 - No impact on Docker build context (already in `.dockerignore`)
 - No impact on deployment artifacts
@@ -238,7 +238,7 @@ The cleanup skill does NOT modify CI/CD pipelines. All archive directories (`Dep
 ### "File already exists in target"
 The script handles this with `SKIP` logging. Re-run is idempotent.
 
-### "Cannot move temp/ to Temp/"
+### "Cannot move temp/ to temp/session-work/"
 macOS case-insensitive filesystem. The script uses in-place reorganization (Category 6 special handling).
 
 ### "Rollback failed"
