@@ -21,17 +21,16 @@ help: ## Show this help message
 # ==========================================
 install: ## Install all dependencies
 	@echo "📦 Installing dependencies..."
-	cd backend && pip install -r requirements.txt
+	pip install -r requirements/base.txt
 
 dev-setup: ## Setup development environment
 	@echo "🔧 Setting up development environment..."
-	cd backend && pip install -r requirements.txt
+	pip install -r requirements/dev.txt
 	pre-commit install || echo "Pre-commit not available, skipping..."
 
 install-dev: ## Install development dependencies only
 	@echo "🛠️ Installing development dependencies..."
-	cd backend && pip install -r requirements.txt
-	pip install black isort flake8 mypy pytest pytest-cov pytest-asyncio
+	pip install -r requirements/dev.txt
 
 # ==========================================
 # Code Quality and Testing

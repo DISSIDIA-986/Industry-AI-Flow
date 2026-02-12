@@ -8,10 +8,13 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-import psycopg2
-import psycopg2.extras
+from backend.services.database.driver_compat import (
+    connect as connect_db,
+    fetchall_dicts,
+    fetchone_dict,
+)
 
 # 配置日志
 logging.basicConfig(
@@ -31,9 +34,7 @@ class ComprehensiveDatabaseInitializer:
     def connect(self):
         """建立数据库连接"""
         try:
-            self.conn = psycopg2.connect(
-                self.database_url, cursor_factory=psycopg2.extras.DictCursor
-            )
+            self.conn = connect_db(self.database_url)
             self.cursor = self.conn.cursor()
             logger.info("Database connection established successfully")
             return True
@@ -142,7 +143,8 @@ class ComprehensiveDatabaseInitializer:
         try:
             # 检查是否已有Prompt数据
             self.cursor.execute("SELECT COUNT(*) as count FROM prompts")
-            count = self.cursor.fetchone()["count"]
+            row = fetchone_dict(self.cursor) or {}
+            count = int(row.get("count") or 0)
 
             if count > 0:
                 logger.info(f"Found {count} existing prompts, skipping initialization")
@@ -347,7 +349,7 @@ Format the output as structured JSON with clear categorization.""",
             self.conn.rollback()
             return False
 
-    def verify_schema(self) -> Dict[str, any]:
+    def verify_schema(self) -> Dict[str, Any]:
         """验证数据库架构"""
         try:
             verification_result = {
@@ -385,7 +387,11 @@ Format the output as structured JSON with clear categorization.""",
                 WHERE table_schema = 'public'
             """
             )
-            existing_tables = {row["table_name"] for row in self.cursor.fetchall()}
+            existing_tables = {
+                str(row.get("table_name"))
+                for row in fetchall_dicts(self.cursor)
+                if row.get("table_name")
+            }
 
             for table in expected_tables:
                 verification_result["tables"][table] = table in existing_tables
@@ -402,7 +408,11 @@ Format the output as structured JSON with clear categorization.""",
                 WHERE table_schema = 'public'
             """
             )
-            existing_views = {row["table_name"] for row in self.cursor.fetchall()}
+            existing_views = {
+                str(row.get("table_name"))
+                for row in fetchall_dicts(self.cursor)
+                if row.get("table_name")
+            }
             verification_result["views"]["prompt_summary"] = (
                 "prompt_summary" in existing_views
             )
