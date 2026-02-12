@@ -193,3 +193,24 @@ Completed (Phase 4 partial, P1):
   - Added regression test `tests/unit/test_main_api_version_alias_routes.py` and wired it into `test-demo-mode-gate`.
 - UI readability:
   - Improved MVP `data-analysis` and `documents` pages with summary cards and artifact/log previews.
+
+---
+
+## 8. Audit Remediation (Round 2)
+
+Completed:
+- Dependency baseline unification (P0):
+  - Updated `requirements/base.txt` to use `requirements/lock/py313-capstone.txt` as canonical runtime source.
+  - Updated `backend/requirements.txt` as a compatibility shim to root base requirements.
+  - Updated `Makefile` install targets (`install`, `dev-setup`, `install-dev`) to install from root layered requirements instead of stale backend-only spec.
+- DB compatibility extension coverage (P1):
+  - Updated `backend/init_comprehensive_database.py` to remove direct `psycopg2` hard dependency and use `backend/services/database/driver_compat.py`.
+- Intent boundary hardening (P1):
+  - Tightened `backend/services/workflows/nodes/intent_node.py` Chinese cost heuristics to reduce generic "成本/预算" false positives while preserving reverse-order phrasing support.
+  - Added regression tests in `tests/unit/test_workflow_intent_node.py` for:
+    - Chinese reverse-order positive case
+    - non-estimation cost-governance negative case
+
+Validation evidence:
+- `make test-cost-estimation-gate` passed.
+- `make test-release-gate` passed.

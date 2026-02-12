@@ -40,3 +40,29 @@ async def test_intent_node_supports_classify_intent_interface():
     assert updated["intent"] == "cost_estimation"
     assert updated["metadata"]["intent_source"] == "classifier"
     assert updated["metadata"]["intent_confidence"] == 0.92
+
+
+@pytest.mark.asyncio
+async def test_intent_node_detects_chinese_reverse_order_cost_phrase():
+    state = {
+        "query": "请帮我估算这个工程成本，并预测是否会超支",
+        "metadata": {},
+    }
+
+    updated = await intent_node(state, SimpleNamespace())
+
+    assert updated["intent"] == "cost_estimation"
+    assert updated["metadata"]["intent_source"] == "heuristic"
+
+
+@pytest.mark.asyncio
+async def test_intent_node_does_not_route_generic_cost_governance_to_estimation():
+    state = {
+        "query": "请解释项目成本控制策略和风险治理框架",
+        "metadata": {},
+    }
+
+    updated = await intent_node(state, SimpleNamespace())
+
+    assert updated["intent"] == "knowledge_retrieval"
+    assert updated["metadata"]["intent_source"] == "heuristic"
