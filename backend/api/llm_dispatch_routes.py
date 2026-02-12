@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.security.context import TenantContext
 from backend.security.dependencies import get_current_tenant, secure_endpoint
+from backend.services.demo_mode_service import get_demo_mode_service
 from backend.services.llm_integration.dispatch_service import get_dispatch_service
 from backend.services.llm_integration.types import DispatchRequest
 
@@ -34,7 +35,33 @@ async def dispatch_query(
     tenant: TenantContext = Depends(get_current_tenant),
 ):
     trace_id = str(uuid.uuid4())
-    route_mode = req.route_mode or settings.resolved_hybrid_mode
+    demo_mode_service = get_demo_mode_service()
+    demo_state = demo_mode_service.get_state()
+    route_mode = demo_mode_service.resolve_route_mode(
+        req.route_mode or settings.resolved_hybrid_mode
+    )
+
+    replay = demo_mode_service.replay_response(req.question)
+    if replay is not None:
+        return {
+            "trace_id": trace_id,
+            "answer": replay["response"],
+            "provider_used": "scripted_replay",
+            "route_mode": "scripted_replay",
+            "latency_ms": 0,
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            "cost": {"estimated_cost_usd": 0.0},
+            "model": "scripted-replay-v1",
+            "demo_mode": demo_state["mode"],
+            "replay_scenario": replay["id"],
+            "safety": {
+                "redaction_applied": False,
+                "sensitive_hit_count": 0,
+                "redaction_categories": [],
+                "policy_decision": "scripted_replay",
+            },
+        }
+
     dispatch_service = get_dispatch_service()
 
     result = dispatch_service.generate(
@@ -59,6 +86,7 @@ async def dispatch_query(
                 "provider_used": result.provider,
                 "route_mode": result.route_mode,
                 "policy_decision": result.policy_decision,
+                "demo_mode": demo_state["mode"],
             },
         )
 
@@ -71,6 +99,7 @@ async def dispatch_query(
         "usage": result.usage.to_dict(),
         "cost": result.cost.to_dict(),
         "model": result.model,
+        "demo_mode": demo_state["mode"],
         "safety": {
             "redaction_applied": result.redaction_applied,
             "sensitive_hit_count": result.sensitive_hit_count,

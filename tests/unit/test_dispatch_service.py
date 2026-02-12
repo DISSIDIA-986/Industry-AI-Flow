@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
+
+from backend.services.demo_mode_service import (
+    DEMO_MODE_LIVE_HYBRID,
+    DEMO_MODE_LOCAL_SAFE,
+    get_demo_mode_service,
+)
 from backend.services.llm_integration.dispatch_service import DispatchService
 from backend.services.llm_integration.types import (
     CostStats,
@@ -54,6 +61,14 @@ class _FakeTracker:
             "decision": "block_cloud",
             "policy_mode": "block",
         }
+
+
+@pytest.fixture(autouse=True)
+def _reset_demo_mode_state():
+    service = get_demo_mode_service()
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
+    yield
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
 
 
 def test_local_only_uses_local_client():
@@ -116,3 +131,25 @@ def test_cloud_only_respects_budget_block_policy():
     res = service.generate(req)
     assert res.success is False
     assert res.policy_decision == "block_cloud"
+
+
+def test_cloud_only_request_is_forced_to_local_in_local_safe_mode():
+    get_demo_mode_service().set_mode(DEMO_MODE_LOCAL_SAFE)
+
+    tracker = _FakeTracker(allow_cloud=True)
+    service = DispatchService(
+        local_client=_FakeLocalClient("local answer"),
+        cloud_client=_FakeCloudClient("cloud answer"),
+        tracker=tracker,
+    )
+    req = DispatchRequest(
+        prompt="hello",
+        tenant_id="tenant-a",
+        trace_id="trace-4",
+        route_mode="cloud_only",
+    )
+
+    res = service.generate(req)
+    assert res.success is True
+    assert res.provider in {"llama_cpp", "ollama"}
+    assert res.route_mode == "local_only"

@@ -7,6 +7,11 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from backend.api import enhanced_query_routes, llm_cost_routes, llm_dispatch_routes
+from backend.services.demo_mode_service import (
+    DEMO_MODE_LIVE_HYBRID,
+    DEMO_MODE_LOCAL_SAFE,
+    get_demo_mode_service,
+)
 from backend.security.context import TenantContext
 from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.llm_integration.types import (
@@ -39,6 +44,14 @@ def _build_app(
     app.dependency_overrides[secure_endpoint] = _mock_secure
     app.dependency_overrides[get_current_tenant] = _mock_tenant
     return app
+
+
+@pytest.fixture(autouse=True)
+def _reset_demo_mode_state():
+    service = get_demo_mode_service()
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
+    yield
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
 
 
 @pytest.mark.asyncio
@@ -104,6 +117,44 @@ async def test_dispatch_route_failure(monkeypatch):
     assert resp.status_code == 502
     detail = resp.json()["detail"]
     assert detail["policy_decision"] == "block_cloud"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_route_forces_local_under_local_safe_mode(monkeypatch):
+    observed = {}
+
+    class _FakeDispatchService:
+        def generate(self, req):
+            observed["route_mode"] = req.route_mode
+            return DispatchResponse(
+                success=True,
+                text="forced local",
+                provider="llama_cpp",
+                model="fake-local",
+                route_mode="local_only",
+                trace_id=req.trace_id,
+                latency_ms=10,
+                usage=UsageStats(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+                cost=CostStats(estimated_cost_usd=0.0),
+            )
+
+    get_demo_mode_service().set_mode(DEMO_MODE_LOCAL_SAFE)
+    monkeypatch.setattr(
+        llm_dispatch_routes, "get_dispatch_service", lambda: _FakeDispatchService()
+    )
+
+    app = _build_app()
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        resp = await client.post(
+            "/api/v1/query/dispatch",
+            json={"question": "hello", "route_mode": "cloud_only"},
+        )
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert observed["route_mode"] == "local_only"
+    assert payload["route_mode"] == "local_only"
 
 
 @pytest.mark.asyncio

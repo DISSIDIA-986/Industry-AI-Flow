@@ -5,6 +5,7 @@
 set -e
 
 echo "🔍 开始环境兼容性检查和自动安装..."
+LOCK_FILE="requirements/lock/py313-capstone.txt"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -205,8 +206,10 @@ EOF
 create_locked_requirements() {
     log_info "创建锁定的依赖文件..."
 
-    pip freeze > requirements.locked.txt
-    log_success "已创建 requirements.locked.txt"
+    mkdir -p "$(dirname "$LOCK_FILE")"
+    pip freeze > "$LOCK_FILE"
+    cp "$LOCK_FILE" requirements.locked.txt
+    log_success "已创建 $LOCK_FILE（并同步兼容副本 requirements.locked.txt）"
 }
 
 # 生成环境信息
@@ -265,7 +268,8 @@ main() {
     echo "3. 运行测试: python -m pytest tests/"
     echo ""
     echo "📁 生成的文件:"
-    echo "- requirements.locked.txt (锁定的依赖列表)"
+    echo "- $LOCK_FILE (锁定的依赖列表)"
+    echo "- requirements.locked.txt (兼容副本)"
     echo "- environment_info.json (环境信息)"
     echo ""
     log_success "现在可以运行测试了！"

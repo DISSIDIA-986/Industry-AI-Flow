@@ -1,0 +1,7 @@
+# Capstone runtime dependencies (Python 3.13 baseline)
+-r ../backend/requirements.txt
+
+# Runtime complements used by workflow gates
+pydantic-settings>=2.0.3,<3.0.0
+asyncpg==0.29.0
+alembic>=1.13.0,<2.0.0

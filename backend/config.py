@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     max_cloud_calls_per_minute: int = int(
         os.getenv("MAX_CLOUD_CALLS_PER_MINUTE", "120")
     )
+    demo_mode: str = os.getenv(
+        "DEMO_MODE", "live_hybrid"
+    )  # live_hybrid | local_safe | scripted_replay
+    demo_allow_cloud_override: bool = (
+        os.getenv("DEMO_ALLOW_CLOUD_OVERRIDE", "false").lower() == "true"
+    )
 
     # 向量化 (Phase 2: 升级到 nomic-embed-text-v1.5)
     embedding_model: str = os.getenv(
@@ -328,6 +334,13 @@ class Settings(BaseSettings):
         if mode in {"local_only", "hybrid_auto", "cloud_only"}:
             return mode
         return "local_only"
+
+    @property
+    def resolved_demo_mode(self) -> str:
+        mode = self._normalize_token(self.demo_mode)
+        if mode in {"live_hybrid", "local_safe", "scripted_replay"}:
+            return mode
+        return "live_hybrid"
 
     @property
     def resolved_local_backend(self) -> str:

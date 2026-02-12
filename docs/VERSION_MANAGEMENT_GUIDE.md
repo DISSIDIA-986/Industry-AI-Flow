@@ -65,14 +65,15 @@ source venv/bin/activate
 ### 3. 版本锁定机制
 
 **文件说明:**
-- `requirements.locked.txt`: 精确锁定的依赖版本
+- `requirements/lock/py313-capstone.txt`: 精确锁定的依赖版本（主文件）
+- `requirements.locked.txt`: 兼容副本
 - `pyproject.toml`: 现代Python项目管理配置
 - `.pre-commit-config.yaml`: 代码质量和兼容性检查钩子
 
 **使用方法:**
 ```bash
 # 安装锁定的依赖
-pip install -r requirements.locked.txt
+pip install -r requirements/lock/py313-capstone.txt
 
 # 从pyproject.toml安装（推荐）
 pip install -e .
@@ -130,7 +131,7 @@ python3 -m pytest tests/   # 运行测试套件
 
 # 部署前检查
 python3 version_manager.py --save-report
-pip install -r requirements.locked.txt
+pip install -r requirements/lock/py313-capstone.txt
 ```
 
 ## 故障排除
@@ -204,7 +205,7 @@ pip install "langchain==0.1.0" "langchain-core==0.1.0"
 ### 1. 依赖缓存
 ```bash
 # 使用pip缓存加速安装
-pip install --cache-dir ~/.cache/pip -r requirements.locked.txt
+pip install --cache-dir ~/.cache/pip -r requirements/lock/py313-capstone.txt
 ```
 
 ### 2. 并行安装

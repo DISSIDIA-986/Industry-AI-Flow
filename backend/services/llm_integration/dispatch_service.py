@@ -10,6 +10,7 @@ from typing import Optional
 from backend.config import settings
 from backend.observability.llm_metrics import record_llm_fallback, record_llm_request
 from backend.services.audit_logger import audit_logger
+from backend.services.demo_mode_service import get_demo_mode_service
 from backend.services.llm_integration.cost_tracker import CostTracker, cost_tracker
 from backend.services.llm_integration.llm_client import LLMClientFactory
 from backend.services.llm_integration.types import (
@@ -83,9 +84,26 @@ class DispatchService:
         return str(info.get("model") or info.get("name") or fallback)
 
     def generate(self, req: DispatchRequest) -> DispatchResponse:
-        route_mode = req.route_mode or settings.resolved_hybrid_mode
-        if route_mode not in {"local_only", "hybrid_auto", "cloud_only"}:
-            route_mode = settings.resolved_hybrid_mode
+        demo_mode_service = get_demo_mode_service()
+        replay = demo_mode_service.replay_response(req.prompt)
+        if replay is not None:
+            return DispatchResponse(
+                success=True,
+                text=str(replay["response"]),
+                provider="scripted_replay",
+                model="scripted-replay-v1",
+                route_mode="local_only",
+                trace_id=req.trace_id,
+                latency_ms=0,
+                confidence=1.0,
+                usage=UsageStats(),
+                cost=CostStats(),
+                policy_decision="scripted_replay",
+            )
+
+        route_mode = demo_mode_service.resolve_route_mode(
+            req.route_mode or settings.resolved_hybrid_mode
+        )
 
         if route_mode == "local_only":
             return self._run_local(req, route_mode="local_only")
@@ -238,6 +256,24 @@ class DispatchService:
         started = time.time()
         provider = settings.resolved_cloud_provider
         model = provider
+        demo_mode_service = get_demo_mode_service()
+
+        if not demo_mode_service.cloud_calls_allowed():
+            latency_ms = int((time.time() - started) * 1000)
+            if route_mode == "hybrid_auto":
+                record_llm_fallback(reason="demo_mode_force_local")
+                return self._run_local(req, route_mode="hybrid_auto", soft_fail=True)
+            return DispatchResponse(
+                success=False,
+                text="Cloud provider is disabled by current demo mode.",
+                provider=provider,
+                model=model,
+                route_mode=route_mode,  # type: ignore[arg-type]
+                trace_id=req.trace_id,
+                latency_ms=latency_ms,
+                policy_decision="demo_mode_force_local",
+                error="cloud_disabled_by_demo_mode",
+            )
 
         rate_limit = max(1, settings.max_cloud_calls_per_minute)
         cloud_window = self._cloud_call_windows[req.tenant_id]
