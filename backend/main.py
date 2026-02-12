@@ -6,7 +6,7 @@ import psutil
 import uvicorn
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from backend.api.document_management_routes import router as document_management_router
 from backend.api.enhanced_query_routes import router as enhanced_query_router
@@ -161,11 +161,13 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=3, ge=1, le=20)
     data_file: Optional[str] = Field(default=None, max_length=512)
 
-    @validator("question", pre=True, allow_reuse=True)
+    @field_validator("question", mode="before")
+    @classmethod
     def _sanitize_question(cls, value: str) -> str:
         return sanitize_text(value, field_name="question", max_length=2048)
 
-    @validator("data_file", pre=True, allow_reuse=True)
+    @field_validator("data_file", mode="before")
+    @classmethod
     def _sanitize_data_file(cls, value: Optional[str]) -> Optional[str]:
         return sanitize_identifier(value, "data_file") if value else value
 
@@ -175,11 +177,15 @@ class CodeExecutionRequest(BaseModel):
     data_files: Optional[List[str]] = None
     timeout: Optional[int] = Field(default=None, ge=1, le=900)
 
-    @validator("data_files", each_item=True, pre=True, allow_reuse=True)
-    def _sanitize_data_files(cls, value: Optional[str]) -> Optional[str]:
-        return sanitize_identifier(value, "data_files") if value else value
+    @field_validator("data_files", mode="before")
+    @classmethod
+    def _sanitize_data_files(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return None
+        return [sanitize_identifier(item, "data_files") for item in value if item]
 
-    @validator("code", pre=True, allow_reuse=True)
+    @field_validator("code", mode="before")
+    @classmethod
     def _validate_code(cls, value: str) -> str:
         if not value or not value.strip():
             raise ValueError("code cannot be empty")
@@ -194,19 +200,25 @@ class DataAnalysisRequest(BaseModel):
     target_column: Optional[str] = None
     columns: Optional[List[str]] = None
 
-    @validator("data_file", pre=True, allow_reuse=True)
+    @field_validator("data_file", mode="before")
+    @classmethod
     def _sanitize_data_file(cls, value: str) -> str:
         return sanitize_identifier(value, "data_file")
 
-    @validator("target_column", pre=True, allow_reuse=True)
+    @field_validator("target_column", mode="before")
+    @classmethod
     def _sanitize_target_column(cls, value: Optional[str]) -> Optional[str]:
         return sanitize_identifier(value, "target_column") if value else value
 
-    @validator("columns", each_item=True, pre=True, allow_reuse=True)
-    def _sanitize_columns(cls, value: Optional[str]) -> Optional[str]:
-        return sanitize_identifier(value, "columns") if value else value
+    @field_validator("columns", mode="before")
+    @classmethod
+    def _sanitize_columns(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return None
+        return [sanitize_identifier(item, "columns") for item in value if item]
 
-    @validator("analysis_type", pre=True, allow_reuse=True)
+    @field_validator("analysis_type", mode="before")
+    @classmethod
     def _sanitize_analysis_type(cls, value: str) -> str:
         return sanitize_identifier(value, "analysis_type", max_length=64)
 
@@ -221,23 +233,30 @@ class VisualizationRequest(BaseModel):
     save_format: str = "png"
     interactive: bool = False
 
-    @validator("data_file", pre=True, allow_reuse=True)
+    @field_validator("data_file", mode="before")
+    @classmethod
     def _sanitize_viz_data_file(cls, value: str) -> str:
         return sanitize_identifier(value, "data_file")
 
-    @validator("x_column", "y_column", "color_column", pre=True, allow_reuse=True)
-    def _sanitize_viz_columns(cls, value: Optional[str], field) -> Optional[str]:
-        return sanitize_identifier(value, field.name) if value else value
+    @field_validator("x_column", "y_column", "color_column", mode="before")
+    @classmethod
+    def _sanitize_viz_columns(
+        cls, value: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        return sanitize_identifier(value, info.field_name) if value else value
 
-    @validator("save_format", pre=True, allow_reuse=True)
+    @field_validator("save_format", mode="before")
+    @classmethod
     def _sanitize_save_format(cls, value: str) -> str:
         return sanitize_identifier(value, "save_format", max_length=16)
 
-    @validator("chart_type", pre=True, allow_reuse=True)
+    @field_validator("chart_type", mode="before")
+    @classmethod
     def _sanitize_chart_type(cls, value: str) -> str:
         return sanitize_identifier(value, "chart_type", max_length=64)
 
-    @validator("title", pre=True, allow_reuse=True)
+    @field_validator("title", mode="before")
+    @classmethod
     def _sanitize_title(cls, value: Optional[str]) -> Optional[str]:
         return (
             sanitize_text(value, field_name="title", max_length=256) if value else value

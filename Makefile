@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -70,7 +70,8 @@ test-llama: ## Run llama.cpp integration tests
 
 test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 	@echo "🛡️ Running phase-1 quality gate..."
-	python -m py_compile \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN -m py_compile \
 		backend/config.py \
 		backend/main.py \
 		backend/init_database.py \
@@ -87,8 +88,8 @@ test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 		backend/services/security/redaction_service.py \
 		backend/services/security/egress_guard.py \
 		backend/services/workflows/nodes/cost_estimation_node.py \
-		backend/observability/llm_metrics.py
-	pytest -q \
+		backend/observability/llm_metrics.py; \
+	$$PYTHON_BIN -m pytest -q \
 		tests/unit/test_dispatch_service.py \
 		tests/unit/test_redaction_service.py \
 		tests/unit/test_llm_api_routes.py \
@@ -104,11 +105,12 @@ test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 
 test-cost-estimation-gate: ## Run cost-estimation API/workflow gate
 	@echo "💰 Running cost-estimation gate..."
-	python -m py_compile \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN -m py_compile \
 		backend/api/cost_estimation_routes.py \
 		backend/services/cost_estimation_service.py \
-		backend/services/workflows/nodes/cost_estimation_node.py
-	pytest -q \
+		backend/services/workflows/nodes/cost_estimation_node.py; \
+	$$PYTHON_BIN -m pytest -q \
 		tests/integration/test_cost_estimation_api.py \
 		tests/integration/test_workflow_cost_estimation_query_api.py \
 		tests/unit/test_cost_estimation_service.py \
@@ -119,7 +121,7 @@ test-cost-estimation-gate: ## Run cost-estimation API/workflow gate
 
 test-demo-mode-gate: ## Run demo-mode workflow/dispatch gate
 	@echo "🎬 Running demo-mode gate..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN -m py_compile \
 		backend/config.py \
 		backend/api/demo_mode_routes.py \
@@ -127,18 +129,23 @@ test-demo-mode-gate: ## Run demo-mode workflow/dispatch gate
 		backend/api/workflow_query_routes.py \
 		backend/api/llm_dispatch_routes.py \
 		backend/services/llm_integration/dispatch_service.py; \
-	$$PYTHON_BIN -m pytest -q \
-		tests/unit/test_demo_mode_service.py \
-		tests/integration/test_demo_mode_api.py \
-		tests/unit/test_workflow_query_routes.py \
-		tests/unit/test_dispatch_service.py \
-		tests/unit/test_llm_config_resolution.py \
-		tests/unit/test_main_api_version_alias_routes.py \
-		tests/unit/test_main_demo_mode_router_mount_contract.py
+		$$PYTHON_BIN -m pytest -q \
+			tests/unit/test_demo_mode_service.py \
+			tests/integration/test_demo_mode_api.py \
+			tests/unit/test_workflow_query_routes.py \
+			tests/unit/test_dispatch_service.py \
+			tests/unit/test_llm_config_resolution.py \
+			tests/unit/test_main_api_version_alias_routes.py \
+			tests/unit/test_main_demo_mode_router_mount_contract.py
+
+test-demo-smoke: ## Run capstone demo smoke preflight + API sanity checks
+	@echo "🔥 Running capstone demo smoke..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_demo_smoke.py --pretty --train-model-if-missing $${DEMO_SMOKE_ARGS:-}
 
 test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
 	@echo "📈 Running workflow KPI gate..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/testing/build_kpi_payload.py \
 		--audit-log tests/evaluation/fixtures/audit_sample.jsonl \
 		--evaluation-json tests/evaluation/fixtures/ragas_sample_metrics.json \
@@ -159,20 +166,20 @@ test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
 
 test-rollback-rehearsal: ## Run rollback rehearsal checks and unit tests
 	@echo "🔁 Running rollback rehearsal..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	PROMPT_EXPERIMENTS_ENABLED=false CODE_EXECUTION_PROVIDER=docker \
 	$$PYTHON_BIN scripts/testing/run_rollback_rehearsal.py --pretty; \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_run_rollback_rehearsal_script.py
 
 test-schema-rehearsal: ## Run prompt schema migration rehearsal checks
 	@echo "🧱 Running schema migration rehearsal..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/testing/run_schema_migration_rehearsal.py --pretty; \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_run_schema_migration_rehearsal_script.py
 
 test-observability-replay: ## Run workflow observability replay gate
 	@echo "📊 Running observability replay..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/testing/run_observability_replay.py \
 		--audit-log tests/evaluation/fixtures/audit_sample.jsonl \
 		--evaluation-json tests/evaluation/fixtures/ragas_sample_metrics.json \
@@ -189,7 +196,7 @@ test-observability-replay: ## Run workflow observability replay gate
 
 test-legacy-regression: ## Run legacy /api/v1/query and /query/dispatch regression
 	@echo "🧪 Running legacy API regression..."
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_llm_api_routes.py
 
 test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
@@ -202,7 +209,7 @@ test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + re
 	@$(MAKE) test-legacy-regression
 
 export-prompt-catalog: ## Export prompt catalog YAML mirrors to research/prompt-catalog
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/migration/export_prompt_catalog.py --clean --pretty
 
 lint: ## Run code linting
@@ -341,7 +348,7 @@ prompt-admin: ## Run Streamlit prompt-admin (real API management)
 	streamlit run tools/prompt-admin/app.py
 
 prompt-admin-demo: ## Run prompt-admin demo API checks
-	@PYTHON_BIN=$$(if [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN scripts/testing/run_prompt_admin_demo.py --base-url $${PROMPT_API_BASE_URL:-http://localhost:8000} --pretty
 
 # ==========================================
