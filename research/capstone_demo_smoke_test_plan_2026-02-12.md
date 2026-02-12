@@ -21,18 +21,29 @@ Completed in this iteration:
 6. Updated `.env.example` defaults for local demo path:
 - explicit `LLM_BACKEND=ollama`
 - `LOCAL_PRIMARY_BACKEND=ollama`
+7. Fixed gate/runtime dependency drift:
+- pinned `httpx==0.26.0` in capstone lock (TestClient compatibility)
+- added `jinja2==3.1.4` to lock and release-gate deps
+8. Hardened Makefile Python resolver for gates:
+- gate targets now prefer `.venv_capstone` (Python 3.13 baseline) before fallback envs
+9. Stabilized smoke API import path:
+- `run_demo_smoke.py` now mounts minimal FastAPI routers for TestClient checks instead of importing `backend.main`
+- avoids false failures from unrelated heavy startup modules during smoke API sanity
+10. Pydantic v2 startup compatibility:
+- migrated `backend/main.py` request validators to `field_validator` style
+- removed unused `langchain_core` import from `backend/services/prompt_manager.py`
 
 Remaining operator actions on local machine:
 1. Start PostgreSQL server process (client exists, server currently not running).
 2. Align Ollama model with env (`OLLAMA_MODEL`) or pull the configured model.
-3. Bootstrap Python 3.13 lock env (`make capstone-env-setup`) before live rehearsal.
+3. Re-run full smoke after 1/2:
+- `make test-demo-smoke`
 
 ## 1. Current Readiness Snapshot
 
 ### 1.1 Verified status on current machine
 - Python:
-  - `python3` = 3.9.6
-  - `python3.13` = 3.13.12 (available)
+  - `.venv_capstone` = Python 3.13.12 (active baseline for gates)
 - Ollama:
   - service is running
   - installed model: `deepseek-r1:8b`
@@ -41,36 +52,37 @@ Remaining operator actions on local machine:
   - `psql` installed (14.20)
   - DB service is **not running** (`localhost:5432 - no response`)
 - Cost-estimation training dataset:
-  - no matching CSV found in current branch/worktree for required schema
+  - present: `datasets/unified_construction_projects_enhanced.csv` (schema check passed)
+- Cost model artifact:
+  - present: `workspace/models/cost_estimation/latest.json`
 - Capstone lock env:
-  - Python 3.13 is present, but lock dependencies are not installed in a dedicated 3.13 venv yet
+  - installed and validated in `.venv_capstone`
+- Release gate:
+  - `make test-release-gate` passes on current branch
+- Smoke status:
+  - `make test-demo-smoke` fails only on external prerequisites:
+    - Postgres not reachable
+    - Ollama configured model mismatch
+  - API smoke sub-check itself passes (`health/workflow/cost/predict/query`)
 
 ### 1.2 Immediate conclusion
-A complete local end-to-end demo run is **not ready yet**, but it is feasible on this Mac Studio after environment bootstrap and data/model preparation.
+A complete local end-to-end demo run is **almost ready** on this Mac Studio; only Postgres service startup and Ollama model alignment remain as blocking prerequisites.
 
 ---
 
 ## 2. Demo-Critical Missing Items (P0/P1)
 
 ## P0 (must finish before demo rehearsal)
-1. Cost model training input is missing in current branch.
-- Impact: `/api/v1/cost-estimation/predict` and NL cost route cannot provide real model output unless a model artifact is trained/loaded.
-
-2. PostgreSQL service is not running.
+1. PostgreSQL service is not running.
 - Impact: RAG/document/vector and workflow startup paths degrade or fail.
 
-3. Local LLM model mismatch.
+2. Local LLM model mismatch.
 - Config expects `qwen2.5:7b`, installed is `deepseek-r1:8b`.
 - Impact: local dispatch or RAG generation can fail if model is not present.
 
-4. Python runtime environment is inconsistent with project baseline.
-- Project baseline is Python 3.13, but existing venvs are mixed (`3.9` broken-arch env and `3.14` env).
-- Impact: dependency/runtime drift risk and unstable demo behavior.
-
 ## P1 (should finish for smoother demo)
 1. Unify env defaults for embedding (`.env` vs `backend/config.py` defaults) to avoid confusion.
-2. Add a dedicated smoke-test command/script for one-click verification.
-3. Refresh README setup snippets to align with capstone lock workflow.
+2. Refresh README setup snippets to align with capstone lock workflow and smoke prerequisites.
 
 ---
 

@@ -17,7 +17,6 @@ import asyncpg
 import jinja2
 from jinja2 import Template, meta
 from jinja2.sandbox import SandboxedEnvironment
-from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
 

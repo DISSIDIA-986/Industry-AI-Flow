@@ -202,6 +202,21 @@ make capstone-env-setup
 
 # 2) 检查当前环境与锁定清单的一致性
 make capstone-env-check
+
+# 3) 运行 Capstone Demo 冒烟（会校验数据集/模型/Postgres/Ollama并执行API冒烟）
+make test-demo-smoke
+```
+
+在执行 `make test-demo-smoke` 前，请先确保：
+
+```bash
+# PostgreSQL 服务已启动
+brew services start postgresql@14 || brew services start postgresql
+
+# Ollama 模型与配置一致（二选一）
+ollama pull qwen2.5:7b
+# 或修改 .env
+# OLLAMA_MODEL=deepseek-r1:8b
 ```
 
 依赖分层文件位于：
