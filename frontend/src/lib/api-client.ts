@@ -152,7 +152,7 @@ export interface DemoModeState {
 }
 
 export async function getPlatformHealth(config: AppConfigState) {
-  return request<HealthResponse>({ config, path: "health" });
+  return request<HealthResponse>({ config, path: "api/v1/health" });
 }
 
 export async function getWorkflowHealth(config: AppConfigState) {
@@ -229,7 +229,7 @@ export async function uploadDocument(config: AppConfigState, file: File) {
     headers["X-API-Key"] = config.apiKey;
   }
 
-  const response = await fetch("/api/backend/documents/upload", {
+  const response = await fetch("/api/backend/api/v1/documents/upload", {
     method: "POST",
     headers,
     body: form,
@@ -253,7 +253,7 @@ export async function uploadDataFile(config: AppConfigState, file: File) {
     headers["X-API-Key"] = config.apiKey;
   }
 
-  const response = await fetch("/api/backend/data/upload", {
+  const response = await fetch("/api/backend/api/v1/data/upload", {
     method: "POST",
     headers,
     body: form,
@@ -286,7 +286,7 @@ export async function runDataAnalysis(
 ) {
   return request<Record<string, unknown>>({
     config,
-    path: "data/analyze",
+    path: "api/v1/data/analyze",
     method: "POST",
     body: payload,
   });
@@ -298,7 +298,7 @@ export async function generateVisualization(
 ) {
   return request<Record<string, unknown>>({
     config,
-    path: "visualization/generate",
+    path: "api/v1/visualization/generate",
     method: "POST",
     body: payload,
   });

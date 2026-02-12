@@ -7,11 +7,12 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional
 
-import psycopg2
-from pgvector.psycopg2 import register_vector
-
 from backend.config import settings
 from backend.services.core.embedder import embed_single_text
+from backend.services.database.driver_compat import (
+    connect as connect_db,
+    register_pgvector,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,9 @@ class LongTermMemoryStore:
 
     def _ensure_table(self) -> None:
         try:
-            conn = psycopg2.connect(self.database_url)
+            conn = connect_db(self.database_url)
             cur = conn.cursor()
-            register_vector(conn)
+            register_pgvector(conn)
             cur.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
@@ -61,11 +62,8 @@ class LongTermMemoryStore:
                 conn.close()
 
     def _get_connection(self):
-        conn = psycopg2.connect(self.database_url)
-        try:
-            register_vector(conn)
-        except Exception:
-            pass
+        conn = connect_db(self.database_url)
+        register_pgvector(conn)
         return conn
 
     def store_memory(

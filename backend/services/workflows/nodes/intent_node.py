@@ -2,20 +2,87 @@
 
 from __future__ import annotations
 
-from typing import Any
+import re
+from typing import Any, Optional
 
 from backend.services.workflows.state import WorkflowState
 
 
+_COST_PATTERNS = (
+    re.compile(r"(estimate|estimating|predict|forecast).{0,24}(cost|budget|overrun)"),
+    re.compile(r"(cost|budget|overrun).{0,24}(estimate|estimation|predict|forecast)"),
+    re.compile(r"(成本|预算).{0,20}(估算|预测|超支|预估)"),
+)
+
+
 def _heuristic_intent(query: str) -> str:
     text = (query or "").strip().lower()
-    if any(token in text for token in ("python", "script", "execute", "run code")):
+    if any(
+        token in text
+        for token in ("python", "script", "execute", "run code", "执行代码", "脚本")
+    ):
         return "code_execution"
-    if any(token in text for token in ("analyze", "analysis", "dataset", "csv")):
+    if any(
+        token in text
+        for token in (
+            "cost estimate",
+            "cost estimation",
+            "estimate cost",
+            "budget estimate",
+            "cost overrun",
+            "construction cost",
+            "budget overrun",
+            "cost risk",
+            "预算估算",
+            "成本估算",
+            "预算",
+            "成本",
+            "估算",
+            "超支",
+        )
+    ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
+        return "cost_estimation"
+    if any(
+        token in text
+        for token in ("analyze", "analysis", "dataset", "csv", "统计", "数据分析")
+    ):
         return "data_analysis"
-    if any(token in text for token in ("document", "pdf", "ocr", "extract text")):
+    if any(
+        token in text
+        for token in ("document", "pdf", "ocr", "extract text", "文档", "提取文本")
+    ):
         return "document_processing"
     return "knowledge_retrieval"
+
+
+def _extract_intent_value(raw: Any) -> Optional[str]:
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        return raw
+    if hasattr(raw, "value"):
+        return str(getattr(raw, "value"))
+    return str(raw)
+
+
+async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
+    if hasattr(classifier, "classify_intent"):
+        for payload in (
+            {"query": query, "context": metadata},
+            {"query": query, "metadata": metadata},
+            {"query": query},
+        ):
+            try:
+                result = classifier.classify_intent(**payload)
+                return await result if hasattr(result, "__await__") else result
+            except TypeError:
+                continue
+
+    if hasattr(classifier, "classify"):
+        result = classifier.classify(query=query, metadata=metadata)
+        return await result if hasattr(result, "__await__") else result
+
+    return None
 
 
 async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
@@ -28,14 +95,20 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
         metadata["intent_source"] = "heuristic"
         return state
 
-    if hasattr(classifier, "classify"):
-        result = classifier.classify(query=query, metadata=metadata)
-        if hasattr(result, "__await__"):
-            result = await result
+    result = await _call_classifier(classifier, query, metadata)
+    if result is not None:
         if isinstance(result, dict):
-            state["intent"] = str(result.get("intent") or _heuristic_intent(query))
+            extracted = _extract_intent_value(result.get("intent"))
+            state["intent"] = extracted or _heuristic_intent(query)
+            if "confidence" in result:
+                metadata["intent_confidence"] = result.get("confidence")
+        elif hasattr(result, "intent"):
+            extracted = _extract_intent_value(getattr(result, "intent"))
+            state["intent"] = extracted or _heuristic_intent(query)
+            if hasattr(result, "confidence"):
+                metadata["intent_confidence"] = getattr(result, "confidence")
         else:
-            state["intent"] = str(result or _heuristic_intent(query))
+            state["intent"] = _extract_intent_value(result) or _heuristic_intent(query)
         metadata["intent_source"] = "classifier"
         return state
 

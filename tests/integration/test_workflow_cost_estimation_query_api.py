@@ -159,3 +159,22 @@ def test_workflow_query_cost_estimation_requires_budget_feature(client: TestClie
     assert "please provide at least" in payload["response"].lower()
     assert payload["metadata"]["cost_estimation_status"] == "need_features"
     assert payload["metadata"]["shortcut_response"] is True
+
+
+def test_workflow_query_estimate_cost_phrase_routes_to_cost_intent(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/workflow/query",
+        json={
+            "query": (
+                "Estimate cost risk for a 20-floor office in Toronto with 200000 sqft "
+                "and 18 months duration."
+            )
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+
+    assert payload["success"] is True
+    assert payload["intent"] == "cost_estimation"
+    assert payload["metadata"]["cost_estimation_status"] == "need_features"
+    assert payload["metadata"]["shortcut_response"] is True

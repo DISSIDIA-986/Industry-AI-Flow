@@ -159,6 +159,15 @@ async def _initialize_fallback_runner() -> WorkflowRunner:
     except Exception as exc:
         logger.warning("Fallback runner without cost estimation service: %s", exc)
 
+    try:
+        from backend.services.intent_classification.simple_intent_classifier import (
+            SimpleIntentClassifier,
+        )
+
+        services.intent_classifier = SimpleIntentClassifier()
+    except Exception as exc:
+        logger.warning("Fallback runner without intent classifier: %s", exc)
+
     orchestrator = WorkflowOrchestrator(services=services)
     return DefaultWorkflowRunner(orchestrator=orchestrator)
 

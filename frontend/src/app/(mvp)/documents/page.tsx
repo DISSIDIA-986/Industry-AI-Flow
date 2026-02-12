@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useAppConfig } from "@/components/app-config-context";
 import {
@@ -18,6 +18,25 @@ export default function DocumentsPage() {
   const [operations, setOperations] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const statsSummary = useMemo(() => {
+    if (!stats) {
+      return [];
+    }
+    const keys = ["total_documents", "active_documents", "total_chunks"];
+    return keys
+      .filter((key) => typeof stats[key] === "number")
+      .map((key) => [key, Number(stats[key])] as const);
+  }, [stats]);
+
+  const operationRows = useMemo(() => {
+    if (!operations || !Array.isArray(operations.logs)) {
+      return [];
+    }
+    return operations.logs
+      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      .slice(0, 5);
+  }, [operations]);
 
   async function handleUpload() {
     if (!selectedFile) {
@@ -84,14 +103,51 @@ export default function DocumentsPage() {
         <div className="result-grid">
           <div>
             <p className="result-label">Upload Result</p>
+            {uploadResult ? (
+              <div className="kv-grid">
+                {Object.entries(uploadResult)
+                  .filter(([key, value]) =>
+                    ["filename", "sanitized_filename", "size", "status"].includes(key) &&
+                    ["string", "number"].includes(typeof value),
+                  )
+                  .map(([key, value]) => (
+                    <div key={key} className="kv-item">
+                      <span>{key}</span>
+                      <strong>{String(value)}</strong>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
             <pre>{uploadResult ? JSON.stringify(uploadResult, null, 2) : "No upload yet"}</pre>
           </div>
           <div>
             <p className="result-label">Document Statistics</p>
+            {statsSummary.length ? (
+              <div className="kv-grid">
+                {statsSummary.map(([key, value]) => (
+                  <div key={key} className="kv-item">
+                    <span>{key}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <pre>{stats ? JSON.stringify(stats, null, 2) : "No stats loaded"}</pre>
           </div>
           <div>
             <p className="result-label">Operations Log</p>
+            {operationRows.length ? (
+              <div className="log-list">
+                {operationRows.map((row, index) => (
+                  <div key={`${String(row.id ?? index)}`} className="log-item">
+                    <strong>{String(row.operation ?? "operation")}</strong>
+                    <span>
+                      {String(row.status ?? "unknown")} · {String(row.filename ?? "-")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <pre>{operations ? JSON.stringify(operations, null, 2) : "No log loaded"}</pre>
           </div>
         </div>

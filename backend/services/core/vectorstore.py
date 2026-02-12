@@ -2,11 +2,12 @@ import logging
 import time
 import uuid
 
-import psycopg2
-from pgvector.psycopg2 import register_vector
-
 from backend.config import settings
 from backend.observability.performance_metrics import record_db_query_duration
+from backend.services.database.driver_compat import (
+    connect as connect_db,
+    register_pgvector,
+)
 
 
 class VectorStore:
@@ -20,21 +21,17 @@ class VectorStore:
 
     def get_connection(self):
         """获取数据库连接"""
-        conn = psycopg2.connect(self.database_url)
+        conn = connect_db(self.database_url)
         # 尝试注册 pgvector，如果不可用则跳过
-        try:
-            register_vector(conn)
-        except Exception:
-            # pgvector 扩展未安装，向量将存储为 TEXT
-            pass
+        register_pgvector(conn)
         return conn
 
     def _ensure_indexes(self) -> None:
         """Create helpful indexes if they do not exist."""
         try:
-            conn = psycopg2.connect(self.database_url)
+            conn = connect_db(self.database_url)
             cur = conn.cursor()
-            register_vector(conn)
+            register_pgvector(conn)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents(filename);"
             )

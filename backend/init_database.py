@@ -4,16 +4,15 @@
 
 import logging
 
-import psycopg2
-
 from backend.config import settings
+from backend.services.database.driver_compat import connect as connect_db
 
 logger = logging.getLogger(__name__)
 
 
 def init_database():
     """初始化数据库表结构"""
-    conn = psycopg2.connect(settings.database_url)
+    conn = connect_db(settings.database_url)
     cur = conn.cursor()
 
     try:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useAppConfig } from "@/components/app-config-context";
 import {
@@ -9,6 +9,48 @@ import {
   uploadDataFile,
 } from "@/lib/api-client";
 import { normalizeError } from "@/lib/formatters";
+
+function firstArtifactPath(payload: Record<string, unknown> | null): string | null {
+  if (!payload) {
+    return null;
+  }
+
+  if (typeof payload.file_path === "string" && payload.file_path) {
+    return payload.file_path;
+  }
+
+  const chartInfo = payload.chart_info;
+  if (
+    chartInfo &&
+    typeof chartInfo === "object" &&
+    typeof (chartInfo as Record<string, unknown>).output_file === "string"
+  ) {
+    return (chartInfo as Record<string, string>).output_file;
+  }
+
+  const visualizations = payload.visualizations;
+  if (Array.isArray(visualizations)) {
+    for (const item of visualizations) {
+      if (item && typeof item === "object") {
+        const row = item as Record<string, unknown>;
+        if (typeof row.path === "string" && row.path) {
+          return row.path;
+        }
+        if (typeof row.filename === "string" && row.filename) {
+          return row.filename;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function basename(rawPath: string): string {
+  const normalized = rawPath.replace(/\\/g, "/");
+  const pieces = normalized.split("/");
+  return pieces[pieces.length - 1] || rawPath;
+}
 
 export default function DataAnalysisPage() {
   const { config } = useAppConfig();
@@ -20,6 +62,29 @@ export default function DataAnalysisPage() {
   const [viz, setViz] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const analysisSummary = useMemo(() => {
+    if (!result) {
+      return [];
+    }
+    return Object.entries(result)
+      .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+      .slice(0, 6);
+  }, [result]);
+
+  const visualizationAsset = useMemo(() => {
+    const raw = firstArtifactPath(viz);
+    if (!raw) {
+      return null;
+    }
+    const filename = basename(raw);
+    const extension = filename.split(".").pop()?.toLowerCase() ?? "";
+    return {
+      filename,
+      url: `/api/backend/api/v1/files/visualizations/${encodeURIComponent(filename)}`,
+      isImage: ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension),
+    };
+  }, [viz]);
 
   async function handleUploadData() {
     if (!file) {
@@ -140,10 +205,42 @@ export default function DataAnalysisPage() {
         <div className="result-grid">
           <div>
             <p className="result-label">Analysis Result</p>
+            {analysisSummary.length ? (
+              <div className="kv-grid">
+                {analysisSummary.map(([key, value]) => (
+                  <div key={key} className="kv-item">
+                    <span>{key}</span>
+                    <strong>{String(value)}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <pre>{result ? JSON.stringify(result, null, 2) : "No analysis result yet"}</pre>
           </div>
           <div>
             <p className="result-label">Visualization Result</p>
+            {visualizationAsset ? (
+              <div className="artifact-card">
+                <p className="muted-text">Artifact: {visualizationAsset.filename}</p>
+                {visualizationAsset.isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="artifact-image"
+                    src={visualizationAsset.url}
+                    alt={visualizationAsset.filename}
+                  />
+                ) : (
+                  <a
+                    className="secondary-button"
+                    href={visualizationAsset.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Generated Artifact
+                  </a>
+                )}
+              </div>
+            ) : null}
             <pre>{viz ? JSON.stringify(viz, null, 2) : "No visualization result yet"}</pre>
           </div>
         </div>

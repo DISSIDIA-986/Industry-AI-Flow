@@ -113,6 +113,7 @@ test-cost-estimation-gate: ## Run cost-estimation API/workflow gate
 		tests/integration/test_workflow_cost_estimation_query_api.py \
 		tests/unit/test_cost_estimation_service.py \
 		tests/unit/test_cost_estimation_workflow_intent.py \
+		tests/unit/test_workflow_intent_node.py \
 		tests/unit/test_workflow_orchestrator_pipeline.py \
 		tests/unit/test_main_cost_estimation_router_mount_contract.py
 
@@ -132,6 +133,7 @@ test-demo-mode-gate: ## Run demo-mode workflow/dispatch gate
 		tests/unit/test_workflow_query_routes.py \
 		tests/unit/test_dispatch_service.py \
 		tests/unit/test_llm_config_resolution.py \
+		tests/unit/test_main_api_version_alias_routes.py \
 		tests/unit/test_main_demo_mode_router_mount_contract.py
 
 test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
