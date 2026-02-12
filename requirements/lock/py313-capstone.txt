@@ -1,0 +1,35 @@
+# Locked Capstone environment (Python 3.13.x)
+# Install with: pip install -r requirements/lock/py313-capstone.txt
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+psycopg[binary]==3.2.1
+pgvector==0.2.5
+sentence-transformers==2.2.2
+PyMuPDF==1.24.10
+requests==2.31.0
+pydantic==1.10.13
+pydantic-settings==2.0.3
+psutil==5.9.6
+python-multipart==0.0.6
+cryptography==43.0.1
+PyJWT==2.9.0
+prometheus-fastapi-instrumentator==6.1.0
+bleach==6.1.0
+cachetools==5.5.0
+pytest-asyncio==0.21.0
+nltk==3.9.1
+rank-bm25==0.2.2
+asyncpg==0.29.0
+alembic==1.13.2
+
+# OCR stack (nightly paddlepaddle is installed separately when required)
+paddleocr==3.3.0
+
+# Tooling
+black==23.7.0
+isort==5.12.0
+flake8==6.0.0
+mypy==1.5.1
+pytest==7.4.0
+pytest-cov==4.1.0

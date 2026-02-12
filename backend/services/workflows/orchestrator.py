@@ -55,7 +55,9 @@ class DefaultWorkflowRunner:
         session_id: str,
         user_id: Optional[str] = None,
         thread_id: Optional[str] = None,
+        route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
+        resolved_route_mode = route_mode or "local_only"
         state: WorkflowState = {
             "trace_id": str(uuid4()),
             "tenant_id": "public",
@@ -64,7 +66,7 @@ class DefaultWorkflowRunner:
             "retrieved_context": [],
             "system_prompt": None,
             "prompt_meta": None,
-            "route_mode": "local_only",
+            "route_mode": resolved_route_mode,
             "provider_used": None,
             "response": None,
             "metrics": {},
@@ -73,7 +75,7 @@ class DefaultWorkflowRunner:
                 "session_id": session_id,
                 "user_id": user_id,
                 "thread_id": thread_id or session_id,
-                "requested_route_mode": None,
+                "requested_route_mode": resolved_route_mode,
                 "tenant_id": "public",
                 "workflow_runner": "fallback_orchestrator",
                 "prompt_experiments_enabled": bool(

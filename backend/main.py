@@ -12,6 +12,8 @@ from backend.api.document_management_routes import router as document_management
 from backend.api.enhanced_query_routes import router as enhanced_query_router
 
 # 导入新的API路由
+from backend.api.cost_estimation_routes import router as cost_estimation_router
+from backend.api.demo_mode_routes import router as demo_mode_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
@@ -128,8 +130,10 @@ app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
 )
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
+app.include_router(cost_estimation_router)
 app.include_router(llm_dispatch_router)  # llm_dispatch_routes已包含prefix
 app.include_router(llm_cost_router)  # llm_cost_routes已包含prefix
+app.include_router(demo_mode_router)
 # prompt_routes already has prefix "/api/prompts", avoid double-prefixing to "/api/v1/api/prompts".
 app.include_router(prompt_router, tags=["prompts"])  # P0修复：注册Prompt路由
 app.include_router(workflow_query_router)

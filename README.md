@@ -65,6 +65,7 @@ Industry AI Flow是一个现代化的AI工作流平台，集成了：
 - **对话记忆**：默认开启「短期 + 摘要 + 长期」三层记忆体系（`ENABLE_CONVERSATION_MEMORY` 等变量可调），记忆摘要和结构化事实自动写入 `conversation_memories` 表，详情见 `docs/MEMORY_SYSTEM.md`。
 - **智能缓存**：`QUERY_CACHE_ENABLED` + `QUERY_CACHE_TTL_SECONDS`/`QUERY_CACHE_MAXSIZE` 可缓存多租户 RAG 查询结果，降低响应延迟。
 - **统一调度**：新增 `HYBRID_MODE`（`local_only | hybrid_auto | cloud_only`）、`LOCAL_PRIMARY_BACKEND`、`CLOUD_PROVIDER`、`LOCAL_CONFIDENCE_THRESHOLD`，通过 `/api/v1/query/dispatch` 统一管理本地优先与云端回退。
+- **演示模式**：支持 `DEMO_MODE`（`live_hybrid | local_safe | scripted_replay`），并提供 `/api/v1/demo/mode` 管理接口，可在答辩现场快速切换主模式、离线保底模式和脚本回放模式。
 - **成本治理**：新增 `/api/v1/llm/usage` 与 `/api/v1/llm/budget/{tenant_id}`，并落库 `llm_usage_logs`、`llm_budget_policies`，支持租户预算阈值与超限策略。
 - **隐私出站守卫**：云端调用前执行脱敏与 egress policy 校验，审计日志会记录 `provider/redaction_applied/sensitive_hit_count/policy_decision`。
 - **可观测性**：启用 `ENABLE_PROMETHEUS_METRICS=true` 暴露 `/metrics` 供 Prometheus/Alertmanager 抓取；`LOG_FORMAT_JSON=true` 提供结构化JSON日志，便于集中化分析。
@@ -193,6 +194,22 @@ make lint             # 运行代码检查
 - **Node.js**: 16+ (可选，用于前端工具)
 - **Docker**: 20+ (可选，用于容器化部署)
 
+### 🧩 Capstone Demo 环境标准（推荐）
+
+```bash
+# 1) 一键创建并安装锁定环境（Python 3.13）
+make capstone-env-setup
+
+# 2) 检查当前环境与锁定清单的一致性
+make capstone-env-check
+```
+
+依赖分层文件位于：
+- `requirements/base.txt`
+- `requirements/dev.txt`
+- `requirements/demo.txt`
+- `requirements/lock/py313-capstone.txt`
+
 ### 🔧 快速安装
 
 ```bash
@@ -252,6 +269,22 @@ make prompt-admin
 # 运行 Prompt Admin 演示脚本（API 探活 + 可选实验流量演练）
 make prompt-admin-demo
 ```
+
+### 🎨 Frontend MVP（Next.js）
+
+```bash
+# 安装并启动前端
+make frontend-install
+make frontend-dev
+
+# 或直接在 frontend 目录执行
+cd frontend
+npm run dev
+```
+
+- 默认访问地址: `http://localhost:3000`
+- 前端通过 `frontend/src/app/api/backend/[...path]/route.ts` 代理到后端
+- 默认后端地址: `http://127.0.0.1:8000`（可在 `frontend/.env.local` 设置 `BACKEND_BASE_URL`）
 
 ### 🐳 Docker 部署
 
@@ -470,15 +503,18 @@ Industry-AI-Flow/
 │   └── old-docs/                      # 📄 其他临时文档
 
 ├── 📄 README.md                        # 📖 项目主页
-├── 📄 QUICK_START_GUIDE.md             # 🚀 快速开始指南
-├── 📄 INSTALLATION_GUIDE.md            # ⚙️ 详细安装指南
-├── 📁 Temp/reports/PROJECT_STRUCTURE_OPTIMIZATION_PLAN.md # 📋 项目结构优化计划（归档）
+├── 📄 .deprecated/guides/2026-02-12-batch3/QUICK_START_GUIDE.md  # 🚀 快速开始指南（归档）
+├── 📄 .deprecated/guides/2026-02-12-batch3/INSTALLATION_GUIDE.md # ⚙️ 详细安装指南（归档）
+├── 📁 temp/reports/PROJECT_STRUCTURE_OPTIMIZATION_PLAN.md # 📋 项目结构优化计划（归档）
 ├── 📄 Makefile                         # 🔨 优化的构建脚本
 ├── 📄 .globalignore                    # 🚫 忽略归档和临时文件
 └── 📄 .env.example                     # 📝 环境变量示例
 ```
 
 ### 核心架构组件
+
+> 推荐优先查看可视化楼层架构图（HTML）：
+> **[docs/ARCHITECTURE_DIAGRAM.html](docs/ARCHITECTURE_DIAGRAM.html)**
 
 #### 🧠 意图分类工作流
 ```mermaid
@@ -626,8 +662,8 @@ MIT License
 ## 📚 文档导航
 
 - **📖 [文档中心](docs/README.md)** - 完整的文档索引和导航
-- **🚀 [快速开始](QUICK_START_GUIDE.md)** - 5分钟快速上手
-- **⚙️ [安装指南](INSTALLATION_GUIDE.md)** - 详细的环境配置
+- **🚀 [快速开始](.deprecated/guides/2026-02-12-batch3/QUICK_START_GUIDE.md)** - 5分钟快速上手
+- **⚙️ [安装指南](.deprecated/guides/2026-02-12-batch3/INSTALLATION_GUIDE.md)** - 详细的环境配置
 - **👨‍💻 [开发指南](docs/development/contributing.md)** - 参与项目开发
 - **🧪 [测试指南](docs/development/testing.md)** - 运行和编写测试
 - **📝 [测试用例](test_cases/README.md)** - 测试用例规格说明

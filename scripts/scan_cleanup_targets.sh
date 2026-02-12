@@ -48,18 +48,18 @@ destination_for() {
   local base
   base="$(basename "$rel")"
   if [[ "$rel" == *.md ]]; then
-    echo "Temp/reports/$base"
+    echo ".deprecated/reports/auto/$base"
     return
   fi
   if [[ "$base" == verify_*.py ]]; then
-    echo "Deprecated/root-scripts/$base"
+    echo ".deprecated/root-scripts/$base"
     return
   fi
   if [[ -d "$ROOT/$rel" ]]; then
-    echo "Deprecated/artifacts/$base"
+    echo ".deprecated/artifacts/$base"
     return
   fi
-  echo "Temp/session-work/$base"
+  echo "temp/session-work/$base"
 }
 
 collect_candidates() {

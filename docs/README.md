@@ -7,8 +7,8 @@ Welcome to the comprehensive documentation center for Industry AI Flow. This doc
 ### For Users
 - **[📘 User Guide](user/)** - Getting started and using the system
 - **[🔧 Basic Usage](user/basic-usage.md)** - Core functionality walkthrough
-- **[⚡ Quick Start](../../QUICK_START_GUIDE.md)** - 5-minute setup guide
-- **[🛠️ Installation](../../INSTALLATION_GUIDE.md)** - Detailed installation instructions
+- **[⚡ Quick Start](../.deprecated/guides/2026-02-12-batch3/QUICK_START_GUIDE.md)** - 5-minute setup guide
+- **[🛠️ Installation](../.deprecated/guides/2026-02-12-batch3/INSTALLATION_GUIDE.md)** - Detailed installation instructions
 
 ### For Developers
 - **[👨‍💻 Developer Guide](developer/)** - Development setup and contribution
@@ -26,6 +26,8 @@ Welcome to the comprehensive documentation center for Industry AI Flow. This doc
 
 ### 🏗️ [Architecture Documentation](architecture/)
 System architecture and design documents
+- [Layered Floor Diagram (HTML)](ARCHITECTURE_DIAGRAM.html) - Visual architecture map with colored dependency/data flows
+- [Capstone Demo Modes](CAPSTONE_DEMO_MODES.md) - Live/Local/Replay mode control and API operations
 - [System Overview](architecture/system-overview.md) - High-level system architecture
 - [Intent Classifier](architecture/intent-classifier.md) - Query classification system design
 - [Prompt Management](architecture/prompt-management.md) - Prompt management strategy
@@ -61,7 +63,7 @@ User guides and tutorials
 
 ## 🚀 快速开始
 
-1. **新手入门**：阅读 [快速开始指南](../QUICK_START_GUIDE.md)
+1. **新手入门**：阅读 [快速开始指南](../.deprecated/guides/2026-02-12-batch3/QUICK_START_GUIDE.md)
 2. **环境配置**：参考 [设置指南](./implementation/setup-guide.md)
 3. **开发参与**：查看 [贡献指南](./development/contributing.md)
 

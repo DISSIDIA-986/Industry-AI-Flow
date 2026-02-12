@@ -6,10 +6,21 @@ import pytest
 
 import backend.api.workflow_query_routes as workflow_routes
 from backend.api.workflow_query_routes import get_workflow_runner, router
+from backend.services.demo_mode_service import (
+    DEMO_MODE_LIVE_HYBRID,
+    get_demo_mode_service,
+)
 
 
 class _FakeWorkflowRunner:
-    async def run_workflow(self, query, session_id, user_id=None, thread_id=None):
+    async def run_workflow(
+        self,
+        query,
+        session_id,
+        user_id=None,
+        thread_id=None,
+        route_mode=None,
+    ):
         return {
             "success": True,
             "agent_response": f"handled: {query}",
@@ -18,9 +29,18 @@ class _FakeWorkflowRunner:
                 "provider_used": "local",
                 "prompt_meta": {"name": "construction_rag_grounded_qa"},
                 "routing_path": "hybrid_auto",
+                "route_mode": route_mode,
             },
             "error": None,
         }
+
+
+@pytest.fixture(autouse=True)
+def _reset_demo_mode_state():
+    service = get_demo_mode_service()
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
+    yield
+    service.reset_for_tests(mode=DEMO_MODE_LIVE_HYBRID, allow_cloud_override=False)
 
 
 @pytest.mark.asyncio
