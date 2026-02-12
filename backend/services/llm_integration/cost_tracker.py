@@ -8,11 +8,13 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
 from backend.config import settings
 from backend.observability.llm_metrics import record_llm_cost, record_llm_tokens
+from backend.services.database.driver_compat import (
+    connect as connect_db,
+    fetchall_dicts,
+    fetchone_dict,
+)
 from backend.services.llm_integration.types import CostStats, UsageStats
 
 logger = logging.getLogger(__name__)
@@ -74,7 +76,7 @@ class CostTracker:
         return CostStats(estimated_cost_usd=round(float(estimated), 6))
 
     def _connect(self):
-        return psycopg2.connect(self.database_url)
+        return connect_db(self.database_url)
 
     def record_usage(
         self,
@@ -130,7 +132,7 @@ class CostTracker:
     ) -> Dict[str, object]:
         try:
             conn = self._connect()
-            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur = conn.cursor()
             params: List[object] = [tenant_id, max(1, days)]
             provider_filter = ""
             if provider:
@@ -155,7 +157,7 @@ class CostTracker:
                 """,
                 tuple(params),
             )
-            rows = [dict(item) for item in cur.fetchall()]
+            rows = fetchall_dicts(cur)
             cur.close()
             conn.close()
         except Exception as exc:
@@ -184,7 +186,7 @@ class CostTracker:
     def get_budget_policy(self, tenant_id: str) -> Optional[BudgetPolicy]:
         try:
             conn = self._connect()
-            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur = conn.cursor()
             cur.execute(
                 """
                 SELECT tenant_id, monthly_budget_usd, soft_limit_ratio,
@@ -194,7 +196,7 @@ class CostTracker:
                 """,
                 (tenant_id,),
             )
-            row = cur.fetchone()
+            row = fetchone_dict(cur)
             cur.close()
             conn.close()
             if not row:

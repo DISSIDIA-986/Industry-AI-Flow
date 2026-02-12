@@ -250,6 +250,7 @@ def get_memory_usage() -> float:
     return round(process.memory_info().rss / 1024 / 1024, 2)
 
 
+@app.get("/api/v1/health")
 @app.get("/health")
 async def health(tenant: TenantContext = Depends(get_current_tenant)):
     """健康检查"""
@@ -262,6 +263,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
     }
 
 
+@app.get("/api/v1/environment")
 @app.get("/environment")
 async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
     """获取执行环境信息"""
@@ -286,6 +288,7 @@ async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
         return {"error": str(e), "docker_available": False}
 
 
+@app.post("/api/v1/documents/upload")
 @app.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
@@ -333,6 +336,7 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
 
+@app.post("/api/v1/data/upload")
 @app.post("/data/upload")
 async def upload_data_file(
     file: UploadFile = File(...),
@@ -382,6 +386,7 @@ async def upload_data_file(
         raise HTTPException(status_code=500, detail=f"数据文件上传失败: {str(e)}")
 
 
+@app.post("/api/v1/rag/query")
 @app.post("/rag/query")
 async def rag_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
@@ -439,6 +444,7 @@ async def rag_query(
         return {"error": str(e), "question": request.question, "answer": "系统错误，请查看日志"}
 
 
+@app.post("/api/v1/unified/query")
 @app.post("/unified/query")
 async def unified_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
@@ -472,6 +478,7 @@ async def unified_query(
         }
 
 
+@app.post("/api/v1/code/execute")
 @app.post("/code/execute")
 async def execute_code(
     request: CodeExecutionRequest, tenant: TenantContext = Depends(get_current_tenant)
@@ -505,6 +512,7 @@ async def execute_code(
         return {"success": False, "error": str(e), "stdout": "", "stderr": str(e)}
 
 
+@app.post("/api/v1/code/validate")
 @app.post("/code/validate")
 async def validate_code(
     request: Dict[str, str], tenant: TenantContext = Depends(get_current_tenant)
@@ -536,6 +544,7 @@ async def validate_code(
         }
 
 
+@app.post("/api/v1/data/analyze")
 @app.post("/data/analyze")
 async def analyze_data(
     request: DataAnalysisRequest, tenant: TenantContext = Depends(get_current_tenant)
@@ -577,6 +586,7 @@ async def analyze_data(
         }
 
 
+@app.post("/api/v1/data/preprocess")
 @app.post("/data/preprocess")
 async def preprocess_data(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
@@ -608,6 +618,7 @@ async def preprocess_data(
         }
 
 
+@app.post("/api/v1/visualization/generate")
 @app.post("/visualization/generate")
 async def generate_visualization(
     request: VisualizationRequest, tenant: TenantContext = Depends(get_current_tenant)
@@ -646,6 +657,7 @@ async def generate_visualization(
         return {"success": False, "error": str(e), "chart_type": request.chart_type}
 
 
+@app.post("/api/v1/visualization/advanced")
 @app.post("/visualization/advanced")
 async def generate_advanced_visualization(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
@@ -677,6 +689,7 @@ async def generate_advanced_visualization(
         }
 
 
+@app.post("/api/v1/dashboard/generate")
 @app.post("/dashboard/generate")
 async def generate_dashboard(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
@@ -708,6 +721,7 @@ async def generate_dashboard(
         }
 
 
+@app.get("/api/v1/files/visualizations/{filename}")
 @app.get("/files/visualizations/{filename}")
 async def get_visualization_file(
     filename: str, tenant: TenantContext = Depends(get_current_tenant)
