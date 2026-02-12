@@ -1,0 +1,9 @@
+{
+  "faithfulness": 0.61,
+  "answer_relevancy": 0.68,
+  "prompt_ab_lift": 0.01,
+  "baseline_p95_latency_ms": 1000,
+  "current_p95_latency_ms": 1230,
+  "sensitive_egress_hits": 1,
+  "monthly_cost_cad": 700
+}
