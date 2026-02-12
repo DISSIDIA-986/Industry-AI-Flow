@@ -37,12 +37,14 @@ Completed in this iteration:
 - wired into `test-release-gate`
 12. Added smoke-script API-path regression:
 - `tests/unit/test_run_demo_smoke_script.py::test_demo_smoke_script_runs_api_smoke_with_trained_model`
+13. Added local live smoke gate:
+- Make target `test-demo-smoke-live-gate` (requires real Postgres/Ollama reachability)
+- supports runtime override via `DEMO_SMOKE_LIVE_ARGS` (e.g., `--ollama-model deepseek-r1:8b`)
 
 Remaining operator actions on local machine:
-1. Start PostgreSQL server process (client exists, server currently not running).
-2. Align Ollama model with env (`OLLAMA_MODEL`) or pull the configured model.
-3. Re-run full smoke after 1/2:
-- `make test-demo-smoke`
+1. Align Ollama model with env (`OLLAMA_MODEL`) or pull the configured model.
+2. Run full default smoke without overrides:
+- `make test-demo-smoke` or `make test-demo-smoke-live-gate`
 
 ## 1. Current Readiness Snapshot
 
@@ -55,7 +57,7 @@ Remaining operator actions on local machine:
   - project configured model: `qwen2.5:7b`
 - PostgreSQL:
   - `psql` installed (14.20)
-  - DB service is **not running** (`localhost:5432 - no response`)
+  - DB service is running (`localhost:5432 - accepting connections`)
 - Cost-estimation training dataset:
   - present: `datasets/unified_construction_projects_enhanced.csv` (schema check passed)
 - Cost model artifact:
@@ -65,29 +67,26 @@ Remaining operator actions on local machine:
 - Release gate:
   - `make test-release-gate` passes on current branch
 - Smoke status:
-  - `make test-demo-smoke` fails only on external prerequisites:
-    - Postgres not reachable
-    - Ollama configured model mismatch
-  - API smoke sub-check itself passes (`health/workflow/cost/predict/query`)
+  - `make test-demo-smoke-gate` passes (CI-friendly mode; external checks skipped)
+  - `make test-demo-smoke-live-gate DEMO_SMOKE_LIVE_ARGS="--ollama-model deepseek-r1:8b"` passes
+  - default live smoke still depends on env/model consistency (`OLLAMA_MODEL` vs installed model list)
+  - API smoke sub-check passes (`health/workflow/cost/predict/query`)
 
 ### 1.2 Immediate conclusion
-A complete local end-to-end demo run is **almost ready** on this Mac Studio; only Postgres service startup and Ollama model alignment remain as blocking prerequisites.
+A complete local end-to-end demo run is ready on this Mac Studio when model selection is aligned (either install `qwen2.5:7b` or set `OLLAMA_MODEL=deepseek-r1:8b`).
 
 ---
 
 ## 2. Demo-Critical Missing Items (P0/P1)
 
 ## P0 (must finish before demo rehearsal)
-1. PostgreSQL service is not running.
-- Impact: RAG/document/vector and workflow startup paths degrade or fail.
-
-2. Local LLM model mismatch.
+1. Local LLM model mismatch.
 - Config expects `qwen2.5:7b`, installed is `deepseek-r1:8b`.
 - Impact: local dispatch or RAG generation can fail if model is not present.
 
 ## P1 (should finish for smoother demo)
 1. Unify env defaults for embedding (`.env` vs `backend/config.py` defaults) to avoid confusion.
-2. Refresh README setup snippets to align with capstone lock workflow and smoke prerequisites.
+2. Keep README smoke instructions synchronized with Makefile gate split (`test-demo-smoke-gate` vs `test-demo-smoke-live-gate`).
 
 ---
 
@@ -265,7 +264,9 @@ Fail if any P0 blocker remains.
 
 ## 8. Recommended Next Implementation Batch
 
-1. Re-introduce or commit a canonical demo training CSV into an allowed tracked path (or provide a deterministic data generation script for demo).
-2. Add a dedicated one-command smoke script (e.g., `scripts/testing/run_demo_smoke.py`) and a Make target (`make test-demo-smoke`).
+1. Resolve model baseline decision for demo (`qwen2.5:7b` as standard, or migrate default to `deepseek-r1:8b`) and update `.env`/`.env.example` accordingly.
+2. Keep both smoke paths in routine checks:
+- CI: `make test-demo-smoke-gate`
+- local rehearsal: `make test-demo-smoke-live-gate`
 3. Align `.env.example`, README, and backend defaults into one canonical capstone profile.
 4. Keep demo fallback plan explicit: `live_hybrid` primary, `local_safe` backup, `scripted_replay` emergency.
