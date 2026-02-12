@@ -119,8 +119,12 @@ class _FakeConn:
 
 def _run_init_database(table_names: Sequence[str]) -> _FakeConn:
     conn = _FakeConn(table_names)
-    with patch.object(init_db.psycopg2, "connect", return_value=conn):
-        init_db.init_database()
+    if hasattr(init_db, "connect_db"):
+        with patch.object(init_db, "connect_db", return_value=conn):
+            init_db.init_database()
+    else:
+        with patch.object(init_db.psycopg2, "connect", return_value=conn):
+            init_db.init_database()
     return conn
 
 
