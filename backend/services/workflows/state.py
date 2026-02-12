@@ -27,5 +27,6 @@ class WorkflowServices(TypedDict, total=False):
     reranker: Any
     prompt_manager: Any
     template_selector: Any
+    cost_estimation_service: Any
     code_execution_manager: Any
     response_builder: Any

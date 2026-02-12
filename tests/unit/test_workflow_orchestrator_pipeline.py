@@ -54,6 +54,23 @@ class _FakeCodeManager:
         }
 
 
+class _FakeCostEstimationService:
+    def predict_project(self, project, confidence_quantile=0.9):
+        del project, confidence_quantile
+        return {
+            "predicted_cost_overrun_pct": 12.5,
+            "predicted_actual_cost_cad": 1125000.0,
+            "estimated_cost_cad": 1000000.0,
+            "prediction_interval_cad": {
+                "confidence_quantile": 0.9,
+                "lower": 980000.0,
+                "upper": 1260000.0,
+            },
+            "uncertainty": {"ape_quantile": 0.12},
+            "unknown_categories": {},
+        }
+
+
 @pytest.mark.asyncio
 async def test_workflow_pipeline_full_path():
     services = SimpleNamespace(
@@ -88,6 +105,24 @@ async def test_workflow_pipeline_full_path():
     assert "node_latency_ms" in updated["metrics"]
     assert "intent_node" in updated["metrics"]["node_latency_ms"]
     assert "response_node" in updated["metadata"]["completed_nodes"]
+
+
+@pytest.mark.asyncio
+async def test_workflow_pipeline_cost_estimation_shortcut():
+    services = SimpleNamespace(cost_estimation_service=_FakeCostEstimationService())
+    state = {
+        "query": "please provide a cost estimate with estimated cost 1000000 and sqft 12000",
+        "metadata": {},
+        "metrics": {},
+    }
+
+    updated = await run_workflow_pipeline(state, services)
+
+    assert updated["intent"] == "cost_estimation"
+    assert "Cost estimation result" in (updated["response"] or "")
+    assert updated["metadata"]["cost_estimation_status"] == "ok"
+    assert updated["metadata"]["shortcut_response"] is True
+    assert updated["metrics"]["cost_estimation_executed"] is True
 
 
 @pytest.mark.asyncio

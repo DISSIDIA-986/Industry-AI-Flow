@@ -1,6 +1,7 @@
 """Workflow node exports."""
 
 from backend.services.workflows.nodes.code_exec_node import code_exec_node
+from backend.services.workflows.nodes.cost_estimation_node import cost_estimation_node
 from backend.services.workflows.nodes.groundedness_node import groundedness_node
 from backend.services.workflows.nodes.intent_node import intent_node
 from backend.services.workflows.nodes.prompt_node import prompt_node
@@ -18,6 +19,7 @@ __all__ = [
     "groundedness_node",
     "route_node",
     "code_exec_node",
+    "cost_estimation_node",
     "safety_node",
     "response_node",
 ]
