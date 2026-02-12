@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-demo-smoke-live-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -152,6 +152,16 @@ test-demo-smoke-gate: ## Run CI-friendly demo smoke gate (skip external Postgres
 		--skip-ollama-check \
 		--dataset-path datasets/unified_construction_projects_enhanced.csv \
 		--model-path /tmp/industry_ai_flow_smoke_model.json
+
+test-demo-smoke-live-gate: ## Run local live demo smoke gate (requires Postgres/Ollama)
+	@echo "🚦 Running demo smoke gate (live external dependencies)..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_demo_smoke.py \
+		--pretty \
+		--train-model-if-missing \
+		--dataset-path datasets/unified_construction_projects_enhanced.csv \
+		--model-path /tmp/industry_ai_flow_smoke_model.json \
+		$${DEMO_SMOKE_LIVE_ARGS:-}
 
 test-kpi-gate: ## Run workflow KPI gate (faithfulness/relevancy/p95/cost/safety)
 	@echo "📈 Running workflow KPI gate..."
