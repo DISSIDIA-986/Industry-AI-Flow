@@ -1,592 +1,586 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - 系统架构图</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Industry AI Flow - 分层架构楼层图</title>
+  <style>
+    :root {
+      --bg-1: #f4f7fb;
+      --bg-2: #e9eef7;
+      --panel: #ffffff;
+      --ink-1: #13203a;
+      --ink-2: #3f4f6a;
+      --border: #dbe4f3;
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            min-height: 100vh;
-        }
+      --ui: #2d7be7;
+      --api: #16a085;
+      --orchestrate: #f39c12;
+      --ai: #5b6ee1;
+      --data: #c0392b;
+      --platform: #4b5563;
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
-            overflow: hidden;
-        }
+      --flow-request: #2d7be7;
+      --flow-control: #f39c12;
+      --flow-data: #16a085;
+      --flow-security: #c0392b;
+    }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 20px;
-        }
+    * { box-sizing: border-box; }
 
-        .header h1 {
-            font-size: 36px;
-            color: #333;
-            margin-bottom: 10px;
-        }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink-1);
+      background: radial-gradient(1200px 600px at 10% -10%, #ffffff 0%, var(--bg-1) 50%, var(--bg-2) 100%);
+    }
 
-        .header p {
-            color: #666;
-            font-size: 16px;
-        }
+    .wrap {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 18px 36px;
+    }
 
-        .legend {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
+    .hero {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(135deg, #fefefe 0%, #f7fbff 40%, #eef5ff 100%);
+      box-shadow: 0 14px 40px rgba(15, 48, 95, 0.08);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(24px, 3.2vw, 36px);
+      letter-spacing: 0.3px;
+    }
 
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 2px solid #333;
-        }
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--ink-2);
+      font-size: 14px;
+    }
 
-        .architecture {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-            margin-top: 40px;
-        }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
 
-        .layer {
-            display: flex;
-            align-items: stretch;
-            position: relative;
-            animation: fadeIn 0.6s ease-out;
-        }
+    .legend-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      font-size: 12px;
+      color: var(--ink-2);
+    }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
 
-        .layer-label {
-            width: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #2c3e50;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            padding: 15px 10px;
-            text-align: center;
-            border-radius: 10px 0 0 10px;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+    .chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
 
-        .layer-content {
-            flex: 1;
-            display: flex;
-            gap: 15px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 0 10px 10px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            flex-wrap: wrap;
-        }
+    .line {
+      width: 32px;
+      border-top: 3px solid;
+      position: relative;
+      top: 0;
+    }
 
-        .component {
-            flex: 1;
-            min-width: 200px;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    .line.dashed { border-top-style: dashed; }
 
-        .component:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-        }
+    .diagram {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 14px 36px rgba(15, 48, 95, 0.08);
+      padding: 14px;
+      overflow: hidden;
+    }
 
-        .component::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-        }
+    .floors {
+      display: grid;
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
 
-        /* 组件颜色 */
-        .component-ui::before { background: #3498db; }
-        .component-ui { background: #ebf5fb; border-left: 4px solid #3498db; }
+    .floor {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      min-height: 120px;
+      align-items: stretch;
+    }
 
-        .component-api::before { background: #2ecc71; }
-        .component-api { background: #e8f8f5; border-left: 4px solid #2ecc71; }
+    .floor-label {
+      border-radius: 12px 0 0 12px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.3px;
+    }
 
-        .component-service::before { background: #f39c12; }
-        .component-service { background: #fef5e7; border-left: 4px solid #f39c12; }
+    .strip {
+      border-radius: 0 12px 12px 0;
+      border: 1px solid var(--border);
+      border-left: none;
+      background: #fbfdff;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 8px;
+      align-items: stretch;
+    }
 
-        .component-ai::before { background: #9b59b6; }
-        .component-ai { background: #f4ecf7; border-left: 4px solid #9b59b6; }
+    .component {
+      border: 1px solid #cfe0f9;
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+      box-shadow: 0 6px 16px rgba(17, 54, 102, 0.06);
+      position: relative;
+      min-height: 88px;
+    }
 
-        .component-data::before { background: #e74c3c; }
-        .component-data { background: #fdedec; border-left: 4px solid #e74c3c; }
+    .component h3 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.25;
+      letter-spacing: 0.1px;
+      color: #16263f;
+    }
 
-        .component-security::before { background: #34495e; }
-        .component-security { background: #eaeded; border-left: 4px solid #34495e; }
+    .component p {
+      margin: 6px 0 0;
+      font-size: 11px;
+      color: #53627a;
+      line-height: 1.4;
+    }
 
-        .component h3 {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .component::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 10px 10px 0 0;
+      background: currentColor;
+      opacity: 0.85;
+    }
 
-        .component h3 .icon {
-            font-size: 20px;
-        }
+    .theme-ui { color: var(--ui); }
+    .theme-api { color: var(--api); }
+    .theme-orchestrate { color: var(--orchestrate); }
+    .theme-ai { color: var(--ai); }
+    .theme-data { color: var(--data); }
+    .theme-platform { color: var(--platform); }
 
-        .component p {
-            font-size: 13px;
-            color: #7f8c8d;
-            line-height: 1.5;
-        }
+    .floor-ui .floor-label { background: var(--ui); }
+    .floor-api .floor-label { background: var(--api); }
+    .floor-orchestrate .floor-label { background: var(--orchestrate); }
+    .floor-ai .floor-label { background: var(--ai); }
+    .floor-data .floor-label { background: var(--data); }
+    .floor-platform .floor-label { background: var(--platform); }
 
-        .component-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 10px;
-        }
+    .flow-svg {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
 
-        .tag {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.1);
-            color: #555;
-        }
+    .flow-request {
+      stroke: var(--flow-request);
+      stroke-width: 2.4;
+      fill: none;
+    }
 
-        /* 连接线 */
-        .connections {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-        }
+    .flow-control {
+      stroke: var(--flow-control);
+      stroke-width: 2.4;
+      fill: none;
+    }
 
-        /* 响应式 */
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
+    .flow-data {
+      stroke: var(--flow-data);
+      stroke-width: 2.4;
+      fill: none;
+      stroke-dasharray: 8 6;
+    }
 
-            .layer {
-                flex-direction: column;
-            }
+    .flow-security {
+      stroke: var(--flow-security);
+      stroke-width: 2.2;
+      fill: none;
+      stroke-dasharray: 4 6;
+    }
 
-            .layer-label {
-                width: 100%;
-                writing-mode: horizontal-tb;
-                transform: none;
-                border-radius: 10px 10px 0 0;
-            }
+    .footnote {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--ink-2);
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
 
-            .layer-content {
-                border-radius: 0 0 10px 10px;
-            }
+    @media (max-width: 1200px) {
+      .strip { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .floor { grid-template-columns: 96px 1fr; }
+    }
 
-            .component {
-                min-width: 100%;
-            }
-        }
-
-        /* 数据流向指示 */
-        .flow-indicator {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            background: #fff3cd;
-            border: 2px dashed #ffc107;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 14px;
-            color: #856404;
-        }
-
-        .flow-indicator::before {
-            content: '⬇';
-            margin-right: 8px;
-            font-size: 18px;
-        }
-
-        /* 工具提示 */
-        .component {
-            cursor: help;
-        }
-
-        .component[title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2c3e50;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            z-index: 100;
-            margin-bottom: 8px;
-        }
-    </style>
+    @media (max-width: 760px) {
+      .diagram { padding: 10px; }
+      .floor { grid-template-columns: 1fr; }
+      .floor-label {
+        border-radius: 10px 10px 0 0;
+        justify-content: flex-start;
+        padding-left: 12px;
+      }
+      .strip {
+        border-left: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        grid-template-columns: 1fr;
+      }
+      .flow-svg { display: none; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🏗️ Industry AI Flow 系统架构图</h1>
-            <p>企业级AI工作流平台 - 分层架构与数据流向可视化</p>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Industry AI Flow 架构楼层图</h1>
+      <p>按 6 层展示组件与依赖。连线已按真实主链路校正：请求流、控制流、数据流、安全/观测流。</p>
 
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #ebf5fb; border-color: #3498db;"></div>
-                    <span>用户界面层</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #e8f8f5; border-color: #2ecc71;"></div>
-                    <span>API网关层</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #fef5e7; border-color: #f39c12;"></div>
-                    <span>业务服务层</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #f4ecf7; border-color: #9b59b6;"></div>
-                    <span>AI引擎层</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #fdedec; border-color: #e74c3c;"></div>
-                    <span>数据存储层</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #eaeded; border-color: #34495e;"></div>
-                    <span>安全与基础设施层</span>
-                </div>
-            </div>
+      <div class="legend-grid">
+        <div class="legend-card">
+          <div class="legend-row"><span class="chip" style="background:var(--ui)"></span><span>L1 体验层 (UI/Client)</span></div>
+          <div class="legend-row"><span class="chip" style="background:var(--api)"></span><span>L2 接入层 (API/Auth/Cache)</span></div>
+          <div class="legend-row"><span class="chip" style="background:var(--orchestrate)"></span><span>L3 编排层 (Workflow/Intent/Prompt)</span></div>
+        </div>
+        <div class="legend-card">
+          <div class="legend-row"><span class="chip" style="background:var(--ai)"></span><span>L4 AI Runtime (RAG/Dispatch/Exec/Cost)</span></div>
+          <div class="legend-row"><span class="chip" style="background:var(--data)"></span><span>L5 数据层 (Postgres/Prompt/Artifact)</span></div>
+          <div class="legend-row"><span class="chip" style="background:var(--platform)"></span><span>L6 平台层 (Security/Obs/Config)</span></div>
+        </div>
+        <div class="legend-card">
+          <div class="legend-row"><span class="line" style="border-color:var(--flow-request)"></span><span>请求主路径（实线）</span></div>
+          <div class="legend-row"><span class="line" style="border-color:var(--flow-control)"></span><span>编排控制流（实线）</span></div>
+          <div class="legend-row"><span class="line dashed" style="border-color:var(--flow-data)"></span><span>数据读写流（虚线）</span></div>
+          <div class="legend-row"><span class="line dashed" style="border-color:var(--flow-security)"></span><span>安全/观测流（虚线）</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="diagram" id="diagram">
+      <svg class="flow-svg" id="flowSvg" aria-hidden="true"></svg>
+
+      <div class="floors">
+        <div class="floor floor-ui">
+          <div class="floor-label">L1 体验层</div>
+          <div class="strip">
+            <article class="component theme-ui" id="c_ui_streamlit">
+              <h3>Streamlit / Web UI</h3>
+              <p>对话、上传、查询、可视化交互入口。</p>
+            </article>
+            <article class="component theme-ui" id="c_ui_prompt_admin">
+              <h3>Prompt Admin</h3>
+              <p>模板编辑、实验配置、版本管理。</p>
+            </article>
+            <article class="component theme-ui" id="c_ui_api_client">
+              <h3>External API Client</h3>
+              <p>第三方系统通过 REST API 对接。</p>
+            </article>
+            <article class="component theme-ui" id="c_ui_user_input">
+              <h3>User Input</h3>
+              <p>自然语言问题、文档、成本估算请求。</p>
+            </article>
+          </div>
         </div>
 
-        <div class="architecture">
-            <!-- 第1层：用户界面层 -->
-            <div class="layer">
-                <div class="layer-label">用户界面层</div>
-                <div class="layer-content">
-                    <div class="component component-ui" title="用户交互界面">
-                        <h3><span class="icon">🖥️</span> Streamlit Web UI</h3>
-                        <p>主界面 - 对话式交互、文档上传、查询反馈</p>
-                        <div class="component-tags">
-                            <span class="tag">实时响应</span>
-                            <span class="tag">文件上传</span>
-                            <span class="tag">可视化</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-ui" title="Prompt管理界面">
-                        <h3><span class="icon">⚙️</span> Prompt Admin UI</h3>
-                        <p>Prompt模板管理、A/B测试、版本控制</p>
-                        <div class="component-tags">
-                            <span class="tag">模板编辑</span>
-                            <span class="tag">性能分析</span>
-                            <span class="tag">实验管理</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-ui" title="API调用">
-                        <h3><span class="icon">🔌</span> REST API Client</h3>
-                        <p>外部系统集成、第三方应用调用</p>
-                        <div class="component-tags">
-                            <span class="tag">Swagger文档</span>
-                            <span class="tag">认证支持</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-indicator">
-                HTTP请求 / API调用
-            </div>
-
-            <!-- 第2层：API网关层 -->
-            <div class="layer">
-                <div class="layer-label">API网关层</div>
-                <div class="layer-content">
-                    <div class="component component-api" title="FastAPI主服务">
-                        <h3><span class="icon">🚀</span> FastAPI Router</h3>
-                        <p>请求路由、参数验证、响应格式化</p>
-                        <div class="component-tags">
-                            <span class="tag">异步处理</span>
-                            <span class="tag">自动文档</span>
-                            <span class="tag">类型验证</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-api" title="认证授权">
-                        <h3><span class="icon">🔐</span> Auth & Rate Limit</h3>
-                        <p>API密钥验证、JWT认证、租户隔离、限流保护</p>
-                        <div class="component-tags">
-                            <span class="tag">API Key</span>
-                            <span class="tag">JWT Token</span>
-                            <span class="tag">租户隔离</span>
-                            <span class="tag">限流</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-api" title="查询缓存">
-                        <h3><span class="icon">💾</span> Query Cache</h3>
-                        <p>智能查询缓存、TTL管理、缓存预热</p>
-                        <div class="component-tags">
-                            <span class="tag">LRU缓存</span>
-                            <span class="tag">多租户</span>
-                            <span class="tag">性能优化</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-indicator">
-                业务逻辑调用 / 服务编排
-            </div>
-
-            <!-- 第3层：业务服务层 -->
-            <div class="layer">
-                <div class="layer-label">业务服务层</div>
-                <div class="layer-content">
-                    <div class="component component-service" title="意图识别服务">
-                        <h3><span class="icon">🎯</span> Intent Classifier</h3>
-                        <p>智能意图识别（知识检索/数据分析/文档处理/代码执行）</p>
-                        <div class="component-tags">
-                            <span class="tag">4类意图</span>
-                            <span class="tag">置信度评分</span>
-                            <span class="tag">LangChain 1.0</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-service" title="RAG工作流">
-                        <h3><span class="icon">📚</span> RAG Orchestrator</h3>
-                        <p>检索增强生成、文档索引管理、查询优化</p>
-                        <div class="component-tags">
-                            <span class="tag">混合检索</span>
-                            <span class="tag">重排序</span>
-                            <span class="tag">引用溯源</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-service" title="文档处理服务">
-                        <h3><span class="icon">📄</span> Document Processor</h3>
-                        <p>OCR识别、PDF解析、文档分块、向量化</p>
-                        <div class="component-tags">
-                            <span class="tag">PaddleOCR</span>
-                            <span class="tag">PDF解析</span>
-                            <span class="tag">智能分块</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-service" title="Prompt管理服务">
-                        <h3><span class="icon">📝</span> Prompt Manager</h3>
-                        <p>Prompt模板管理、版本控制、A/B测试</p>
-                        <div class="component-tags">
-                            <span class="tag">版本管理</span>
-                            <span class="tag">A/B测试</span>
-                            <span class="tag">性能追踪</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-indicator">
-                AI推理调用 / 数据检索
-            </div>
-
-            <!-- 第4层：AI引擎层 -->
-            <div class="layer">
-                <div class="layer-label">AI引擎层</div>
-                <div class="layer-content">
-                    <div class="component component-ai" title="混合LLM调度">
-                        <h3><span class="icon">🤖</span> Hybrid LLM Dispatcher</h3>
-                        <p>本地/云端LLM统一调度、自动降级、成本追踪</p>
-                        <div class="component-tags">
-                            <span class="tag">本地优先</span>
-                            <span class="tag">云端回退</span>
-                            <span class="tag">成本治理</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-ai" title="向量嵌入">
-                        <h3><span class="icon">🔢</span> Embedding Service</h3>
-                        <p>文本向量化、语义相似度计算</p>
-                        <div class="component-tags">
-                            <span class="tag">nomic-embed</span>
-                            <span class="tag">768维</span>
-                            <span class="tag">Metal加速</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-ai" title="重排序模型">
-                        <h3><span class="icon">🎯</span> Reranker</h3>
-                        <p>检索结果重排序、相关性评分优化</p>
-                        <div class="component-tags">
-                            <span class="tag">bge-reranker</span>
-                            <span class="tag">精度提升</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-ai" title="本地LLM">
-                        <h3><span class="icon">💻</span> Local LLM (Ollama)</h3>
-                        <p>Qwen2.5:7b GGUF推理、Metal加速、低延迟</p>
-                        <div class="component-tags">
-                            <span class="tag">Qwen2.5:7b</span>
-                            <span class="tag">llama.cpp</span>
-                            <span class="tag">私有化</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-indicator">
-                数据持久化 / 检索查询
-            </div>
-
-            <!-- 第5层：数据存储层 -->
-            <div class="layer">
-                <div class="layer-label">数据存储层</div>
-                <div class="layer-content">
-                    <div class="component component-data" title="向量数据库">
-                        <h3><span class="icon">🗄️</span> PostgreSQL + pgvector</h3>
-                        <p>向量存储、相似度搜索、全文检索、元数据过滤</p>
-                        <div class="component-tags">
-                            <span class="tag">向量索引</span>
-                            <span class="tag">BM25</span>
-                            <span class="tag">混合检索</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-data" title="文档存储">
-                        <h3><span class="icon">📁</span> Document Store</h3>
-                        <p>原始文档、分块文档、嵌入向量、元数据</p>
-                        <div class="component-tags">
-                            <span class="tag">分块管理</span>
-                            <span class="tag">版本追踪</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-data" title="对话记忆">
-                        <h3><span class="icon">🧠</span> Conversation Memory</h3>
-                        <p>短期记忆、摘要记忆、长期记忆、结构化事实</p>
-                        <div class="component-tags">
-                            <span class="tag">三层记忆</span>
-                            <span class="tag">上下文管理</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-data" title="使用统计">
-                        <h3><span class="icon">📊</span> Usage & Budget</h3>
-                        <p>LLM使用日志、成本追踪、预算策略</p>
-                        <div class="component-tags">
-                            <span class="tag">成本追踪</span>
-                            <span class="tag">预算控制</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-indicator">
-                安全防护 / 可观测性 / 基础设施
-            </div>
-
-            <!-- 第6层：安全与基础设施层 -->
-            <div class="layer">
-                <div class="layer-label">安全与基础设施层</div>
-                <div class="layer-content">
-                    <div class="component component-security" title="安全防护">
-                        <h3><span class="icon">🛡️</span> Security Services</h3>
-                        <p>敏感信息脱敏、出站守卫、XSS/SQL注入防护</p>
-                        <div class="component-tags">
-                            <span class="tag">PII脱敏</span>
-                            <span class="tag">出站策略</span>
-                            <span class="tag">审计日志</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-security" title="可观测性">
-                        <h3><span class="icon">📈</span> Observability</h3>
-                        <p>Prometheus监控、结构化日志、性能指标、审计追踪</p>
-                        <div class="component-tags">
-                            <span class="tag">Prometheus</span>
-                            <span class="tag">JSON日志</span>
-                            <span class="tag">审计追踪</span>
-                        </div>
-                    </div>
-
-                    <div class="component component-security" title="基础设施">
-                        <h3><span class="icon">🔧</span> Infrastructure</h3>
-                        <p>Docker容器化、Kubernetes支持、配置管理</p>
-                        <div class="component-tags">
-                            <span class="tag">Docker</span>
-                            <span class="tag">K8s就绪</span>
-                            <span class="tag">环境配置</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="floor floor-api">
+          <div class="floor-label">L2 接入层</div>
+          <div class="strip">
+            <article class="component theme-api" id="c_api_fastapi">
+              <h3>FastAPI Routers</h3>
+              <p>workflow/query、dispatch、prompt、cost-estimation 等路由入口。</p>
+            </article>
+            <article class="component theme-api" id="c_api_auth">
+              <h3>Auth + Tenant Scope</h3>
+              <p>认证、租户作用域与权限控制。</p>
+            </article>
+            <article class="component theme-api" id="c_api_cache">
+              <h3>Query Cache</h3>
+              <p>多租户缓存入口，减少重复查询开销。</p>
+            </article>
+            <article class="component theme-api" id="c_api_guardrail">
+              <h3>Input Validation</h3>
+              <p>Pydantic 参数校验与请求清洗。</p>
+            </article>
+          </div>
         </div>
 
-        <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 14px;">
-            <p>💡 <strong>提示</strong>：鼠标悬停在组件上可查看详细说明</p>
-            <p style="margin-top: 10px;">
-                数据流向：用户输入 → API网关 → 业务服务 → AI引擎 → 数据存储
-                <br>
-                支持流向：安全防护 ← 可观测性 ← 基础设施
-            </p>
+        <div class="floor floor-orchestrate">
+          <div class="floor-label">L3 编排层</div>
+          <div class="strip">
+            <article class="component theme-orchestrate" id="c_orch_workflow">
+              <h3>Workflow Orchestrator</h3>
+              <p>节点编排、执行顺序控制、节点耗时统计。</p>
+            </article>
+            <article class="component theme-orchestrate" id="c_orch_intent">
+              <h3>Intent Classifier</h3>
+              <p>知识检索/代码执行/成本估算等意图识别。</p>
+            </article>
+            <article class="component theme-orchestrate" id="c_orch_prompt">
+              <h3>Prompt Selector/Manager</h3>
+              <p>模板选择、渲染、实验策略、版本控制。</p>
+            </article>
+            <article class="component theme-orchestrate" id="c_orch_policy">
+              <h3>Routing & Budget Policy</h3>
+              <p>local_only / hybrid_auto / cloud_only 路由与预算策略。</p>
+            </article>
+          </div>
         </div>
-    </div>
+
+        <div class="floor floor-ai">
+          <div class="floor-label">L4 AI Runtime</div>
+          <div class="strip">
+            <article class="component theme-ai" id="c_ai_rag">
+              <h3>RAG Engine</h3>
+              <p>检索、重排、上下文拼接与 grounded 输出。</p>
+            </article>
+            <article class="component theme-ai" id="c_ai_dispatch">
+              <h3>LLM Dispatch Service</h3>
+              <p>本地优先调度、云回退、调用与成本记录。</p>
+            </article>
+            <article class="component theme-ai" id="c_ai_executor">
+              <h3>Code Execution Manager</h3>
+              <p>Docker / provider fallback 执行分析代码。</p>
+            </article>
+            <article class="component theme-ai" id="c_ai_costmodel">
+              <h3>Cost Estimation Model</h3>
+              <p>训练、加载、预测与置信区间估计。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="floor floor-data">
+          <div class="floor-label">L5 数据层</div>
+          <div class="strip">
+            <article class="component theme-data" id="c_data_pg">
+              <h3>PostgreSQL + pgvector</h3>
+              <p>文档索引、向量检索、业务与审计数据。</p>
+            </article>
+            <article class="component theme-data" id="c_data_prompt_tables">
+              <h3>Prompt / Usage / Budget Tables</h3>
+              <p>prompt_*、llm_usage_logs、llm_budget_policies 等。</p>
+            </article>
+            <article class="component theme-data" id="c_data_artifacts">
+              <h3>Model Artifacts</h3>
+              <p>workspace/models/cost_estimation/*.json。</p>
+            </article>
+            <article class="component theme-data" id="c_data_docs">
+              <h3>Document Chunks</h3>
+              <p>原文、分块、embedding 与 metadata。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="floor floor-platform">
+          <div class="floor-label">L6 平台层</div>
+          <div class="strip">
+            <article class="component theme-platform" id="c_sec_redaction">
+              <h3>Redaction + Egress Guard</h3>
+              <p>敏感信息脱敏，限制明文出站。</p>
+            </article>
+            <article class="component theme-platform" id="c_sec_observability">
+              <h3>Observability + Audit</h3>
+              <p>workflow/dispatch 指标、审计日志与回放。</p>
+            </article>
+            <article class="component theme-platform" id="c_sec_config">
+              <h3>Config + Release Gates</h3>
+              <p>配置开关、phase/release gate 与回滚脚本。</p>
+            </article>
+            <article class="component theme-platform" id="c_sec_runtime">
+              <h3>Runtime Infrastructure</h3>
+              <p>Docker runtime、provider health、隔离执行环境。</p>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        主查询链路：L1 -> L2 -> L3 -> L4 -> L5。<br />
+        成本估算链路：L1 -> L2 -> L4 -> L5。<br />
+        安全与观测作为横向能力，覆盖 API、编排、运行时与数据层。
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const connections = [
+      { from: "c_ui_streamlit", to: "c_api_fastapi", type: "request", fromSide: "bottom", toSide: "top" },
+      { from: "c_ui_prompt_admin", to: "c_api_fastapi", type: "request", fromSide: "bottom", toSide: "top" },
+      { from: "c_ui_api_client", to: "c_api_fastapi", type: "request", fromSide: "bottom", toSide: "top" },
+      { from: "c_ui_user_input", to: "c_api_fastapi", type: "request", fromSide: "bottom", toSide: "top" },
+
+      { from: "c_api_fastapi", to: "c_api_auth", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_api_fastapi", to: "c_api_guardrail", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_api_fastapi", to: "c_api_cache", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_api_fastapi", to: "c_orch_workflow", type: "request", fromSide: "bottom", toSide: "top" },
+      { from: "c_api_fastapi", to: "c_orch_prompt", type: "control", fromSide: "bottom", toSide: "top" },
+      { from: "c_api_fastapi", to: "c_ai_costmodel", type: "request", fromSide: "bottom", toSide: "top" },
+
+      { from: "c_orch_workflow", to: "c_orch_intent", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_orch_intent", to: "c_orch_policy", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_orch_workflow", to: "c_orch_prompt", type: "control", fromSide: "right", toSide: "left" },
+      { from: "c_orch_workflow", to: "c_ai_rag", type: "data", fromSide: "bottom", toSide: "top" },
+      { from: "c_orch_policy", to: "c_ai_dispatch", type: "control", fromSide: "bottom", toSide: "top" },
+      { from: "c_orch_workflow", to: "c_ai_executor", type: "control", fromSide: "bottom", toSide: "top" },
+
+      { from: "c_ai_rag", to: "c_data_pg", type: "data", fromSide: "bottom", toSide: "top" },
+      { from: "c_ai_rag", to: "c_data_docs", type: "data", fromSide: "bottom", toSide: "top" },
+      { from: "c_orch_prompt", to: "c_data_prompt_tables", type: "data", fromSide: "bottom", toSide: "top" },
+      { from: "c_ai_dispatch", to: "c_data_prompt_tables", type: "data", fromSide: "bottom", toSide: "top" },
+      { from: "c_ai_costmodel", to: "c_data_artifacts", type: "data", fromSide: "bottom", toSide: "top" },
+
+      { from: "c_ai_dispatch", to: "c_sec_redaction", type: "security", fromSide: "bottom", toSide: "top" },
+      { from: "c_orch_workflow", to: "c_sec_observability", type: "security", fromSide: "bottom", toSide: "top" },
+      { from: "c_api_fastapi", to: "c_sec_config", type: "security", fromSide: "bottom", toSide: "top" },
+      { from: "c_ai_executor", to: "c_sec_runtime", type: "security", fromSide: "bottom", toSide: "top" },
+      { from: "c_sec_observability", to: "c_data_pg", type: "data", fromSide: "top", toSide: "bottom" }
+    ];
+
+    function getAnchor(el, side, containerRect) {
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2 - containerRect.left;
+      const cy = r.top + r.height / 2 - containerRect.top;
+      if (side === "top") return { x: cx, y: r.top - containerRect.top };
+      if (side === "bottom") return { x: cx, y: r.bottom - containerRect.top };
+      if (side === "left") return { x: r.left - containerRect.left, y: cy };
+      return { x: r.right - containerRect.left, y: cy };
+    }
+
+    function pickSides(fromEl, toEl) {
+      const fr = fromEl.getBoundingClientRect();
+      const tr = toEl.getBoundingClientRect();
+      const dy = tr.top - fr.top;
+      const dx = tr.left - fr.left;
+
+      if (Math.abs(dy) > 24) {
+        return dy > 0
+          ? { fromSide: "bottom", toSide: "top" }
+          : { fromSide: "top", toSide: "bottom" };
+      }
+
+      return dx > 0
+        ? { fromSide: "right", toSide: "left" }
+        : { fromSide: "left", toSide: "right" };
+    }
+
+    function orthPath(a, b) {
+      const points = [];
+      points.push(`M ${a.x} ${a.y}`);
+
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+
+      if (dy >= dx) {
+        const midY = (a.y + b.y) / 2;
+        points.push(`L ${a.x} ${midY}`);
+        points.push(`L ${b.x} ${midY}`);
+      } else {
+        const midX = (a.x + b.x) / 2;
+        points.push(`L ${midX} ${a.y}`);
+        points.push(`L ${midX} ${b.y}`);
+      }
+
+      points.push(`L ${b.x} ${b.y}`);
+      return points.join(" ");
+    }
+
+    function drawFlows() {
+      const container = document.getElementById("diagram");
+      const svg = document.getElementById("flowSvg");
+      if (!container || !svg) return;
+
+      const rect = container.getBoundingClientRect();
+      svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+      svg.setAttribute("width", rect.width);
+      svg.setAttribute("height", rect.height);
+
+      svg.innerHTML = `
+        <defs>
+          <marker id="arrow-request" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--flow-request)" />
+          </marker>
+          <marker id="arrow-control" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--flow-control)" />
+          </marker>
+          <marker id="arrow-data" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--flow-data)" />
+          </marker>
+          <marker id="arrow-security" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--flow-security)" />
+          </marker>
+        </defs>
+      `;
+
+      connections.forEach((flow) => {
+        const fromEl = document.getElementById(flow.from);
+        const toEl = document.getElementById(flow.to);
+        if (!fromEl || !toEl) return;
+
+        const sides = {
+          fromSide: flow.fromSide,
+          toSide: flow.toSide
+        };
+        if (!sides.fromSide || !sides.toSide) {
+          const fallback = pickSides(fromEl, toEl);
+          sides.fromSide = fallback.fromSide;
+          sides.toSide = fallback.toSide;
+        }
+        const a = getAnchor(fromEl, sides.fromSide, rect);
+        const b = getAnchor(toEl, sides.toSide, rect);
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", orthPath(a, b));
+        path.setAttribute("class", `flow-${flow.type}`);
+        path.setAttribute("marker-end", `url(#arrow-${flow.type})`);
+        path.setAttribute("opacity", "0.88");
+        svg.appendChild(path);
+      });
+    }
+
+    const redraw = () => {
+      if (window.innerWidth <= 760) return;
+      drawFlows();
+    };
+
+    window.addEventListener("load", redraw);
+    window.addEventListener("resize", redraw);
+  </script>
 </body>
 </html>
