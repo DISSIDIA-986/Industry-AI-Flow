@@ -1,111 +1,85 @@
 # ==========================================
-# Environment and Configuration
+# Environment and virtual environments
 # ==========================================
 .env
 .env.*
+!.env.example
 .venv/
 .venv_capstone/
-venv/
-venv_llamacpp/
-venv_test/
 .venv_test/
+venv/
+venv_*/
+venv_test/
 env/
 test_env/
 
 # ==========================================
-# Python
+# Python bytecode and caches
 # ==========================================
 __pycache__/
-*.pyc
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
 .Python
+
+# ==========================================
+# Build and packaging artifacts
+# ==========================================
 build/
-develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-/lib/
-/lib64/
-parts/
 sdist/
-var/
 wheels/
+pip-wheel-metadata/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # ==========================================
-# Testing and Coverage
+# Test, lint, and coverage artifacts
 # ==========================================
-.coverage
-htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
 .tox/
 .nox/
-.pytest_cache/
-.cache/
-.mypy_cache/
+.hypothesis/
 .dmypy.json
 dmypy.json
+.coverage
+.coverage.*
 coverage.xml
-*.cover
-.hypothesis/
+htmlcov/
 
 # ==========================================
-# Jupyter Notebook
+# Logs and temp outputs
 # ==========================================
-.ipynb_checkpoints
-
-# ==========================================
-# Documentation and Reports
-# ==========================================
-docs/_build/
-site/
+logs/
 *.log
-reports/
-tests/reports/latest/*.html
-tests/reports/latest/*.json
-tests/reports/historical/
-
-# ==========================================
-# Data and Media Files
-# ==========================================
-samples/
-*.pdf
-*.docx
-*.doc
-*.xls
-*.xlsx
-*.ppt
-*.pptx
-*.csv
-*.json
-*.xml
-*.yaml
-*.yml
-data/
-datasets/
+*.out
+*.err
 temp/
 tmp/
 *.tmp
 *.temp
+*.pid
+*.pid.lock
+output/
+outputs/
+test_output/
+reports/
+benchmark_results/
+performance_logs/
 
 # ==========================================
-# AI/ML Model Files
+# Documentation build outputs
 # ==========================================
-models/
-*.pkl
-*.joblib
-*.h5
-*.hdf5
-*.pb
-*.onnx
-*.tflite
+docs/_build/
+site/
 
 # ==========================================
-# Database and Storage
+# Data stores and local runtime caches
 # ==========================================
 *.db
 *.sqlite
@@ -115,52 +89,9 @@ embeddings/
 cache/
 
 # ==========================================
-# Docker and Containers
+# Workspace generated artifacts
 # ==========================================
-.dockerignore
-docker-compose.override.yml
-
-# ==========================================
-# IDE and Editors
-# ==========================================
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# ==========================================
-# OS and System Files
-# ==========================================
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# ==========================================
-# Temporary Files and Outputs
-# ==========================================
-temp/
-tmp/
-*.tmp
-*.bak
-*.backup
-*.old
-output/
-outputs/
-test_output/
-logs/
-*.log
-.claude/
-# 注意：不要使用 *.md，这会错误地忽略所有Markdown文件
-# 应该使用更具体的模式，如 docs/_build/*.md 等
-
-# ==========================================
-# Workspace and Experimental Code
-# ==========================================
+workspace/models/
 workspace/experiments/*
 workspace/prototypes/*
 workspace/sandbox/*
@@ -169,30 +100,46 @@ workspace/sandbox/*
 !workspace/sandbox/.gitkeep
 
 # ==========================================
-# Performance and Monitoring
+# Frontend local dependencies
 # ==========================================
-*.prof
-*.profile
-benchmark_results/
-performance_logs/
+frontend/node_modules/
 
-examples/
-datasets/
+# ==========================================
+# Editor and OS files
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# ==========================================
+# Notebook checkpoints
+# ==========================================
+.ipynb_checkpoints/
+
+# ==========================================
+# Cleanup / audit artifacts
+# ==========================================
+cleanup_manifest.log
+cleanup_scan_report.tsv
+.claude/
+
+# ==========================================
+# Legacy local-only directories
+# ==========================================
+samples/
 chinese_docker_output/
 chinese_visualization_output/
 
-# Ensure research markdown files are tracked
-!research/*.md
-
-# Deprecated files (kept for reference, not scanned)
-docs/deprecated/
-
-# Cleanup archives and manifests
-temp/
-cleanup_manifest.log
-cleanup_scan_report.tsv
-
-# Track capstone dependency specs and demo fixtures
+# Keep dependency specs and demo fixture files tracked
 !requirements/
 !requirements/**/*.txt
 !test_resources/demo/
