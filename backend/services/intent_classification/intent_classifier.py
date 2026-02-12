@@ -25,6 +25,7 @@ class IntentType(Enum):
 
     KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # 知识检索类
     DATA_ANALYSIS = "data_analysis"  # 数据分析类
+    COST_ESTIMATION = "cost_estimation"  # 成本估算类
     DOCUMENT_PROCESSING = "document_processing"  # 文档处理类
     CODE_EXECUTION = "code_execution"  # 代码执行类
     UNCLEAR_INTENT = "unclear_intent"  # 意图不明确
@@ -434,6 +435,23 @@ class IntentClassifier:
             confidence = 0.85
             reasoning = "问题包含知识查询相关的关键词"
         elif any(
+            keyword in query_lower
+            for keyword in [
+                "cost estimate",
+                "cost estimation",
+                "budget",
+                "overrun",
+                "construction cost",
+                "成本",
+                "预算",
+                "估算",
+                "超支",
+            ]
+        ):
+            intent = "cost_estimation"
+            confidence = 0.91
+            reasoning = "问题涉及工程成本估算相关操作"
+        elif any(
             keyword in query_lower for keyword in ["分析", "统计", "图表", "数据", "dataset"]
         ):
             intent = "data_analysis"
@@ -588,6 +606,7 @@ class IntentClassifier:
         actions = {
             IntentType.KNOWLEDGE_RETRIEVAL: "调用RAG检索系统进行知识查询",
             IntentType.DATA_ANALYSIS: "启动数据分析Agent处理数据任务",
+            IntentType.COST_ESTIMATION: "启动成本估算模型进行预算与超支预测",
             IntentType.DOCUMENT_PROCESSING: "启动OCR Agent处理文档提取任务",
             IntentType.CODE_EXECUTION: "启动代码执行Agent运行计算任务",
             IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图",
@@ -665,6 +684,7 @@ class IntentClassifier:
                         [
                             {"type": "knowledge_retrieval", "desc": "知识查询和回答"},
                             {"type": "data_analysis", "desc": "数据分析和可视化"},
+                            {"type": "cost_estimation", "desc": "工程成本估算与超支预测"},
                             {"type": "document_processing", "desc": "文档处理和OCR"},
                             {"type": "code_execution", "desc": "代码执行和计算"},
                         ],
@@ -726,6 +746,14 @@ class IntentClassifier:
                     "default_visualization": True,
                 }
             )
+        elif result.intent == IntentType.COST_ESTIMATION:
+            routing_info.update(
+                {
+                    "supported_formats": ["csv", "excel", "json"],
+                    "model_inference": True,
+                    "prediction_targets": ["cost_overrun_pct", "actual_cost_cad"],
+                }
+            )
         elif result.intent == IntentType.DOCUMENT_PROCESSING:
             routing_info.update(
                 {
@@ -750,6 +778,7 @@ class IntentClassifier:
         agent_mapping = {
             IntentType.KNOWLEDGE_RETRIEVAL: "RAGAgent",
             IntentType.DATA_ANALYSIS: "DataAnalysisAgent",
+            IntentType.COST_ESTIMATION: "DataAnalysisAgent",
             IntentType.DOCUMENT_PROCESSING: "OCRAgent",
             IntentType.CODE_EXECUTION: "CodeExecutorAgent",
             IntentType.UNCLEAR_INTENT: "ClarificationAgent",

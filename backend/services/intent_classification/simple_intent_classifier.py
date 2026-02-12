@@ -18,6 +18,7 @@ class IntentType(Enum):
 
     KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # 知识检索类
     DATA_ANALYSIS = "data_analysis"  # 数据分析类
+    COST_ESTIMATION = "cost_estimation"  # 成本估算类
     DOCUMENT_PROCESSING = "document_processing"  # 文档处理类
     CODE_EXECUTION = "code_execution"  # 代码执行类
     UNCLEAR_INTENT = "unclear_intent"  # 意图不明确
@@ -239,6 +240,32 @@ class SimpleIntentClassifier:
                     r"多少.*百分比",
                 ],
                 "priority": 2,  # 高优先级，因为数据分析更具体
+            },
+            IntentType.COST_ESTIMATION: {
+                "keywords": [
+                    "cost estimate",
+                    "cost estimation",
+                    "construction cost",
+                    "budget estimate",
+                    "cost overrun",
+                    "overrun",
+                    "estimate cost",
+                    "预算",
+                    "成本",
+                    "估算",
+                    "造价",
+                    "超支",
+                    "成本预测",
+                    "预算预测",
+                ],
+                "patterns": [
+                    r"(cost|budget)\s+(estimate|estimation|forecast)",
+                    r"(cost|budget)\s+overrun",
+                    r"(estimate|predict).*(cost|budget)",
+                    r"(成本|预算).*(估算|预测)",
+                    r"(造价|超支).*(预测|估算)",
+                ],
+                "priority": 3,
             },
             IntentType.DOCUMENT_PROCESSING: {
                 "keywords": [
@@ -494,6 +521,7 @@ class SimpleIntentClassifier:
         actions = {
             IntentType.KNOWLEDGE_RETRIEVAL: "调用RAG检索系统进行知识查询",
             IntentType.DATA_ANALYSIS: "启动数据分析Agent处理数据任务",
+            IntentType.COST_ESTIMATION: "启动成本估算模型进行预算与超支预测",
             IntentType.DOCUMENT_PROCESSING: "启动OCR Agent处理文档提取任务",
             IntentType.CODE_EXECUTION: "启动代码执行Agent运行计算任务",
             IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图",
