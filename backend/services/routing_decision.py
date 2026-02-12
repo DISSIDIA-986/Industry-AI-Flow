@@ -310,6 +310,7 @@ class RoutingDecisionEngine:
         intent_mapping = {
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
+            "cost_estimation": AgentType.DATA_ANALYSIS_AGENT,
             "document_processing": AgentType.DOCUMENT_PROCESSING_AGENT,
             "code_execution": AgentType.CODE_EXECUTION_AGENT,
         }
@@ -429,6 +430,10 @@ class RoutingDecisionEngine:
             "数据": "data_analysis",
             "分析": "data_analysis",
             "图表": "data_analysis",
+            "成本": "cost_estimation",
+            "预算": "cost_estimation",
+            "估算": "cost_estimation",
+            "超支": "cost_estimation",
             "文档": "document_processing",
             "PDF": "document_processing",
             "图片": "document_processing",
