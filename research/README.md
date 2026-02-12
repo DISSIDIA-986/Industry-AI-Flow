@@ -1,171 +1,47 @@
-# Industry AI Flow LLM架构调研目录
+# Research Hub
 
-## 文档概览
+本目录用于存放 Capstone 调研、方案与审计文档。为了降低根目录噪音，文档已按类型分层。
 
-本目录包含Industry AI Flow项目的完整LLM架构调研报告，针对Mac Studio M1 Max 32GB环境，专注于RAG/REG系统+动态Python代码生成应用。
+## 目录结构
 
-### 核心文档
+- `architecture/`: 架构与技术调研
+  - `architecture/llm-architecture-research.md`
+  - `architecture/new_architecture.md`
+  - `architecture/rag-workflow-data-model-and-schema-design.md`
+  - `architecture/rag-workflow-implementation-details.md`
+  - `architecture/商用LLM代码执行沙箱服务.md`
+- `plans/`: 规划与实施方案
+  - `plans/capstone_frontend_overview_plan.md`
+  - `plans/capstone_optimization_execution_plan_2026-02-12.md`
+  - `plans/project-structure-optimization-plan-2026-02-12.md`
+  - `plans/rag-workflow-deep-optimization-plan.md`
+- `reports/`: 评估与复盘报告
+  - `reports/adoption_analysis.md`
+  - `reports/capstone-review-report.md`
+  - `reports/capstone_optimization_completion_report_2026-02-12.md`
+  - `reports/hybrid-llm-evaluation-report.md`
+- `guides/`: 使用与落地指引
+  - `guides/quick-start-guide.md`
+- `meta/`: 元信息与过程记录
+  - `meta/CLAUDE.md`
+  - `meta/COMMIT_SUMMARY.md`
+- `prompt-catalog/`: Prompt 目录导出与说明
 
-1. **[llm-architecture-research.md](llm-architecture-research.md)** - 主调研报告
-   - LLM实现方式对比分析
-   - 本地开源模型推荐
-   - 代码沙箱集成方案
-   - 完整技术评估
+## 保留在根目录的活跃文档
 
-2. **[implementation-roadmap.md](implementation-roadmap.md)** - 实施路线图
-   - 12周详细时间表
-   - 资源需求规划
-   - 风险矩阵分析
-   - 里程碑检查点
+以下文档仍保留在 `research/` 根目录，便于当前迭代直接引用：
 
-3. **[quick-start-guide.md](quick-start-guide.md)** - 快速启动指南
-   - 5分钟环境搭建
-   - 配置示例
-   - 常见问题解决
-   - 性能调优指南
+- `capstone_hybrid_strategy_and_versioning_plan.md`
+- `capstone_demo_smoke_test_plan_2026-02-12.md`
+- `layered_gap_review_and_execution_plan_2026-02-12.md`
+- `implementation-roadmap.md`
+- `summary-and-next-steps.md`
+- `teamagency-structure-review-2026-02-12.md`
+- `SKILL.md`
 
-4. **[summary-and-next-steps.md](summary-and-next-steps.md)** - 总结与行动计划
-   - 核心发现总结
-   - 风险评估
-   - 立即行动项
-   - 长期规划
+## 建议阅读路径
 
-## 快速导航
-
-### 如果您是决策者：
-- 阅读 **[summary-and-next-steps.md](summary-and-next-steps.md)** 了解核心结论
-- 查看 **[implementation-roadmap.md](implementation-roadmap.md)** 了解时间规划
-- 重点关注 **风险评估** 和 **成本分析** 部分
-
-### 如果您是技术负责人：
-- 详细阅读 **[llm-architecture-research.md](llm-architecture-research.md)**
-- 参考 **[quick-start-guide.md](quick-start-guide.md)** 搭建环境
-- 关注 **技术栈选择** 和 **性能基准**
-
-### 如果您是开发人员：
-- 从 **[quick-start-guide.md](quick-start-guide.md)** 开始
-- 实践 **5分钟快速启动**
-- 参考 **配置示例** 和 **代码片段**
-
-## 核心建议摘要
-
-### 架构选择：分阶段混合架构
-1. **阶段1（1-2个月）**: 纯本地部署，验证核心功能
-2. **阶段2（3-4个月）**: 引入商用API辅助复杂任务
-3. **阶段3（5-6个月）**: 动态混合调度，最优平衡
-
-### 技术栈推荐：
-- **LLM框架**: Ollama + LangChain
-- **本地模型**: DeepSeek-Coder-7B（Q4_K_M量化）
-- **沙箱方案**: Docker安全容器
-- **向量数据库**: ChromaDB
-
-### 性能预期（M1 Max 32GB）：
-- 推理速度: 25-35 tokens/s
-- 内存占用: 12-14GB VRAM
-- 响应时间: ≤5秒（90%请求）
-
-### 成本预估：
-- 本地部署: $1,200/年
-- 混合架构: $6,000-24,000/年
-
-## 立即行动
-
-### 今天可以做的：
-```bash
-# 1. 安装基础环境
-brew install ollama
-
-# 2. 下载测试模型
-ollama pull deepseek-coder:7b-q4_K_M
-
-# 3. 运行快速演示
-python quick_demo.py
-```
-
-### 本周目标：
-1. 完成技术可行性验证
-2. 建立性能基准
-3. 创建最小可行产品(MVP)
-
-### 本月目标：
-1. 实现核心功能
-2. 完成安全测试
-3. 准备试点部署
-
-## 关键特性
-
-### 数据隐私保障 ✅
-- 敏感数据100%本地处理
-- 商用API仅接收脱敏metadata
-- 多层加密与访问控制
-- 完整审计追踪
-
-### 技术可行性 ✅
-- M1 Max硬件完全支持8B模型
-- 成熟的本地推理框架
-- 完善的沙箱安全方案
-- 活跃的开源社区
-
-### 业务价值 ✅
-- 成本节约：提升5倍效率
-- 准确性：代码生成≥85%
-- 可扩展性：支持复杂分析
-- 合规性：企业级安全要求
-
-## 风险评估
-
-### 高风险（需重点关注）：
-1. **模型能力不足** - 多模型备选方案
-2. **数据泄露** - 严格访问控制，端到端加密
-
-### 中风险（需定期监控）：
-1. **成本超支** - 使用量监控，预算预警
-2. **集成复杂度** - 模块化设计，分阶段实施
-
-### 低风险（需一般关注）：
-1. **技术依赖** - 技术栈多样化
-
-## 成功指标
-
-### 技术指标：
-- 响应时间: ≤5秒
-- 准确率: ≥85%
-- 可用性: ≥99.5%
-- 安全事件: 0
-
-### 业务指标：
-- 用户满意度: ≥4.5/5
-- 成本节约: ≥30%
-- 处理效率: 提升5倍
-- 错误率: 降低70%
-
-## 联系信息
-
-### 技术问题：
-- GitHub Issues: [项目仓库]
-- 技术论坛: [社区链接]
-- 紧急支持: [联系方式]
-
-### 业务咨询：
-- 项目经理: [姓名]
-- 产品负责人: [姓名]
-- 安全顾问: [姓名]
-
-## 文档更新记录
-
-| 版本 | 日期 | 更新内容 | 负责人 |
-|------|------|----------|--------|
-| 1.0 | 2026-02-06 | 初始调研报告完成 | LLM架构专家组 |
-| 1.1 | 待更新 | 根据测试反馈更新 | 待定 |
-
-## 许可证
-
-本调研报告仅供内部使用，未经许可不得外传。
-
----
-
-*调研完成时间: 2026年2月6日*
-*硬件环境: Mac Studio M1 Max 32GB*
-*适用项目: Industry AI Flow v1.0*
-*保密等级: 内部机密*
+1. 总览：`implementation-roadmap.md`
+2. 架构：`architecture/llm-architecture-research.md`
+3. 执行计划：`capstone_hybrid_strategy_and_versioning_plan.md` + `plans/`
+4. 结果复盘：`reports/`

@@ -5,7 +5,7 @@
 修复prompt_routes依赖断裂问题。
 
 创建时间: 2026-02-09
-参考: research/rag-workflow-implementation-details.md
+参考: research/architecture/rag-workflow-implementation-details.md
 """
 
 import asyncpg
