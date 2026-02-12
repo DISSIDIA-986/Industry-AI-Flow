@@ -187,6 +187,15 @@ class SmartDocumentRouter:
                         strategy = ProcessingStrategy.RAG_RETRIEVAL
                         agent = "RAGAgent (未找到结构化数据文件)"
 
+                # 成本估算意图
+                elif intent_value == "cost_estimation":
+                    if has_structured_data:
+                        strategy = ProcessingStrategy.DATA_ANALYSIS
+                        agent = "DataAnalysisAgent"
+                    else:
+                        strategy = ProcessingStrategy.RAG_RETRIEVAL
+                        agent = "RAGAgent (成本估算缺少结构化数据)"
+
                 # 知识检索意图
                 elif intent_value == "knowledge_retrieval":
                     strategy = ProcessingStrategy.RAG_RETRIEVAL

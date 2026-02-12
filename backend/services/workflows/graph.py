@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 from backend.services.workflows.nodes.code_exec_node import code_exec_node
+from backend.services.workflows.nodes.cost_estimation_node import cost_estimation_node
 from backend.services.workflows.nodes.groundedness_node import groundedness_node
 from backend.services.workflows.nodes.intent_node import intent_node
 from backend.services.workflows.nodes.prompt_node import prompt_node
@@ -53,6 +54,7 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     """
     pipeline = [
         ("intent_node", intent_node),
+        ("cost_estimation_node", cost_estimation_node),
         ("retrieval_node", retrieval_node),
         ("rerank_node", rerank_node),
         ("prompt_node", prompt_node),
@@ -66,6 +68,13 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     for node_name, handler in pipeline:
         if state.get("error"):
             break
+
+        metadata = state.setdefault("metadata", {})
+        if metadata.get("shortcut_response", False) and node_name not in {
+            "safety_node",
+            "response_node",
+        }:
+            continue
 
         if node_name == "prompt_node" and getattr(services, "prompt_manager", None) is None:
             continue
