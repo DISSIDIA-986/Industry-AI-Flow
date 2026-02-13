@@ -1,336 +1,337 @@
-# Industry AI Flow - 系统架构
+# Industry AI Flow - System Architecture
 
-## 架构总览
+## Architecture Overview
 
-Industry AI Flow 采用六层分层架构，从用户界面到基础设施，每层职责清晰，依赖关系明确。
+Industry AI Flow adopts a six-layer layered architecture with clear responsibilities and well-defined dependency relationships from user interface to infrastructure.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          用户界面层                                  │
-│  Streamlit Web UI | Prompt管理界面 | 外部API客户端                      │
+│                     User Interface Layer                           │
+│  Streamlit Web UI | Prompt Admin UI | External API Client          │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          API网关层                                   │
-│  FastAPI路由器 | 身份认证 | 租户隔离 | 输入验证 | 查询缓存              │
+│                      API Gateway Layer                             │
+│  FastAPI Routers | Authentication | Tenant Isolation | Validation   │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        业务服务层                                     │
-│  工作流编排器 | 意图分类器 | 提示词选择器 | 路由策略 | 预算控制          │
+│                   Business Services Layer                           │
+│  Workflow Orchestrator | Intent Classifier | Prompt Selector |      │
+│  Routing Strategy | Budget Control                                 │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        AI运行时层                                     │
-│  RAG引擎 | LLM调度服务 | 代码执行管理器 | 成本估算服务                   │
+│                      AI Runtime Layer                              │
+│  RAG Engine | LLM Dispatch | Code Execution | Cost Estimation       │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        数据存储层                                     │
-│  PostgreSQL + pgvector | 提示词库 | 用量数据 | 模型工件                  │
+│                     Data Storage Layer                             │
+│  PostgreSQL + pgvector | Prompt Library | Usage Data | Models       │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      安全与平台层                                     │
-│  数据脱敏 | 出站守卫 | 可观测性 | 审计日志 | 配置管理                    │
+│                  Security & Platform Layer                          │
+│  Data Redaction | Egress Guard | Observability | Audit | Config     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## 层次详细说明
+## Layer Details
 
-### 1. 用户界面层 (L1 - UI Layer)
+### 1. User Interface Layer (L1 - UI Layer)
 
-**职责**: 用户交互、数据展示、操作入口
+**Responsibility**: User interaction, data presentation, operation entry points
 
-**核心组件**:
-- **Streamlit Web UI**: 主用户界面，提供查询、可视化、管理功能
-- **Prompt Admin UI**: 提示词管理界面，支持版本控制和A/B测试
-- **外部API客户端**: RESTful API，支持第三方集成
+**Core Components**:
+- **Streamlit Web UI**: Main user interface providing query, visualization, and management features
+- **Prompt Admin UI**: Prompt management interface with version control and A/B testing
+- **External API Client**: RESTful API supporting third-party integration
 
-**技术栈**: Streamlit, JavaScript, HTML/CSS
+**Tech Stack**: Streamlit, JavaScript, HTML/CSS
 
-**主要代码位置**: `frontend/`, API客户端示例
-
----
-
-### 2. API网关层 (L2 - API Gateway Layer)
-
-**职责**: 路由分发、身份认证、请求验证、缓存策略
-
-**核心组件**:
-- **FastAPI路由器**: 统一的API入口点
-  - `/api/v1/workflow/query` - 工作流查询
-  - `/api/v1/cost/estimate` - 成本估算
-  - `/api/v1/prompts/*` - 提示词管理
-- **身份认证**: JWT token验证，租户上下文管理
-- **输入验证**: Pydantic模型验证请求参数
-- **查询缓存**: Redis缓存，减少重复查询成本
-
-**技术栈**: FastAPI, Pydantic, Redis, JWT
-
-**主要代码位置**:
-- `backend/main.py` - 应用入口
-- `backend/api/` - 所有路由定义
-- `backend/middleware/` - 认证中间件
+**Main Code Locations**: `frontend/`, API client examples
 
 ---
 
-### 3. 业务服务层 (L3 - Business Services Layer)
+### 2. API Gateway Layer (L2 - API Gateway Layer)
 
-**职责**: 业务逻辑编排、意图识别、智能路由
+**Responsibility**: Route distribution, authentication, request validation, caching strategy
 
-**核心组件**:
-- **工作流编排器**: 管理复杂的查询执行流程
-- **意图分类器**: 识别用户查询类型（RAG/代码/混合）
-- **提示词选择器**: 动态选择最优提示词模板
-- **路由策略**: 基于成本、性能、预算的智能路由
-- **预算控制**: 用量监控和预算执行
+**Core Components**:
+- **FastAPI Routers**: Unified API entry points
+  - `/api/v1/workflow/query` - Workflow query
+  - `/api/v1/cost/estimate` - Cost estimation
+  - `/api/v1/prompts/*` - Prompt management
+- **Authentication**: JWT token validation, tenant context management
+- **Input Validation**: Pydantic model validation for request parameters
+- **Query Cache**: Redis caching to reduce duplicate query costs
 
-**技术栈**: Python, LangGraph, 业务规则引擎
+**Tech Stack**: FastAPI, Pydantic, Redis, JWT
 
-**主要代码位置**:
-- `backend/services/workflows/` - 工作流定义
-- `backend/services/intent_classification/` - 意图识别
-- `backend/services/routing_decision.py` - 路由逻辑
-- `backend/services/prompt_manager.py` - 提示词管理
-
----
-
-### 4. AI运行时层 (L4 - AI Runtime Layer)
-
-**职责**: AI模型执行、数据处理、成本计算
-
-**核心组件**:
-- **RAG引擎**:
-  - 文档嵌入 (OpenAI/Cohere embeddings)
-  - 向量检索 (pgvector)
-  - 混合检索 (BM25 + Semantic)
-  - 重排序 (Cohere Rerank)
-- **LLM调度服务**:
-  - 多提供商支持 (OpenAI, Anthropic, Cohere)
-  - 智能故障转移
-  - 成本追踪
-- **代码执行管理器**:
-  - Docker容器隔离
-  - 沙箱执行
-  - 超时控制
-- **成本估算服务**:
-  - 线性回归模型
-  - 置信区间计算
-  - 模型版本管理
-
-**技术栈**: LangChain, PostgreSQL + pgvector, Docker, scikit-learn
-
-**主要代码位置**:
-- `backend/services/rag_engine.py` - RAG核心逻辑
-- `backend/services/llm_integration/dispatch_service.py` - LLM调度
-- `backend/services/code_executor/` - 代码执行
-- `backend/services/cost_estimation_service.py` - 成本估算
+**Main Code Locations**:
+- `backend/main.py` - Application entry
+- `backend/api/` - All route definitions
+- `backend/middleware/` - Authentication middleware
 
 ---
 
-### 5. 数据存储层 (L5 - Data Storage Layer)
+### 3. Business Services Layer (L3 - Business Services Layer)
 
-**职责**: 数据持久化、向量存储、模型工件管理
+**Responsibility**: Business logic orchestration, intent recognition, intelligent routing
 
-**核心组件**:
-- **PostgreSQL + pgvector**: 主数据库，支持向量检索
-  - `documents` - 文档块和嵌入
-  - `prompts` - 提示词模板
-  - `usage` - 用量统计
-  - `budgets` - 预算配置
-- **向量索引**: HNSW索引，加速相似度搜索
-- **模型工件**: 成本估算模型的持久化存储
+**Core Components**:
+- **Workflow Orchestrator**: Manages complex query execution flows
+- **Intent Classifier**: Identifies user query types (RAG/Code/Hybrid)
+- **Prompt Selector**: Dynamically selects optimal prompt templates
+- **Routing Strategy**: Intelligent routing based on cost, performance, and budget
+- **Budget Control**: Usage monitoring and budget enforcement
 
-**技术栈**: PostgreSQL 15+, pgvector, 文件系统
+**Tech Stack**: Python, LangGraph, Business Rules Engine
 
-**主要代码位置**:
-- `backend/services/core/vectorstore.py` - 向量数据库操作
-- `backend/services/core/embedder.py` - 文档嵌入
-- `workspace/models/cost_estimation/` - 模型工件
-
----
-
-### 6. 安全与平台层 (L6 - Security & Platform Layer)
-
-**职责**: 安全防护、可观测性、运维支持
-
-**核心组件**:
-- **数据脱敏**: PII信息自动识别和脱敏
-- **出站守卫**: 外部API调用监控和过滤
-- **可观测性**: 指标、日志、追踪
-- **审计日志**: 完整的操作审计追踪
-- **配置管理**: 环境配置、密钥管理
-- **发布门禁**: CI/CD质量门禁
-
-**技术栈**: Prometheus, Grafana, ELK Stack, Vault
-
-**主要代码位置**:
-- `backend/services/security/` - 安全服务
-- `backend/observability/` - 可观测性
-- `.github/workflows/` - CI/CD流程
+**Main Code Locations**:
+- `backend/services/workflows/` - Workflow definitions
+- `backend/services/intent_classification/` - Intent recognition
+- `backend/services/routing_decision.py` - Routing logic
+- `backend/services/prompt_manager.py` - Prompt management
 
 ---
 
-## 核心业务流程
+### 4. AI Runtime Layer (L4 - AI Runtime Layer)
 
-### 1. RAG查询流程
+**Responsibility**: AI model execution, data processing, cost calculation
+
+**Core Components**:
+- **RAG Engine**:
+  - Document embedding (OpenAI/Cohere embeddings)
+  - Vector retrieval (pgvector)
+  - Hybrid retrieval (BM25 + Semantic)
+  - Reranking (Cohere Rerank)
+- **LLM Dispatch Service**:
+  - Multi-provider support (OpenAI, Anthropic, Cohere)
+  - Intelligent failover
+  - Cost tracking
+- **Code Execution Manager**:
+  - Docker container isolation
+  - Sandbox execution
+  - Timeout control
+- **Cost Estimation Service**:
+  - Linear regression model
+  - Confidence interval calculation
+  - Model version management
+
+**Tech Stack**: LangChain, PostgreSQL + pgvector, Docker, scikit-learn
+
+**Main Code Locations**:
+- `backend/services/rag_engine.py` - RAG core logic
+- `backend/services/llm_integration/dispatch_service.py` - LLM dispatch
+- `backend/services/code_executor/` - Code execution
+- `backend/services/cost_estimation_service.py` - Cost estimation
+
+---
+
+### 5. Data Storage Layer (L5 - Data Storage Layer)
+
+**Responsibility**: Data persistence, vector storage, model artifact management
+
+**Core Components**:
+- **PostgreSQL + pgvector**: Primary database with vector retrieval support
+  - `documents` - Document chunks and embeddings
+  - `prompts` - Prompt templates
+  - `usage` - Usage statistics
+  - `budgets` - Budget configuration
+- **Vector Index**: HNSW index for accelerated similarity search
+- **Model Artifacts**: Persistent storage for cost estimation models
+
+**Tech Stack**: PostgreSQL 15+, pgvector, File System
+
+**Main Code Locations**:
+- `backend/services/core/vectorstore.py` - Vector database operations
+- `backend/services/core/embedder.py` - Document embedding
+- `workspace/models/cost_estimation/` - Model artifacts
+
+---
+
+### 6. Security & Platform Layer (L6 - Security & Platform Layer)
+
+**Responsibility**: Security protection, observability, operational support
+
+**Core Components**:
+- **Data Redaction**: Automatic PII identification and redaction
+- **Egress Guard**: External API call monitoring and filtering
+- **Observability**: Metrics, logging, tracing
+- **Audit Logging**: Complete operational audit trail
+- **Configuration Management**: Environment configuration, secret management
+- **Release Gates**: CI/CD quality gates
+
+**Tech Stack**: Prometheus, Grafana, ELK Stack, Vault
+
+**Main Code Locations**:
+- `backend/services/security/` - Security services
+- `backend/observability/` - Observability
+- `.github/workflows/` - CI/CD pipelines
+
+---
+
+## Core Business Flows
+
+### 1. RAG Query Flow
 
 ```
-用户查询 (L1)
+User Query (L1)
     ↓
-API网关验证 (L2)
+API Gateway Validation (L2)
     ↓
-意图识别 (L3) → 识别为RAG查询
+Intent Recognition (L3) → Identified as RAG query
     ↓
-提示词选择 (L3) → 选择RAG提示词模板
+Prompt Selection (L3) → Select RAG prompt template
     ↓
-RAG引擎 (L4)
-    ├─ 文档嵌入
-    ├─ 向量检索 (L5)
-    ├─ 重排序
-    └─ 上下文构建
+RAG Engine (L4)
+    ├─ Document Embedding
+    ├─ Vector Retrieval (L5)
+    ├─ Reranking
+    └─ Context Building
     ↓
-LLM调度 (L4) → 生成响应
+LLM Dispatch (L4) → Generate response
     ↓
-数据脱敏 (L6)
+Data Redaction (L6)
     ↓
-返回结果 (L1)
+Return Result (L1)
 ```
 
-### 2. 代码分析流程
+### 2. Code Analysis Flow
 
 ```
-用户上传数据 (L1)
+User Upload Data (L1)
     ↓
-API网关验证 (L2)
+API Gateway Validation (L2)
     ↓
-意图识别 (L3) → 识别为代码分析请求
+Intent Recognition (L3) → Identified as code analysis request
     ↓
-工作流编排 (L3)
-    ├─ 数据预处理
-    └─ 代码生成计划
+Workflow Orchestration (L3)
+    ├─ Data Preprocessing
+    └─ Code Generation Plan
     ↓
-代码执行管理器 (L4)
-    ├─ Docker容器启动
-    ├─ 代码执行
-    └─ 结果收集
+Code Execution Manager (L4)
+    ├─ Docker Container Start
+    ├─ Code Execution
+    └─ Result Collection
     ↓
-结果返回 (L1)
+Return Result (L1)
 ```
 
-### 3. 成本估算流程
+### 3. Cost Estimation Flow
 
 ```
-用户请求估算 (L1)
+User Request Estimation (L1)
     ↓
-API网关验证 (L2)
+API Gateway Validation (L2)
     ↓
-成本估算服务 (L4)
-    ├─ 特征提取
-    ├─ 模型推理 (L5)
-    └─ 置信区间计算
+Cost Estimation Service (L4)
+    ├─ Feature Extraction
+    ├─ Model Inference (L5)
+    └─ Confidence Interval Calculation
     ↓
-返回估算结果 (L1)
+Return Estimation Result (L1)
 ```
 
-## 数据流图
+## Data Flow Diagram
 
 ```
 ┌─────────────┐
-│  用户输入   │
+│  User Input │
 └──────┬──────┘
        │
        ▼
 ┌───────────────────────────────────────┐
-│  API网关层 - 认证、验证、路由          │
+│  API Gateway Layer - Auth, Validate, Route │
 └──────┬──────────────────────────────┘
        │
        ├─────────────────┬─────────────────┬──────────────┐
        ▼                 ▼                 ▼              ▼
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│ RAG查询     │  │ 代码分析    │  │ 成本估算    │  │ 提示词管理  │
+│ RAG Query   │  │ Code Analysis│  │ Cost Estimation│ │ Prompt Mgmt  │
 └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
        │                │                │                │
        ▼                ▼                ▼                ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  AI运行时层 - LLM调度、代码执行、模型推理                     │
+│  AI Runtime Layer - LLM Dispatch, Code Execution, Model Inference │
 └──────┬─────────────────────────────────────────────────────┘
        │
        ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  数据存储层 - PostgreSQL + pgvector                         │
+│  Data Storage Layer - PostgreSQL + pgvector                 │
 └──────┬─────────────────────────────────────────────────────┘
        │
        ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  安全与平台层 - 脱敏、审计、监控                               │
+│  Security & Platform Layer - Redaction, Audit, Monitoring     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-## 依赖关系
+## Dependency Relationships
 
-- L1 依赖 L2 (API调用)
-- L2 依赖 L3 (业务逻辑)
-- L3 依赖 L4 (AI能力)
-- L4 依赖 L5 (数据访问)
-- 所有层依赖 L6 (安全/平台服务)
+- L1 depends on L2 (API calls)
+- L2 depends on L3 (Business logic)
+- L3 depends on L4 (AI capabilities)
+- L4 depends on L5 (Data access)
+- All layers depend on L6 (Security/Platform services)
 
-## 扩展性设计
+## Scalability Design
 
-### 水平扩展
-- API网关层: 无状态，支持多实例负载均衡
-- AI运行时层: 任务队列 + 工作进程池
+### Horizontal Scaling
+- API Gateway Layer: Stateless, supports multi-instance load balancing
+- AI Runtime Layer: Task queue + worker pool
 
-### 垂直扩展
-- 数据存储层: 读写分离，向量索引优化
-- AI模型层: 模型服务化部署
+### Vertical Scaling
+- Data Storage Layer: Read-write splitting, vector index optimization
+- AI Model Layer: Model serving deployment
 
-### 插件化
-- 新增LLM提供商: 实现统一接口
-- 新增意图类型: 扩展意图分类器
-- 新增数据源: 实现数据适配器
+### Plugin Architecture
+- Add new LLM providers: Implement unified interface
+- Add new intent types: Extend intent classifier
+- Add new data sources: Implement data adapter
 
-## 安全设计
+## Security Design
 
-### 认证授权
-- JWT token认证
-- 租户级别数据隔离
-- RBAC权限控制
+### Authentication & Authorization
+- JWT token authentication
+- Tenant-level data isolation
+- RBAC permission control
 
-### 数据安全
-- 传输加密 (TLS)
-- 敏感数据脱敏
-- 审计日志完整性
+### Data Security
+- Transport encryption (TLS)
+- Sensitive data redaction
+- Audit log integrity
 
-### 运行时安全
-- 代码沙箱隔离 (Docker)
-- 出站流量控制
-- 资源配额限制
+### Runtime Security
+- Code sandbox isolation (Docker)
+- Egress traffic control
+- Resource quota limits
 
-## 可观测性
+## Observability
 
-### 指标监控
-- API响应时间
-- LLM调用成功率
-- 成本追踪
-- 缓存命中率
+### Metrics Monitoring
+- API response time
+- LLM call success rate
+- Cost tracking
+- Cache hit rate
 
-### 日志管理
-- 结构化日志 (JSON)
-- 日志聚合 (ELK)
-- 错误追踪 (Sentry)
+### Log Management
+- Structured logging (JSON)
+- Log aggregation (ELK)
+- Error tracking (Sentry)
 
-### 分布式追踪
-- 请求链路追踪
-- 性能瓶颈分析
-- 依赖关系可视化
+### Distributed Tracing
+- Request path tracing
+- Performance bottleneck analysis
+- Dependency visualization
 
-## 交互式架构图
+## Interactive Architecture Diagram
 
-查看交互式分层架构图：[ARCHITECTURE_DIAGRAM.html](./ARCHITECTURE_DIAGRAM.html)
+View the interactive layered architecture diagram: [ARCHITECTURE_DIAGRAM.html](./ARCHITECTURE_DIAGRAM.html)

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - 分层架构图</title>
+    <title>Industry AI Flow - Layered Architecture Diagram</title>
     <style>
         * {
             margin: 0;
@@ -282,7 +282,7 @@
 <body>
     <div class="container">
         <h1>Industry AI Flow</h1>
-        <p class="subtitle">企业级RAG系统 - 六层分层架构</p>
+        <p class="subtitle">Enterprise RAG System - Six-Layer Layered Architecture</p>
 
         <div class="architecture">
             <!-- Layer 1: UI -->
@@ -290,18 +290,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L1</span>
-                        用户界面层 (UI Layer)
+                        User Interface Layer (UI Layer)
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        提供用户交互界面，包括Web UI、管理界面和外部API客户端
+                        Provides user interaction interfaces including Web UI, management interface, and external API clients
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">📊 Streamlit Web UI</div>
-                            <div class="component-desc">主用户界面，提供查询、可视化、管理功能</div>
+                            <div class="component-desc">Main user interface providing query, visualization, and management features</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Streamlit</span>
                                 <span class="tech-badge">JavaScript</span>
@@ -309,7 +309,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🔧 Prompt Admin UI</div>
-                            <div class="component-desc">提示词管理界面，支持版本控制和A/B测试</div>
+                            <div class="component-desc">Prompt management interface with version control and A/B testing</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">React</span>
                                 <span class="tech-badge">TypeScript</span>
@@ -317,7 +317,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🔌 External API Client</div>
-                            <div class="component-desc">RESTful API，支持第三方系统集成</div>
+                            <div class="component-desc">RESTful API supporting third-party system integration</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">REST</span>
                                 <span class="tech-badge">OpenAPI</span>
@@ -332,18 +332,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L2</span>
-                        API网关层 (API Gateway Layer)
+                        API Gateway Layer
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        统一API入口，负责路由分发、身份认证、请求验证和缓存策略
+                        Unified API entry point responsible for route distribution, authentication, request validation, and caching strategy
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">🚦 FastAPI Routers</div>
-                            <div class="component-desc">统一的API路由管理，支持工作流查询、成本估算、提示词管理等</div>
+                            <div class="component-desc">Unified API route management supporting workflow queries, cost estimation, and prompt management</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">FastAPI</span>
                                 <span class="tech-badge">Pydantic</span>
@@ -351,7 +351,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🔐 Authentication & Authorization</div>
-                            <div class="component-desc">JWT token验证，租户级别数据隔离和RBAC权限控制</div>
+                            <div class="component-desc">JWT token validation, tenant-level data isolation, and RBAC permission control</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">JWT</span>
                                 <span class="tech-badge">OAuth2</span>
@@ -359,7 +359,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">✅ Input Validation</div>
-                            <div class="component-desc">Pydantic模型验证请求参数，确保数据完整性和安全性</div>
+                            <div class="component-desc">Pydantic model validation for request parameters ensuring data integrity and security</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Pydantic</span>
                                 <span class="tech-badge">Validator</span>
@@ -367,7 +367,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">⚡ Query Cache</div>
-                            <div class="component-desc">Redis缓存层，减少重复查询成本，提升响应速度</div>
+                            <div class="component-desc">Redis cache layer to reduce duplicate query costs and improve response speed</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Redis</span>
                                 <span class="tech-badge">Cache</span>
@@ -382,18 +382,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L3</span>
-                        业务服务层 (Business Services Layer)
+                        Business Services Layer
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        核心业务逻辑层，负责工作流编排、意图识别、智能路由和预算控制
+                        Core business logic layer responsible for workflow orchestration, intent recognition, intelligent routing, and budget control
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">🔄 Workflow Orchestrator</div>
-                            <div class="component-desc">使用LangGraph管理复杂的查询执行流程，支持状态机和条件路由</div>
+                            <div class="component-desc">Manages complex query execution flows using LangGraph with state machine and conditional routing</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">LangGraph</span>
                                 <span class="tech-badge">State Machine</span>
@@ -401,7 +401,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🎯 Intent Classifier</div>
-                            <div class="component-desc">识别用户查询类型（RAG/代码分析/混合LLM），决定执行路径</div>
+                            <div class="component-desc">Identifies user query types (RAG/Code Analysis/Hybrid LLM) to determine execution path</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">NLP</span>
                                 <span class="tech-badge">Classification</span>
@@ -409,7 +409,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">💬 Prompt Selector</div>
-                            <div class="component-desc">动态选择最优提示词模板，支持版本控制和A/B测试</div>
+                            <div class="component-desc">Dynamically selects optimal prompt templates with version control and A/B testing support</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Template Engine</span>
                                 <span class="tech-badge">A/B Testing</span>
@@ -417,7 +417,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🧭 Routing & Budget Policy</div>
-                            <div class="component-desc">基于成本、性能和预算的智能路由决策，实时预算监控和控制</div>
+                            <div class="component-desc">Intelligent routing decisions based on cost, performance, and budget with real-time monitoring</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Policy Engine</span>
                                 <span class="tech-badge">Budget Control</span>
@@ -432,18 +432,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L4</span>
-                        AI运行时层 (AI Runtime Layer)
+                        AI Runtime Layer
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        AI能力核心层，提供RAG、LLM调度、代码执行和成本估算能力
+                        AI capability core layer providing RAG, LLM dispatch, code execution, and cost estimation capabilities
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">🔍 RAG Engine</div>
-                            <div class="component-desc">混合检索系统，支持语义检索、关键词检索和智能重排序</div>
+                            <div class="component-desc">Hybrid retrieval system supporting semantic retrieval, keyword retrieval, and intelligent reranking</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">LangChain</span>
                                 <span class="tech-badge">pgvector</span>
@@ -452,7 +452,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🤖 LLM Dispatch Service</div>
-                            <div class="component-desc">多提供商LLM调度，支持OpenAI、Anthropic、Cohere等，智能故障转移</div>
+                            <div class="component-desc">Multi-provider LLM dispatch supporting OpenAI, Anthropic, Cohere, with intelligent failover</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">OpenAI</span>
                                 <span class="tech-badge">Anthropic</span>
@@ -461,7 +461,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">⚙️ Code Execution Manager</div>
-                            <div class="component-desc">Docker容器隔离的代码执行环境，支持Python、R等多种语言</div>
+                            <div class="component-desc">Docker container isolated code execution environment supporting Python, R, and other languages</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Docker</span>
                                 <span class="tech-badge">Sandbox</span>
@@ -470,7 +470,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">💰 Cost Estimation Service</div>
-                            <div class="component-desc">基于机器学习的成本预测模型，提供准确的成本估算和置信区间</div>
+                            <div class="component-desc">Machine learning based cost prediction model providing accurate cost estimation and confidence intervals</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">scikit-learn</span>
                                 <span class="tech-badge">Linear Regression</span>
@@ -485,18 +485,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L5</span>
-                        数据存储层 (Data Storage Layer)
+                        Data Storage Layer
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        数据持久化层，支持关系数据、向量数据、模型工件和文件存储
+                        Data persistence layer supporting relational data, vector data, model artifacts, and file storage
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">🗄️ PostgreSQL + pgvector</div>
-                            <div class="component-desc">主数据库，支持向量检索和复杂查询，包含文档、提示词、用量、预算等表</div>
+                            <div class="component-desc">Primary database with vector retrieval support containing documents, prompts, usage, budgets, and other tables</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">PostgreSQL 15+</span>
                                 <span class="tech-badge">pgvector</span>
@@ -505,7 +505,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">📦 Model Artifacts</div>
-                            <div class="component-desc">成本估算模型、嵌入模型等模型工件的版本化存储</div>
+                            <div class="component-desc">Versioned storage for cost estimation models, embedding models, and other model artifacts</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">File System</span>
                                 <span class="tech-badge">Version Control</span>
@@ -513,7 +513,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">📄 Document Store</div>
-                            <div class="component-desc">文档块、嵌入向量和元数据的存储，支持高效检索</div>
+                            <div class="component-desc">Storage for document chunks, embedding vectors, and metadata with efficient retrieval</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Vector Store</span>
                                 <span class="tech-badge">Embeddings</span>
@@ -528,18 +528,18 @@
                 <div class="layer-header" onclick="toggleLayer(this)">
                     <div class="layer-title">
                         <span class="layer-number">L6</span>
-                        安全与平台层 (Security & Platform Layer)
+                        Security & Platform Layer
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="layer-content">
                     <div class="layer-description">
-                        跨层安全防护、可观测性、审计日志和运维支持
+                        Cross-layer security protection, observability, audit logging, and operational support
                     </div>
                     <div class="components">
                         <div class="component">
                             <div class="component-title">🛡️ Data Redaction</div>
-                            <div class="component-desc">PII信息自动识别和脱敏，保护敏感数据</div>
+                            <div class="component-desc">Automatic PII identification and redaction to protect sensitive data</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Regex</span>
                                 <span class="tech-badge">NER</span>
@@ -547,7 +547,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">🚪 Egress Guard</div>
-                            <div class="component-desc">外部API调用监控和过滤，防止数据泄露</div>
+                            <div class="component-desc">External API call monitoring and filtering to prevent data leakage</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Firewall</span>
                                 <span class="tech-badge">Rate Limiting</span>
@@ -555,7 +555,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">📊 Observability</div>
-                            <div class="component-desc">指标监控、日志聚合、分布式追踪</div>
+                            <div class="component-desc">Metrics monitoring, log aggregation, and distributed tracing</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Prometheus</span>
                                 <span class="tech-badge">Grafana</span>
@@ -564,7 +564,7 @@
                         </div>
                         <div class="component">
                             <div class="component-title">📝 Audit Logging</div>
-                            <div class="component-desc">完整的操作审计追踪，支持合规要求</div>
+                            <div class="component-desc">Complete operational audit trail supporting compliance requirements</div>
                             <div class="tech-stack">
                                 <span class="tech-badge">Audit Log</span>
                                 <span class="tech-badge">Compliance</span>
@@ -577,37 +577,37 @@
 
         <!-- Flow Section -->
         <div class="flow-section">
-            <h2>📊 请求处理流程</h2>
+            <h2>📊 Request Processing Flow</h2>
             <div class="flow-diagram">
-                <div class="flow-layer">用户请求 (L1 - UI Layer)</div>
-                <div class="flow-layer">API网关处理 (L2 - 认证、验证、路由)</div>
-                <div class="flow-layer">业务服务处理 (L3 - 意图识别、工作流编排)</div>
-                <div class="flow-layer">AI执行 (L4 - RAG/LLM/代码执行)</div>
-                <div class="flow-layer">数据访问 (L5 - 数据库查询、模型推理)</div>
-                <div class="flow-layer">安全处理 (L6 - 脱敏、审计、监控)</div>
-                <div class="flow-layer">返回结果 (L1 - 展示给用户)</div>
+                <div class="flow-layer">User Request (L1 - UI Layer)</div>
+                <div class="flow-layer">API Gateway Processing (L2 - Authentication, Validation, Routing)</div>
+                <div class="flow-layer">Business Service Processing (L3 - Intent Recognition, Workflow Orchestration)</div>
+                <div class="flow-layer">AI Execution (L4 - RAG/LLM/Code Execution)</div>
+                <div class="flow-layer">Data Access (L5 - Database Query, Model Inference)</div>
+                <div class="flow-layer">Security Processing (L6 - Redaction, Audit, Monitoring)</div>
+                <div class="flow-layer">Return Result (L1 - Display to User)</div>
             </div>
         </div>
 
         <!-- Legend -->
         <div class="legend">
-            <h3>📖 图例说明</h3>
+            <h3>📖 Legend</h3>
             <div class="legend-items">
                 <div class="legend-item">
                     <div class="legend-color"></div>
-                    <div class="legend-text">核心架构层 - 从UI到基础设施的完整分层</div>
+                    <div class="legend-text">Core Architecture Layers - Complete layering from UI to infrastructure</div>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color"></div>
-                    <div class="legend-text">技术栈展示 - 每层使用的主要技术</div>
+                    <div class="legend-text">Tech Stack Display - Main technologies used in each layer</div>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color"></div>
-                    <div class="legend-text">交互式设计 - 点击展开/收起各层详情</div>
+                    <div class="legend-text">Interactive Design - Click to expand/collapse layer details</div>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color"></div>
-                    <div class="legend-text">依赖关系 - 上层依赖下层服务</div>
+                    <div class="legend-text">Dependency Relationships - Upper layers depend on lower layer services</div>
                 </div>
             </div>
         </div>
@@ -620,7 +620,7 @@
             content.classList.toggle('active');
         }
 
-        // 默认展开第一层
+        // Default expand first layer
         document.addEventListener('DOMContentLoaded', function() {
             const firstLayer = document.querySelector('.layer-header');
             if (firstLayer) {
