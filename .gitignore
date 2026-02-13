@@ -76,6 +76,7 @@ performance_logs/
 # Documentation build outputs
 # ==========================================
 docs/_build/
+docs/site/
 site/
 
 # ==========================================
