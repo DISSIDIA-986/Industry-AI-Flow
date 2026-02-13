@@ -3,630 +3,611 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - Layered Architecture Diagram</title>
+    <title>Industry AI Flow - System Architecture Poster</title>
     <style>
+        :root {
+            --page-bg: #e9edf2;
+            --board-bg: #d9dde2;
+            --stroke: #4e5968;
+            --text-main: #1e2a36;
+            --label-bg: #a8c7e9;
+            --access-bg: #c6ddf2;
+            --api-bg: #f4ca7a;
+            --business-bg: #ebc0c4;
+            --runtime-bg: #b8ddc7;
+            --data-bg: #f1d3ac;
+            --storage-bg: #a7a5ec;
+            --infra-bg: #8cb5df;
+            --security-bg: #e58a8a;
+            --observe-bg: #8bdf8b;
+            --cell-bg: #f4f6f8;
+            --focus-bg: #76b7e5;
+            --violet: #6e63dc;
+            --mint: #9ee3d3;
+            --sand: #f0dfc6;
+            --sky: #bfe4f7;
+            --lime: #c9e9b2;
+        }
+
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: "Segoe UI", "Arial", sans-serif;
+            background: var(--page-bg);
+            color: var(--text-main);
             padding: 20px;
-            color: #333;
         }
 
-        .container {
-            max-width: 1400px;
+        .poster {
+            width: min(1900px, 100%);
             margin: 0 auto;
+            background: #ffffff;
+            border: 2px solid #717d8f;
+            padding: 20px;
         }
 
-        h1 {
+        .title {
             text-align: center;
-            color: white;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 8px;
+            font-size: 34px;
+            letter-spacing: 0.5px;
         }
 
         .subtitle {
             text-align: center;
-            color: rgba(255,255,255,0.9);
-            margin-bottom: 40px;
-            font-size: 1.1em;
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #394657;
         }
 
-        .architecture {
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
+        .diagram {
+            background: var(--board-bg);
+            border: 2px solid #7c8798;
+            padding: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 138px;
+            gap: 10px;
+        }
+
+        .stack {
+            display: grid;
+            gap: 10px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 126px 1fr;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .label {
+            border: 1.6px solid var(--stroke);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+            clip-path: polygon(12% 0%, 100% 0%, 100% 100%, 12% 100%, 0% 50%);
+            background: var(--label-bg);
         }
 
         .layer {
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .layer:last-child {
-            margin-bottom: 0;
+            border: 1.6px solid var(--stroke);
+            border-radius: 4px;
+            padding: 10px 12px;
+            display: grid;
+            gap: 8px;
         }
 
         .layer-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 1.1em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
 
-        .layer-header:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-
-        .layer-header .layer-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .layer-header .layer-number {
-            background: rgba(255,255,255,0.3);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-
-        .layer-header .toggle-icon {
-            font-size: 1.5em;
-            transition: transform 0.3s ease;
-        }
-
-        .layer-header.active .toggle-icon {
-            transform: rotate(180deg);
-        }
-
-        .layer-content {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-top: 15px;
-            display: none;
-            animation: slideDown 0.3s ease;
-        }
-
-        .layer-content.active {
-            display: block;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .layer-description {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 0.95em;
-            line-height: 1.6;
-        }
-
-        .components {
+        .cells {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
+            gap: 7px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
-        .component {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            transition: all 0.3s ease;
-        }
-
-        .component:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .component-title {
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 8px;
-            font-size: 1em;
-        }
-
-        .component-desc {
-            color: #666;
-            font-size: 0.85em;
-            line-height: 1.5;
-        }
-
-        .tech-stack {
-            margin-top: 10px;
+        .cell {
+            border: 1.4px solid #646d7b;
+            background: var(--cell-bg);
+            min-height: 56px;
+            padding: 8px 7px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-
-        .tech-badge {
-            background: #e9ecef;
-            color: #495057;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: 500;
-        }
-
-        .flow-section {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .flow-section h2 {
-            color: #667eea;
-            margin-bottom: 25px;
-            font-size: 1.8em;
-        }
-
-        .flow-diagram {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .flow-layer {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            font-weight: 500;
-            position: relative;
-            transition: all 0.3s ease;
+            font-size: 16px;
+            line-height: 1.2;
+            font-weight: 600;
         }
 
-        .flow-layer:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        .highlight {
+            background: var(--focus-bg);
+            font-weight: 700;
         }
 
-        .flow-layer::after {
-            content: '▼';
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #667eea;
-            font-size: 1.2em;
+        .layer-access { background: var(--access-bg); }
+        .layer-api { background: var(--api-bg); }
+        .layer-business { background: var(--business-bg); }
+        .layer-runtime { background: var(--runtime-bg); }
+        .layer-data { background: var(--data-bg); }
+        .layer-storage { background: var(--storage-bg); }
+        .layer-infra { background: var(--infra-bg); }
+
+        .cells-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .flow-layer:last-child::after {
-            display: none;
+        .cells-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
-        .legend {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin-top: 20px;
-        }
-
-        .legend h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .legend-items {
+        .cylinders {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
         }
 
-        .legend-item {
+        .db-group {
+            border: 1.4px solid #666ea0;
+            border-radius: 4px;
+            background: rgba(144, 145, 231, 0.45);
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            padding: 10px 6px;
+        }
+
+        .cylinder {
+            width: 82px;
+            height: 102px;
+            border: 1.4px solid #616161;
+            border-radius: 45% / 12%;
+            position: relative;
+            background: #f4f4f4;
             display: flex;
             align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #252525;
+        }
+
+        .cylinder::before {
+            content: "";
+            position: absolute;
+            top: -1px;
+            left: 0;
+            right: 0;
+            height: 18px;
+            border: 1.4px solid #616161;
+            border-radius: 50%;
+            background: #eeeeee;
+        }
+
+        .cylinder span {
+            z-index: 1;
+        }
+
+        .cylinder.alt {
+            background: #d5d5d5;
+        }
+
+        .sidebars {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .bar {
+            border: 1.6px solid var(--stroke);
+            border-radius: 4px;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 31px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            letter-spacing: 4px;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        .bar-observe {
+            background: var(--observe-bg);
+        }
+
+        .bar-security {
+            background: var(--security-bg);
+        }
+
+        .subflow-section {
+            margin-top: 16px;
+            background: var(--board-bg);
+            border: 2px solid #7c8798;
+            padding: 12px;
+        }
+
+        .subflow-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subflow-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
         }
 
-        .legend-color {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .subflow {
+            border: 1.6px solid #4d5868;
+            background: #d4d9e0;
+            padding: 10px;
+            display: grid;
+            gap: 6px;
+            align-content: start;
+            min-height: 540px;
         }
 
-        .legend-text {
-            color: #666;
-            font-size: 0.9em;
+        .subflow h3 {
+            font-size: 17px;
+            text-align: center;
+            margin-bottom: 2px;
         }
 
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8em;
-            }
+        .node {
+            border: 1.4px solid #4a5562;
+            border-radius: 3px;
+            background: #f6f8fa;
+            min-height: 44px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.15;
+        }
 
-            .architecture {
-                padding: 20px;
-            }
+        .node-violet { background: var(--violet); color: #ffffff; }
+        .node-mint { background: var(--mint); }
+        .node-sand { background: var(--sand); }
+        .node-sky { background: var(--sky); }
+        .node-lime { background: var(--lime); }
 
-            .components {
+        .arrow {
+            text-align: center;
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 800;
+            color: #1b2430;
+        }
+
+        .row-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 70px 1fr 70px;
+            gap: 6px;
+            align-items: stretch;
+        }
+
+        .side-tag {
+            border: 1.2px solid #4e5968;
+            border-radius: 3px;
+            background: #ffffff;
+            padding: 4px 3px;
+            font-size: 11px;
+            text-align: center;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+        }
+
+        .loop {
+            border: 1.3px dashed #4b5565;
+            border-radius: 4px;
+            background: #edf1f4;
+            min-height: 36px;
+            padding: 5px 7px;
+            font-size: 12px;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .note {
+            margin-top: 12px;
+            font-size: 15px;
+            color: #384455;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1400px) {
+            .grid {
                 grid-template-columns: 1fr;
+            }
+
+            .sidebars {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .bar {
+                writing-mode: horizontal-tb;
+                letter-spacing: 0;
+                font-size: 22px;
+                min-height: 60px;
+            }
+
+            .subflow-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .subflow {
+                min-height: auto;
+            }
+        }
+
+        @media print {
+            @page {
+                size: A3 landscape;
+                margin: 6mm;
+            }
+
+            body {
+                background: #ffffff;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .poster {
+                width: 100%;
+                border: 0;
+                padding: 0;
+            }
+
+            .subflow {
+                break-inside: avoid-page;
+                page-break-inside: avoid;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Industry AI Flow</h1>
-        <p class="subtitle">Enterprise RAG System - Six-Layer Layered Architecture</p>
+    <div class="poster">
+        <h1 class="title">Industry AI Flow - System Architecture</h1>
+        <p class="subtitle">Visio-Style Layered View for Capstone Poster Printing</p>
 
-        <div class="architecture">
-            <!-- Layer 1: UI -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L1</span>
-                        User Interface Layer (UI Layer)
-                    </div>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        Provides user interaction interfaces including Web UI, management interface, and external API clients
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">📊 Streamlit Web UI</div>
-                            <div class="component-desc">Main user interface providing query, visualization, and management features</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Streamlit</span>
-                                <span class="tech-badge">JavaScript</span>
+        <div class="diagram">
+            <div class="grid">
+                <div class="stack">
+                    <section class="row">
+                        <div class="label">Access</div>
+                        <div class="layer layer-access">
+                            <div class="layer-header">L1 Access Endpoints</div>
+                            <div class="cells">
+                                <div class="cell">Streamlit Web UI</div>
+                                <div class="cell">Prompt Admin UI</div>
+                                <div class="cell">External API Client</div>
+                                <div class="cell highlight">Third-Party Integration</div>
                             </div>
                         </div>
-                        <div class="component">
-                            <div class="component-title">🔧 Prompt Admin UI</div>
-                            <div class="component-desc">Prompt management interface with version control and A/B testing</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">React</span>
-                                <span class="tech-badge">TypeScript</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">🔌 External API Client</div>
-                            <div class="component-desc">RESTful API supporting third-party system integration</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">REST</span>
-                                <span class="tech-badge">OpenAPI</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </section>
 
-            <!-- Layer 2: API Gateway -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L2</span>
-                        API Gateway Layer
-                    </div>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        Unified API entry point responsible for route distribution, authentication, request validation, and caching strategy
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">🚦 FastAPI Routers</div>
-                            <div class="component-desc">Unified API route management supporting workflow queries, cost estimation, and prompt management</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">FastAPI</span>
-                                <span class="tech-badge">Pydantic</span>
+                    <section class="row">
+                        <div class="label">API</div>
+                        <div class="layer layer-api">
+                            <div class="layer-header">L2 API Gateway</div>
+                            <div class="cells">
+                                <div class="cell">FastAPI Routers</div>
+                                <div class="cell">Authentication + RBAC</div>
+                                <div class="cell">Input Validation</div>
+                                <div class="cell">Request Cache (Redis)</div>
                             </div>
                         </div>
-                        <div class="component">
-                            <div class="component-title">🔐 Authentication & Authorization</div>
-                            <div class="component-desc">JWT token validation, tenant-level data isolation, and RBAC permission control</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">JWT</span>
-                                <span class="tech-badge">OAuth2</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">✅ Input Validation</div>
-                            <div class="component-desc">Pydantic model validation for request parameters ensuring data integrity and security</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Pydantic</span>
-                                <span class="tech-badge">Validator</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">⚡ Query Cache</div>
-                            <div class="component-desc">Redis cache layer to reduce duplicate query costs and improve response speed</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Redis</span>
-                                <span class="tech-badge">Cache</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </section>
 
-            <!-- Layer 3: Business Services -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L3</span>
-                        Business Services Layer
-                    </div>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        Core business logic layer responsible for workflow orchestration, intent recognition, intelligent routing, and budget control
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">🔄 Workflow Orchestrator</div>
-                            <div class="component-desc">Manages complex query execution flows using LangGraph with state machine and conditional routing</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">LangGraph</span>
-                                <span class="tech-badge">State Machine</span>
+                    <section class="row">
+                        <div class="label">Services</div>
+                        <div class="layer layer-business">
+                            <div class="layer-header">L3 Business Services</div>
+                            <div class="cells">
+                                <div class="cell">Workflow Orchestrator</div>
+                                <div class="cell">Intent Classifier</div>
+                                <div class="cell">Prompt Selector</div>
+                                <div class="cell">Routing + Budget Policy</div>
+                                <div class="cell">Cost Governance</div>
+                                <div class="cell">Tenant Isolation Logic</div>
+                                <div class="cell highlight">Rapid Business Module Extension</div>
+                                <div class="cell">Service Coordination</div>
                             </div>
                         </div>
-                        <div class="component">
-                            <div class="component-title">🎯 Intent Classifier</div>
-                            <div class="component-desc">Identifies user query types (RAG/Code Analysis/Hybrid LLM) to determine execution path</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">NLP</span>
-                                <span class="tech-badge">Classification</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">💬 Prompt Selector</div>
-                            <div class="component-desc">Dynamically selects optimal prompt templates with version control and A/B testing support</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Template Engine</span>
-                                <span class="tech-badge">A/B Testing</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">🧭 Routing & Budget Policy</div>
-                            <div class="component-desc">Intelligent routing decisions based on cost, performance, and budget with real-time monitoring</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Policy Engine</span>
-                                <span class="tech-badge">Budget Control</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </section>
 
-            <!-- Layer 4: AI Runtime -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L4</span>
-                        AI Runtime Layer
-                    </div>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        AI capability core layer providing RAG, LLM dispatch, code execution, and cost estimation capabilities
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">🔍 RAG Engine</div>
-                            <div class="component-desc">Hybrid retrieval system supporting semantic retrieval, keyword retrieval, and intelligent reranking</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">LangChain</span>
-                                <span class="tech-badge">pgvector</span>
-                                <span class="tech-badge">BM25</span>
+                    <section class="row">
+                        <div class="label">AI</div>
+                        <div class="layer layer-runtime">
+                            <div class="layer-header">L4 AI Runtime</div>
+                            <div class="cells">
+                                <div class="cell">RAG Engine</div>
+                                <div class="cell">LLM Dispatch Service</div>
+                                <div class="cell">Code Execution Manager</div>
+                                <div class="cell highlight">Cost Estimation Service</div>
                             </div>
                         </div>
-                        <div class="component">
-                            <div class="component-title">🤖 LLM Dispatch Service</div>
-                            <div class="component-desc">Multi-provider LLM dispatch supporting OpenAI, Anthropic, Cohere, with intelligent failover</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">OpenAI</span>
-                                <span class="tech-badge">Anthropic</span>
-                                <span class="tech-badge">Cohere</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">⚙️ Code Execution Manager</div>
-                            <div class="component-desc">Docker container isolated code execution environment supporting Python, R, and other languages</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Docker</span>
-                                <span class="tech-badge">Sandbox</span>
-                                <span class="tech-badge">Timeout Control</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">💰 Cost Estimation Service</div>
-                            <div class="component-desc">Machine learning based cost prediction model providing accurate cost estimation and confidence intervals</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">scikit-learn</span>
-                                <span class="tech-badge">Linear Regression</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </section>
 
-            <!-- Layer 5: Data Storage -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L5</span>
-                        Data Storage Layer
-                    </div>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        Data persistence layer supporting relational data, vector data, model artifacts, and file storage
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">🗄️ PostgreSQL + pgvector</div>
-                            <div class="component-desc">Primary database with vector retrieval support containing documents, prompts, usage, budgets, and other tables</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">PostgreSQL 15+</span>
-                                <span class="tech-badge">pgvector</span>
-                                <span class="tech-badge">HNSW Index</span>
+                    <section class="row">
+                        <div class="label">Data</div>
+                        <div class="layer layer-data">
+                            <div class="layer-header">L5 Data Services</div>
+                            <div class="cells">
+                                <div class="cell">Data Access API</div>
+                                <div class="cell">Transaction Management</div>
+                                <div class="cell">Read / Write Split</div>
+                                <div class="cell">TTL + Expiration Control</div>
+                                <div class="cell">File I/O</div>
+                                <div class="cell">Data Synchronization</div>
+                                <div class="cell">Vector Upsert Pipeline</div>
+                                <div class="cell">Backup + Recovery</div>
                             </div>
                         </div>
-                        <div class="component">
-                            <div class="component-title">📦 Model Artifacts</div>
-                            <div class="component-desc">Versioned storage for cost estimation models, embedding models, and other model artifacts</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">File System</span>
-                                <span class="tech-badge">Version Control</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">📄 Document Store</div>
-                            <div class="component-desc">Storage for document chunks, embedding vectors, and metadata with efficient retrieval</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Vector Store</span>
-                                <span class="tech-badge">Embeddings</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </section>
 
-            <!-- Layer 6: Security & Platform -->
-            <div class="layer">
-                <div class="layer-header" onclick="toggleLayer(this)">
-                    <div class="layer-title">
-                        <span class="layer-number">L6</span>
-                        Security & Platform Layer
-                    </div>
-                    <span class="toggle-icon">▼</span>
+                    <section class="row">
+                        <div class="label">Storage</div>
+                        <div class="layer layer-storage">
+                            <div class="layer-header">L6 Storage Systems</div>
+                            <div class="cylinders">
+                                <div class="db-group">
+                                    <div class="cylinder"><span>SQL</span></div>
+                                    <div class="cylinder alt"><span>SQL</span></div>
+                                </div>
+                                <div class="db-group">
+                                    <div class="cylinder"><span>KV</span></div>
+                                    <div class="cylinder alt"><span>KV</span></div>
+                                </div>
+                                <div class="db-group">
+                                    <div class="cylinder"><span>IDX</span></div>
+                                    <div class="cylinder alt"><span>IDX</span></div>
+                                </div>
+                            </div>
+                            <div class="cells cells-3">
+                                <div class="cell">PostgreSQL + pgvector</div>
+                                <div class="cell">Redis</div>
+                                <div class="cell">Search + Artifact Store</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="row">
+                        <div class="label">Runtime</div>
+                        <div class="layer layer-infra">
+                            <div class="layer-header">Deployment Environment</div>
+                            <div class="cells cells-2">
+                                <div class="cell">Cloud VM / Container Platform</div>
+                                <div class="cell">Dedicated Server / On-Prem Node</div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-                <div class="layer-content">
-                    <div class="layer-description">
-                        Cross-layer security protection, observability, audit logging, and operational support
-                    </div>
-                    <div class="components">
-                        <div class="component">
-                            <div class="component-title">🛡️ Data Redaction</div>
-                            <div class="component-desc">Automatic PII identification and redaction to protect sensitive data</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Regex</span>
-                                <span class="tech-badge">NER</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">🚪 Egress Guard</div>
-                            <div class="component-desc">External API call monitoring and filtering to prevent data leakage</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Firewall</span>
-                                <span class="tech-badge">Rate Limiting</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">📊 Observability</div>
-                            <div class="component-desc">Metrics monitoring, log aggregation, and distributed tracing</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Prometheus</span>
-                                <span class="tech-badge">Grafana</span>
-                                <span class="tech-badge">ELK</span>
-                            </div>
-                        </div>
-                        <div class="component">
-                            <div class="component-title">📝 Audit Logging</div>
-                            <div class="component-desc">Complete operational audit trail supporting compliance requirements</div>
-                            <div class="tech-stack">
-                                <span class="tech-badge">Audit Log</span>
-                                <span class="tech-badge">Compliance</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+                <aside class="sidebars">
+                    <div class="bar bar-observe">Audit &amp; Observability</div>
+                    <div class="bar bar-security">Security &amp; Access Control</div>
+                </aside>
             </div>
         </div>
 
-        <!-- Flow Section -->
-        <div class="flow-section">
-            <h2>📊 Request Processing Flow</h2>
-            <div class="flow-diagram">
-                <div class="flow-layer">User Request (L1 - UI Layer)</div>
-                <div class="flow-layer">API Gateway Processing (L2 - Authentication, Validation, Routing)</div>
-                <div class="flow-layer">Business Service Processing (L3 - Intent Recognition, Workflow Orchestration)</div>
-                <div class="flow-layer">AI Execution (L4 - RAG/LLM/Code Execution)</div>
-                <div class="flow-layer">Data Access (L5 - Database Query, Model Inference)</div>
-                <div class="flow-layer">Security Processing (L6 - Redaction, Audit, Monitoring)</div>
-                <div class="flow-layer">Return Result (L1 - Display to User)</div>
-            </div>
-        </div>
+        <section class="subflow-section">
+            <h2 class="subflow-title">Complex Subprocess Diagrams</h2>
+            <div class="subflow-grid">
+                <article class="subflow">
+                    <h3>A. Intent Routing and Resilience</h3>
+                    <div class="node node-violet">Request Intake (Context + Session + Prompt Version)</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-sky">Intent + Risk Classifier</div>
+                    <div class="arrow">↓</div>
+                    <div class="split">
+                        <div class="side-tag">Budget Guard</div>
+                        <div class="node node-sand">Policy Decision Hub</div>
+                        <div class="side-tag">Model Health Probe</div>
+                    </div>
+                    <div class="arrow">↓</div>
+                    <div class="row-3">
+                        <div class="node">RAG Path</div>
+                        <div class="node">Direct LLM Path</div>
+                        <div class="node">Hybrid Path</div>
+                    </div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-mint">Retry + Fallback Controller</div>
+                    <div class="loop">On timeout/error: degrade to lower-cost model and return partial-safe answer.</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-lime">Final Answer Composer + Trace ID</div>
+                </article>
 
-        <!-- Legend -->
-        <div class="legend">
-            <h3>📖 Legend</h3>
-            <div class="legend-items">
-                <div class="legend-item">
-                    <div class="legend-color"></div>
-                    <div class="legend-text">Core Architecture Layers - Complete layering from UI to infrastructure</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color"></div>
-                    <div class="legend-text">Tech Stack Display - Main technologies used in each layer</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color"></div>
-                    <div class="legend-text">Interactive Design - Click to expand/collapse layer details</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color"></div>
-                    <div class="legend-text">Dependency Relationships - Upper layers depend on lower layer services</div>
-                </div>
+                <article class="subflow">
+                    <h3>B. RAG Quality Control Loop</h3>
+                    <div class="node node-violet">Chunked Knowledge Base + Embedding Index</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-sky">Hybrid Retrieval (Vector + BM25)</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-sand">Rerank + Freshness + Permission Filter</div>
+                    <div class="arrow">↓</div>
+                    <div class="node">Confidence Gate</div>
+                    <div class="row-2">
+                        <div class="node node-mint">Pass: Context Packager</div>
+                        <div class="node">Fail: Query Rewrite</div>
+                    </div>
+                    <div class="loop">Rewrite branch triggers second retrieval pass before packing context.</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-lime">Grounded Answer + Citation Builder</div>
+                </article>
+
+                <article class="subflow">
+                    <h3>C. Cost and Safe Execution Control</h3>
+                    <div class="node node-violet">Tenant Budget Profile + SLA Tier</div>
+                    <div class="arrow">↓</div>
+                    <div class="split">
+                        <div class="side-tag">PII Redaction</div>
+                        <div class="node node-sky">Token Estimator + Plan Generator</div>
+                        <div class="side-tag">Rate Limits</div>
+                    </div>
+                    <div class="arrow">↓</div>
+                    <div class="row-3">
+                        <div class="node">Cache Hit</div>
+                        <div class="node">LLM Execution</div>
+                        <div class="node">Sandbox Code Run</div>
+                    </div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-sand">Cost Reconciler (Estimated vs Actual)</div>
+                    <div class="arrow">↓</div>
+                    <div class="row-2">
+                        <div class="node node-mint">Alert + Audit Sink</div>
+                        <div class="node node-lime">Response with Cost Metadata</div>
+                    </div>
+                </article>
             </div>
-        </div>
+        </section>
+
+        <p class="note">Print tip: Browser print setting -> A3 landscape -> 100% scale -> enable background graphics.</p>
     </div>
-
-    <script>
-        function toggleLayer(element) {
-            element.classList.toggle('active');
-            const content = element.nextElementSibling;
-            content.classList.toggle('active');
-        }
-
-        // Default expand first layer
-        document.addEventListener('DOMContentLoaded', function() {
-            const firstLayer = document.querySelector('.layer-header');
-            if (firstLayer) {
-                toggleLayer(firstLayer);
-            }
-        });
-    </script>
 </body>
 </html>
