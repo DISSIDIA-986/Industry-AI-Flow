@@ -1,7 +1,7 @@
 """
-LLM调度服务单元测试
+LLMEN
 
-测试DispatchService的本地/云端LLM调度、fallback机制和置信度判断
+ENDispatchServiceEN/ENLLMEN,fallbackEN
 """
 
 import pytest
@@ -17,15 +17,15 @@ from backend.services.llm_integration.types import (
 
 
 class TestDispatchService:
-    """DispatchService单元测试类"""
+    """DispatchServiceEN"""
 
     @pytest.fixture
     def service(self):
-        """创建调度服务实例"""
+        """EN"""
         return DispatchService()
 
     def test_initialization(self, service):
-        """测试初始化"""
+        """EN"""
         assert service is not None
         assert hasattr(service, 'local_client')
         assert hasattr(service, 'zhipu_client')
@@ -34,8 +34,8 @@ class TestDispatchService:
 
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_local_only_mode_success(self, mock_llama_client, service):
-        """测试本地优先模式成功"""
-        # Mock本地客户端响应
+        """EN"""
+        # MockEN
         mock_instance = Mock()
         mock_instance.generate.return_value = "Local response"
         mock_llama_client.return_value = mock_instance
@@ -57,8 +57,8 @@ class TestDispatchService:
 
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_local_only_mode_failure(self, mock_llama_client, service):
-        """测试本地优先模式失败"""
-        # Mock本地客户端抛出异常
+        """EN"""
+        # MockEN
         mock_instance = Mock()
         mock_instance.generate.side_effect = Exception("Local model failed")
         mock_llama_client.return_value = mock_instance
@@ -79,8 +79,8 @@ class TestDispatchService:
     @patch('backend.services.llm_integration.dispatch_service.ZhipuClient')
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_hybrid_mode_local_success(self, mock_llama, mock_zhipu, service):
-        """测试混合模式本地成功"""
-        # Mock本地客户端
+        """EN"""
+        # MockEN
         mock_local = Mock()
         mock_local.generate.return_value = "Local response"
         mock_llama.return_value = mock_local
@@ -101,13 +101,13 @@ class TestDispatchService:
     @patch('backend.services.llm_integration.dispatch_service.ZhipuClient')
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_hybrid_mode_cloud_fallback(self, mock_llama, mock_zhipu, service):
-        """测试混合模式云端fallback"""
-        # Mock本地客户端返回低置信度
+        """ENfallback"""
+        # MockEN
         mock_local = Mock()
         mock_local.generate.return_value = "I'm not sure about this"
         mock_llama.return_value = mock_local
         
-        # Mock云端客户端
+        # MockEN
         mock_cloud = Mock()
         mock_cloud.generate.return_value = "Detailed cloud response"
         mock_zhipu.return_value = mock_cloud
@@ -116,7 +116,7 @@ class TestDispatchService:
             tenant_id="test_tenant",
             question="Complex question requiring cloud",
             route_mode=RouteMode.HYBRID_AUTO,
-            local_conf_threshold=0.99  # 高阈值触发fallback
+            local_conf_threshold=0.99  # ENfallback
         )
         
         result = service.generate(request)
@@ -127,8 +127,8 @@ class TestDispatchService:
 
     @patch('backend.services.llm_integration.dispatch_service.OpenAIClient')
     def test_cloud_only_mode(self, mock_openai, service):
-        """测试云端优先模式"""
-        # Mock云端客户端
+        """EN"""
+        # MockEN
         mock_instance = Mock()
         mock_instance.generate.return_value = "Cloud response"
         mock_openai.return_value = mock_instance
@@ -147,20 +147,20 @@ class TestDispatchService:
         assert result.text == "Cloud response"
 
     def test_dispatch_request_validation(self, service):
-        """测试请求参数验证"""
-        # 测试空问题
+        """EN"""
+        # EN
         request = DispatchRequest(
             tenant_id="test_tenant",
             question="",
             route_mode=RouteMode.LOCAL_ONLY
         )
         
-        # 空问题应该被拒绝或处理
+        # EN
         assert request.question == ""
 
     def test_max_tokens_validation(self, service):
-        """测试max_tokens参数验证"""
-        # 测试边界值
+        """ENmax_tokensEN"""
+        # EN
         test_cases = [0, 100, 1000, 32000]
         
         for max_tokens in test_cases:
@@ -173,8 +173,8 @@ class TestDispatchService:
             assert request.max_tokens == max_tokens
 
     def test_temperature_validation(self, service):
-        """测试temperature参数验证"""
-        # 测试边界值
+        """ENtemperatureEN"""
+        # EN
         test_cases = [0.0, 0.5, 1.0, 1.5, 2.0]
         
         for temperature in test_cases:
@@ -189,8 +189,8 @@ class TestDispatchService:
     @patch('backend.services.llm_integration.dispatch_service.ZhipuClient')
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_cost_tracking(self, mock_llama, mock_zhipu, service):
-        """测试成本追踪"""
-        # Mock本地客户端
+        """EN"""
+        # MockEN
         mock_local = Mock()
         mock_local.generate.return_value = "Response"
         mock_llama.return_value = mock_local
@@ -212,11 +212,11 @@ class TestDispatchService:
     @patch('backend.services.llm_integration.dispatch_service.ZhipuClient')
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_budget_alert(self, mock_llama, mock_zhipu, service):
-        """测试预算告警"""
-        # 设置极低预算
+        """EN"""
+        # EN
         service.cost_tracker.set_budget("test_tenant", 0.000001)
         
-        # Mock本地客户端
+        # MockEN
         mock_local = Mock()
         mock_local.generate.return_value = "Response"
         mock_llama.return_value = mock_local
@@ -229,17 +229,17 @@ class TestDispatchService:
         
         service.generate(request)
         
-        # 检查预算告警
+        # EN
         alert = service.cost_tracker.check_budget_alert("test_tenant")
         assert alert is not None
-        # 本地模型成本极低，可能不会超预算
-        # 这里主要验证告警机制可以正常工作
+        # EN,EN
+        # EN
 
     @patch('backend.services.llm_integration.dispatch_service.ZhipuClient')
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     def test_redaction_before_cloud_call(self, mock_llama, mock_zhipu, service):
-        """测试云端调用前的脱敏"""
-        # Mock云端客户端
+        """EN"""
+        # MockEN
         mock_cloud = Mock()
         mock_cloud.generate.return_value = "Safe response"
         mock_zhipu.return_value = mock_cloud
@@ -253,11 +253,11 @@ class TestDispatchService:
         result = service.generate(request)
         
         assert result.success is True
-        # 验证敏感信息被脱敏后发送到云端
-        # 这里主要验证脱敏服务被调用
+        # EN
+        # EN
 
     def test_dispatch_result_creation(self):
-        """测试DispatchResult创建"""
+        """ENDispatchResultEN"""
         result = DispatchResult(
             success=True,
             provider="llama_cpp",
@@ -282,12 +282,12 @@ class TestDispatchService:
     @patch('backend.services.llm_integration.dispatch_service.LlamaCppClient')
     @pytest.mark.parametrize("route_mode,expected_provider", [
         (RouteMode.LOCAL_ONLY, "llama_cpp"),
-        (RouteMode.CLOUD_ONLY, "zhipu"),  # 或 openai
-        (RouteMode.HYBRID_AUTO, "llama_cpp"),  # 默认先尝试本地
+        (RouteMode.CLOUD_ONLY, "zhipu"),  # EN openai
+        (RouteMode.HYBRID_AUTO, "llama_cpp"),  # EN
     ])
     def test_route_modes(self, mock_llama, mock_zhipu, service, route_mode, expected_provider):
-        """参数化测试不同路由模式"""
-        # Mock客户端
+        """EN"""
+        # MockEN
         mock_local = Mock()
         mock_local.generate.return_value = "Response"
         mock_llama.return_value = mock_local
@@ -311,7 +311,7 @@ class TestDispatchService:
             assert result.provider in ["zhipu", "openai"]
 
     def test_concurrent_dispatch(self):
-        """测试并发调度"""
+        """EN"""
         import threading
         
         service = DispatchService()
@@ -333,7 +333,7 @@ class TestDispatchService:
                 except Exception as e:
                     errors.append(e)
             
-            # 创建50个线程并发调度
+            # EN50EN
             threads = [
                 threading.Thread(target=dispatch_concurrently, args=(i,))
                 for i in range(50)
@@ -345,17 +345,17 @@ class TestDispatchService:
             for t in threads:
                 t.join()
             
-            # 验证没有错误
-            assert len(errors) == 0, f"并发调度错误: {errors}"
+            # EN
+            assert len(errors) == 0, f"EN: {errors}"
 
     def test_latency_tracking(self, service):
-        """测试延迟跟踪"""
+        """EN"""
         with patch('backend.services.llm_integration.dispatch_service.LlamaCppClient') as mock_llama:
             import time
             
-            # Mock本地客户端，添加延迟
+            # MockEN,EN
             def slow_generate(*args, **kwargs):
-                time.sleep(0.01)  # 10ms延迟
+                time.sleep(0.01)  # 10msEN
                 return "Response"
             
             mock_instance = Mock()
@@ -371,4 +371,4 @@ class TestDispatchService:
             result = service.generate(request)
             
             assert result.latency_ms > 0
-            assert result.latency_ms < 100  # 应该小于100ms
+            assert result.latency_ms < 100  # EN100ms

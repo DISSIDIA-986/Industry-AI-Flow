@@ -171,11 +171,11 @@ class ProblemClassificationTester:
         logger.info("\n=== Test Set 1.1: Knowledge Retrieval Intent ===")
 
         test_cases = [
-            ("什么是RAG?", "knowledge_retrieval"),
-            ("LangChain有哪些主要功能?", "knowledge_retrieval"),
-            ("向量数据库的工作原理是什么?", "knowledge_retrieval"),
-            ("请介绍一下PaddleOCR的使用方法", "knowledge_retrieval"),
-            ("AI工作流系统的架构是怎样的?", "knowledge_retrieval"),
+            ("ENRAG?", "knowledge_retrieval"),
+            ("LangChainEN?", "knowledge_retrieval"),
+            ("EN?", "knowledge_retrieval"),
+            ("ENPaddleOCREN", "knowledge_retrieval"),
+            ("AIEN?", "knowledge_retrieval"),
         ]
 
         results = []
@@ -202,11 +202,11 @@ class ProblemClassificationTester:
         logger.info("\n=== Test Set 1.2: Data Analysis Intent ===")
 
         test_cases = [
-            ("分析一下员工数据的统计特征", "data_analysis"),
-            ("计算销售数据的平均值和标准差", "data_analysis"),
-            ("绘制财务数据的趋势图", "data_analysis"),
-            ("对用户行为数据进行聚类分析", "data_analysis"),
-            ("生成数据质量报告", "data_analysis"),
+            ("EN", "data_analysis"),
+            ("EN", "data_analysis"),
+            ("EN", "data_analysis"),
+            ("EN", "data_analysis"),
+            ("EN", "data_analysis"),
         ]
 
         results = []
@@ -233,11 +233,11 @@ class ProblemClassificationTester:
         logger.info("\n=== Test Set 1.3: Document Processing Intent ===")
 
         test_cases = [
-            ("处理这个PDF文档", "document_processing"),
-            ("从图片中提取文字", "document_processing"),
-            ("将Word文档转换为Markdown格式", "document_processing"),
-            ("合并多个Excel文件", "document_processing"),
-            ("对文档进行OCR识别", "document_processing"),
+            ("ENPDFEN", "document_processing"),
+            ("EN", "document_processing"),
+            ("ENWordENMarkdownEN", "document_processing"),
+            ("ENExcelEN", "document_processing"),
+            ("ENOCREN", "document_processing"),
         ]
 
         results = []
@@ -264,11 +264,11 @@ class ProblemClassificationTester:
         logger.info("\n=== Test Set 1.4: Code Execution Intent ===")
 
         test_cases = [
-            ("运行这段Python代码", "code_execution"),
-            ("执行数据清洗脚本", "code_execution"),
-            ("计算斐波那契数列", "code_execution"),
-            ("生成随机数列表", "code_execution"),
-            ("执行数据库查询", "code_execution"),
+            ("ENPythonEN", "code_execution"),
+            ("EN", "code_execution"),
+            ("EN", "code_execution"),
+            ("EN", "code_execution"),
+            ("EN", "code_execution"),
         ]
 
         results = []
@@ -298,9 +298,9 @@ class ProblemClassificationTester:
 
         # For mixed intents, we expect the primary/dominant intent
         test_cases = [
-            ("先分析销售数据,然后生成可视化报告", "data_analysis"),  # Primary: data analysis
-            ("查询RAG系统文档,并执行示例代码", "knowledge_retrieval"),  # Primary: knowledge
-            ("处理PDF文档并提取关键数据进行统计分析", "document_processing"),  # Primary: document
+            ("EN,EN", "data_analysis"),  # Primary: data analysis
+            ("ENRAGEN,EN", "knowledge_retrieval"),  # Primary: knowledge
+            ("ENPDFEN", "document_processing"),  # Primary: document
         ]
 
         results = []
@@ -330,9 +330,9 @@ class ProblemClassificationTester:
 
         # These queries could map to multiple intents - we accept any reasonable classification
         test_cases = [
-            ("处理数据", ["data_analysis", "document_processing"]),  # Could be either
-            ("分析文档", ["knowledge_retrieval", "document_processing", "data_analysis"]),
-            ("执行任务", ["code_execution", "data_analysis"]),
+            ("EN", ["data_analysis", "document_processing"]),  # Could be either
+            ("EN", ["knowledge_retrieval", "document_processing", "data_analysis"]),
+            ("EN", ["code_execution", "data_analysis"]),
         ]
 
         results = []
@@ -402,7 +402,7 @@ class ProblemClassificationTester:
 
     async def test_5_1_response_time_async(self):
         """Test Set 5.1: Response Time Validation (async)"""
-        test_queries = ["什么是机器学习?", "分析数据趋势", "处理PDF文档", "执行Python脚本", "查询用户信息"]
+        test_queries = ["EN?", "EN", "ENPDFEN", "ENPythonEN", "EN"]
 
         response_times = []
         passed_count = 0
@@ -448,7 +448,7 @@ class ProblemClassificationTester:
 
     async def test_5_2_stress_test_async(self):
         """Test Set 5.2: Stress Test (100 queries) - async"""
-        base_queries = ["什么是人工智能?", "分析销售数据", "处理文档", "执行代码", "查询信息"]
+        base_queries = ["EN?", "EN", "EN", "EN", "EN"]
 
         # Generate 100 queries by repeating base queries
         stress_queries = (base_queries * 20)[:100]
