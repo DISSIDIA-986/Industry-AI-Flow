@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 import backend.main as main_module
 from backend.main import app
+from backend.services.language_policy import RAG_CHINESE_QUERY_UNSUPPORTED
 
 
 @pytest.mark.asyncio
@@ -164,3 +165,19 @@ async def test_health_reports_embedding_backend_status(monkeypatch):
     payload = resp.json()
     assert payload["embedding"]["backend"] == "fallback_hash"
     assert payload["embedding"]["fallback_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_rag_query_rejects_chinese_input():
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        resp = await client.post(
+            "/api/v1/rag/query",
+            json={"question": "请总结招标文件", "top_k": 3},
+        )
+
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["code"] == RAG_CHINESE_QUERY_UNSUPPORTED
+    assert "English" in detail["message"]
