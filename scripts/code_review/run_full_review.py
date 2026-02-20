@@ -59,7 +59,7 @@ class CodeReviewRunner:
             "ARCHITECTURE.md",
             "docs/ARCHITECTURE.md",
             "docs/ARCHITECTURE_DIAGRAM.html",
-            "CAPSTONE_VALIDATION_TEST_PLAN.md",
+            "docs/reports/CAPSTONE_VALIDATION_TEST_PLAN.md",
             "CODE_REVIEW_STRATEGY.md"
         ]
         
