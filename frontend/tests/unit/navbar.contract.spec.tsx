@@ -34,24 +34,24 @@ describe('Navbar contracts', () => {
     render(<Navbar />)
 
     for (const navLabel of [
-      '仪表板',
-      '工作流聊天',
-      '文档管理',
-      '数据仪表板',
-      '成本估算',
-      'API测试',
+      'Dashboard',
+      'Workflow chat',
+      'Document management',
+      'Data dashboard',
+      'cost estimate',
+      'APItest',
     ]) {
       expect(screen.getByRole('link', { name: navLabel })).toBeInTheDocument()
     }
 
     expect(screen.getByRole('link', { name: 'Industry AI Flow' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '退出登录' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
   })
 
   it('keeps logout workflow contract wired to auth and router', () => {
     render(<Navbar />)
 
-    fireEvent.click(screen.getByRole('button', { name: '退出登录' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }))
 
     expect(logoutMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith('/login')
@@ -62,8 +62,8 @@ describe('Navbar contracts', () => {
 
     render(<Navbar />)
 
-    expect(screen.getByRole('link', { name: '登录' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '注册' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '退出登录' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Log in' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'register' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
   })
 })
