@@ -31,3 +31,52 @@ jobs:
       - name: Run release gate
         run: |
           make test-release-gate
+
+  frontend-layout-nav-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps for live API regression
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/release-gate.txt
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run frontend layout/nav regression gate
+        run: |
+          make test-frontend-layout-nav-gate
+
+      - name: Upload frontend regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-layout-nav-gate-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/playwright-results.json
+            frontend/junit-results.xml
+            logs/backend-e2e-live.log
+          if-no-files-found: warn
