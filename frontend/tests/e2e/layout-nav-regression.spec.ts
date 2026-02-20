@@ -59,7 +59,7 @@ test.describe('Layout width and navbar persistence regressions', () => {
       await test.step(`layout check: ${route}`, async () => {
         await page.goto(route);
         await expect(topNavbar(page)).toBeVisible();
-        await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
 
         const metrics = await readShellMetrics(page);
         const widthRatio = metrics.shellMainWidth / metrics.viewportWidth;
@@ -84,14 +84,14 @@ test.describe('Layout width and navbar persistence regressions', () => {
   test('top navbar remains visible and functional after cross-page navigation', async ({ page }) => {
     await page.goto('/workflow-chat');
     await expect(topNavbar(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
 
     const navFlow = [
-      { label: 'API测试', url: /\/api-integration-test$/ },
-      { label: '文档管理', url: /\/documents-integrated$/ },
-      { label: '数据仪表板', url: /\/data-dashboard$/ },
-      { label: '成本估算', url: /\/cost-estimation$/ },
-      { label: '工作流聊天', url: /\/workflow-chat$/ },
+      { label: 'APItest', url: /\/api-integration-test$/ },
+      { label: 'Document management', url: /\/documents-integrated$/ },
+      { label: 'Data dashboard', url: /\/data-dashboard$/ },
+      { label: 'cost estimate', url: /\/cost-estimation$/ },
+      { label: 'Workflow chat', url: /\/workflow-chat$/ },
     ] as const;
 
     for (const step of navFlow) {
@@ -100,7 +100,7 @@ test.describe('Layout width and navbar persistence regressions', () => {
         await expect(page).toHaveURL(step.url);
         await expect(topNavbar(page)).toBeVisible();
         await expect(page.getByRole('link', { name: 'Industry AI Flow' })).toBeVisible();
-        await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
       });
     }
   });

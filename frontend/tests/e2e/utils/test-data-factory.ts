@@ -1,10 +1,10 @@
 /**
- * 测试数据工厂
- * 生成各种测试场景所需的数据
+ * test data factory
+ * Generate data required for various test scenarios
  */
 
 /**
- * 生成测试用户数据
+ * Generate test user data
  */
 export function createTestUserData() {
   const timestamp = Date.now();
@@ -20,7 +20,7 @@ export function createTestUserData() {
 }
 
 /**
- * 生成测试文档数据
+ * Generate test document data
  */
 export function createTestDocumentData() {
   const documentTypes = ['PDF', 'DOCX', 'XLSX', 'PPTX', 'TXT', 'CSV', 'JSON'];
@@ -45,7 +45,7 @@ export function createTestDocumentData() {
 }
 
 /**
- * 生成测试聊天消息
+ * Generate test chat message
  */
 export function createTestChatMessage() {
   const messageTypes = [
@@ -102,7 +102,7 @@ export function createTestChatMessage() {
 }
 
 /**
- * 生成测试成本估算数据
+ * Generate test cost estimate data
  */
 export function createTestCostEstimationData() {
   const projectTypes = ['Web Application', 'Mobile App', 'Data Pipeline', 'ML Model', 'API Service'];
@@ -113,7 +113,7 @@ export function createTestCostEstimationData() {
   const complexity = complexities[Math.floor(Math.random() * complexities.length)];
   const timeline = timelines[Math.floor(Math.random() * timelines.length)];
   
-  // 基础成本计算
+  // Basic costing
   const baseCosts = {
     'Web Application': { simple: 10000, medium: 25000, complex: 50000, 'very-complex': 100000 },
     'Mobile App': { simple: 15000, medium: 35000, complex: 70000, 'very-complex': 140000 },
@@ -124,14 +124,14 @@ export function createTestCostEstimationData() {
   
   const baseCost = baseCosts[projectType as keyof typeof baseCosts]?.[complexity as keyof typeof baseCosts[keyof typeof baseCosts]] || 25000;
   
-  // 时间调整因子
+  // time adjustment factor
   const timeFactor = timeline < 60 ? 1.2 : timeline > 120 ? 0.9 : 1.0;
   
-  // 团队规模影响
+  // Impact of team size
   const teamSize = Math.floor(Math.random() * 10) + 3;
   const teamFactor = 1 + (teamSize - 3) * 0.1;
   
-  // 最终估算
+  // final estimate
   const estimatedCost = Math.round(baseCost * timeFactor * teamFactor);
   
   return {
@@ -157,7 +157,7 @@ export function createTestCostEstimationData() {
 }
 
 /**
- * 生成测试仪表板数据
+ * Generate test dashboard data
  */
 export function createTestDashboardData() {
   const metrics = {
@@ -169,7 +169,7 @@ export function createTestDashboardData() {
     responseTime: Math.random() * 500 + 100 // 100-600ms
   };
   
-  // 生成时间序列数据
+  // Generate time series data
   const timeSeries = [];
   const now = new Date();
   
@@ -186,7 +186,7 @@ export function createTestDashboardData() {
     });
   }
   
-  // 生成分类数据
+  // Generate categorical data
   const categories = ['Technology', 'Finance', 'Healthcare', 'Education', 'Retail'];
   const categoryData = categories.map(category => ({
     category,
@@ -194,7 +194,7 @@ export function createTestDashboardData() {
     growth: Math.random() * 50 - 10 // -10% to +40%
   }));
   
-  // 生成性能数据
+  // Generate performance data
   const performanceData = [
     { metric: 'Page Load Time', value: metrics.responseTime, target: 500, unit: 'ms' },
     { metric: 'API Response Time', value: Math.random() * 200 + 50, target: 200, unit: 'ms' },
@@ -212,7 +212,7 @@ export function createTestDashboardData() {
 }
 
 /**
- * 生成测试API响应
+ * Generate testsAPIresponse
  */
 export function createTestAPIResponse(endpoint: string) {
   const endpointResponses: Record<string, any> = {
@@ -290,7 +290,7 @@ export function createTestAPIResponse(endpoint: string) {
 }
 
 /**
- * 生成测试文件
+ * Generate test files
  */
 export function createTestFile(type: string = 'txt') {
   const fileTypes: Record<string, { content: string; mimeType: string }> = {

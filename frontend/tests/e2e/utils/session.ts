@@ -90,7 +90,7 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
         intent: {
           type: 'cost_estimation',
           confidence: 0.92,
-          description: '成本估算查询',
+          description: 'Cost estimate inquiry',
         },
         sources: [
           {
