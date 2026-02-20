@@ -34,7 +34,7 @@ def test_complete_analysis():
 
     # 1. 数据加载
     print("📊 1. 数据加载和预处理")
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
     print(f"   ✅ 数据加载成功: {df.shape}")
 
@@ -392,7 +392,7 @@ def generate_advanced_insights(df):
     try:
         # 模拟代码执行
         df = pd.read_csv(
-            "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+            "test_resources/datasets/Housing.csv"
         )
 
         # 执行生成的洞察分析

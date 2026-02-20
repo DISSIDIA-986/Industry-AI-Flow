@@ -262,8 +262,30 @@ def get_execution_environment_info() -> Dict[str, Any]:
         "psycopg2-binary",
     ]
 
+    manager = get_code_execution_manager()
+    if manager is not None and hasattr(manager, "health_snapshot"):
+        health_snapshot = manager.health_snapshot(mode=settings.code_execution_provider)
+        docker_state = (
+            health_snapshot.get("providers", {}).get("docker") or {}
+            if isinstance(health_snapshot.get("providers"), dict)
+            else {}
+        )
+        docker_available = bool(docker_state.get("healthy", False))
+        code_execution_available = bool(health_snapshot.get("healthy", False))
+    else:
+        health_snapshot = {
+            "healthy": bool(code_executor is not None),
+            "mode": settings.code_execution_provider,
+            "selected_provider": "docker",
+            "providers": {"docker": {"healthy": bool(code_executor is not None)}},
+        }
+        docker_available = bool(code_executor is not None)
+        code_execution_available = bool(code_executor is not None)
+
     return {
-        "docker_available": code_executor is not None,
+        "docker_available": docker_available,
+        "code_execution_available": code_execution_available,
+        "execution_health": health_snapshot,
         "resource_limits": config_info,
         "available_libraries": available_libraries,
         "security_features": security_features,

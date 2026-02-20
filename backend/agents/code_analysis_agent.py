@@ -1,14 +1,18 @@
 """Code Analysis Agent - 具备 Python 代码执行和数据分析能力"""
 
-from langchain.agents import create_agent
-from langchain_anthropic import ChatAnthropic
-from langchain_ollama import ChatOllama
+import logging
 
+from backend.agents.langchain_compat import (
+    build_legacy_llm_invoke_adapter,
+    create_agent_compat,
+)
 from backend.agents.state import CodeAnalysisAgentState
 from backend.config import settings
 from backend.tools.code_execution import code_execution_tool
 from backend.tools.data_analysis import data_analysis_tool
 from backend.tools.visualization import visualization_tool
+
+logger = logging.getLogger(__name__)
 
 
 def _get_llm():
@@ -19,6 +23,15 @@ def _get_llm():
         配置好的LLM实例
     """
     if settings.llm_provider == "zhipu":
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except Exception as exc:
+            logger.warning(
+                "langchain_anthropic unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         return ChatAnthropic(
             model=settings.zhipu_model,
             api_key=settings.zhipu_api_key,
@@ -27,6 +40,15 @@ def _get_llm():
             temperature=0,
         )
     else:
+        try:
+            from langchain_ollama import ChatOllama
+        except Exception as exc:
+            logger.warning(
+                "langchain_ollama unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         return ChatOllama(
             model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
@@ -98,7 +120,7 @@ def build_code_analysis_agent():
     )
 
     # 3. 创建 Agent
-    agent = create_agent(
+    agent = create_agent_compat(
         model=llm,
         tools=[code_execution_tool, data_analysis_tool, visualization_tool],
         system_prompt=system_prompt,

@@ -210,6 +210,9 @@ class DockerExecutor:
                 "cpu_quota": self.cpu_quota,
                 "network_disabled": not self.enable_network,
                 "user": "1000:1000",  # Non-root user
+                "read_only": True,
+                "tmpfs": {"/tmp": "rw,noexec,nosuid,size=64m"},
+                "security_opt": ["no-new-privileges"],
                 "detach": True,
                 "remove": False,  # Keep container for log extraction
             }

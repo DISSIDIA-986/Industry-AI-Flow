@@ -8,7 +8,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from backend.config import settings
-from backend.services.core.embedder import embed_single_text
+from backend.services.core.embedder import embed_query_text, embed_single_text
 from backend.services.database.driver_compat import (
     connect as connect_db,
     register_pgvector,
@@ -119,7 +119,7 @@ class LongTermMemoryStore:
         if not query:
             return []
 
-        embedding = embed_single_text(query)
+        embedding = embed_query_text(query)
         embedding_str = "[" + ",".join(map(str, embedding)) + "]"
 
         conn = self._get_connection()

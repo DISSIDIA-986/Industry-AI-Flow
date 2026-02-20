@@ -144,6 +144,7 @@ start_backend() {
     LLM_BACKEND=ollama \
     LLM_PROVIDER=ollama \
     HYBRID_MODE=local_only \
+    REQUIRE_API_KEY="${REQUIRE_API_KEY:-false}" \
     WORKFLOW_RUNNER_MODE="${WORKFLOW_RUNNER_MODE:-auto}" \
     ENABLE_CONVERSATION_MEMORY="${ENABLE_CONVERSATION_MEMORY:-false}" \
     CODE_EXECUTION_PROVIDER=auto \

@@ -138,7 +138,7 @@ if __name__ == "__main__":
             f.write(test_code)
 
         # 设置输出目录
-        output_dir = Path("docker_test_output")
+        output_dir = Path("temp/reports/docker_test_output")
         output_dir.mkdir(exist_ok=True)
 
         # 修改脚本以支持输出保存
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 import json
 
 # 保存分析结果
-output_file = Path("docker_test_output/analysis_results.json")
+output_file = Path("temp/reports/docker_test_output/analysis_results.json")
 results = analyze_housing_data()
 
 with open(output_file, 'w', encoding='utf-8') as f:
@@ -165,7 +165,7 @@ print(f"\\n结果已保存到: {output_file}")
         print("✅ 代码执行成功!")
 
         # 检查结果文件
-        result_file = Path("docker_test_output/analysis_results.json")
+        result_file = Path("temp/reports/docker_test_output/analysis_results.json")
         if result_file.exists():
             import json
 
@@ -350,7 +350,7 @@ def generate_visualizations():
     print("=== 开始生成可视化图表 ===")
 
     # 创建输出目录
-    output_dir = Path("docker_test_output/visualizations")
+    output_dir = Path("temp/reports/docker_test_output/visualizations")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 加载数据
@@ -594,7 +594,7 @@ def main():
             print(f"   包含类型: 分布图、散点图、热力图、箱线图等")
 
         print("\n🔧 下一步建议:")
-        print("1. 构建 Docker 镜像: ./scripts/build_data_analysis_docker.sh")
+        print("1. 构建 Docker 镜像: ./scripts/deploy/build_data_analysis_docker.sh")
         print("2. 测试完整的 LangChain 1.0 集成")
         print("3. 验证自我修复机制在 Docker 环境中的表现")
         print("4. 使用更多样化的数据集进行测试")

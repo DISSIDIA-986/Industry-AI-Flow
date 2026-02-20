@@ -20,6 +20,27 @@ _model: Any = None
 _FALLBACK_DIM = int(getattr(settings, "embedding_dim", 384) or 384)
 
 
+def _supports_nomic_retrieval_prefix() -> bool:
+    model_name = str(getattr(settings, "embedding_model", "") or "").lower()
+    return "nomic-embed-text" in model_name
+
+
+def _prepare_text(text: str, *, input_type: str) -> str:
+    """Apply model-specific input formatting for better retrieval quality."""
+    normalized = text or ""
+    if not _supports_nomic_retrieval_prefix():
+        return normalized
+
+    if input_type == "query":
+        prefix = "search_query: "
+    else:
+        prefix = "search_document: "
+
+    if normalized.startswith(prefix):
+        return normalized
+    return f"{prefix}{normalized}"
+
+
 def _fallback_embedding(text: str, *, dim: int) -> List[float]:
     """Build deterministic pseudo-embedding from text hash.
 
@@ -66,16 +87,21 @@ def get_model() -> Any:
     return _model
 
 
-def embed_texts(texts: list[str]) -> list[list[float]]:
+def embed_texts(texts: list[str], *, input_type: str = "document") -> list[list[float]]:
+    prepared_texts = [_prepare_text(text, input_type=input_type) for text in texts]
     model = get_model()
     if model is None:
-        return [_fallback_embedding(text, dim=_FALLBACK_DIM) for text in texts]
+        return [_fallback_embedding(text, dim=_FALLBACK_DIM) for text in prepared_texts]
 
-    embeddings = model.encode(texts, show_progress_bar=True)
+    embeddings = model.encode(prepared_texts, show_progress_bar=True)
     if hasattr(embeddings, "tolist"):
         return embeddings.tolist()
     return [list(item) for item in embeddings]
 
 
-def embed_single_text(text: str) -> list[float]:
-    return embed_texts([text])[0]
+def embed_single_text(text: str, *, input_type: str = "document") -> list[float]:
+    return embed_texts([text], input_type=input_type)[0]
+
+
+def embed_query_text(text: str) -> list[float]:
+    return embed_single_text(text, input_type="query")

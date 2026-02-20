@@ -1,7 +1,15 @@
 // 真实后端API客户端
 // 用于集成实际的FastAPI后端服务
 
-import { ApiError } from './api-client'
+class RealApiError extends Error {
+  constructor(
+    public status: number,
+    public message: string,
+  ) {
+    super(message)
+    this.name = 'RealApiError'
+  }
+}
 
 // 真实API配置
 const REAL_API_BASE_URL = process.env.NEXT_PUBLIC_REAL_API_URL || 'http://localhost:8001/api/v1'
@@ -14,13 +22,13 @@ const createRealApiClient = () => {
       const url = `${REAL_API_BASE_URL}${endpoint}`
       const token = localStorage.getItem('token')
       
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...options.headers,
+      const headers = new Headers(options.headers)
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
       }
       
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+        headers.set('Authorization', `Bearer ${token}`)
       }
       
       const controller = new AbortController()
@@ -37,19 +45,19 @@ const createRealApiClient = () => {
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new ApiError(response.status, errorData.detail || response.statusText)
+          throw new RealApiError(response.status, errorData.detail || response.statusText)
         }
         
         return await response.json()
       } catch (error) {
         clearTimeout(timeoutId)
-        if (error instanceof ApiError) {
+        if (error instanceof RealApiError) {
           throw error
         }
-        if (error.name === 'AbortError') {
-          throw new ApiError(408, '请求超时，请稍后重试')
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new RealApiError(408, '请求超时，请稍后重试')
         }
-        throw new ApiError(500, '网络错误，请检查网络连接')
+        throw new RealApiError(500, '网络错误，请检查网络连接')
       }
     },
     
@@ -249,7 +257,7 @@ export const realApiService = {
       })
       
       if (!response.ok) {
-        throw new ApiError(response.status, '文档上传失败')
+        throw new RealApiError(response.status, '文档上传失败')
       }
       
       return await response.json()

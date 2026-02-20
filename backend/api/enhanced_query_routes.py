@@ -9,7 +9,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.config import settings
-from backend.security.dependencies import secure_endpoint
+from backend.security.context import TenantContext
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
@@ -68,7 +69,9 @@ class LLMConfigUpdateRequest(BaseModel):
 
 
 @router.post("/query", response_model=QueryResponse)
-async def enhanced_query(request: QueryRequest):
+async def enhanced_query(
+    request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
+):
     """
     增强的RAG查询接口，支持参数配置
 
@@ -96,12 +99,23 @@ async def enhanced_query(request: QueryRequest):
             )
 
         # 保留 legacy /query 的 RAG 检索 + 生成语义，避免无声退化
-        result = rag.query(
-            question=request.question,
-            top_k=request.top_k,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-        )
+        try:
+            result = rag.query(
+                question=request.question,
+                top_k=request.top_k,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
+                session_id=tenant.tenant_id if tenant else settings.default_tenant_id,
+                user_id=tenant.user_id if tenant else None,
+            )
+        except TypeError:
+            # Backward-compatible call path for legacy or test double signatures.
+            result = rag.query(
+                question=request.question,
+                top_k=request.top_k,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
+            )
 
         logger.info(f"Query processed successfully: {request.question[:100]}...")
         return QueryResponse(**result)

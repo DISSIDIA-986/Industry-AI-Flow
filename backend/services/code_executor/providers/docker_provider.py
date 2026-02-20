@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Dict, Optional
 
 from backend.services.code_executor.providers.base import ExecutionResult
@@ -40,4 +41,46 @@ class DockerExecutionProvider:
         return self.executor.execute_code(code=code, data_files=data_files, timeout=timeout)
 
     async def health(self) -> dict:
-        return {"provider": "docker", "healthy": True}
+        def _probe() -> dict:
+            client = getattr(self.executor, "client", None)
+            if client is None:
+                return {
+                    "provider": "docker",
+                    "healthy": False,
+                    "status": "client_unavailable",
+                }
+            try:
+                client.ping()
+            except Exception as exc:
+                return {
+                    "provider": "docker",
+                    "healthy": False,
+                    "status": "daemon_unreachable",
+                    "error": str(exc),
+                }
+
+            try:
+                smoke = self.executor.execute("print('docker_health_ok')")
+            except Exception as exc:
+                return {
+                    "provider": "docker",
+                    "healthy": False,
+                    "status": "sandbox_probe_failed",
+                    "error": str(exc),
+                }
+
+            if not smoke.success:
+                return {
+                    "provider": "docker",
+                    "healthy": False,
+                    "status": "sandbox_probe_failed",
+                    "error": smoke.error or smoke.stderr or "unknown_error",
+                }
+
+            return {
+                "provider": "docker",
+                "healthy": True,
+                "status": "ok",
+            }
+
+        return await asyncio.to_thread(_probe)

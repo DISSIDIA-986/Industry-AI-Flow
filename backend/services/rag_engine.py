@@ -1,10 +1,13 @@
-import datetime
+import asyncio
 import logging
-import time
+import threading
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
 
 from backend.config import settings
-from backend.services.core.embedder import embed_single_text
+from backend.services.core.embedder import embed_query_text
 from backend.services.core.vectorstore import VectorStore
 from backend.services.feedback_system.feedback_manager import (
     FeedbackManager,
@@ -15,11 +18,35 @@ from backend.services.llm_integration.llm_client import (
     get_backend_status,
     get_llm_client,
 )
+from backend.services.memory.manager import ConversationMemoryManager
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
 from backend.services.safety import create_safety_guard
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _MemoryInteraction:
+    user_query: str
+    agent_response: str
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+    classified_intent: str = "rag_query"
+    confidence: float = 1.0
+    processing_time_ms: int = 0
+    success: bool = True
+
+
+@dataclass
+class _MemorySession:
+    session_id: str
+    user_id: Optional[str] = None
+    language_preference: str = "zh"
+    interaction_history: list[_MemoryInteraction] = field(default_factory=list)
+    summary_memory: str = ""
+    last_summary_time: Optional[datetime] = None
+    last_summary_record_index: int = 0
+    long_term_memory_refs: list[str] = field(default_factory=list)
 
 
 class SimpleRAG:
@@ -76,12 +103,23 @@ class SimpleRAG:
             except Exception as exc:
                 logger.warning("Failed to initialize safety guard: %s", exc)
 
+        self.memory_manager: Optional[ConversationMemoryManager] = None
+        self._memory_sessions: dict[str, _MemorySession] = {}
+        self._memory_lock = threading.Lock()
+        if getattr(settings, "enable_conversation_memory", False):
+            try:
+                self.memory_manager = ConversationMemoryManager()
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("Failed to initialize conversation memory manager: %s", exc)
+
     def query(
         self,
         question: str,
         top_k: int = None,
         temperature: float = None,
         max_tokens: int = None,
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> dict:
         """RAG查询流程"""
         if top_k is None:
@@ -106,7 +144,7 @@ class SimpleRAG:
         else:
             # 纯向量检索（Phase 1 方法）
             retrieve_k = top_k * 2 if self.use_reranker else top_k
-            query_embedding = embed_single_text(question)
+            query_embedding = embed_query_text(question)
             similar_chunks = self.vectorstore.similarity_search(
                 query_embedding, top_k=retrieve_k
             )
@@ -124,7 +162,17 @@ class SimpleRAG:
             context_parts.append(f"[文档{i}]\n{chunk['content']}")
         context = "\n\n".join(context_parts)
 
-        prompt = self._build_prompt(question, context)
+        memory_payload = {}
+        memory_session = None
+        if self.memory_manager is not None:
+            memory_session = self._get_or_create_memory_session(
+                session_id=session_id, user_id=user_id
+            )
+            memory_payload = self.memory_manager.build_memory_payload(
+                memory_session, question
+            )
+
+        prompt = self._build_prompt(question, context, memory_payload)
 
         # 4. LLM生成答案
         answer = self.llm_client.generate(
@@ -142,6 +190,9 @@ class SimpleRAG:
             answer = safety_result.get("enhanced_answer", answer)
             if hasattr(safety_result.get("safety_level"), "value"):
                 safety_result["safety_level"] = safety_result["safety_level"].value
+
+        if memory_session is not None:
+            self._record_memory_interaction(memory_session, question, answer)
 
         # 5. 返回结果
         return {
@@ -177,8 +228,14 @@ class SimpleRAG:
 
         return 0.7, 0.3  # 默认权重
 
-    def _build_prompt(self, question: str, context: str) -> str:
+    def _build_prompt(
+        self,
+        question: str,
+        context: str,
+        memory_payload: Optional[dict] = None,
+    ) -> str:
         """构建提示词"""
+        memory_context = self._format_memory_payload(memory_payload or {})
         return f"""你是一个专业的技术问答助手。请基于以下参考文档回答用户问题。
 
 **重要指示**：
@@ -187,12 +244,101 @@ class SimpleRAG:
 3. 如果文档中没有相关信息，明确说"我不知道"
 4. 回答要准确、简洁、专业
 
+**会话上下文**：
+{memory_context}
+
 **参考文档**：
 {context}
 
 **用户问题**：{question}
 
 **你的回答**："""
+
+    @staticmethod
+    def _format_memory_payload(memory_payload: dict) -> str:
+        short_term = memory_payload.get("short_term") or []
+        summary = (memory_payload.get("summary") or "").strip()
+        long_term = memory_payload.get("long_term") or []
+
+        if not short_term and not summary and not long_term:
+            return "无历史上下文。"
+
+        lines: list[str] = []
+        if summary:
+            lines.append(f"- 会话摘要: {summary}")
+
+        if short_term:
+            lines.append("- 最近对话:")
+            for entry in short_term[-6:]:
+                role = entry.get("role", "unknown")
+                content = str(entry.get("content", "")).strip()
+                if content:
+                    lines.append(f"  - {role}: {content[:240]}")
+
+        if long_term:
+            lines.append("- 相关长期记忆:")
+            for item in long_term[:3]:
+                content = item.get("content")
+                if isinstance(content, dict):
+                    compact = ", ".join(
+                        f"{k}={v}" for k, v in list(content.items())[:3]
+                    )
+                else:
+                    compact = str(content)
+                lines.append(f"  - {compact[:240]}")
+
+        return "\n".join(lines)
+
+    def _get_or_create_memory_session(
+        self,
+        session_id: Optional[str],
+        user_id: Optional[str],
+    ) -> _MemorySession:
+        resolved_session_id = (session_id or "default").strip() or "default"
+        with self._memory_lock:
+            session = self._memory_sessions.get(resolved_session_id)
+            if session is None:
+                session = _MemorySession(session_id=resolved_session_id, user_id=user_id)
+                self._memory_sessions[resolved_session_id] = session
+            elif user_id and not session.user_id:
+                session.user_id = user_id
+        return session
+
+    def _record_memory_interaction(
+        self,
+        session: _MemorySession,
+        question: str,
+        answer: str,
+    ) -> None:
+        record = _MemoryInteraction(
+            user_query=question,
+            agent_response=answer,
+            processing_time_ms=0,
+            success=bool(answer and answer.strip()),
+        )
+        session.interaction_history.append(record)
+        if len(session.interaction_history) > 50:
+            session.interaction_history = session.interaction_history[-50:]
+
+        if self.memory_manager is None:
+            return
+
+        async def _update_memory():
+            await self.memory_manager.process_interaction(session, record)
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_update_memory())
+            return
+
+        def _run_in_thread():
+            try:
+                asyncio.run(_update_memory())
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("Async memory update failed: %s", exc)
+
+        threading.Thread(target=_run_in_thread, daemon=True).start()
 
     def submit_feedback(
         self,
@@ -328,6 +474,11 @@ class SimpleRAG:
                     embeddings=data["embeddings"],
                 )
 
+            if self.hybrid_retriever and hasattr(
+                self.hybrid_retriever, "invalidate_bm25_index"
+            ):
+                self.hybrid_retriever.invalidate_bm25_index()
+
             logger.info(
                 f"Successfully added {len(documents)} documents with {len(all_chunks)} chunks"
             )
@@ -353,6 +504,10 @@ class SimpleRAG:
         try:
             # 删除文档的所有chunks
             self.vectorstore.delete_by_doc_id(doc_id)
+            if self.hybrid_retriever and hasattr(
+                self.hybrid_retriever, "invalidate_bm25_index"
+            ):
+                self.hybrid_retriever.invalidate_bm25_index()
             logger.info(f"Successfully deleted document: {doc_id}")
             return True
         except Exception as e:

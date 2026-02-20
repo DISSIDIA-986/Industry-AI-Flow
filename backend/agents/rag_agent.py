@@ -1,13 +1,17 @@
-"""RAG Agent - 使用LangChain 1.0 统一create_agent API"""
+"""RAG Agent - 使用统一 Agent 构建接口。"""
 
-from langchain.agents import create_agent
-from langchain_anthropic import ChatAnthropic
-from langchain_ollama import ChatOllama
+import logging
 
 from backend.agents.state import RAGAgentState
+from backend.agents.langchain_compat import (
+    build_legacy_llm_invoke_adapter,
+    create_agent_compat,
+)
 from backend.config import settings
 from backend.tools.reranker import rerank_tool
 from backend.tools.retrieval import hybrid_retrieval_tool
+
+logger = logging.getLogger(__name__)
 
 
 def _get_llm():
@@ -22,6 +26,15 @@ def _get_llm():
         配置好的LLM实例
     """
     if settings.llm_provider == "zhipu":
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except Exception as exc:
+            logger.warning(
+                "langchain_anthropic unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         # 使用智谱AI（通过Anthropic兼容接口）
         return ChatAnthropic(
             model=settings.zhipu_model,
@@ -31,6 +44,15 @@ def _get_llm():
             temperature=0,
         )
     else:
+        try:
+            from langchain_ollama import ChatOllama
+        except Exception as exc:
+            logger.warning(
+                "langchain_ollama unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         # 使用本地Ollama（默认）
         return ChatOllama(
             model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
@@ -86,7 +108,7 @@ def build_rag_agent():
 """
 
     # 3. 创建Agent（使用LangChain 1.0统一API）
-    agent = create_agent(
+    agent = create_agent_compat(
         model=llm,
         tools=[hybrid_retrieval_tool, rerank_tool],
         system_prompt=system_prompt,
