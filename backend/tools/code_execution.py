@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def _validation_failure_payload(validation_error: str, warnings: list[str]) -> Dict[str, Any]:
     return {
         "success": False,
-        "error": "代码安全检查失败",
+        "error": "Code safety validation failed.",
         "validation_errors": [validation_error] if validation_error else [],
         "warnings": warnings,
         "stdout": "",
@@ -84,7 +84,7 @@ def code_execution_tool(
     if code_executor is None and manager is None:
         return {
             "success": False,
-            "error": "代码执行器不可用，请检查 Docker 环境",
+            "error": "Code executor unavailable. Please verify the Docker environment.",
             "stdout": "",
             "stderr": "Code executor not available",
             "exit_code": -1,
@@ -116,19 +116,19 @@ def code_execution_tool(
 
         # 记录执行日志
         if result["success"]:
-            logger.info(f"代码执行成功，耗时 {result['execution_time']:.2f} 秒")
+            logger.info(f"Code execution succeeded in {result['execution_time']:.2f}s")
             if result["visualizations"]:
-                logger.info(f"生成了 {len(result['visualizations'])} 个可视化文件")
+                logger.info(f"Generated {len(result['visualizations'])} visualization file(s)")
         else:
-            logger.warning(f"代码执行失败: {result.get('error', 'Unknown error')}")
+            logger.warning(f"Code execution failed: {result.get('error', 'Unknown error')}")
 
         return result
 
     except Exception as e:
-        logger.error(f"代码执行工具异常: {e}")
+        logger.error(f"Code execution tool error: {e}")
         return {
             "success": False,
-            "error": f"工具执行异常: {str(e)}",
+            "error": f"Tool execution error: {str(e)}",
             "stdout": "",
             "stderr": str(e),
             "exit_code": -1,
@@ -173,7 +173,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         syntax_errors = []
         security_errors = []
         if validation_result.error:
-            if "syntax" in validation_result.error.lower() or "语法" in validation_result.error:
+            if "syntax" in validation_result.error.lower():
                 syntax_errors.append(validation_result.error)
             else:
                 security_errors.append(validation_result.error)
@@ -182,7 +182,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
             "syntax_errors": syntax_errors,
             "security_errors": security_errors,
             "warnings": validation_result.warnings,
-            "suggestions": ["可在启用 Docker 后进行完整执行前校验"],
+            "suggestions": ["Enable Docker to run full pre-execution validation."],
         }
 
     try:
@@ -194,7 +194,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         security_errors = []
 
         for error in validation_errors:
-            if "语法错误" in error:
+            if "syntax error" in error.lower():
                 syntax_errors.append(error)
             else:
                 security_errors.append(error)
@@ -202,9 +202,9 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         # 生成建议
         suggestions = []
         if security_errors:
-            suggestions.append("移除危险操作，如 os.system、subprocess 等")
+            suggestions.append("Remove dangerous operations such as os.system or subprocess.")
         if syntax_errors:
-            suggestions.append("修复语法错误")
+            suggestions.append("Fix syntax errors.")
 
         return {
             "valid": len(validation_errors) == 0,
@@ -215,10 +215,10 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         }
 
     except Exception as e:
-        logger.error(f"代码验证工具异常: {e}")
+        logger.error(f"Code validation tool error: {e}")
         return {
             "valid": False,
-            "syntax_errors": [f"验证异常: {str(e)}"],
+            "syntax_errors": [f"Validation error: {str(e)}"],
             "security_errors": [],
             "warnings": [],
             "suggestions": [],

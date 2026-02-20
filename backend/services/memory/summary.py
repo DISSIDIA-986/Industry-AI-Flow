@@ -22,7 +22,7 @@ class ConversationSummarizer:
             self.client = LLMClientFactory.create_client(backend=backend)
             self.available = True
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("无法初始化摘要 LLM，记忆摘要被禁用: %s", exc)
+            logger.warning("EN LLM,EN: %s", exc)
             self.client = None
             self.available = False
 
@@ -37,24 +37,24 @@ class ConversationSummarizer:
             return existing_summary
 
         interactions_text = "\n".join(
-            f"用户: {item['user']}\n助手: {item['assistant']}\n---" for item in interactions
+            f"EN: {item['user']}\nEN: {item['assistant']}\n---" for item in interactions
         )
 
         prompt = f"""
-你是一名对话总结助手，请将对话信息总结成200字以内的关键上下文。
+EN,EN200EN.
 
-现有摘要:
-{existing_summary or '（暂无）'}
+EN:
+{existing_summary or '(EN)'}
 
-新增对话:
+EN:
 {interactions_text}
 
-请给出更新后的摘要，包含：
-1. 用户的目标和任务
-2. 关键细节与限制条件
-3. 尚未解决的问题
+EN,EN:
+1. EN
+2. EN
+3. EN
 
-输出语言：{language}
+EN:{language}
 """
 
         try:
@@ -65,7 +65,7 @@ class ConversationSummarizer:
             )
             return summary.strip()
         except Exception as exc:  # pragma: no cover - LLM failure
-            logger.error("生成对话摘要失败: %s", exc)
+            logger.error("EN: %s", exc)
             return existing_summary
 
     @staticmethod

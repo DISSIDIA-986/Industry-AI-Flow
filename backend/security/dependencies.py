@@ -69,11 +69,14 @@ async def secure_endpoint(
     # 2. User authentication (Bearer token)
     if (authorization or settings.require_user_auth) and not is_public:
         if not settings.auth_jwt_secret:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User authentication required but AUTH_JWT_SECRET not configured.",
-            )
-        user_identity = authenticate_user(authorization)
+            # Optional bearer auth should not break non-auth-required deployments.
+            if settings.require_user_auth:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="User authentication required but AUTH_JWT_SECRET not configured.",
+                )
+        else:
+            user_identity = authenticate_user(authorization)
 
     # 3. Tenant resolution
     tenant_id = (

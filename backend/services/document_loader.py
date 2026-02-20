@@ -1,5 +1,5 @@
 """
-文档加载器：支持 PDF、TXT、图片 (Phase 2: 增加 OCR 支持)
+EN:EN PDF,TXT,EN (Phase 2: EN OCR EN)
 """
 import logging
 import os
@@ -12,7 +12,7 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Phase 2 Step 4: OCR 支持（可选）
+# Phase 2 Step 4: OCR EN(EN)
 try:
     from paddleocr import PaddleOCR
 
@@ -22,50 +22,50 @@ except ImportError:
 
 
 class EnhancedDocumentLoader:
-    """增强文档加载器：支持 PDF、TXT、图片 (带OCR)"""
+    """EN:EN PDF,TXT,EN (ENOCR)"""
 
     def __init__(self, use_ocr: bool = True, ocr_lang: Optional[str] = None):
         """
-        初始化增强文档加载器
+        EN
 
         Args:
-            use_ocr: 是否启用 OCR 功能
-            ocr_lang: OCR 语言 ('en' 英文, 'ch' 中文, 'en+ch' 混合)
-                     默认从配置读取 (settings.ocr_lang，默认为 'en')
+            use_ocr: EN OCR EN
+            ocr_lang: OCR EN ('en' EN, 'ch' EN, 'en+ch' EN)
+                     EN (settings.ocr_lang,EN 'en')
         """
-        # Phase 2 优化: 默认使用英文OCR，适配主要文档语言
+        # Phase 2 EN: ENOCR,EN
         if ocr_lang is None:
             ocr_lang = settings.ocr_lang
         self.use_ocr = use_ocr and OCR_AVAILABLE
 
-        # Phase 2 Step 4: 初始化 PaddleOCR (3.3.1 新API)
+        # Phase 2 Step 4: EN PaddleOCR (3.3.1 ENAPI)
         if self.use_ocr:
             self.ocr = PaddleOCR(
-                use_textline_orientation=True,  # 启用文本行方向检测 (替代use_angle_cls)
-                lang=ocr_lang,  # 语言
+                use_textline_orientation=True,  # EN (ENuse_angle_cls)
+                lang=ocr_lang,  # EN
             )
-            logger.info("OCR 模块已启用 (PaddleOCR 3.3.1, 语言: %s)", ocr_lang)
+            logger.info("OCR EN (PaddleOCR 3.3.1, EN: %s)", ocr_lang)
         else:
             self.ocr = None
             if use_ocr and not OCR_AVAILABLE:
-                logger.warning("PaddleOCR 未安装，OCR 功能不可用")
+                logger.warning("PaddleOCR EN,OCR EN")
 
     def load_document(self, file_path: Union[str, Path]) -> str:
         """
-        加载文档内容
+        EN
 
         Args:
-            file_path: 文档路径
+            file_path: EN
 
         Returns:
-            文档文本内容
+            EN
         """
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"文件不存在: {file_path}")
+            raise FileNotFoundError(f"EN: {file_path}")
 
-        # 根据文件扩展名选择加载方式
+        # EN
         ext = file_path.suffix.lower()
 
         if ext == ".txt":
@@ -75,20 +75,20 @@ class EnhancedDocumentLoader:
         elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
             return self._load_image(file_path)
         else:
-            raise ValueError(f"不支持的文件格式: {ext}")
+            raise ValueError(f"EN: {ext}")
 
     def _load_txt(self, file_path: Path) -> str:
-        """加载 TXT 文件"""
+        """EN TXT EN"""
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
 
     def _load_pdf(self, file_path: Path) -> str:
         """
-        加载 PDF 文件
+        EN PDF EN
 
-        策略：
-        1. 先尝试提取文本
-        2. 如果文本很少且启用 OCR，则使用 OCR 提取
+        EN:
+        1. EN
+        2. EN OCR,EN OCR EN
         """
         doc = fitz.open(file_path)
         text_content = []
@@ -96,25 +96,25 @@ class EnhancedDocumentLoader:
         for page_num in range(len(doc)):
             page = doc[page_num]
 
-            # 尝试提取文本
+            # EN
             page_text = page.get_text()
 
-            # 如果文本很少（可能是扫描件），使用 OCR
+            # EN(EN),EN OCR
             if self.use_ocr and len(page_text.strip()) < 50:
-                logger.debug("页面 %s: 检测到扫描内容，使用 OCR", page_num + 1)
-                page_image = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2倍分辨率
+                logger.debug("EN %s: EN,EN OCR", page_num + 1)
+                page_image = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2EN
                 img_bytes = page_image.tobytes("png")
 
-                # 保存临时图片
+                # EN
                 temp_img = f"/tmp/page_{page_num}.png"
                 with open(temp_img, "wb") as f:
                     f.write(img_bytes)
 
-                # OCR 识别
+                # OCR EN
                 ocr_result = self._ocr_image(temp_img)
                 text_content.append(ocr_result)
 
-                # 删除临时文件
+                # EN
                 os.remove(temp_img)
             else:
                 text_content.append(page_text)
@@ -123,26 +123,26 @@ class EnhancedDocumentLoader:
         return "\n\n".join(text_content)
 
     def _load_image(self, file_path: Path) -> str:
-        """加载图片文件并使用 OCR 提取文本"""
+        """EN OCR EN"""
         if not self.use_ocr:
-            raise ValueError("OCR 未启用，无法处理图片文件")
+            raise ValueError("OCR EN,EN")
 
         return self._ocr_image(str(file_path))
 
     def _ocr_image(self, image_path: str) -> str:
         """
-        使用 PaddleOCR 3.3.1 识别图片文本
+        EN PaddleOCR 3.3.1 EN
 
         Args:
-            image_path: 图片路径
+            image_path: EN
 
         Returns:
-            识别的文本
+            EN
         """
-        # PaddleOCR 3.3.1 新API: 使用predict()而非ocr()
+        # PaddleOCR 3.3.1 ENAPI: ENpredict()ENocr()
         result = self.ocr.predict(image_path)
 
-        # 提取文本内容 (新格式)
+        # EN (EN)
         text_lines = []
         if result and len(result) > 0:
             page_result = result[0]
@@ -152,9 +152,9 @@ class EnhancedDocumentLoader:
         return "\n".join(text_lines)
 
 
-# Phase 1 兼容函数（保持向后兼容）
+# Phase 1 EN(EN)
 def load_pdf(file_path: str) -> str:
-    """提取PDF文本（使用PyMuPDF）"""
+    """ENPDFEN(ENPyMuPDF)"""
     doc = fitz.open(file_path)
     text = "\n".join(page.get_text() for page in doc)
     doc.close()
@@ -162,44 +162,44 @@ def load_pdf(file_path: str) -> str:
 
 
 def load_txt(file_path: str) -> str:
-    """加载纯文本文件"""
+    """EN"""
     with open(file_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
 def load_document(file_path: str) -> str:
-    """根据文件扩展名加载文档（Phase 1 简单版本）"""
+    """EN(Phase 1 EN)"""
     if file_path.endswith(".pdf"):
         return load_pdf(file_path)
     elif file_path.endswith(".txt"):
         return load_txt(file_path)
     else:
-        raise ValueError(f"不支持的文件格式: {file_path}")
+        raise ValueError(f"EN: {file_path}")
 
 
 class DocumentLoader:
-    """兼容新文档管理系统的文档加载器"""
+    """EN"""
 
     def __init__(self):
         self.enhanced_loader = EnhancedDocumentLoader(use_ocr=True)
 
     def load_document(self, file_path: str) -> list:
         """
-        加载文档并返回LangChain Document对象列表
+        ENLangChain DocumentEN
 
         Args:
-            file_path: 文档路径
+            file_path: EN
 
         Returns:
-            LangChain Document对象列表
+            LangChain DocumentEN
         """
         try:
             from langchain_core.documents import Document
 
-            # 使用增强加载器加载文本
+            # EN
             text_content = self.enhanced_loader.load_document(file_path)
 
-            # 创建单个Document对象
+            # ENDocumentEN
             return [
                 Document(
                     page_content=text_content,
@@ -215,5 +215,5 @@ class DocumentLoader:
             return []
 
 
-# 为了兼容性，在模块级别创建一个实例
+# EN,EN
 document_loader = DocumentLoader()

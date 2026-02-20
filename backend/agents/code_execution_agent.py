@@ -1,4 +1,4 @@
-"""可迭代代码执行 Agent - 支持 LangChain 1.0 中间件和自我修复机制"""
+"""EN Agent - EN LangChain 1.0 EN"""
 
 import asyncio
 import json
@@ -34,7 +34,7 @@ class _FallbackAsyncLLM:
 
 @dataclass
 class ExecutionAttempt:
-    """执行尝试记录"""
+    """EN"""
 
     attempt_id: str
     code: str
@@ -55,7 +55,7 @@ class ExecutionAttempt:
 
 
 class CodeExecutionState(TypedDict):
-    """代码执行状态"""
+    """EN"""
 
     original_request: str
     current_code: str
@@ -68,7 +68,7 @@ class CodeExecutionState(TypedDict):
 
 
 class IterativeExecutionCallback(BaseCallbackHandler):
-    """可迭代执行回调处理器"""
+    """EN"""
 
     def __init__(self):
         self.execution_log = []
@@ -76,7 +76,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         self.fix_strategies = {}
 
     def on_agent_action(self, action, **kwargs):
-        """Agent 动作回调"""
+        """Agent EN"""
         self.execution_log.append(
             {
                 "type": "agent_action",
@@ -86,7 +86,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_start(self, serialized, input_str, **kwargs):
-        """工具开始回调"""
+        """EN"""
         self.execution_log.append(
             {
                 "type": "tool_start",
@@ -97,7 +97,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_end(self, output, **kwargs):
-        """工具结束回调"""
+        """EN"""
         self.execution_log.append(
             {
                 "type": "tool_end",
@@ -109,7 +109,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_error(self, error, **kwargs):
-        """工具错误回调"""
+        """EN"""
         self.execution_log.append(
             {
                 "type": "tool_error",
@@ -118,14 +118,14 @@ class IterativeExecutionCallback(BaseCallbackHandler):
             }
         )
 
-        # 分析错误模式
+        # EN
         self._analyze_error_pattern(error)
 
     def _analyze_error_pattern(self, error):
-        """分析错误模式"""
+        """EN"""
         error_str = str(error).lower()
 
-        # 常见错误模式识别
+        # EN
         if "import" in error_str and "no module" in error_str:
             self.error_patterns["missing_import"] = (
                 self.error_patterns.get("missing_import", 0) + 1
@@ -166,7 +166,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
 
 
 class CodeFixer:
-    """代码修复器"""
+    """EN"""
 
     def __init__(self):
         self.fix_templates = {
@@ -179,7 +179,7 @@ class CodeFixer:
                 "plotly": "import plotly.express as px",
             },
             "fix_syntax": [
-                # 修复常见语法错误
+                # EN
                 ("print", "print(", ")"),
                 ("return", "return ", ""),
                 ("def ", "def ", "(self):"),
@@ -188,27 +188,27 @@ class CodeFixer:
                 ("while ", "while ", ":"),
             ],
             "define_variable": {
-                # 变量定义模板
+                # EN
                 "df": "df = pd.DataFrame()",
                 "data": "data = []",
                 "result": "result = None",
                 "fig": "fig, ax = plt.subplots()",
             },
             "fix_indexing": {
-                # 索引修复策略
-                "out_of_bounds": "使用 len(df) - 1 作为最大索引",
-                "negative_index": "使用负数索引从末尾访问",
-                "iloc_loc": "使用 df.iloc 而不是直接索引",
+                # EN
+                "out_of_bounds": "EN len(df) - 1 EN",
+                "negative_index": "EN",
+                "iloc_loc": "EN df.iloc EN",
             },
             "fix_type_conversion": {
-                # 类型转换修复
+                # EN
                 "str_to_int": "int()",
                 "str_to_float": "float()",
                 "list_to_series": "pd.Series()",
                 "series_to_list": ".tolist()",
             },
             "fix_file_path": {
-                # 文件路径修复
+                # EN
                 "workspace": "/workspace/data/",
                 "relative": "./data/",
                 "absolute": "/tmp/luncheon_data/",
@@ -219,15 +219,15 @@ class CodeFixer:
         self, code: str, error_message: str, fix_strategy: str
     ) -> tuple[str, List[str]]:
         """
-        修复代码
+        EN
 
         Args:
-            code: 原始代码
-            error_message: 错误消息
-            fix_strategy: 修复策略
+            code: EN
+            error_message: EN
+            fix_strategy: EN
 
         Returns:
-            修复后的代码和应用修复列表
+            EN
         """
         fixes_applied = []
 
@@ -254,99 +254,99 @@ class CodeFixer:
                 return code, fixes_applied
 
         except Exception as e:
-            logger.warning(f"代码修复失败: {e}")
+            logger.warning(f"EN: {e}")
             return code, fixes_applied
 
     def _fix_missing_imports(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复缺失的导入"""
+        """EN"""
         error_lower = error_message.lower()
         fixed_code = code
 
-        # 检测缺失的模块
+        # EN
         for module, import_statement in self.fix_templates[
             "add_import_statement"
         ].items():
             if module in error_lower and module not in code.lower():
-                # 在代码开头添加导入
+                # EN
                 fixed_code = f"{import_statement}\n\n{fixed_code}"
-                fixes_applied.append(f"添加导入: {import_statement}")
+                fixes_applied.append(f"EN: {import_statement}")
 
         return fixed_code, fixes_applied
 
     def _fix_syntax_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复语法错误"""
+        """EN"""
         fixed_code = code
 
-        # 基础语法修复
+        # EN
         for pattern, prefix, suffix in self.fix_templates["fix_syntax"]:
             if pattern in error_message.lower():
-                # 这里可以实现更复杂的语法修复逻辑
-                fixes_applied.append(f"尝试修复语法错误: {pattern}")
+                # EN
+                fixes_applied.append(f"EN: {pattern}")
 
         return fixed_code, fixes_applied
 
     def _fix_undefined_variables(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复未定义变量"""
+        """EN"""
         fixed_code = code
         error_lower = error_message.lower()
 
-        # 检测未定义的变量
+        # EN
         for var_name, var_definition in self.fix_templates["define_variable"].items():
             if f"'{var_name}'" in error_lower and var_name not in code:
-                # 在使用变量前添加定义
+                # EN
                 lines = code.split("\n")
                 insert_index = 0
 
-                # 寻找合适的插入位置（在导入语句之后）
+                # EN(EN)
                 for i, line in enumerate(lines):
                     if line.strip().startswith(("import", "from")) or not line.strip():
                         continue
                     insert_index = i
                     break
 
-                lines.insert(insert_index, f"# 定义变量 {var_name}\n{var_definition}\n")
+                lines.insert(insert_index, f"# EN {var_name}\n{var_definition}\n")
                 fixed_code = "\n".join(lines)
-                fixes_applied.append(f"定义变量: {var_name}")
+                fixes_applied.append(f"EN: {var_name}")
 
         return fixed_code, fixes_applied
 
     def _fix_index_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复索引错误"""
+        """EN"""
         fixed_code = code
-        fixes_applied.append("检查并修复索引访问")
+        fixes_applied.append("EN")
 
-        # 这里可以实现更复杂的索引修复逻辑
-        # 例如添加边界检查、使用iloc等
+        # EN
+        # EN,ENilocEN
 
         return fixed_code, fixes_applied
 
     def _fix_type_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复类型错误"""
+        """EN"""
         fixed_code = code
-        fixes_applied.append("添加类型转换")
+        fixes_applied.append("EN")
 
-        # 这里可以实现类型转换逻辑
+        # EN
 
         return fixed_code, fixes_applied
 
     def _fix_file_paths(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """修复文件路径错误"""
+        """EN"""
         fixed_code = code
-        fixes_applied.append("修正文件路径")
+        fixes_applied.append("EN")
 
-        # 替换可能的错误路径
+        # EN
         path_mappings = {
             "./data/": "/workspace/data/",
             "../data/": "/workspace/data/",
@@ -357,20 +357,20 @@ class CodeFixer:
         for wrong_path, correct_path in path_mappings.items():
             if wrong_path in fixed_code:
                 fixed_code = fixed_code.replace(wrong_path, correct_path)
-                fixes_applied.append(f"路径修正: {wrong_path} -> {correct_path}")
+                fixes_applied.append(f"EN: {wrong_path} -> {correct_path}")
 
         return fixed_code, fixes_applied
 
 
 class IterativeCodeExecutionAgent:
-    """可迭代代码执行 Agent"""
+    """EN Agent"""
 
     def __init__(self, max_attempts: int = 5):
         """
-        初始化可迭代代码执行 Agent
+        EN Agent
 
         Args:
-            max_attempts: 最大尝试次数
+            max_attempts: EN
         """
         self.max_attempts = max_attempts
         self.callback_handler = IterativeExecutionCallback()
@@ -379,7 +379,7 @@ class IterativeCodeExecutionAgent:
         self.logger = logging.getLogger(__name__)
 
     def _get_llm(self):
-        """获取 LLM 实例"""
+        """EN LLM EN"""
         from backend.config import settings
 
         if settings.llm_provider == "zhipu":
@@ -422,23 +422,23 @@ class IterativeCodeExecutionAgent:
         context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        迭代执行代码，直到成功或达到最大尝试次数
+        EN,EN
 
         Args:
-            original_request: 原始请求
-            initial_code: 初始代码（可选）
-            data_file: 数据文件路径（可选）
-            context: 上下文信息（可选）
+            original_request: EN
+            initial_code: EN(EN)
+            data_file: EN(EN)
+            context: EN(EN)
 
         Returns:
-            执行结果字典，包含：
-            - success: 是否成功
-            - final_code: 最终代码
-            - attempts: 所有尝试记录
-            - execution_result: 最终执行结果
-            - summary: 执行摘要
+            EN,EN:
+            - success: EN
+            - final_code: EN
+            - attempts: EN
+            - execution_result: EN
+            - summary: EN
         """
-        # 初始化状态
+        # EN
         state = CodeExecutionState(
             original_request=original_request,
             current_code=initial_code or "",
@@ -450,13 +450,13 @@ class IterativeCodeExecutionAgent:
             is_completed=False,
         )
 
-        # 如果没有初始代码，生成初始代码
+        # EN,EN
         if not state["current_code"]:
             state["current_code"] = await self._generate_initial_code(
                 original_request, data_file, context
             )
 
-        # 迭代执行
+        # EN
         while (
             state["current_attempt"] < state["max_attempts"]
             and not state["is_completed"]
@@ -464,22 +464,22 @@ class IterativeCodeExecutionAgent:
             state["current_attempt"] += 1
 
             self.logger.info(
-                f"代码执行尝试 {state['current_attempt']}/{state['max_attempts']}"
+                f"EN {state['current_attempt']}/{state['max_attempts']}"
             )
 
-            # 执行代码
+            # EN
             attempt_result = await self._execute_code_attempt(state, data_file)
             state["attempts"].append(attempt_result)
 
             if attempt_result.success:
                 state["is_completed"] = True
-                self.logger.info("代码执行成功！")
+                self.logger.info("EN!")
             else:
-                # 分析错误并修复代码
+                # EN
                 fixed_code = await self._analyze_and_fix_code(state, attempt_result)
                 state["current_code"] = fixed_code
 
-        # 生成最终结果
+        # EN
         return self._generate_final_result(state)
 
     async def _generate_initial_code(
@@ -488,30 +488,30 @@ class IterativeCodeExecutionAgent:
         data_file: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """生成初始代码"""
+        """EN"""
         prompt = f"""
-基于以下用户请求，生成 Python 数据分析代码：
+EN,EN Python EN:
 
-用户请求: {request}
+EN: {request}
 
-数据文件: {data_file if data_file else '无'}
+EN: {data_file if data_file else 'EN'}
 
-上下文信息: {json.dumps(context, ensure_ascii=False) if context else '无'}
+EN: {json.dumps(context, ensure_ascii=False) if context else 'EN'}
 
-请生成完整的 Python 代码，包括：
-1. 必要的导入语句
-2. 数据读取和预处理
-3. 分析和可视化代码
-4. 结果输出
+EN Python EN,EN:
+1. EN
+2. EN
+3. EN
+4. EN
 
-要求：
-- 代码应该完整可执行
-- 包含错误处理
-- 生成可视化图表
-- 输出分析结果
+EN:
+- EN
+- EN
+- EN
+- EN
 """
 
-        messages = [("system", "你是一个专业的数据分析师，擅长编写 Python 数据分析代码。"), ("human", prompt)]
+        messages = [("system", "EN,EN Python EN."), ("human", prompt)]
 
         response = await self.llm.ainvoke(messages)
         return response.content
@@ -519,14 +519,14 @@ class IterativeCodeExecutionAgent:
     async def _execute_code_attempt(
         self, state: CodeExecutionState, data_file: Optional[str] = None
     ) -> ExecutionAttempt:
-        """执行单次代码尝试"""
+        """EN"""
         attempt_id = f"attempt_{state['current_attempt']}"
 
-        # 准备数据文件
+        # EN
         data_files = [data_file] if data_file else None
 
         try:
-            # 执行代码
+            # EN
             result = code_executor.execute_code(
                 code=state["current_code"],
                 data_files=data_files,
@@ -561,15 +561,15 @@ class IterativeCodeExecutionAgent:
     async def _analyze_and_fix_code(
         self, state: CodeExecutionState, failed_attempt: ExecutionAttempt
     ) -> str:
-        """分析错误并修复代码"""
-        self.logger.info(f"分析执行错误: {failed_attempt.error_message}")
+        """EN"""
+        self.logger.info(f"EN: {failed_attempt.error_message}")
 
-        # 使用 LLM 分析错误
+        # EN LLM EN
         analysis_result = await self._analyze_error_with_llm(
             failed_attempt.code, failed_attempt.error_message, failed_attempt.stderr
         )
 
-        # 应用自动修复
+        # EN
         fixed_code = await self._apply_automatic_fixes(
             failed_attempt.code, failed_attempt.error_message, analysis_result
         )
@@ -579,55 +579,55 @@ class IterativeCodeExecutionAgent:
     async def _analyze_error_with_llm(
         self, code: str, error_message: str, stderr: str
     ) -> Dict[str, Any]:
-        """使用 LLM 分析错误"""
+        """EN LLM EN"""
         prompt = f"""
-分析以下 Python 代码的错误并提供修复建议：
+EN Python EN:
 
-代码:
+EN:
 ```python
 {code}
 ```
 
-错误信息:
+EN:
 {error_message}
 
-标准错误输出:
+EN:
 {stderr}
 
-请分析：
-1. 错误的根本原因
-2. 具体的修复建议
-3. 需要添加的导入语句
-4. 需要修改的代码行
+EN:
+1. EN
+2. EN
+3. EN
+4. EN
 
-以 JSON 格式返回分析结果：
+EN JSON EN:
 {{
-    "error_type": "错误类型",
-    "root_cause": "根本原因",
-    "fix_suggestions": ["修复建议1", "修复建议2"],
+    "error_type": "EN",
+    "root_cause": "EN",
+    "fix_suggestions": ["EN1", "EN2"],
     "missing_imports": ["import1", "import2"],
     "code_changes": [
         {{
-            "line": 行号,
-            "original": "原始代码",
-            "fixed": "修复后代码"
+            "line": EN,
+            "original": "EN",
+            "fixed": "EN"
         }}
     ]
 }}
 """
 
-        messages = [("system", "你是一个专业的 Python 调试专家，擅长分析和修复代码错误。"), ("human", prompt)]
+        messages = [("system", "EN Python EN,EN."), ("human", prompt)]
 
         try:
             response = await self.llm.ainvoke(messages)
-            # 尝试解析 JSON 结果
+            # EN JSON EN
             return json.loads(response.content)
         except:
-            # 如果解析失败，返回基础分析
+            # EN,EN
             return {
                 "error_type": "unknown",
-                "root_cause": "无法解析错误信息",
-                "fix_suggestions": ["检查代码语法"],
+                "root_cause": "EN",
+                "fix_suggestions": ["EN"],
                 "missing_imports": [],
                 "code_changes": [],
             }
@@ -635,21 +635,21 @@ class IterativeCodeExecutionAgent:
     async def _apply_automatic_fixes(
         self, code: str, error_message: str, analysis_result: Dict[str, Any]
     ) -> str:
-        """应用自动修复"""
+        """EN"""
         fixed_code = code
         fixes_applied = []
 
-        # 基于 LLM 分析应用修复
+        # EN LLM EN
         fix_suggestions = analysis_result.get("fix_suggestions", [])
         missing_imports = analysis_result.get("missing_imports", [])
 
-        # 添加缺失的导入
+        # EN
         for import_stmt in missing_imports:
             if import_stmt not in fixed_code:
                 fixed_code = f"{import_stmt}\n{fixed_code}"
-                fixes_applied.append(f"添加导入: {import_stmt}")
+                fixes_applied.append(f"EN: {import_stmt}")
 
-        # 应用代码变更
+        # EN
         code_changes = analysis_result.get("code_changes", [])
         for change in code_changes:
             line_num = change.get("line", 0)
@@ -660,12 +660,12 @@ class IterativeCodeExecutionAgent:
             if 0 <= line_num < len(lines):
                 if original in lines[line_num]:
                     lines[line_num] = lines[line_num].replace(original, fixed)
-                    fixes_applied.append(f"第{line_num}行: {original} -> {fixed}")
+                    fixes_applied.append(f"EN{line_num}EN: {original} -> {fixed}")
 
             fixed_code = "\n".join(lines)
 
-        # 使用内置修复器
-        if fixes_applied:  # 如果 LLM 修复失败，尝试内置修复
+        # EN
+        if fixes_applied:  # EN LLM EN,EN
             error_type = analysis_result.get("error_type", "").lower()
             fix_strategy = self.callback_handler.fix_strategies.get(error_type, "")
 
@@ -675,11 +675,11 @@ class IterativeCodeExecutionAgent:
                 )
                 fixes_applied.extend(auto_fixes)
 
-        self.logger.info(f"应用了 {len(fixes_applied)} 个修复")
+        self.logger.info(f"EN {len(fixes_applied)} EN")
         return fixed_code
 
     def _generate_final_result(self, state: CodeExecutionState) -> Dict[str, Any]:
-        """生成最终结果"""
+        """EN"""
         successful_attempt = None
         failed_attempts = []
 
@@ -711,7 +711,7 @@ class IterativeCodeExecutionAgent:
                 "success": False,
                 "final_code": state["current_code"],
                 "attempts": len(state["attempts"]),
-                "error_message": "达到最大尝试次数，代码执行失败",
+                "error_message": "All execution attempts failed.",
                 "failed_attempts": [
                     {
                         "attempt_id": attempt.attempt_id,
@@ -730,12 +730,12 @@ class IterativeCodeExecutionAgent:
             }
 
     def _count_fixes_applied(self, attempts: List[ExecutionAttempt]) -> int:
-        """统计应用的修复数量"""
+        """EN"""
         total_fixes = 0
-        for attempt in attempts[1:]:  # 跳过第一次尝试
+        for attempt in attempts[1:]:  # EN
             total_fixes += len(attempt.fixes_applied or [])
         return total_fixes
 
 
-# 全局实例
+# EN
 iterative_code_agent = IterativeCodeExecutionAgent()

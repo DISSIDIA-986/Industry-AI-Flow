@@ -12,16 +12,16 @@ from backend.services.llm_integration.llm_client import LLMClientFactory
 logger = logging.getLogger(__name__)
 
 EXTRACTION_PROMPT = """
-你是一名记忆提取助手。给定最新的对话轮次，请提取对未来对话仍然有用的事实，并以 JSON 格式返回，键包括：
-- user_profile: 关于用户身份或角色的重要事实
-- preferences: 用户的偏好、喜好或风格
-- tasks: 用户正在进行或计划进行的任务
-- facts: 需要长期保存的重要事实
+EN.EN,EN,EN JSON EN,EN:
+- user_profile: EN
+- preferences: EN,EN
+- tasks: EN
+- facts: EN
 
-如果某个字段没有内容，请使用空数组。
-仅返回 JSON，不要添加额外文本。
+EN,EN.
+EN JSON,EN.
 
-对话内容：
+EN:
 {dialogue}
 """
 
@@ -36,7 +36,7 @@ class StructuredMemoryExtractor:
             )
             self.available = True
         except Exception as exc:  # pragma: no cover
-            logger.warning("结构化记忆提取不可用: %s", exc)
+            logger.warning("EN: %s", exc)
             self.client = None
             self.available = False
 
@@ -45,7 +45,7 @@ class StructuredMemoryExtractor:
             return []
 
         dialogue = "\n".join(
-            f"用户: {record.user_query}\n助手: {record.agent_response}\n"
+            f"EN: {record.user_query}\nEN: {record.agent_response}\n"
             for record in interactions
         )
         prompt = EXTRACTION_PROMPT.format(dialogue=dialogue)
@@ -54,7 +54,7 @@ class StructuredMemoryExtractor:
             response = self.client.generate(prompt, temperature=0.0, max_tokens=512)
             json_payload = self._safe_parse_json(response)
         except Exception as exc:  # pragma: no cover
-            logger.error("提取结构化记忆失败: %s", exc)
+            logger.error("EN: %s", exc)
             return []
 
         memories: List[dict] = []

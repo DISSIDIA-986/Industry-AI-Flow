@@ -1,11 +1,11 @@
 """
-安全防护层模块
+EN
 
-提供RAG系统的安全防护功能：
-- 接地度检查
-- 置信度阈值
-- 免责声明
-- 拒绝回答策略
+ENRAGEN:
+- EN
+- EN
+- EN
+- EN
 """
 
 from backend.services.safety.groundedness_checker import (

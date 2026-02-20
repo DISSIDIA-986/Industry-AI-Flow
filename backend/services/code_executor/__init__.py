@@ -30,7 +30,7 @@ except Exception as exc:  # pragma: no cover - fallback for dependency-constrain
     def execute_python_code(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("Docker executor is unavailable in current environment")
 
-# 创建全局执行器实例（延迟初始化）
+# EN(EN)
 _global_executor: Optional[Any] = None
 _execution_manager: Optional[CodeExecutionManager] = None
 
@@ -46,7 +46,7 @@ def _docker_requested() -> bool:
 
 
 def get_code_executor() -> Optional[Any]:
-    """获取全局代码执行器实例（单例模式）"""
+    """EN(EN)"""
     global _global_executor
     if _global_executor is None:
         if not _docker_requested():
@@ -56,12 +56,12 @@ def get_code_executor() -> Optional[Any]:
         try:
             _global_executor = DockerExecutor()
         except Exception as e:
-            logger.error(f"无法初始化代码执行器: {e}")
+            logger.error(f"EN: {e}")
             _global_executor = None
     return _global_executor
 
 
-# 为向后兼容性提供code_executor别名
+# ENcode_executorEN
 code_executor = get_code_executor()
 
 
@@ -116,9 +116,9 @@ def get_code_execution_manager() -> Optional[CodeExecutionManager]:
     return _execution_manager
 
 
-# 自定义异常
+# EN
 class CodeExecutionError(Exception):
-    """代码执行异常"""
+    """EN"""
 
     pass
 

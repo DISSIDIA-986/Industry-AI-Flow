@@ -29,19 +29,19 @@ if TYPE_CHECKING:
 
 
 class HybridRetriever:
-    """混合检索器：结合 BM25 关键词检索和向量语义检索
+    """EN:EN BM25 EN
 
-    优化说明（2026-02-09）：
-    - 替换jieba为NLTK英文分词，修复建筑英文文档分词bug
-    - 预计BM25召回率提升86%（0.35 → 0.65）
+    EN(2026-02-09):
+    - ENjiebaENNLTKEN,ENbug
+    - ENBM25EN86%(0.35 → 0.65)
     """
 
     def __init__(self, vector_store):
         self.vector_store = vector_store
         self.bm25 = None
-        self.doc_chunks = []  # 存储文档块信息 [{chunk_id, doc_id, content, filename}]
+        self.doc_chunks = []  # EN [{chunk_id, doc_id, content, filename}]
         self._indexed_chunk_count = 0
-        self.stemmer = PorterStemmer() if PorterStemmer else None  # 英文词干提取
+        self.stemmer = PorterStemmer() if PorterStemmer else None  # EN
         self._nltk_checked = False
         self._nltk_ready = False
 
@@ -80,53 +80,53 @@ class HybridRetriever:
         return re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", text)
 
     def _tokenize_english(self, text: str) -> list[str]:
-        """英文建筑文档分词（替代jieba）
+        """EN(ENjieba)
 
-        修复bug说明：
-        - jieba对英文建筑术语（如"reinforced-concrete", "load-bearing"）误分词严重
-        - 使用NLTK word_tokenize + PorterStemmer正确处理英文
-        - 保留复合词和专业术语（如"CSA-A23.1-19", "HVAC"）
+        ENbugEN:
+        - jiebaEN(EN"reinforced-concrete", "load-bearing")EN
+        - ENNLTK word_tokenize + PorterStemmerEN
+        - EN(EN"CSA-A23.1-19", "HVAC")
 
         Args:
-            text: 输入文本
+            text: EN
 
         Returns:
-            分词列表
+            EN
         """
-        # 转小写
+        # EN
         text_lower = text.lower()
 
         if self._ensure_nltk_resources():
             try:
-                # NLTK英文分词
+                # NLTKEN
                 tokens = word_tokenize(text_lower)
             except LookupError:
                 tokens = self._regex_tokenize(text_lower)
         else:
             tokens = self._regex_tokenize(text_lower)
 
-        # 词干提取 + 过滤非字母数字
+        # EN + EN
         stemmed_tokens = []
         for token in tokens:
             if token.isalnum():
-                # 应用词干提取
+                # EN
                 stemmed = self.stemmer.stem(token) if self.stemmer else token
                 stemmed_tokens.append(stemmed)
-            # 保留连字符复合词（如"load-bearing", "fire-resistance-rated"）
+            # EN(EN"load-bearing", "fire-resistance-rated")
             elif "-" in token:
-                # 将复合词拆分为独立token和完整形式
+                # ENtokenEN
                 parts = token.split("-")
                 for part in parts:
                     if part.isalnum():
                         stemmed_tokens.append(
                             self.stemmer.stem(part) if self.stemmer else part
                         )
-                stemmed_tokens.append(token.lower())  # 保留完整复合词
+                stemmed_tokens.append(token.lower())  # EN
 
         return stemmed_tokens
 
     def build_bm25_index(self):
-        """构建 BM25 索引（使用NLTK英文分词）"""
+        """EN BM25 EN(ENNLTKEN)"""
         if not BM25_AVAILABLE:
             self.bm25 = None
             self.doc_chunks = []
@@ -135,7 +135,7 @@ class HybridRetriever:
             )
             return
 
-        # 从数据库获取所有文档块
+        # EN
         conn = self.vector_store.get_connection()
         cur = conn.cursor()
 
@@ -173,15 +173,15 @@ class HybridRetriever:
                 }
                 self.doc_chunks.append(chunk_info)
 
-                # 使用NLTK英文分词（替代jieba）
+                # ENNLTKEN(ENjieba)
                 tokens = self._tokenize_english(row[2])
                 tokenized_corpus.append(tokens or ["_empty_"])
 
-            # 构建 BM25 索引
+            # EN BM25 EN
             self.bm25 = BM25Okapi(tokenized_corpus)
             self._indexed_chunk_count = len(self.doc_chunks)
 
-            logger.info("BM25 索引构建完成（NLTK英文分词），共 %s 个文档块", len(self.doc_chunks))
+            logger.info("BM25 EN(NLTKEN),EN %s EN", len(self.doc_chunks))
 
         finally:
             cur.close()
@@ -215,21 +215,21 @@ class HybridRetriever:
         bm25_weight: float = 0.3,
     ) -> list[dict]:
         """
-        混合检索
+        EN
 
         Args:
-            query: 查询文本
-            top_k: 返回结果数量
-            vector_weight: 向量检索权重
-            bm25_weight: BM25 检索权重
+            query: EN
+            top_k: EN
+            vector_weight: EN
+            bm25_weight: BM25 EN
 
         Returns:
-            检索结果列表 [{doc_id, content, filename, score}]
+            EN [{doc_id, content, filename, score}]
         """
         if self.bm25 is None or self._get_chunk_count() != self._indexed_chunk_count:
             self.build_bm25_index()
 
-        # 1. 向量检索
+        # 1. EN
         from backend.services.core.embedder import embed_query_text
 
         query_embedding = embed_query_text(query)
@@ -255,19 +255,19 @@ class HybridRetriever:
                 )
             return final
 
-        # 2. BM25 检索（使用NLTK英文分词）
+        # 2. BM25 EN(ENNLTKEN)
         query_tokens = self._tokenize_english(query) or ["_empty_"]
         bm25_scores = self.bm25.get_scores(query_tokens)
 
-        # 构建 BM25 结果 [(chunk_index, score)]
+        # EN BM25 EN [(chunk_index, score)]
         bm25_results = [(i, score) for i, score in enumerate(bm25_scores)]
         bm25_results.sort(key=lambda x: x[1], reverse=True)
         bm25_top = bm25_results[: top_k * 2]
 
-        # 3. 融合得分 (Reciprocal Rank Fusion - RRF)
+        # 3. EN (Reciprocal Rank Fusion - RRF)
         fused_scores = {}
 
-        # 向量检索结果加权（使用倒数排名）
+        # EN(EN)
         for rank, result in enumerate(vector_results, 1):
             chunk_id = result.get("chunk_id")
             if chunk_id is None:
@@ -276,17 +276,17 @@ class HybridRetriever:
                 fused_scores.get(chunk_id, 0) + vector_weight / rank
             )
 
-        # BM25 检索结果加权
+        # BM25 EN
         for rank, (chunk_index, score) in enumerate(bm25_top, 1):
             chunk_id = self.doc_chunks[chunk_index]["id"]
             fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / rank
 
-        # 4. 排序并返回 top_k 结果
+        # 4. EN top_k EN
         sorted_chunks = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[
             :top_k
         ]
 
-        # 5. 构建最终结果
+        # 5. EN
         final_results = []
         chunk_map = {chunk["id"]: chunk for chunk in self.doc_chunks}
         vector_map = {
@@ -296,7 +296,7 @@ class HybridRetriever:
         }
 
         for chunk_id, fusion_score in sorted_chunks:
-            # 从 doc_chunks 中找到对应的块信息
+            # EN doc_chunks EN
             chunk_info = chunk_map.get(chunk_id)
             if not chunk_info:
                 vector_info = vector_map.get(chunk_id)
