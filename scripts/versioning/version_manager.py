@@ -249,7 +249,7 @@ class VersionManager:
                     "   pip install paddlepaddle==2.6.1 paddleocr==2.7.0 opencv-python==4.8.0.76 pillow==10.0.1"
                 )
                 report["recommendations"].append(
-                    "   或运行自动化脚本: ./install_with_compatibility_check.sh"
+                    "   或运行自动化脚本: ./scripts/setup/install_with_compatibility_check.sh"
                 )
             else:
                 # 其他版本的错误提示

@@ -1,4 +1,9 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+FRONTEND_DIR="$PROJECT_ROOT/frontend"
 
 echo "=== 前端本地测试开始 ==="
 echo "时间: $(date)"
@@ -57,7 +62,7 @@ done
 # 5. 检查组件库
 echo ""
 echo "5. 检查组件库状态..."
-COMPONENTS_DIR="/Users/openclaw/Documents/github.com/Industry-AI-Flow/frontend/src/components"
+COMPONENTS_DIR="$FRONTEND_DIR/src/components"
 if [ -d "$COMPONENTS_DIR" ]; then
   COMPONENT_COUNT=$(find "$COMPONENTS_DIR" -name "*.tsx" -o -name "*.ts" | wc -l | tr -d ' ')
   echo "   ✅ 组件库存在，包含 $COMPONENT_COUNT 个组件文件"
@@ -81,7 +86,7 @@ echo "6. 检查配置文件..."
 CONFIG_FILES=("package.json" "tsconfig.json" "tailwind.config.js" "next.config.js")
 
 for config in "${CONFIG_FILES[@]}"; do
-  CONFIG_PATH="/Users/openclaw/Documents/github.com/Industry-AI-Flow/frontend/$config"
+  CONFIG_PATH="$FRONTEND_DIR/$config"
   if [ -f "$CONFIG_PATH" ]; then
     echo "   ✅ $config: 存在"
   else
@@ -92,7 +97,7 @@ done
 # 7. 检查环境变量
 echo ""
 echo "7. 检查环境变量配置..."
-ENV_FILE="/Users/openclaw/Documents/github.com/Industry-AI-Flow/frontend/.env.local"
+ENV_FILE="$FRONTEND_DIR/.env.local"
 if [ -f "$ENV_FILE" ]; then
   echo "   ✅ .env.local: 存在"
   # 检查关键环境变量
@@ -151,7 +156,7 @@ fi
 # 配置文件测试（4个文件）
 for config in "${CONFIG_FILES[@]}"; do
   TOTAL_TESTS=$((TOTAL_TESTS + 1))
-  CONFIG_PATH="/Users/openclaw/Documents/github.com/Industry-AI-Flow/frontend/$config"
+  CONFIG_PATH="$FRONTEND_DIR/$config"
   if [ -f "$CONFIG_PATH" ]; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
   fi

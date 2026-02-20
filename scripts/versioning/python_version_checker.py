@@ -78,7 +78,7 @@ def check_critical_dependencies():
             f"请安装依赖:\n"
             f"  pip install 'paddlepaddle>=3.0.0b0' 'paddleocr>=3.0.0b0' numpy==1.24.3 opencv-python==4.8.0.76 pillow==10.0.1\n"
             f"或运行专用安装脚本:\n"
-            f"  ./install_python313_paddleocr.sh"
+            f"  ./scripts/setup/install_python313_paddleocr.sh"
         )
 
 
@@ -149,7 +149,7 @@ def run_with_version_check(func: Callable, *args, **kwargs) -> Any:
         print(
             f"1. 确保安装了Python {REQUIRED_PYTHON_VERSION[0]}.{REQUIRED_PYTHON_VERSION[1]}"
         )
-        print(f"2. 运行专用安装脚本: ./install_python313_paddleocr.sh")
+        print(f"2. 运行专用安装脚本: ./scripts/setup/install_python313_paddleocr.sh")
         print(f"3. 激活Python 3.13环境")
         return None
 
@@ -243,7 +243,7 @@ def create_version_test_report() -> dict:
             {
                 "priority": "HIGH",
                 "issue": f"缺失{missing_deps}个关键依赖",
-                "solution": "运行 ./install_python313_paddleocr.sh 安装依赖",
+                "solution": "运行 ./scripts/setup/install_python313_paddleocr.sh 安装依赖",
             }
         )
 
