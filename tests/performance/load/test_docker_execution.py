@@ -80,7 +80,7 @@ def analyze_housing_data():
     print("=== 房价数据分析开始 ===")
 
     # 1. 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     print(f"数据加载成功: {df.shape}")
@@ -132,11 +132,6 @@ if __name__ == "__main__":
 '''
 
     try:
-        # 创建临时脚本文件
-        script_path = Path("temp_analysis_script.py")
-        with open(script_path, "w", encoding="utf-8") as f:
-            f.write(test_code)
-
         # 设置输出目录
         output_dir = Path("docker_test_output")
         output_dir.mkdir(exist_ok=True)
@@ -221,7 +216,7 @@ def advanced_housing_analysis():
     print("=== 高级房价分析开始 ===")
 
     # 1. 数据预处理
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     print(f"原始数据形状: {df.shape}")
@@ -305,11 +300,6 @@ if __name__ == "__main__":
 '''
 
     try:
-        # 创建临时脚本
-        script_path = Path("advanced_analysis_script.py")
-        with open(script_path, "w", encoding="utf-8") as f:
-            f.write(advanced_code)
-
         # 执行高级分析
         exec_globals = {}
         exec(advanced_code, exec_globals)
@@ -354,7 +344,7 @@ def generate_visualizations():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     plt.style.use('default')
