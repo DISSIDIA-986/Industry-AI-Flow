@@ -395,14 +395,11 @@ def _build_enhanced_request(
 
 中文字体支持代码（请在代码开头添加）：
 ```python
-import sys
 try:
-    if '/app/utils' not in sys.path:
-        sys.path.insert(0, '/app/utils')
     import matplotlib_chinese_support
     matplotlib_chinese_support.setup_chinese_matplotlib()
     print("✓ 已启用中文字体支持")
-except ImportError:
+except Exception:
     plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
     print("✓ 使用备用中文字体配置")
