@@ -9,10 +9,14 @@ from backend.services.workflows.state import WorkflowState
 
 
 _COST_PATTERNS = (
-    re.compile(r"(estimate|estimating|predict|forecast).{0,24}(cost|budget|overrun)"),
-    re.compile(r"(cost|budget|overrun).{0,24}(estimate|estimation|predict|forecast)"),
-    re.compile(r"(成本|预算).{0,20}(估算|预测|超支|预估)"),
-    re.compile(r"(估算|预测|预估).{0,20}(成本|预算|超支)"),
+    re.compile(
+        r"(estimate|estimating|predict|forecast|project).{0,32}"
+        r"(cost|budget|overrun|expense|price)"
+    ),
+    re.compile(
+        r"(cost|budget|overrun|expense|price).{0,32}"
+        r"(estimate|estimation|predict|forecast|projection)"
+    ),
 )
 
 
@@ -20,7 +24,14 @@ def _heuristic_intent(query: str) -> str:
     text = (query or "").strip().lower()
     if any(
         token in text
-        for token in ("python", "script", "execute", "run code", "执行代码", "脚本")
+        for token in (
+            "python",
+            "script",
+            "execute",
+            "run code",
+            "code execution",
+            "program",
+        )
     ):
         return "code_execution"
     if any(
@@ -34,21 +45,35 @@ def _heuristic_intent(query: str) -> str:
             "construction cost",
             "budget overrun",
             "cost risk",
-            "预算估算",
-            "成本估算",
-            "成本预测",
-            "预算预测",
+            "project budget",
+            "project cost",
+            "cost forecast",
+            "cost prediction",
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"
     if any(
         token in text
-        for token in ("analyze", "analysis", "dataset", "csv", "统计", "数据分析")
+        for token in (
+            "analyze",
+            "analysis",
+            "dataset",
+            "csv",
+            "dataframe",
+            "data frame",
+        )
     ):
         return "data_analysis"
     if any(
         token in text
-        for token in ("document", "pdf", "ocr", "extract text", "文档", "提取文本")
+        for token in (
+            "document",
+            "pdf",
+            "ocr",
+            "extract text",
+            "file upload",
+            "scan",
+        )
     ):
         return "document_processing"
     return "knowledge_retrieval"
