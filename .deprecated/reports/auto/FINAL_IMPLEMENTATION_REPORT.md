@@ -25,7 +25,7 @@
 
 ### ✅ 3. 文档创建
 - 部署方案文档 (DEPLOYMENT_PLAN.md)
-- 部署状态追踪 (DEPLOYMENT_STATUS.md)
+- 部署状态追踪 (docs/development/status/DEPLOYMENT_STATUS.md)
 - 部署总结 (DEPLOYMENT_SUMMARY.md)
 - 最终实施报告 (本文档)
 
@@ -164,7 +164,7 @@ curl http://localhost:8000/api/intent/health
 
 ### 文档
 - [x] DEPLOYMENT_PLAN.md
-- [x] DEPLOYMENT_STATUS.md
+- [x] docs/development/status/DEPLOYMENT_STATUS.md
 - [x] DEPLOYMENT_SUMMARY.md
 - [x] scripts/deploy/README.md
 - [x] FINAL_IMPLEMENTATION_REPORT.md

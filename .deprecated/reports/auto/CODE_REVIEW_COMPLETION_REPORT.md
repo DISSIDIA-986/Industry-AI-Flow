@@ -7,7 +7,7 @@
 ## 完成的主要工作
 
 ### 1. 代码审查策略执行
-- ✅ 创建了专业的代码审查策略文档 (`CODE_REVIEW_STRATEGY.md`)
+- ✅ 创建了专业的代码审查策略文档 (`docs/development/plans/CODE_REVIEW_STRATEGY.md`)
 - ✅ 修复了自动化脚本中的路径错误
 - ✅ 运行了完整的代码审查，获得97.2/100的评分
 

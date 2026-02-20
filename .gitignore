@@ -4,6 +4,8 @@
 .env
 .env.*
 !.env.example
+.env.local
+.env.local.*
 .venv/
 .venv_capstone/
 .venv_test/
@@ -20,6 +22,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .Python
+*.pyc
 
 # ==========================================
 # Build and packaging artifacts
@@ -52,6 +55,15 @@ dmypy.json
 coverage.xml
 htmlcov/
 
+# Frontend test results and reports
+**/junit-results.xml
+**/playwright-report/
+**/playwright-results.json
+**/test-results/
+**/test-output/
+**/test-reports/
+CODE_REVIEW_RESULTS.json
+
 # ==========================================
 # Logs and temp outputs
 # ==========================================
@@ -71,6 +83,8 @@ test_output/
 reports/
 benchmark_results/
 performance_logs/
+startup_debug.log
+cleanup_manifest.log
 
 # ==========================================
 # Documentation build outputs
@@ -78,11 +92,6 @@ performance_logs/
 docs/_build/
 docs/site/
 site/
-!docs/reports/
-!docs/reports/*.md
-!.deprecated/reports/
-!.deprecated/reports/auto/
-!.deprecated/reports/auto/*.md
 
 # ==========================================
 # Data stores and local runtime caches
@@ -106,9 +115,52 @@ workspace/sandbox/*
 !workspace/sandbox/.gitkeep
 
 # ==========================================
-# Frontend local dependencies
+# Frontend local dependencies and build artifacts
 # ==========================================
 frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/nextjs/node_modules/
+frontend/nextjs/.next/
+frontend/nextjs/.turbo/
+
+# Allow repository runbooks even if user-level global gitignore ignores docs/
+!docs/
+!docs/runbooks/
+!docs/runbooks/*.md
+!docs/development/
+!docs/development/status/
+!docs/development/status/*.md
+!docs/development/analysis/
+!docs/development/analysis/*.md
+!docs/development/plans/
+!docs/development/plans/*.md
+!docs/reports/
+!docs/reports/*.md
+!docs/reports/**/*.md
+!.deprecated/
+!.deprecated/reports/
+!.deprecated/reports/auto/
+!.deprecated/reports/auto/*.md
+!.deprecated/frontend-legacy/
+!.deprecated/frontend-legacy/**
+# Monorepo-safe catch-all for nested app packages
+**/node_modules/
+**/.next/
+**/.turbo/
+
+# ==========================================
+# Python package management artifacts
+# ==========================================
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==========================================
+# Frontend package manager logs
+# ==========================================
+yarn-error.log
+pnpm-debug.log
+npm-debug.log*
 
 # ==========================================
 # Editor and OS files
@@ -118,6 +170,7 @@ frontend/node_modules/
 *.swp
 *.swo
 *~
+*.orig
 .DS_Store
 .DS_Store?
 ._*
