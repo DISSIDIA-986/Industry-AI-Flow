@@ -5,14 +5,59 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import tempfile
 import threading
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 import requests
 
+from backend.config import settings
 from backend.services.code_executor.providers.base import ExecutionResult
+
+
+def _is_subpath(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _allowed_data_roots() -> list[Path]:
+    roots = [
+        Path.cwd().resolve(),
+        Path(settings.temp_data_dir).resolve(),
+        Path(tempfile.gettempdir()).resolve(),
+    ]
+    env_tmp = os.getenv("TMPDIR")
+    if env_tmp:
+        roots.append(Path(env_tmp).resolve())
+    seen: set[Path] = set()
+    unique: list[Path] = []
+    for root in roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        unique.append(root)
+    return unique
+
+
+def _resolve_allowed_data_file(path_value: str) -> Path:
+    candidate = Path(path_value).expanduser()
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+
+    allowed = _allowed_data_roots()
+    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed):
+        raise ValueError("data file path is outside allowed paths")
+    if not candidate.exists() or not candidate.is_file():
+        raise ValueError(f"data file not found: {candidate}")
+    return candidate
 
 
 class PPIOExecutionProvider:
@@ -143,7 +188,19 @@ class PPIOExecutionProvider:
         data_files: Optional[list[str]] = None,
         timeout: Optional[int] = None,
     ) -> dict:
-        files = self._load_files(data_files)
+        try:
+            files = self._load_files(data_files)
+        except Exception as exc:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": str(exc),
+                "error": f"unable to load data files: {exc}",
+                "exit_code": -1,
+                "execution_time": 0.0,
+                "visualizations": [],
+                "output_files": {},
+            }
         timeout_s = int(timeout) if timeout else self.timeout_seconds
         result = self._run_coro_sync(self.execute(code=code, files=files, timeout_s=timeout_s))
         visualizations = [
@@ -273,8 +330,9 @@ class PPIOExecutionProvider:
         for path in data_files:
             if not path:
                 continue
-            name = os.path.basename(path)
-            with open(path, "rb") as handle:
+            safe_path = _resolve_allowed_data_file(path)
+            name = safe_path.name
+            with safe_path.open("rb") as handle:
                 payload[name] = handle.read()
         return payload
 
