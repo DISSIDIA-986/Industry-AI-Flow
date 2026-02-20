@@ -244,13 +244,59 @@ async def workflow_query(
         )
         return response
 
-    result = await workflow.run_workflow(
-        query=request.query,
-        session_id=session_id,
-        user_id=request.user_id,
-        thread_id=request.thread_id or session_id,
-        route_mode=effective_route_mode,
-    )
+    try:
+        result = await workflow.run_workflow(
+            query=request.query,
+            session_id=session_id,
+            user_id=request.user_id,
+            thread_id=request.thread_id or session_id,
+            route_mode=effective_route_mode,
+        )
+    except Exception as exc:
+        logger.exception("workflow query failed trace_id=%s", trace_id)
+        latency_ms = int((asyncio.get_running_loop().time() - started) * 1000)
+        error_metadata: Dict[str, Any] = {
+            "trace_id": trace_id,
+            "session_id": session_id,
+            "tenant_id": settings.default_tenant_id,
+            "demo_mode": demo_state["mode"],
+            "effective_route_mode": effective_route_mode,
+            "workflow_runner": "runtime_exception",
+            "error_class": exc.__class__.__name__,
+        }
+        record_workflow_request(
+            route_mode=str(effective_route_mode or "local_only"),
+            provider="unknown",
+            status="error",
+            latency_seconds=max(0.0, latency_ms / 1000.0),
+        )
+        audit_logger.log_event(
+            action="workflow.query",
+            tenant_id=settings.default_tenant_id,
+            status="error",
+            user_id=request.user_id,
+            detail={
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "intent": None,
+                "route_mode": str(effective_route_mode or "local_only"),
+                "provider_used": None,
+                "latency_ms": latency_ms,
+                "workflow_runner": "runtime_exception",
+            },
+        )
+        return WorkflowQueryResponse(
+            success=False,
+            trace_id=trace_id,
+            session_id=session_id,
+            intent=None,
+            route_mode=str(effective_route_mode or "local_only"),
+            provider_used=None,
+            response=None,
+            prompt_meta=None,
+            metadata=error_metadata,
+            error="workflow execution failed",
+        )
 
     metadata = result.get("metadata") or {}
     metadata["trace_id"] = trace_id

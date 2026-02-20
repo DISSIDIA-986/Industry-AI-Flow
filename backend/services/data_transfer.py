@@ -3,13 +3,16 @@
 import logging
 import os
 import shutil
-import tempfile
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
-from sqlalchemy import create_engine, text
+try:
+    from sqlalchemy import create_engine, text
+except Exception:  # pragma: no cover - optional dependency
+    create_engine = None  # type: ignore[assignment]
+    text = None  # type: ignore[assignment]
 
 from backend.config import settings
 
@@ -20,6 +23,52 @@ class DataFileTransferError(Exception):
     """数据文件传递异常"""
 
     pass
+
+
+def _is_subpath(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _allowed_source_roots() -> list[Path]:
+    roots = [
+        Path.cwd().resolve(),
+        Path(settings.temp_data_dir).resolve(),
+        Path(os.getenv("TMPDIR", "/tmp")).resolve(),
+        Path("/tmp").resolve(),
+    ]
+    seen: set[Path] = set()
+    unique_roots: list[Path] = []
+    for root in roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        unique_roots.append(root)
+    return unique_roots
+
+
+def _resolve_allowed_source_file(file_path: str) -> Path:
+    candidate = Path(file_path).expanduser()
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+
+    allowed_roots = _allowed_source_roots()
+    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
+        raise DataFileTransferError("文件路径超出允许范围（outside allowed paths）")
+
+    if not candidate.exists():
+        raise DataFileTransferError(f"文件不存在: {candidate}")
+    if not candidate.is_file():
+        raise DataFileTransferError(f"不是有效文件: {candidate}")
+    if not os.access(candidate, os.R_OK):
+        raise DataFileTransferError(f"文件不可读: {candidate}")
+
+    return candidate
 
 
 class DataFileTransfer:
@@ -33,7 +82,7 @@ class DataFileTransfer:
         # 数据库连接
         self.db_engine = None
         try:
-            if settings.postgres_host and settings.postgres_db:
+            if create_engine and settings.postgres_host and settings.postgres_db:
                 self.db_engine = create_engine(settings.database_url)
                 logger.info("数据库连接初始化成功")
         except Exception as e:
@@ -57,25 +106,22 @@ class DataFileTransfer:
             - file_info: 文件信息
             - metadata: 元数据
         """
-        if not os.path.exists(file_path):
-            return {
-                "success": False,
-                "error": f"文件不存在: {file_path}",
-                "method": transfer_method,
-            }
+        file_info: Optional[Dict[str, Any]] = None
 
         try:
+            safe_file_path = _resolve_allowed_source_file(file_path)
+
             # 获取文件信息
-            file_info = self._get_file_info(file_path)
+            file_info = self._get_file_info(str(safe_file_path))
 
             # 选择传递方式
             if transfer_method == "auto":
                 transfer_method = self._choose_transfer_method(file_info)
 
             if transfer_method == "file_mapping":
-                return self._file_mapping_transfer(file_path, file_info)
+                return self._file_mapping_transfer(str(safe_file_path), file_info)
             elif transfer_method == "database":
-                return self._database_transfer(file_path, file_info)
+                return self._database_transfer(str(safe_file_path), file_info)
             else:
                 raise DataFileTransferError(f"不支持的传递方式: {transfer_method}")
 
@@ -438,7 +484,7 @@ except Exception as e:
 
             elif transfer_result["method"] == "database":
                 # 清理数据库临时表
-                if self.db_engine:
+                if self.db_engine and text is not None:
                     table_name = transfer_result.get("transferred_path")
                     if table_name:
                         with self.db_engine.connect() as conn:
