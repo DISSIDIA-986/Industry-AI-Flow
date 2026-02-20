@@ -21,10 +21,14 @@ class RedactionResult:
 class RedactionService:
     # Keep patterns conservative to avoid over-redaction.
     PATTERNS = {
-        "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+        # Unicode-aware email matcher with delimiter guards.
+        "email": re.compile(
+            r"[^\s@<>()\[\]{}\"'，。；：,:]+@[^\s@<>()\[\]{}\"'，。；：,:]+\.[^\s@<>()\[\]{}\"'，。；：,:]+"
+        ),
         "phone_cn": re.compile(r"\b(?:\+?86[- ]?)?1[3-9]\d{9}\b"),
+        # US number requires explicit separators/parentheses to avoid over-matching plain 10-digit ids.
         "phone_us": re.compile(
-            r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"
+            r"(?<!\w)(?:\+1[-.\s]?)?(?:\(\d{3}\)[-.\s]?|\d{3}[-.\s])\d{3}[-.\s]\d{4}(?!\w)"
         ),
         "id_like": re.compile(r"\b\d{15,18}[0-9Xx]?\b"),
         "ipv4": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
