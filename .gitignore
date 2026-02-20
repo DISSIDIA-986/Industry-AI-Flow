@@ -78,6 +78,11 @@ performance_logs/
 docs/_build/
 docs/site/
 site/
+!docs/reports/
+!docs/reports/*.md
+!.deprecated/reports/
+!.deprecated/reports/auto/
+!.deprecated/reports/auto/*.md
 
 # ==========================================
 # Data stores and local runtime caches
