@@ -1,5 +1,5 @@
 """
-ENAPIEN - EN
+Enhanced query API routes
 """
 
 import logging
@@ -16,12 +16,12 @@ from backend.services.language_policy import ensure_rag_english_query
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
-# ENRAGEN
+# RAG singleton
 rag_instance = None
 
 
 def get_rag_instance():
-    """ENRAGEN"""
+    """RAG singleton"""
     global rag_instance
     if rag_instance is None:
         from backend.services.rag_engine import SimpleRAG
@@ -35,7 +35,7 @@ def get_rag_instance():
 
 
 class QueryRequest(BaseModel):
-    """EN"""
+    """Query schema."""
 
     question: str
     top_k: Optional[int] = None
@@ -45,7 +45,7 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """EN"""
+    """Query schema."""
 
     query_id: str
     question: str
@@ -62,7 +62,7 @@ class QueryResponse(BaseModel):
 
 
 class LLMConfigUpdateRequest(BaseModel):
-    """LLMEN"""
+    """LLM"""
 
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
@@ -74,7 +74,7 @@ async def enhanced_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
     """
-    ENRAGEN,EN
+    RAG singleton,EN
 
     Args:
         request: EN
@@ -133,10 +133,10 @@ async def enhanced_query(
 @router.get("/query/config")
 async def get_current_llm_config():
     """
-    ENLLMEN
+    ENLLM
 
     Returns:
-        ENLLMEN
+        ENLLM
     """
     try:
         rag = get_rag_instance()
@@ -160,7 +160,7 @@ async def get_current_llm_config():
 @router.post("/query/config")
 async def update_llm_config(request: LLMConfigUpdateRequest):
     """
-    ENLLMEN
+    ENLLM
 
     Args:
         request: EN
@@ -218,7 +218,7 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
 @router.get("/query/models")
 async def list_available_models():
     """
-    ENLLMEN
+    ENLLM
 
     Returns:
         EN
@@ -241,7 +241,7 @@ async def list_available_models():
 @router.post("/query/switch-model")
 async def switch_model(model_name: str = Body(..., embed=True)):
     """
-    ENLLMEN
+    ENLLM
 
     Args:
         model_name: EN
@@ -410,7 +410,7 @@ async def query_health_check():
             "reranker": "enabled" if rag.use_reranker else "disabled",
         }
 
-        # ENLLMEN
+        # ENLLM
         try:
             models = rag.llm_client.list_models()
             health_status["llm_connection"] = "healthy"
