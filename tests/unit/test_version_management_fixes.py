@@ -44,7 +44,7 @@ def test_python_version_checker():
     print("🧪 测试 1: Python版本检查器功能")
     print("=" * 80)
 
-    success = run_command("python3 python_version_checker.py", "运行Python版本检查器")
+    success = run_command("python3 scripts/versioning/python_version_checker.py", "运行Python版本检查器")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:
@@ -59,7 +59,7 @@ def test_version_manager():
     print("=" * 80)
 
     success = run_command(
-        "python3 version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
+        "python3 scripts/versioning/version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
     )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
@@ -121,7 +121,7 @@ def test_installation_script():
     print("🧪 测试 5: Python 3.13专用安装脚本")
     print("=" * 80)
 
-    success = run_command("./install_python313_paddleocr.sh", "运行Python 3.13专用安装脚本")
+    success = run_command("./scripts/setup/install_python313_paddleocr.sh", "运行Python 3.13专用安装脚本")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     if not success:

@@ -7,7 +7,7 @@ import {
   // 表格组件
   Table, TableHead, TableHeader, TableBody, TableRow, TableCell, Pagination,
   // 卡片组件
-  Card, CardHeader, CardTitle, CardContent, CardFooter, StatCard, InfoCard,
+  Card, CardHeader, CardTitle, CardContent, StatCard, InfoCard,
   // 模态框组件
   Modal, ConfirmModal, LoadingModal,
   // 反馈组件

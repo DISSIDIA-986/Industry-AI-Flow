@@ -17,6 +17,19 @@ _rate_limiter = SlidingWindowRateLimiter(
     burst=settings.api_rate_limit_burst,
 )
 
+_PUBLIC_PATH_PREFIXES = (
+    "/health",
+    "/api/v1/health",
+    "/api/v1/auth/",
+)
+
+
+def _is_public_path(path: str) -> bool:
+    """Endpoints that are intentionally reachable without API key."""
+    if path in {"/api/v1/auth", "/api/v1/auth/"}:
+        return True
+    return path.startswith(_PUBLIC_PATH_PREFIXES)
+
 
 async def secure_endpoint(
     request: Request,
@@ -36,9 +49,11 @@ async def secure_endpoint(
 
     client_host = request.client.host if request.client else "unknown"
     user_identity: Optional[UserIdentity] = None
+    path = request.url.path
+    is_public = _is_public_path(path)
 
     # 1. API key validation
-    if settings.require_api_key:
+    if settings.require_api_key and not is_public:
         if not api_key or not settings.is_api_key_allowed(api_key):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -52,7 +67,7 @@ async def secure_endpoint(
         )
 
     # 2. User authentication (Bearer token)
-    if authorization or settings.require_user_auth:
+    if (authorization or settings.require_user_auth) and not is_public:
         if not settings.auth_jwt_secret:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

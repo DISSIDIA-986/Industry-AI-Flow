@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -219,36 +220,46 @@ class IntentClassifier:
                 processed_query, context
             )
 
-            # 4. 获取分类Prompt
-            prompt_info, prompt_content = await self.prompt_manager.get_prompt(
-                name="intent_classification",
-                category="Intent",
-                context={
-                    "query_length": len(processed_query),
-                    "has_uploaded_files": len(context.uploaded_files) > 0,
-                    "session_depth": context.query_count_in_session,
-                },
-                variables={
-                    "user_query": processed_query,
-                    "session_topic": context.session_topic,
-                    "recent_intents": ", ".join(context.recent_intents[-3:])
-                    if context.recent_intents
-                    else "",
-                    "uploaded_files": ", ".join(
-                        [f["name"] for f in context.uploaded_files]
-                    )
-                    if context.uploaded_files
-                    else "无",
-                    "user_preferences": json.dumps(
-                        context.user_preferences, ensure_ascii=False
-                    ),
-                },
-            )
+            # 4. 获取分类Prompt（若缺失则降级为内置分类提示）
+            prompt_prefix = ""
+            try:
+                _, prompt_content = await self.prompt_manager.get_prompt(
+                    name="intent_classification",
+                    category="Intent",
+                    context={
+                        "query_length": len(processed_query),
+                        "has_uploaded_files": len(context.uploaded_files) > 0,
+                        "session_depth": context.query_count_in_session,
+                    },
+                    variables={
+                        "user_query": processed_query,
+                        "session_topic": context.session_topic,
+                        "recent_intents": ", ".join(context.recent_intents[-3:])
+                        if context.recent_intents
+                        else "",
+                        "uploaded_files": ", ".join(
+                            [f["name"] for f in context.uploaded_files]
+                        )
+                        if context.uploaded_files
+                        else "无",
+                        "user_preferences": json.dumps(
+                            context.user_preferences, ensure_ascii=False
+                        ),
+                    },
+                )
+                prompt_prefix = prompt_content
+            except Exception as prompt_exc:
+                logger.warning(
+                    "意图分类Prompt缺失，使用内置降级分类逻辑: %s", prompt_exc
+                )
 
             # 5. 调用LLM进行分类
-            llm_response = await self._call_llm_for_classification(
-                prompt_content + "\n\n" + classification_request
+            final_prompt = (
+                f"{prompt_prefix}\n\n{classification_request}"
+                if prompt_prefix
+                else classification_request
             )
+            llm_response = await self._call_llm_for_classification(final_prompt)
 
             # 6. 解析分类结果
             intent_result = await self._parse_classification_result(llm_response)
@@ -622,7 +633,8 @@ class IntentClassifier:
             else [],
             "has_files": len(context.uploaded_files) > 0,
         }
-        return hash(json.dumps(key_data, sort_keys=True)).hexdigest()
+        payload = json.dumps(key_data, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def _get_from_cache(self, cache_key: str) -> Optional[IntentResult]:
         """从缓存获取结果"""

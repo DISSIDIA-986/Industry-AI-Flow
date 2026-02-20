@@ -49,13 +49,24 @@ Industry AI Flow adopts a six-layer layered architecture with clear responsibili
 **Responsibility**: User interaction, data presentation, operation entry points
 
 **Core Components**:
-- **Streamlit Web UI**: Main user interface providing query, visualization, and management features
-- **Prompt Admin UI**: Prompt management interface with version control and A/B testing
+- **Next.js Web Application**: Modern React-based frontend with server-side rendering
+  - User authentication and session management
+  - Real-time chat interface for AI queries
+  - Document management and visualization
+  - Data analytics and cost estimation dashboards
+  - Prompt management with version control
 - **External API Client**: RESTful API supporting third-party integration
 
-**Tech Stack**: Streamlit, JavaScript, HTML/CSS
+**Tech Stack**: Next.js 14, React 18, TypeScript, Tailwind CSS
 
-**Main Code Locations**: `frontend/`, API client examples
+**Main Code Locations**: `frontend/` (Next.js application), API client examples
+
+**Key Features**:
+- Server-side rendering for optimal performance
+- Responsive design for mobile and desktop
+- JWT-based authentication
+- Real-time updates via WebSocket
+- Comprehensive component library
 
 ---
 

@@ -64,15 +64,15 @@ export interface StatusUpdateData {
 }
 
 export class WebSocketService {
-  private ws: WebSocket | null = null
-  private reconnectAttempts = 0
-  private maxReconnectAttempts = 5
-  private reconnectDelay = 1000
-  private heartbeatInterval: NodeJS.Timeout | null = null
-  private messageHandlers: Map<WebSocketMessageType, ((data: any) => void)[]> = new Map()
-  private connectionHandlers: ((connected: boolean) => void)[] = []
-  private url: string
-  private isConnected = false
+  protected ws: WebSocket | null = null
+  protected reconnectAttempts = 0
+  protected maxReconnectAttempts = 5
+  protected reconnectDelay = 1000
+  protected heartbeatInterval: NodeJS.Timeout | null = null
+  protected messageHandlers: Map<WebSocketMessageType, ((data: any) => void)[]> = new Map()
+  protected connectionHandlers: ((connected: boolean) => void)[] = []
+  protected url: string
+  protected isConnected = false
 
   constructor(url: string = 'ws://localhost:8001/ws') {
     this.url = url
@@ -224,7 +224,7 @@ export class WebSocketService {
   }
 
   // 私有方法
-  private handleMessage(message: WebSocketMessage): void {
+  protected handleMessage(message: WebSocketMessage): void {
     console.log('收到WebSocket消息:', message)
     
     // 处理心跳消息
@@ -251,7 +251,7 @@ export class WebSocketService {
     }
   }
 
-  private notifyConnectionChange(connected: boolean): void {
+  protected notifyConnectionChange(connected: boolean): void {
     this.connectionHandlers.forEach(handler => handler(connected))
   }
 

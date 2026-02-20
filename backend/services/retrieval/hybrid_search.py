@@ -40,6 +40,7 @@ class HybridRetriever:
         self.vector_store = vector_store
         self.bm25 = None
         self.doc_chunks = []  # 存储文档块信息 [{chunk_id, doc_id, content, filename}]
+        self._indexed_chunk_count = 0
         self.stemmer = PorterStemmer() if PorterStemmer else None  # 英文词干提取
         self._nltk_checked = False
         self._nltk_ready = False
@@ -156,6 +157,7 @@ class HybridRetriever:
             if not rows:
                 self.doc_chunks = []
                 self.bm25 = None
+                self._indexed_chunk_count = 0
                 logger.info("BM25 index skipped: no document chunks found")
                 return
 
@@ -177,9 +179,30 @@ class HybridRetriever:
 
             # 构建 BM25 索引
             self.bm25 = BM25Okapi(tokenized_corpus)
+            self._indexed_chunk_count = len(self.doc_chunks)
 
             logger.info("BM25 索引构建完成（NLTK英文分词），共 %s 个文档块", len(self.doc_chunks))
 
+        finally:
+            cur.close()
+            conn.close()
+
+    def invalidate_bm25_index(self) -> None:
+        """Mark BM25 index dirty so next search rebuilds from latest chunks."""
+        self.bm25 = None
+        self.doc_chunks = []
+        self._indexed_chunk_count = 0
+
+    def _get_chunk_count(self) -> int:
+        conn = self.vector_store.get_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM document_chunks")
+            row = cur.fetchone()
+            return int(row[0] if row else 0)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Failed to inspect document chunk count: %s", exc)
+            return self._indexed_chunk_count
         finally:
             cur.close()
             conn.close()
@@ -203,13 +226,13 @@ class HybridRetriever:
         Returns:
             检索结果列表 [{doc_id, content, filename, score}]
         """
-        if self.bm25 is None:
+        if self.bm25 is None or self._get_chunk_count() != self._indexed_chunk_count:
             self.build_bm25_index()
 
         # 1. 向量检索
-        from backend.services.core.embedder import embed_single_text
+        from backend.services.core.embedder import embed_query_text
 
-        query_embedding = embed_single_text(query)
+        query_embedding = embed_query_text(query)
         vector_results = self.vector_store.similarity_search(
             query_embedding, top_k=top_k * 2
         )

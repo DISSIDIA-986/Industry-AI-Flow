@@ -35,10 +35,22 @@ _global_executor: Optional[Any] = None
 _execution_manager: Optional[CodeExecutionManager] = None
 
 
+def _docker_requested() -> bool:
+    """Return whether Docker execution should be initialized."""
+    from backend.config import settings
+
+    provider = (settings.code_execution_provider or "docker").strip().lower()
+    if not settings.enable_docker_sandbox:
+        return False
+    return provider in {"docker", "auto"}
+
+
 def get_code_executor() -> Optional[Any]:
     """获取全局代码执行器实例（单例模式）"""
     global _global_executor
     if _global_executor is None:
+        if not _docker_requested():
+            return None
         if DockerExecutor is None:
             return None
         try:
@@ -59,27 +71,33 @@ def get_code_execution_manager() -> Optional[CodeExecutionManager]:
     if _execution_manager is not None:
         return _execution_manager
 
-    docker_provider = None
-    try:
-        docker_provider = DockerExecutionProvider()
-    except Exception as exc:
-        logger.warning("Docker provider unavailable: %s", exc)
-
     from backend.config import settings
 
-    ppio_enabled = settings.enable_ppio_code_execution
-    ppio_provider = PPIOExecutionProvider(
-        enabled=ppio_enabled,
-        base_url=settings.ppio_base_url,
-        api_key=settings.ppio_api_key or None,
-        execute_path=settings.ppio_execute_path,
-        health_path=settings.ppio_health_path,
-        model=settings.ppio_model or None,
-        timeout_seconds=settings.ppio_timeout_seconds,
-        failure_threshold=settings.ppio_failure_threshold,
-        cooldown_seconds=settings.ppio_cooldown_seconds,
-        verify_tls=settings.ppio_verify_tls,
-    )
+    provider = (settings.code_execution_provider or "docker").strip().lower()
+    docker_enabled = _docker_requested()
+    ppio_enabled = settings.enable_ppio_code_execution or provider == "ppio"
+
+    docker_provider = None
+    if docker_enabled:
+        try:
+            docker_provider = DockerExecutionProvider()
+        except Exception as exc:
+            logger.warning("Docker provider unavailable: %s", exc)
+
+    ppio_provider = None
+    if ppio_enabled:
+        ppio_provider = PPIOExecutionProvider(
+            enabled=ppio_enabled,
+            base_url=settings.ppio_base_url,
+            api_key=settings.ppio_api_key or None,
+            execute_path=settings.ppio_execute_path,
+            health_path=settings.ppio_health_path,
+            model=settings.ppio_model or None,
+            timeout_seconds=settings.ppio_timeout_seconds,
+            failure_threshold=settings.ppio_failure_threshold,
+            cooldown_seconds=settings.ppio_cooldown_seconds,
+            verify_tls=settings.ppio_verify_tls,
+        )
 
     if docker_provider is None and not ppio_enabled:
         return None

@@ -47,7 +47,7 @@ def test_python_version_checker():
     print("=" * 80)
 
     success = run_command(
-        f"{PYTHON_313_CMD} python_version_checker.py", "运行Python 3.13版本检查器"
+        f"{PYTHON_313_CMD} scripts/versioning/python_version_checker.py", "运行Python 3.13版本检查器"
     )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
@@ -75,7 +75,7 @@ def test_version_manager():
     print("=" * 80)
 
     success = run_command(
-        f"{PYTHON_313_CMD} version_manager.py --check-deps paddleocr",
+        f"{PYTHON_313_CMD} scripts/versioning/version_manager.py --check-deps paddleocr",
         "检查PaddleOCR依赖兼容性",
     )
 
@@ -90,7 +90,7 @@ def test_advanced_version_manager():
     print("=" * 80)
 
     success = run_command(
-        f"{PYTHON_313_CMD} advanced_version_manager.py", "运行高级版本管理器分析"
+        f"{PYTHON_313_CMD} scripts/versioning/advanced_version_manager.py", "运行高级版本管理器分析"
     )
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
@@ -103,7 +103,7 @@ def test_version_checker_with_venv():
     print("🧪 测试 5: 版本检查器（虚拟环境）")
     print("=" * 80)
 
-    success = run_command(f"{VENV_CMD} python_version_checker.py", "在虚拟环境中运行版本检查器")
+    success = run_command(f"{VENV_CMD} scripts/versioning/python_version_checker.py", "在虚拟环境中运行版本检查器")
 
     print(f"\n📊 测试结果: {'✅ 通过' if success else '❌ 失败'}")
     return success

@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 
 from backend.config import settings
-from backend.services.code_executor import CodeExecutionError, code_executor
-from backend.services.ollama_client import OllamaClient
+from backend.services.code_executor import code_executor, get_code_execution_manager
+from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +24,21 @@ logger = logging.getLogger(__name__)
 class DataAnalysisAgent:
     """数据分析Agent - 智能处理结构化数据查询"""
 
-    def __init__(self, llm_client: Optional[OllamaClient] = None):
+    def __init__(self, llm_client: Optional[Any] = None):
         """
         初始化数据分析Agent
 
         Args:
             llm_client: LLM客户端，用于生成分析代码
         """
-        self.llm_client = llm_client or OllamaClient()
+        self.llm_client = llm_client or LLMClientFactory.create_client(
+            backend=settings.resolved_local_backend
+        )
+        self.code_execution_manager = get_code_execution_manager()
         self.code_executor = code_executor
 
-        if not self.code_executor:
-            logger.warning("CodeExecutor不可用，数据分析功能受限")
+        if not self.code_execution_manager and not self.code_executor:
+            logger.warning("Code execution provider unavailable, data analysis is degraded")
 
     def analyze_query(
         self,
@@ -80,16 +83,24 @@ class DataAnalysisAgent:
                 }
 
             # 4. 执行代码
-            if not self.code_executor:
+            if not self.code_execution_manager and not self.code_executor:
                 return {
                     "success": False,
-                    "error": "CodeExecutor不可用",
+                    "error": "Code execution provider is unavailable",
                     "answer": "抱歉，数据分析服务暂时不可用。",
                 }
 
-            execution_result = self.code_executor.execute_code(
-                code=analysis_code, data_files=[data_file_path], timeout=30
-            )
+            if self.code_execution_manager is not None:
+                execution_result = self.code_execution_manager.execute_code(
+                    code=analysis_code,
+                    data_files=[data_file_path],
+                    timeout=30,
+                    mode=settings.code_execution_provider,
+                )
+            else:
+                execution_result = self.code_executor.execute_code(
+                    code=analysis_code, data_files=[data_file_path], timeout=30
+                )
 
             # 5. 处理执行结果
             if execution_result["success"]:
@@ -257,7 +268,7 @@ class DataAnalysisAgent:
 
 **代码要求**:
 1. 使用pandas读取数据: pd.read_csv() 或 pd.read_excel()
-2. 数据文件路径已自动映射到 /workspace/data/{os.path.basename(data_file_path)}
+2. 数据文件路径已自动映射到 /workspace/{os.path.basename(data_file_path)}
 3. 只输出最终答案，使用 print() 函数
 4. 答案简洁明了，直接回答问题
 5. 如果需要可视化，保存图片到 /workspace/ 目录
@@ -270,7 +281,7 @@ import pandas as pd
 import numpy as np
 
 # 读取数据
-df = pd.read_csv('/workspace/data/{os.path.basename(data_file_path)}')
+df = pd.read_csv('/workspace/{os.path.basename(data_file_path)}')
 
 # 执行分析
 # ... your analysis code ...
@@ -337,7 +348,7 @@ print("答案: ...")
         """描述统计模板"""
         return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 print("数据集概览:")
 print(f"总行数: {{len(df)}}")
 print(f"总列数: {{len(df.columns)}}")
@@ -357,7 +368,7 @@ print(df.describe())
             target_col = numeric_cols[0]  # 使用第一个数值列
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 avg_value = df['{target_col}'].mean()
 print(f"'{target_col}'的平均值: {{avg_value:.2f}}")
 """
@@ -374,7 +385,7 @@ print(f"'{target_col}'的平均值: {{avg_value:.2f}}")
             target_col = numeric_cols[0]
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 max_value = df['{target_col}'].max()
 max_row = df[df['{target_col}'] == max_value].iloc[0]
 print(f"最大'{target_col}': {{max_value}}")
@@ -393,7 +404,7 @@ print(f"对应记录: {{max_row.to_dict()}}")
             target_col = numeric_cols[0]
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 min_value = df['{target_col}'].min()
 min_row = df[df['{target_col}'] == min_value].iloc[0]
 print(f"最小'{target_col}': {{min_value}}")
@@ -414,7 +425,7 @@ print(f"对应记录: {{min_row.to_dict()}}")
             target_col = categorical_cols[0]
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 value_counts = df['{target_col}'].value_counts()
 print(f"'{target_col}'各类别数量:")
 print(value_counts)
@@ -422,7 +433,7 @@ print(value_counts)
         else:
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 print(f"总记录数: {{len(df)}}")
 """
 
@@ -438,7 +449,7 @@ print(f"总记录数: {{len(df)}}")
             target_col = categorical_cols[0]
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/data/{filename}')
+df = pd.read_csv('/workspace/{filename}')
 value_counts = df['{target_col}'].value_counts()
 percentages = (value_counts / len(df) * 100).round(2)
 print(f"'{target_col}'各类别百分比:")

@@ -36,7 +36,7 @@ def test_chinese_visualization():
     print("=" * 60)
 
     # 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     print(f"📊 数据加载成功: {df.shape}")

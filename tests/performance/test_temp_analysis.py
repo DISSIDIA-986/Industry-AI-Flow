@@ -20,7 +20,7 @@ def analyze_housing_data():
     print("=== 房价数据分析开始 ===")
 
     # 1. 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     print(f"数据加载成功: {df.shape}")

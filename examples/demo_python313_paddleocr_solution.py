@@ -68,7 +68,7 @@ def demo_python313_paddleocr_solution():
     print("version_manager.py 的Python 3.13专用特性:")
 
     success = run_command(
-        "python3 version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
+        "python3 scripts/versioning/version_manager.py --check-deps paddleocr", "检查PaddleOCR依赖兼容性"
     )
 
     if not success:
@@ -111,10 +111,10 @@ def demo_python313_paddleocr_solution():
     print("   source venv/bin/activate")
     print()
     print("2. 安装PaddleOCR:")
-    print("   ./install_python313_paddleocr.sh")
+    print("   ./scripts/setup/install_python313_paddleocr.sh")
     print()
     print("3. 验证安装:")
-    print("   python3 version_manager.py")
+    print("   python3 scripts/versioning/version_manager.py")
     print("   python3 test_paddleocr.py")
     print()
     print("4. 运行建筑行业测试:")

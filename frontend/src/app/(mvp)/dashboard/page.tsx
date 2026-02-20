@@ -14,11 +14,7 @@ export default function OverviewDashboardPage() {
     documentsProcessed: 0,
     costSavings: 0
   })
-  const [chartData, setChartData] = useState<any>(null)
-
-  useEffect(() => {
-    loadData()
-  }, [])
+  const [chartData, setChartData] = useState<Array<Record<string, unknown>> | null>(null)
 
   const loadData = async () => {
     try {
@@ -37,6 +33,11 @@ export default function OverviewDashboardPage() {
       console.error('加载数据失败:', error)
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadData()
+  }, [])
 
   const quickActions = [
     { title: '开始新查询', description: '与AI助手对话', href: '/workflow-chat', color: 'blue' },

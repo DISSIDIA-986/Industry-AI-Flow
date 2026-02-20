@@ -6,25 +6,29 @@
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from backend.config import settings
-
-from .context_manager import ContextManager, SessionContext
-from .intent_classifier import IntentClassifier, IntentResult, QueryContext
-from .prompt_manager import PromptManager
-from .routing_decision import AgentType, RoutingDecision, RoutingDecisionEngine
+from backend.services.context_manager import ContextManager, SessionContext
+from backend.services.intent_classification.intent_classifier import (
+    IntentClassifier,
+    IntentResult,
+    QueryContext,
+)
+from backend.services.prompt_manager import PromptManager
+from backend.services.routing_decision import (
+    AgentType,
+    RoutingDecision,
+    RoutingDecisionEngine,
+)
 from backend.services.workflows.nodes.prompt_node import prompt_node
 from backend.services.workflows.prompting.template_selector import TemplateSelector
 
@@ -76,6 +80,10 @@ class IntentClassificationWorkflow:
         self.routing_engine = routing_engine
         self.prompt_manager = prompt_manager
         self.template_selector = TemplateSelector()
+        self._rag_service = None
+        self._data_analysis_agent = None
+        self._document_extractor = None
+        self._code_execution_manager = None
 
         # 创建工作流图
         self.workflow = self._create_workflow()
@@ -95,9 +103,9 @@ class IntentClassificationWorkflow:
         workflow.add_node("context_enrichment", self._context_enrichment_node)
         workflow.add_node("intent_classification", self._intent_classification_node)
         workflow.add_node("confidence_evaluation", self._confidence_evaluation_node)
-        workflow.add_node("routing_decision", self._routing_decision_node)
+        workflow.add_node("routing_decision_step", self._routing_decision_node)
         workflow.add_node("prompt_preparation", self._prompt_preparation_node)
-        workflow.add_node("clarification_needed", self._clarification_needed_node)
+        workflow.add_node("clarification_step", self._clarification_needed_node)
         workflow.add_node(
             "clarification_processing", self._clarification_processing_node
         )
@@ -118,15 +126,15 @@ class IntentClassificationWorkflow:
             "confidence_evaluation",
             self._route_based_on_confidence,
             {
-                "high_confidence": "routing_decision",
-                "low_confidence": "clarification_needed",
+                "high_confidence": "routing_decision_step",
+                "low_confidence": "clarification_step",
                 "error": "error_handling",
             },
         )
 
-        workflow.add_edge("routing_decision", "prompt_preparation")
+        workflow.add_edge("routing_decision_step", "prompt_preparation")
         workflow.add_edge("prompt_preparation", "agent_dispatch")
-        workflow.add_edge("clarification_needed", "clarification_processing")
+        workflow.add_edge("clarification_step", "clarification_processing")
 
         # 澄清处理后的路由
         workflow.add_conditional_edges(
@@ -134,7 +142,7 @@ class IntentClassificationWorkflow:
             self._route_after_clarification,
             {
                 "retry_classification": "intent_classification",
-                "proceed_with_fallback": "routing_decision",
+                "proceed_with_fallback": "routing_decision_step",
                 "await_user_input": END,
             },
         )
@@ -190,16 +198,32 @@ class IntentClassificationWorkflow:
                 session_id=session_id, max_history=5, include_files=True
             )
 
+            recent_intents = [
+                item.value if hasattr(item, "value") else str(item)
+                for item in session_context.get_recent_intents(3)
+            ]
+            uploaded_files = [
+                {
+                    "name": file_ctx.file_name,
+                    "type": file_ctx.file_type,
+                    "size": file_ctx.file_size,
+                    "file_path": file_ctx.file_path,
+                    "metadata": file_ctx.metadata or {},
+                }
+                for file_ctx in session_context.uploaded_files
+            ]
+
             # 构建查询上下文
             query_context = QueryContext(
                 session_id=session_id,
                 user_id=state.get("user_id"),
-                current_query=state["current_query"],
-                session_history=enhanced_context.get("interaction_history", []),
-                recent_intents=session_context.get_recent_intents(3),
-                uploaded_files=session_context.uploaded_files,
-                user_preferences=session_context.user_preferences,
-                context_keywords=enhanced_context.get("context_keywords", []),
+                session_topic=session_context.session_topic,
+                recent_intents=recent_intents,
+                uploaded_files=uploaded_files,
+                user_preferences=session_context.user_preferences or {},
+                interaction_history=enhanced_context.get("interaction_history", []) or [],
+                time_of_day=datetime.now().strftime("%H:%M"),
+                query_count_in_session=int(session_context.query_count),
             )
             state["query_context"] = query_context
 
@@ -230,11 +254,15 @@ class IntentClassificationWorkflow:
             )
             state["intent_result"] = intent_result
 
-            # 记录交互
-            await self.context_manager.add_interaction_record(
+            # 记录交互（限时，避免记忆子系统阻塞主流程）
+            await self._record_interaction(
                 session_id=state["session_id"],
                 user_query=state["current_query"],
-                classified_intent=intent_result.intent,
+                classified_intent=(
+                    intent_result.intent.value
+                    if hasattr(intent_result.intent, "value")
+                    else str(intent_result.intent)
+                ),
                 agent_response="",  # 待Agent响应后填充
                 confidence=intent_result.confidence,
                 processing_time_ms=intent_result.processing_time_ms,
@@ -243,7 +271,11 @@ class IntentClassificationWorkflow:
 
             # 更新元数据
             state["metadata"]["classification_timestamp"] = datetime.now().isoformat()
-            state["metadata"]["intent"] = intent_result.intent
+            state["metadata"]["intent"] = (
+                intent_result.intent.value
+                if hasattr(intent_result.intent, "value")
+                else str(intent_result.intent)
+            )
             state["metadata"]["confidence"] = intent_result.confidence
 
             logger.info(
@@ -301,7 +333,7 @@ class IntentClassificationWorkflow:
         except Exception as e:
             logger.error(f"置信度评估失败: {str(e)}")
             state["error"] = f"置信度评估失败: {str(e)}"
-            return {"evaluation_result": "error"}
+            return state
 
     async def _routing_decision_node(self, state: WorkflowState) -> WorkflowState:
         """路由决策节点"""
@@ -400,7 +432,11 @@ class IntentClassificationWorkflow:
             else:
                 # 生成基本的澄清上下文
                 clarification_context = {
-                    "possible_intents": [intent_result.intent],
+                    "possible_intents": [
+                        intent_result.intent.value
+                        if hasattr(intent_result.intent, "value")
+                        else str(intent_result.intent)
+                    ],
                     "clarification_questions": [
                         f"关于'{intent_result.intent}'，您能提供更多细节吗？",
                         "您的具体需求是什么？",
@@ -506,27 +542,37 @@ class IntentClassificationWorkflow:
 
             routing_decision = state["routing_decision"]
 
-            # 模拟Agent处理
+            # 真实执行链路：根据路由结果调用对应服务，不允许模板化兜底成功
             agent_type = routing_decision.selected_agent
-            agent_response = await self._dispatch_to_agent(
+            dispatch_result = await self._dispatch_to_agent(
                 agent_type=agent_type,
                 query=state["current_query"],
                 context=state["query_context"],
                 parameters=routing_decision.parameters,
                 system_prompt=state.get("system_prompt"),
                 prompt_meta=state.get("prompt_meta"),
+                route_mode=state.get("metadata", {}).get("requested_route_mode"),
             )
+            agent_response = str(dispatch_result.get("response", "")).strip()
+            if not agent_response:
+                raise RuntimeError("Agent returned empty response")
 
             state["agent_response"] = agent_response
             state["metadata"]["agent_dispatch_timestamp"] = datetime.now().isoformat()
             state["metadata"]["agent_type"] = agent_type.value
+            state["metadata"]["agent_execution_status"] = "ok"
+            state["metadata"]["agent_execution"] = dispatch_result.get("metadata", {})
 
-            # 更新会话上下文中的交互记录
+            # 更新会话上下文中的交互记录（限时，避免阻塞主链路）
             intent_result = state["intent_result"]
-            await self.context_manager.add_interaction_record(
+            await self._record_interaction(
                 session_id=state["session_id"],
                 user_query=state["current_query"],
-                classified_intent=intent_result.intent,
+                classified_intent=(
+                    intent_result.intent.value
+                    if hasattr(intent_result.intent, "value")
+                    else str(intent_result.intent)
+                ),
                 agent_response=agent_response,
                 confidence=intent_result.confidence,
                 processing_time_ms=intent_result.processing_time_ms,
@@ -539,6 +585,8 @@ class IntentClassificationWorkflow:
         except Exception as e:
             logger.error(f"Agent调度失败: {str(e)}")
             state["error"] = f"Agent调度失败: {str(e)}"
+            state["metadata"]["agent_execution_status"] = "error"
+            state["metadata"]["agent_execution_error"] = str(e)
             return state
 
     async def _response_processing_node(self, state: WorkflowState) -> WorkflowState:
@@ -546,7 +594,23 @@ class IntentClassificationWorkflow:
         try:
             logger.info("处理最终响应")
 
+            if state.get("error"):
+                # 受控失败：避免返回空响应并明确提示用户补充可验证上下文。
+                error_response = (
+                    "抱歉，当前请求缺少可验证证据或执行失败。"
+                    "请补充数据文件、代码片段或更具体的问题后重试。"
+                )
+                if not str(state.get("agent_response") or "").strip():
+                    state["agent_response"] = error_response
+                state["messages"].append(AIMessage(content=state["agent_response"]))
+                state["workflow_complete"] = True
+                state["metadata"]["error_timestamp"] = datetime.now().isoformat()
+                return state
+
             agent_response = state.get("agent_response", "")
+            if agent_response is None or not str(agent_response).strip():
+                state["error"] = "Agent returned empty response"
+                return state
 
             # 添加AI消息到历史
             state["messages"].append(AIMessage(content=agent_response))
@@ -575,6 +639,43 @@ class IntentClassificationWorkflow:
         state["metadata"]["error_timestamp"] = datetime.now().isoformat()
 
         return state
+
+    async def _record_interaction(
+        self,
+        *,
+        session_id: str,
+        user_query: str,
+        classified_intent: str,
+        agent_response: str,
+        confidence: float,
+        processing_time_ms: int,
+        success: bool,
+    ) -> None:
+        """Best-effort interaction recording with timeout protection."""
+        try:
+            await asyncio.wait_for(
+                self.context_manager.add_interaction_record(
+                    session_id=session_id,
+                    user_query=user_query,
+                    classified_intent=classified_intent,
+                    agent_response=agent_response,
+                    confidence=confidence,
+                    processing_time_ms=processing_time_ms,
+                    success=success,
+                ),
+                timeout=2.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Interaction recording timed out for session %s; continue without blocking",
+                session_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Interaction recording failed for session %s: %s",
+                session_id,
+                exc,
+            )
 
     def _route_based_on_confidence(self, state: WorkflowState) -> str:
         """基于置信度的路由逻辑"""
@@ -632,6 +733,269 @@ class IntentClassificationWorkflow:
 
         return clarification
 
+    def _get_rag_service(self):
+        if self._rag_service is None:
+            from backend.services.rag_engine import SimpleRAG
+
+            self._rag_service = SimpleRAG(
+                use_hybrid_search=True,
+                use_reranker=True,
+                enable_feedback=settings.enable_feedback_system,
+            )
+        return self._rag_service
+
+    def _get_data_analysis_agent(self):
+        if self._data_analysis_agent is None:
+            from backend.services.data_analysis.data_analysis_agent import (
+                DataAnalysisAgent,
+            )
+
+            self._data_analysis_agent = DataAnalysisAgent()
+        return self._data_analysis_agent
+
+    def _get_document_extractor(self):
+        if self._document_extractor is None:
+            from backend.services.document_processing.document_extractor import (
+                DocumentExtractor,
+            )
+
+            self._document_extractor = DocumentExtractor(use_ocr=True)
+        return self._document_extractor
+
+    def _get_code_execution_manager(self):
+        if self._code_execution_manager is None:
+            from backend.services.code_executor import get_code_execution_manager
+
+            self._code_execution_manager = get_code_execution_manager()
+        return self._code_execution_manager
+
+    @staticmethod
+    def _unique_sources(chunks: List[Dict[str, Any]], limit: int = 5) -> List[str]:
+        sources: List[str] = []
+        seen: set[str] = set()
+        for item in chunks:
+            source = str(
+                item.get("filename")
+                or item.get("source")
+                or (item.get("metadata") or {}).get("filename")
+                or item.get("doc_id")
+                or ""
+            ).strip()
+            if not source or source in seen:
+                continue
+            seen.add(source)
+            sources.append(source)
+            if len(sources) >= limit:
+                break
+        return sources
+
+    @staticmethod
+    def _extract_code_from_query(query: str) -> Optional[str]:
+        import re
+
+        match = re.search(r"```(?:python)?\s*(.*?)```", query, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            code = match.group(1).strip()
+            return code if code else None
+        return None
+
+    def _resolve_uploaded_file_path(
+        self,
+        context: QueryContext,
+        *,
+        allowed_suffixes: Optional[set[str]] = None,
+    ) -> Optional[str]:
+        uploaded_files = context.uploaded_files or []
+        for item in uploaded_files:
+            file_path = str(item.get("file_path") or item.get("path") or "").strip()
+            if not file_path:
+                continue
+            path_obj = Path(file_path)
+            if not path_obj.exists() or not path_obj.is_file():
+                continue
+            if allowed_suffixes is None:
+                return str(path_obj)
+            if path_obj.suffix.lower() in allowed_suffixes:
+                return str(path_obj)
+        return None
+
+    async def _dispatch_rag_query(
+        self,
+        *,
+        query: str,
+        parameters: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        top_k_raw = parameters.get("top_k")
+        try:
+            top_k = int(top_k_raw) if top_k_raw is not None else int(settings.top_k)
+        except Exception:
+            top_k = int(settings.top_k)
+
+        rag = self._get_rag_service()
+        if rag.use_hybrid_search and rag.hybrid_retriever:
+            chunks = await asyncio.to_thread(
+                rag.hybrid_retriever.search,
+                query=query,
+                top_k=max(top_k, 1),
+                vector_weight=0.7,
+                bm25_weight=0.3,
+            )
+        else:
+            from backend.services.core.embedder import embed_query_text
+
+            query_embedding = await asyncio.to_thread(embed_query_text, query)
+            chunks = await asyncio.to_thread(
+                rag.vectorstore.similarity_search, query_embedding, max(top_k, 1)
+            )
+
+        if not isinstance(chunks, list):
+            chunks = []
+        if rag.use_reranker and rag.reranker and chunks:
+            chunks = await asyncio.to_thread(
+                rag.reranker.rerank,
+                query=query,
+                documents=chunks,
+                top_k=max(top_k, 1),
+            )
+
+        sources = self._unique_sources(chunks)
+        if not chunks:
+            raise RuntimeError("RAG retrieval returned empty context")
+        if not sources:
+            raise RuntimeError("RAG returned no grounded sources")
+
+        highlights: List[str] = []
+        for idx, chunk in enumerate(chunks[:3], 1):
+            text = str(chunk.get("content") or "").strip().replace("\n", " ")
+            if not text:
+                continue
+            highlights.append(f"{idx}. {text[:260]}")
+        if not highlights:
+            raise RuntimeError("RAG contexts are empty after retrieval")
+
+        cited_answer = (
+            "Based on retrieved construction knowledge:\n"
+            + "\n".join(highlights)
+            + f"\n\n[sources: {', '.join(sources)}]"
+        )
+        return {
+            "response": cited_answer,
+            "metadata": {
+                "source_count": len(sources),
+                "sources": sources,
+                "retrieved_count": len(chunks),
+            },
+        }
+
+    async def _dispatch_data_analysis_query(
+        self,
+        *,
+        query: str,
+        context: QueryContext,
+    ) -> Dict[str, Any]:
+        data_file = self._resolve_uploaded_file_path(
+            context,
+            allowed_suffixes={".csv", ".xlsx", ".xls", ".json"},
+        )
+        if not data_file:
+            raise RuntimeError("Data analysis requires an uploaded dataset file path")
+
+        agent = self._get_data_analysis_agent()
+        result = await asyncio.to_thread(
+            agent.analyze_query,
+            question=query,
+            data_file_path=data_file,
+            dataset_metadata=None,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("Data analysis returned an invalid payload")
+        if not result.get("success"):
+            raise RuntimeError(str(result.get("error") or "data analysis failed"))
+
+        answer = str(result.get("answer") or "").strip()
+        if not answer:
+            raise RuntimeError("Data analysis returned empty answer")
+
+        return {
+            "response": answer,
+            "metadata": {
+                "data_file": data_file,
+                "execution_time": result.get("execution_time"),
+                "visualizations": result.get("visualizations", []),
+            },
+        }
+
+    async def _dispatch_document_query(
+        self,
+        *,
+        query: str,
+        context: QueryContext,
+    ) -> Dict[str, Any]:
+        file_path = self._resolve_uploaded_file_path(context)
+        if not file_path:
+            raise RuntimeError("Document processing requires an uploaded document path")
+
+        extractor = self._get_document_extractor()
+        extracted = await asyncio.to_thread(extractor.extract, file_path)
+        text = str(getattr(extracted, "text", "") or "").strip()
+        if not text:
+            raise RuntimeError("Document extraction produced empty text")
+
+        preview = text[:1200]
+        answer = (
+            f"Document extracted successfully for query: {query}\n\n"
+            f"Source: {Path(file_path).name}\n"
+            f"Preview:\n{preview}"
+        )
+        return {
+            "response": answer,
+            "metadata": {
+                "document_path": file_path,
+                "file_type": getattr(extracted, "file_type", ""),
+                "method": getattr(extracted, "method", ""),
+                "source_count": 1,
+                "sources": [Path(file_path).name],
+            },
+        }
+
+    async def _dispatch_code_execution_query(
+        self,
+        *,
+        query: str,
+        parameters: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        code = str(parameters.get("code") or "").strip() or self._extract_code_from_query(query)
+        if not code:
+            raise RuntimeError("Code execution requires Python code snippet in query")
+
+        manager = self._get_code_execution_manager()
+        if manager is None:
+            raise RuntimeError("Code execution provider is unavailable")
+
+        mode = str(parameters.get("mode") or settings.code_execution_provider)
+        timeout = parameters.get("timeout")
+        result = await asyncio.to_thread(
+            manager.execute_code,
+            code=code,
+            data_files=None,
+            timeout=timeout,
+            mode=mode,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("Code execution returned an invalid payload")
+        if not result.get("success"):
+            raise RuntimeError(str(result.get("error") or result.get("stderr") or "code execution failed"))
+
+        stdout = str(result.get("stdout") or "").strip()
+        response = stdout or "Code executed successfully with no stdout output."
+        return {
+            "response": response,
+            "metadata": {
+                "mode": mode,
+                "execution_time": result.get("execution_time"),
+            },
+        }
+
     async def _dispatch_to_agent(
         self,
         agent_type: AgentType,
@@ -640,24 +1004,25 @@ class IntentClassificationWorkflow:
         parameters: Dict[str, Any],
         system_prompt: Optional[str] = None,
         prompt_meta: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """调度到具体的Agent"""
-        # 这里是模拟的Agent调用
-        # 在实际应用中，会调用真实的Agent服务
+        route_mode: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """调度到具体的Agent实现链路，不允许模板化假响应。"""
+        del system_prompt, prompt_meta, route_mode
+        normalized_params = parameters if isinstance(parameters, dict) else {}
 
-        agent_responses = {
-            AgentType.RAG_AGENT: f"根据您的查询'{query}'，我为您检索到相关知识：这是一个关于{context.context_keywords[0] if context.context_keywords else '相关主题'}的详细解释...",
-            AgentType.DATA_ANALYSIS_AGENT: f"针对您提到的数据分析需求，我建议采用以下方法：首先进行探索性数据分析，然后根据数据特征选择合适的分析方法...",
-            AgentType.DOCUMENT_PROCESSING_AGENT: f"关于文档处理，我可以帮您提取文本内容、识别表格数据或进行OCR处理。请提供具体的文档信息...",
-            AgentType.CODE_EXECUTION_AGENT: f"我将帮您执行相关代码任务。基于您的需求，建议使用Python来实现相应的计算或算法...",
-            AgentType.GENERAL_AGENT: f"我理解您的需求是'{query}'。让我为您提供一些有用的建议和信息...",
-        }
+        if agent_type in {AgentType.RAG_AGENT, AgentType.GENERAL_AGENT}:
+            return await self._dispatch_rag_query(query=query, parameters=normalized_params)
+        if agent_type == AgentType.DATA_ANALYSIS_AGENT:
+            return await self._dispatch_data_analysis_query(query=query, context=context)
+        if agent_type == AgentType.DOCUMENT_PROCESSING_AGENT:
+            return await self._dispatch_document_query(query=query, context=context)
+        if agent_type == AgentType.CODE_EXECUTION_AGENT:
+            return await self._dispatch_code_execution_query(
+                query=query,
+                parameters=normalized_params,
+            )
 
-        response = agent_responses.get(agent_type, "我正在处理您的请求，请稍候...")
-        if system_prompt:
-            prompt_name = (prompt_meta or {}).get("name", "unknown_prompt")
-            response = f"{response}\n\n[模板已应用: {prompt_name}]"
-        return response
+        raise RuntimeError(f"Unsupported agent type: {agent_type.value}")
 
     async def run_workflow(
         self,
@@ -699,6 +1064,7 @@ class IntentClassificationWorkflow:
                 prompt_meta=None,
                 metadata={
                     "start_timestamp": datetime.now().isoformat(),
+                    "workflow_runner": "intent_workflow",
                     "prompt_experiments_enabled": bool(
                         settings.prompt_experiments_enabled
                     ),
@@ -714,8 +1080,17 @@ class IntentClassificationWorkflow:
             result = await runnable_workflow.ainvoke(initial_state, config=config)
 
             # 构建返回结果
+            metadata = result.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            agent_response = str(result.get("agent_response") or "").strip()
+            success = bool(
+                not result.get("error")
+                and bool(agent_response)
+                and metadata.get("agent_execution_status", "ok") == "ok"
+            )
             return {
-                "success": not bool(result.get("error")),
+                "success": success,
                 "agent_response": result.get("agent_response"),
                 "intent_result": result["intent_result"].to_dict()
                 if result.get("intent_result")
@@ -729,7 +1104,7 @@ class IntentClassificationWorkflow:
                     {"type": type(msg).__name__, "content": msg.content}
                     for msg in result.get("messages", [])
                 ],
-                "metadata": result.get("metadata", {}),
+                "metadata": metadata,
                 "error": result.get("error"),
             }
 
@@ -763,9 +1138,23 @@ class IntentClassificationWorkflow:
             # 创建新的状态更新
             state_update = WorkflowState(
                 messages=[HumanMessage(content=user_response)],
+                session_id=session_id,
+                user_id=None,
                 current_query=user_response,
+                query_context=QueryContext(session_id=session_id),
+                session_context=SessionContext(session_id=session_id),
+                intent_result=None,
+                routing_decision=None,
+                clarification_needed=False,
+                clarification_response=None,
+                agent_response=None,
+                workflow_complete=False,
+                error=None,
+                system_prompt=None,
+                prompt_meta=None,
                 metadata={
                     "continuation_timestamp": datetime.now().isoformat(),
+                    "workflow_runner": "intent_workflow",
                     "prompt_experiments_enabled": bool(
                         settings.prompt_experiments_enabled
                     ),

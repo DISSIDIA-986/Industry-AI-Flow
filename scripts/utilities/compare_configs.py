@@ -2,18 +2,22 @@
 """比较不同RAG配置的性能"""
 
 import json
-import os
 import sys
 import time
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TEST_CASES_PATH = PROJECT_ROOT / "samples/test_questions.json"
+DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "temp/reports/rag/config_comparison.json"
+
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.services.rag_engine import SimpleRAG
 
 
-def load_test_cases(file_path: str = "samples/test_questions.json"):
+def load_test_cases(file_path: Path = TEST_CASES_PATH):
     """加载测试问题集"""
-    with open(file_path, "r", encoding="utf-8") as f:
+    with file_path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -66,7 +70,7 @@ def evaluate(rag_engine, test_cases, config_name: str):
 
 if __name__ == "__main__":
     print("📥 加载测试问题集...")
-    test_cases = load_test_cases("samples/test_questions.json")
+    test_cases = load_test_cases()
     print(f"   共 {len(test_cases)} 个测试问题\n")
 
     results = []
@@ -96,7 +100,8 @@ if __name__ == "__main__":
         print()
 
     # 保存结果
-    with open("config_comparison.json", "w", encoding="utf-8") as f:
+    DEFAULT_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with DEFAULT_OUTPUT_PATH.open("w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
-    print("📁 对比结果已保存到: config_comparison.json")
+    print(f"📁 对比结果已保存到: {DEFAULT_OUTPUT_PATH}")

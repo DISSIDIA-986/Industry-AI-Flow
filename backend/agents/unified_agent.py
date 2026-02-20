@@ -1,12 +1,13 @@
 """统一 Agent - 融合 RAG 和代码分析能力"""
 
 import logging
-from typing import Any, Dict, List
+import threading
+from typing import Any, Dict, List, Optional
 
-from langchain.agents import create_agent
-from langchain_anthropic import ChatAnthropic
-from langchain_ollama import ChatOllama
-
+from backend.agents.langchain_compat import (
+    build_legacy_llm_invoke_adapter,
+    create_agent_compat,
+)
 from backend.agents.state import CodeAnalysisAgentState, RAGAgentState
 from backend.config import settings
 from backend.tools.code_execution import (
@@ -38,6 +39,15 @@ def _get_llm():
         配置好的LLM实例
     """
     if settings.llm_provider == "zhipu":
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except Exception as exc:
+            logger.warning(
+                "langchain_anthropic unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         return ChatAnthropic(
             model=settings.zhipu_model,
             api_key=settings.zhipu_api_key,
@@ -46,6 +56,15 @@ def _get_llm():
             temperature=0,
         )
     else:
+        try:
+            from langchain_ollama import ChatOllama
+        except Exception as exc:
+            logger.warning(
+                "langchain_ollama unavailable, using LLMClient adapter fallback: %s",
+                exc,
+            )
+            return build_legacy_llm_invoke_adapter()
+
         return ChatOllama(
             model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
@@ -262,7 +281,7 @@ def build_unified_agent():
         tools.extend([iterative_code_analysis_tool, self_healing_code_execution_tool])
 
     # 4. 创建统一 Agent
-    agent = create_agent(
+    agent = create_agent_compat(
         model=llm,
         tools=tools,
         system_prompt=system_prompt,
@@ -278,7 +297,7 @@ class UnifiedAgentOrchestrator:
 
     def __init__(self):
         """初始化协调器"""
-        self.agent = build_unified_agent()
+        self.agent = get_unified_agent()
         self.logger = logging.getLogger(__name__)
 
     def process_request(self, question: str, **kwargs) -> Dict[str, Any]:
@@ -458,6 +477,26 @@ class UnifiedAgentOrchestrator:
         return code_results
 
 
-# 全局统一 Agent 实例
-unified_agent = build_unified_agent()
-unified_orchestrator = UnifiedAgentOrchestrator()
+_unified_agent: Optional[Any] = None
+_unified_orchestrator: Optional[UnifiedAgentOrchestrator] = None
+_unified_lock = threading.Lock()
+
+
+def get_unified_agent():
+    """Lazily build unified agent to avoid import-time startup failures."""
+    global _unified_agent
+    if _unified_agent is None:
+        with _unified_lock:
+            if _unified_agent is None:
+                _unified_agent = build_unified_agent()
+    return _unified_agent
+
+
+def get_unified_orchestrator() -> UnifiedAgentOrchestrator:
+    """Lazily build orchestrator and share singleton across requests."""
+    global _unified_orchestrator
+    if _unified_orchestrator is None:
+        with _unified_lock:
+            if _unified_orchestrator is None:
+                _unified_orchestrator = UnifiedAgentOrchestrator()
+    return _unified_orchestrator

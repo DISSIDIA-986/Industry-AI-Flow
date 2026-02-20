@@ -317,7 +317,7 @@ def comprehensive_housing_eda(df):
 # 执行分析
 if __name__ == "__main__":
     # 这里会由系统动态设置数据文件路径
-    data_file = "/workspace/data/Housing.csv"  # This path is used in Docker environment; for local testing: "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_file = "/workspace/data/Housing.csv"  # This path is used in Docker environment; for local testing: "test_resources/datasets/Housing.csv"
 
     try:
         # 读取数据

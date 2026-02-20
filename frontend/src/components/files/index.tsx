@@ -3,9 +3,11 @@
 import { useState, useCallback } from 'react'
 
 interface FileUploadProps {
-  onFileSelect: (file: File) => void
+  onFileSelect?: (file: File) => void
+  onFilesSelected?: (files: File[]) => void
   accept?: string
   maxSize?: number // in MB
+  multiple?: boolean
   label?: string
   helpText?: string
   error?: string
@@ -14,8 +16,10 @@ interface FileUploadProps {
 
 export function FileUpload({ 
   onFileSelect,
+  onFilesSelected,
   accept = '.csv,.xlsx,.xls,.pdf,.txt,.json',
   maxSize = 10, // 10MB
+  multiple = false,
   label = '选择文件',
   helpText,
   error,
@@ -24,7 +28,7 @@ export function FileUpload({
   const [dragActive, setDragActive] = useState(false)
   const [fileName, setFileName] = useState<string>('')
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     if (maxSize && file.size > maxSize * 1024 * 1024) {
       return `文件大小不能超过 ${maxSize}MB`
     }
@@ -38,23 +42,35 @@ export function FileUpload({
     }
     
     return null
-  }
+  }, [accept, maxSize])
 
-  const handleFileSelect = useCallback((file: File) => {
-    const validationError = validateFile(file)
-    if (validationError) {
-      alert(validationError)
+  const handleFileSelect = useCallback((files: File[]) => {
+    const validFiles: File[] = []
+    for (const file of files) {
+      const validationError = validateFile(file)
+      if (validationError) {
+        alert(validationError)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    if (validFiles.length === 0) {
       return
     }
-    
-    setFileName(file.name)
-    onFileSelect(file)
-  }, [onFileSelect, accept, maxSize])
+
+    const selected = multiple ? validFiles : [validFiles[0]]
+    setFileName(selected.map((file) => file.name).join(', '))
+    onFilesSelected?.(selected)
+    if (onFileSelect && selected[0]) {
+      onFileSelect(selected[0])
+    }
+  }, [multiple, onFileSelect, onFilesSelected, validateFile])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileSelect(file)
+    const files = Array.from(e.target.files ?? [])
+    if (files.length > 0) {
+      handleFileSelect(files)
     }
   }
 
@@ -74,9 +90,9 @@ export function FileUpload({
     e.stopPropagation()
     setDragActive(false)
     
-    const file = e.dataTransfer.files?.[0]
-    if (file) {
-      handleFileSelect(file)
+    const files = Array.from(e.dataTransfer.files ?? [])
+    if (files.length > 0) {
+      handleFileSelect(files)
     }
   }, [handleFileSelect])
 
@@ -104,6 +120,7 @@ export function FileUpload({
         <input
           type="file"
           accept={accept}
+          multiple={multiple}
           onChange={handleChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />

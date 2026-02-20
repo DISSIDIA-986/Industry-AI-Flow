@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-demo-smoke-live-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-demo-smoke-live-gate test-data-analysis-gate test-prompt-baseline-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check fullstack-up fullstack-down fullstack-smoke test-construction-rag-e2e rebuild-construction-kb test-construction-rag-full check-structure
 
 # Default target
 .DEFAULT_GOAL := help
@@ -132,6 +132,8 @@ test-demo-mode-gate: ## Run demo-mode workflow/dispatch gate
 			tests/unit/test_demo_mode_service.py \
 			tests/integration/test_demo_mode_api.py \
 			tests/unit/test_workflow_query_routes.py \
+			tests/unit/test_intent_workflow_dispatch_runtime.py \
+			tests/unit/test_langchain_compat_gateway.py \
 			tests/unit/test_dispatch_service.py \
 			tests/unit/test_llm_config_resolution.py \
 			tests/unit/test_main_api_version_alias_routes.py \
@@ -219,9 +221,55 @@ test-legacy-regression: ## Run legacy /api/v1/query and /query/dispatch regressi
 	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
 	$$PYTHON_BIN -m pytest -q tests/unit/test_llm_api_routes.py
 
+test-construction-rag-e2e: ## Run construction RAG end-to-end validation report
+	@echo "🏗️ Running construction RAG E2E validation..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone_arm64/bin/python ]; then echo .venv_capstone_arm64/bin/python; elif [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/run_construction_rag_e2e_validation.py
+
+rebuild-construction-kb: ## Rebuild construction KB with tuned parameters (512/128/top_k=8)
+	@echo "📚 Rebuilding construction KB (chunk=512 overlap=128 top_k=8)..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone_arm64/bin/python ]; then echo .venv_capstone_arm64/bin/python; elif [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/utilities/init_construction_kb.py \
+		--disable-ocr \
+		--chunk-size 512 \
+		--chunk-overlap 128 \
+		--top-k 8
+
+test-construction-rag-full: ## Rebuild KB then run construction RAG E2E validation
+	@$(MAKE) rebuild-construction-kb
+	@$(MAKE) test-construction-rag-e2e
+
+test-prompt-baseline-gate: ## Verify workflow prompt baseline exists and is active/latest
+	@echo "🧩 Running prompt baseline gate..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/migration/seed_prompt_baseline.py --verify-only --pretty
+
+test-data-analysis-gate: ## Run data-analysis runtime/contract gate
+	@echo "📊 Running data-analysis gate..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	set -e; \
+	$$PYTHON_BIN -m py_compile \
+		backend/main.py \
+		backend/tools/data_analysis.py \
+		backend/services/data_analysis/data_analysis_agent.py \
+		backend/agents/langchain_compat.py \
+		backend/agents/unified_agent.py; \
+	$$PYTHON_BIN scripts/migration/seed_prompt_baseline.py --verify-only; \
+		$$PYTHON_BIN -m pytest -q \
+			tests/unit/test_main_runtime_contracts.py \
+			tests/unit/test_docker_provider_health.py \
+			tests/unit/test_data_analysis_agent_provider_mode.py \
+			tests/unit/test_intent_workflow_dispatch_runtime.py \
+			tests/unit/test_langchain_compat_gateway.py \
+			tests/unit/test_data_analysis.py \
+			tests/unit/test_no_absolute_paths_in_tests.py \
+			tests/integration/test_data_analysis_runtime_gate.py
+
 test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
+	@$(MAKE) test-prompt-baseline-gate
 	@$(MAKE) test-cost-estimation-gate
 	@$(MAKE) test-demo-mode-gate
+	@$(MAKE) test-data-analysis-gate
 	@$(MAKE) test-demo-smoke-gate
 	@$(MAKE) test-kpi-gate
 	@$(MAKE) test-rollback-rehearsal
@@ -237,6 +285,9 @@ lint: ## Run code linting
 	@echo "🔍 Running linting..."
 	flake8 backend/ tests/
 	mypy backend/
+
+check-structure: ## Validate repository structure hygiene
+	@bash scripts/testing/check_project_structure.sh
 
 format: ## Format code with black and isort
 	@echo "✨ Formatting code..."
@@ -269,9 +320,10 @@ db-migrate: ## Run database migrations
 
 db-setup: ## Complete database setup (init + migrate)
 	@echo "🏗️ Setting up database..."
-	scripts/setup/install_pgvector_pg14.sh
-	alembic upgrade head
-	python scripts/migration/seed_intent_prompts.py
+	@scripts/setup/install_pgvector_pg14.sh
+	@alembic upgrade head
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/migration/seed_prompt_baseline.py --pretty
 
 # ==========================================
 # Docker Operations
@@ -327,6 +379,18 @@ import-docs: ## Import sample documents
 run: ## Run the application locally
 	@echo "🏃 Running application..."
 	uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+fullstack-up: ## Start full local stack and run full-stack smoke
+	@echo "🚀 Starting full local stack..."
+	bash scripts/deploy/full_stack_up.sh
+
+fullstack-down: ## Stop local backend/frontend started by fullstack-up
+	@echo "🛑 Stopping full local stack..."
+	bash scripts/deploy/full_stack_down.sh
+
+fullstack-smoke: ## Run full-stack connectivity smoke checks
+	@echo "🧪 Running full-stack smoke..."
+	bash scripts/testing/run_full_stack_smoke.sh
 
 capstone-env-check: ## Check Capstone Python/dependency baseline (advisory by default)
 	@echo "🧭 Checking Capstone environment..."

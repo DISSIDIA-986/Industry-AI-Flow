@@ -11,12 +11,42 @@ from typing import Iterable, Tuple
 from fastapi import HTTPException, UploadFile, status
 
 SAFE_FILENAME_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]")
+_OLE_SIGNATURE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+_ZIP_SIGNATURES = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
+_SIGNATURES: dict[str, tuple[bytes, ...]] = {
+    ".pdf": (b"%PDF-",),
+    ".doc": (_OLE_SIGNATURE,),
+    ".xls": (_OLE_SIGNATURE,),
+    ".ppt": (_OLE_SIGNATURE,),
+    ".docx": _ZIP_SIGNATURES,
+    ".xlsx": _ZIP_SIGNATURES,
+    ".pptx": _ZIP_SIGNATURES,
+}
+_TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".json"}
 
 
 def _sanitize_filename(filename: str) -> str:
     """Remove unsafe characters to prevent path traversal."""
     sanitized = SAFE_FILENAME_PATTERN.sub("_", filename)
     return sanitized[:255] or secrets.token_hex(8)
+
+
+def _looks_like_text(content: bytes) -> bool:
+    sample = content[:4096]
+    if b"\x00" in sample:
+        return False
+    return True
+
+
+def _content_matches_extension(content: bytes, extension: str) -> bool:
+    ext = extension.lower()
+    if ext in _TEXT_EXTENSIONS:
+        return _looks_like_text(content)
+
+    signatures = _SIGNATURES.get(ext)
+    if not signatures:
+        return True
+    return any(content.startswith(sig) for sig in signatures)
 
 
 async def validate_and_buffer_upload(
@@ -56,6 +86,11 @@ async def validate_and_buffer_upload(
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File exceeds max size of {max_bytes // (1024 * 1024)}MB.",
+        )
+    if not _content_matches_extension(content, extension):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match file extension signature.",
         )
 
     sanitized_name = _sanitize_filename(original_name)

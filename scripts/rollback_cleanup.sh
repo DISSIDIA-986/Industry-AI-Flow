@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MANIFEST_FILE="${1:-$ROOT/cleanup_manifest.log}"
+MANIFEST_FILE="${1:-${CLEANUP_MANIFEST_FILE:-$ROOT/temp/reports/cleanup/cleanup_manifest.log}}"
 
 if [[ ! -f "$MANIFEST_FILE" ]]; then
   echo "Manifest not found: $MANIFEST_FILE"

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
-from langchain.agents import create_agent
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
@@ -18,6 +17,19 @@ from backend.services.data_transfer import data_transfer
 from backend.tools.code_execution import code_execution_tool
 
 logger = logging.getLogger(__name__)
+
+
+class _FallbackAsyncLLM:
+    """Fallback async LLM used when provider SDKs are unavailable."""
+
+    async def ainvoke(self, messages):
+        return AIMessage(
+            content=(
+                "```python\n"
+                "print('Fallback iterative execution response: provider SDK unavailable')\n"
+                "```"
+            )
+        )
 
 
 @dataclass
@@ -368,24 +380,39 @@ class IterativeCodeExecutionAgent:
 
     def _get_llm(self):
         """获取 LLM 实例"""
-        from langchain_anthropic import ChatAnthropic
-        from langchain_ollama import ChatOllama
-
         from backend.config import settings
 
         if settings.llm_provider == "zhipu":
-            return ChatAnthropic(
-                model=settings.zhipu_model,
-                api_key=settings.zhipu_api_key,
-                base_url=settings.zhipu_base_url,
-                temperature=0.1,
-            )
+            try:
+                from langchain_anthropic import ChatAnthropic
+
+                return ChatAnthropic(
+                    model=settings.zhipu_model,
+                    api_key=settings.zhipu_api_key,
+                    base_url=settings.zhipu_base_url,
+                    temperature=0.1,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "langchain_anthropic unavailable, using fallback async LLM: %s",
+                    exc,
+                )
+                return _FallbackAsyncLLM()
         else:
-            return ChatOllama(
-                model=settings.ollama_model,
-                base_url=settings.ollama_host,
-                temperature=0.1,
-            )
+            try:
+                from langchain_ollama import ChatOllama
+
+                return ChatOllama(
+                    model=settings.ollama_model,
+                    base_url=settings.ollama_host,
+                    temperature=0.1,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "langchain_ollama unavailable, using fallback async LLM: %s",
+                    exc,
+                )
+                return _FallbackAsyncLLM()
 
     async def execute_code_iteratively(
         self,

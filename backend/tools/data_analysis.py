@@ -1,11 +1,22 @@
 """数据分析工具 - 自动化 EDA 和数据分析功能"""
 
 import logging
+from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
 from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_container_data_path(data_file: str) -> str:
+    """Map host file path to the mounted path visible in the sandbox container."""
+    raw_path = str(data_file or "").strip()
+    if not raw_path:
+        return raw_path
+    if raw_path.startswith("/workspace/"):
+        return raw_path
+    return f"/workspace/{Path(raw_path).name}"
 
 
 @tool
@@ -76,9 +87,15 @@ def data_analysis_tool(
         if result["success"]:
             # 解析分析结果
             analysis_result = _parse_analysis_output(result["stdout"])
+            answer = _build_analysis_answer(
+                analysis_type=analysis_type,
+                parsed_result=analysis_result,
+                raw_output=result.get("stdout", ""),
+            )
             analysis_result.update(
                 {
                     "success": True,
+                    "answer": answer,
                     "analysis_type": analysis_type,
                     "visualizations": result.get("visualizations", []),
                 }
@@ -206,12 +223,13 @@ def _generate_analysis_code(
     """生成数据分析代码"""
 
     # 确定文件读取方式
+    container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
-        read_code = f"df = pd.read_csv('{data_file}')"
+        read_code = f"df = pd.read_csv('{container_data_file}')"
     elif data_file.endswith((".xlsx", ".xls")):
-        read_code = f"df = pd.read_excel('{data_file}')"
+        read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {data_file}"
+        read_code = f"# 请手动读取数据文件: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -462,12 +480,13 @@ def _generate_preprocessing_code(
     """生成数据预处理代码"""
 
     # 确定文件读取方式
+    container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
-        read_code = f"df = pd.read_csv('{data_file}')"
+        read_code = f"df = pd.read_csv('{container_data_file}')"
     elif data_file.endswith((".xlsx", ".xls")):
-        read_code = f"df = pd.read_excel('{data_file}')"
+        read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {data_file}"
+        read_code = f"# 请手动读取数据文件: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -655,6 +674,31 @@ def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
             "recommendations": [],
             "raw_output": stdout,
         }
+
+
+def _build_analysis_answer(
+    *,
+    analysis_type: str,
+    parsed_result: Dict[str, Any],
+    raw_output: str,
+) -> str:
+    """Build a concise textual answer for API callers."""
+    info = parsed_result.get("data_info") or {}
+    rows = info.get("rows")
+    cols = info.get("columns")
+    numeric_cols = info.get("numeric_columns")
+    categorical_cols = info.get("categorical_columns")
+
+    if isinstance(rows, int) and isinstance(cols, int) and (rows > 0 or cols > 0):
+        return (
+            f"分析完成（{analysis_type}）。数据集共有 {rows} 行、{cols} 列，"
+            f"其中数值列 {numeric_cols or 0} 个，分类列 {categorical_cols or 0} 个。"
+        )
+
+    condensed_lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
+    if condensed_lines:
+        return condensed_lines[0][:240]
+    return "分析完成。"
 
 
 def _parse_preprocessing_output(stdout: str) -> Dict[str, Any]:

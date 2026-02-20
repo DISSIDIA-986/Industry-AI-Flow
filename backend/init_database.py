@@ -407,6 +407,29 @@ def init_database():
             """
         )
 
+        # Ensure migration ledger exists and is backward-compatible with older schemas.
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version VARCHAR(128) PRIMARY KEY,
+                description TEXT,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE schema_migrations
+            ADD COLUMN IF NOT EXISTS description TEXT
+            """
+        )
+        cur.execute(
+            """
+            ALTER TABLE schema_migrations
+            ADD COLUMN IF NOT EXISTS applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            """
+        )
+
         cur.execute(
             """
             INSERT INTO schema_migrations (version, description)

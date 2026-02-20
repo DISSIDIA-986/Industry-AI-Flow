@@ -1,15 +1,15 @@
 'use client'
 
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
+  LineChart as RechartsLineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts'
 
 interface ChartProps {
   data: any[]
-  width?: number | string
-  height?: number | string
+  width?: number | `${number}%`
+  height?: number | `${number}%`
   title?: string
 }
 
@@ -19,18 +19,21 @@ export function LineChartComponent({ data, width = '100%', height = 300, title }
     <div className="w-full">
       {title && <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>}
       <ResponsiveContainer width={width} height={height}>
-        <LineChart data={data}>
+        <RechartsLineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
           <Legend />
           <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-        </LineChart>
+        </RechartsLineChart>
       </ResponsiveContainer>
     </div>
   )
 }
+
+// Compatibility aliases for legacy imports.
+export const LineChart = LineChartComponent
 
 // 柱状图组件
 export function BarChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
@@ -38,18 +41,21 @@ export function BarChartComponent({ data, width = '100%', height = 300, title }:
     <div className="w-full">
       {title && <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>}
       <ResponsiveContainer width={width} height={height}>
-        <BarChart data={data}>
+        <RechartsBarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
           <Legend />
           <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
-        </BarChart>
+        </RechartsBarChart>
       </ResponsiveContainer>
     </div>
   )
 }
+
+// Compatibility aliases for legacy imports.
+export const BarChart = BarChartComponent
 
 // 饼图组件
 export function PieChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
@@ -65,7 +71,10 @@ export function PieChartComponent({ data, width = '100%', height = 300, title }:
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            label={({ name, percent }) => {
+              const safePercent = typeof percent === 'number' ? percent : 0
+              return `${String(name)}: ${(safePercent * 100).toFixed(0)}%`
+            }}
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"

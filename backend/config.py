@@ -142,6 +142,9 @@ class Settings(BaseSettings):
     enable_iterative_execution: bool = (
         os.getenv("ENABLE_ITERATIVE_EXECUTION", "true").lower() == "true"
     )
+    workflow_runner_mode: str = os.getenv(
+        "WORKFLOW_RUNNER_MODE", "auto"
+    ).lower()  # auto | fallback | intent
     max_code_fix_attempts: int = int(
         os.getenv("MAX_CODE_FIX_ATTEMPTS", "5")
     )  # 最大修复尝试次数
@@ -162,7 +165,7 @@ class Settings(BaseSettings):
     )
 
     # API & Security
-    require_api_key: bool = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
+    require_api_key: bool = os.getenv("REQUIRE_API_KEY", "true").lower() == "true"
     api_keys_raw: str = os.getenv("API_KEYS", "")
     api_key_header: str = os.getenv("API_KEY_HEADER", "X-API-Key")
     tenant_header: str = os.getenv("TENANT_HEADER", "X-Tenant-ID")

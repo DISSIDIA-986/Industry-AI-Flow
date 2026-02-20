@@ -3,8 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCAN_SCRIPT="$ROOT/scripts/scan_cleanup_targets.sh"
-REPORT_FILE="$ROOT/cleanup_scan_report.tsv"
-MANIFEST_FILE="$ROOT/cleanup_manifest.log"
+REPORT_DIR="${CLEANUP_REPORT_DIR:-$ROOT/temp/reports/cleanup}"
+REPORT_FILE="${CLEANUP_REPORT_FILE:-$REPORT_DIR/cleanup_scan_report.tsv}"
+MANIFEST_FILE="${CLEANUP_MANIFEST_FILE:-$REPORT_DIR/cleanup_manifest.log}"
 ROLLBACK_SCRIPT="$ROOT/scripts/rollback_cleanup.sh"
 
 MODE="dry-run"
@@ -23,6 +24,10 @@ Modes:
 
 Options:
   --include-review   Include "review" risk items in --execute / --dry-run
+
+Env overrides:
+  CLEANUP_REPORT_FILE    Override scan report path
+  CLEANUP_MANIFEST_FILE  Override manifest path
 EOF
 }
 
@@ -41,7 +46,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 run_scan() {
-  bash "$SCAN_SCRIPT" "$ROOT"
+  mkdir -p "$REPORT_DIR"
+  CLEANUP_REPORT_FILE="$REPORT_FILE" bash "$SCAN_SCRIPT" "$ROOT"
 }
 
 select_moves() {

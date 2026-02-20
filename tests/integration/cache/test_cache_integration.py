@@ -315,14 +315,12 @@ class TestCacheIntegration:
 
     def test_cache_hit_rate_tracking(self, cache):
         """测试缓存命中率跟踪"""
-        # 模拟多次查询
-        questions = ["q1", "q2", "q3", "q1", "q2", "q1"]  # q1:3次, q2:2次, q3:1次
-        
-        # 第一次查询（全部未命中）
+        # 首轮使用唯一问题，确保全部miss
+        first_round_questions = [f"q{i}" for i in range(1, 7)]
         hits = 0
         misses = 0
-        
-        for question in questions:
+
+        for question in first_round_questions:
             result = cache.get("tenant1", question, 5)
             if result is None:
                 misses += 1
@@ -330,23 +328,23 @@ class TestCacheIntegration:
                 cache.set("tenant1", question, 5, {"answer": f"Answer to {question}"})
             else:
                 hits += 1
-        
-        # 第一次循环：全部miss
+
+        # 第一轮：全部miss
         assert hits == 0
         assert misses == 6
-        
-        # 第二次查询（应该全部命中）
+
+        # 第二轮：复用同一批问题，应全部hit
         hits = 0
         misses = 0
-        
-        for question in questions:
+
+        for question in first_round_questions:
             result = cache.get("tenant1", question, 5)
             if result is None:
                 misses += 1
             else:
                 hits += 1
-        
-        # 第二次循环：全部hit
+
+        # 第二轮：全部hit
         assert hits == 6
         assert misses == 0
 

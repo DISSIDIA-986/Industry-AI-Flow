@@ -38,7 +38,7 @@ class _FakeConn:
 
 def test_init_database_contains_prompt_schema_alignment_sql(monkeypatch):
     fake_conn = _FakeConn()
-    monkeypatch.setattr(init_db.psycopg2, "connect", lambda *_args, **_kwargs: fake_conn)
+    monkeypatch.setattr(init_db, "connect_db", lambda *_args, **_kwargs: fake_conn)
 
     init_db.init_database()
 

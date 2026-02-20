@@ -3,12 +3,14 @@
 import { ReactNode } from 'react'
 
 interface LoadingProps {
+  message?: string
   text?: string
   size?: 'sm' | 'md' | 'lg'
   fullScreen?: boolean
 }
 
 export function Loading({ 
+  message,
   text = '加载中...', 
   size = 'md',
   fullScreen = false 
@@ -22,7 +24,7 @@ export function Loading({
   const content = (
     <div className="flex flex-col items-center justify-center space-y-3">
       <div className={`${sizeClasses[size]} border-blue-200 border-t-blue-600 rounded-full animate-spin`}></div>
-      {text && <p className="text-gray-600">{text}</p>}
+      {(message ?? text) && <p className="text-gray-600">{message ?? text}</p>}
     </div>
   )
 
@@ -76,6 +78,8 @@ interface EmptyStateProps {
   description?: string
   icon?: ReactNode
   action?: ReactNode
+  actionLabel?: string
+  onAction?: () => void
   className?: string
 }
 
@@ -84,8 +88,22 @@ export function EmptyState({
   description, 
   icon,
   action,
+  actionLabel,
+  onAction,
   className = '' 
 }: EmptyStateProps) {
+  const resolvedAction =
+    action ??
+    (actionLabel && onAction ? (
+      <button
+        type="button"
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        onClick={onAction}
+      >
+        {actionLabel}
+      </button>
+    ) : null)
+
   return (
     <div className={`text-center py-12 ${className}`}>
       {icon && <div className="mb-4">{icon}</div>}
@@ -93,7 +111,7 @@ export function EmptyState({
       {description && (
         <p className="text-gray-600 mb-6 max-w-md mx-auto">{description}</p>
       )}
-      {action && <div>{action}</div>}
+      {resolvedAction && <div>{resolvedAction}</div>}
     </div>
   )
 }

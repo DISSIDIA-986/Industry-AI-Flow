@@ -11,9 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { FileUpload } from '@/components/ui/files/file-upload'
-import { FileList } from '@/components/ui/files/file-list'
 import { Loading } from '@/components/ui/feedback/loading'
-import { ErrorDisplay } from '@/components/ui/feedback/error-display'
 import { EmptyState } from '@/components/ui/feedback/empty-state'
 
 interface Document {
@@ -41,13 +39,13 @@ export default function DocumentsPage() {
   useEffect(() => {
     loadDocuments()
     checkApiHealth()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkApiHealth = async () => {
     try {
       const health = await realApiService.checkHealth()
       setApiStatus(health.status === 'ok' ? 'connected' : 'disconnected')
-    } catch (error) {
+    } catch {
       setApiStatus('disconnected')
     }
   }

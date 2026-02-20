@@ -79,6 +79,7 @@ interface StatCardProps {
   title: string
   value: string | number
   change?: string
+  description?: string
   icon?: ReactNode
   trend?: 'up' | 'down' | 'neutral'
   className?: string
@@ -88,6 +89,7 @@ export function StatCard({
   title, 
   value, 
   change, 
+  description,
   icon,
   trend = 'neutral',
   className = '' 
@@ -105,9 +107,9 @@ export function StatCard({
         {icon && <div className="text-gray-400">{icon}</div>}
       </div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
-      {change && (
-        <div className={`mt-2 text-sm font-medium ${trendColors[trend]}`}>
-          {change}
+      {(change || description) && (
+        <div className={`mt-2 text-sm ${change ? `font-medium ${trendColors[trend]}` : 'text-gray-600'}`}>
+          {change ?? description}
         </div>
       )}
     </Card>

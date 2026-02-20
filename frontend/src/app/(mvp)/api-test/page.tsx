@@ -19,7 +19,8 @@ export default function ApiTestPage() {
       setHealth(healthData)
     } catch (error) {
       console.error('健康检查失败:', error)
-      setHealth({ status: 'error', message: error.message })
+      const message = error instanceof Error ? error.message : String(error)
+      setHealth({ status: 'error', message })
     } finally {
       setLoading(false)
     }
@@ -29,7 +30,6 @@ export default function ApiTestPage() {
     setTestResults(prev => ({ ...prev, [endpoint]: { loading: true } }))
     
     try {
-      let result
       const url = `http://localhost:8001/api/v1${endpoint}`
       
       const options: RequestInit = {
@@ -42,7 +42,7 @@ export default function ApiTestPage() {
       }
       
       const response = await fetch(url, options)
-      result = await response.json()
+      const result = await response.json()
       
       setTestResults(prev => ({ 
         ...prev, 
@@ -54,11 +54,12 @@ export default function ApiTestPage() {
         }
       }))
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
       setTestResults(prev => ({ 
         ...prev, 
         [endpoint]: { 
           success: false, 
-          error: error.message,
+          error: message,
           timestamp: new Date().toISOString()
         }
       }))

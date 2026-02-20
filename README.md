@@ -441,15 +441,19 @@ Industry-AI-Flow/
 │   ├── test_answer_generation.py      # 💬 回答生成测试
 │   ├── test_ocr_integration.py        # 📷 OCR集成测试
 │   ├── test_data_analysis_code_execution.py # 📊 数据分析和代码执行测试
-│   ├── test_streamlit_interface.py    # 🎨 Streamlit接口测试
+│   ├── test_frontend_integration.py    # 🎨 前端集成测试
 │   ├── test_frontend_chat_interface.py # 💬 前端聊天接口测试
 │   ├── test_user_feedback_rag_impact.py # 💬 用户反馈RAG影响测试
 │   └── run_comprehensive_tests.py     # 🧪 综合测试运行器
 
 ├── 📁 scripts/                        # 🔧 重新组织的脚本工具
 │   ├── README.md                      # 📖 脚本说明文档
-│   ├── deployment/                    # 🚀 部署脚本
-│   │   └── build_data_analysis_docker.sh # 🐳 Docker构建脚本
+│   ├── deploy/                        # 🚀 部署与运维脚本
+│   │   ├── build_data_analysis_docker.sh # 🐳 Docker构建脚本
+│   │   ├── full_stack_up.sh           # ⬆️ 全栈启动
+│   │   └── health_check.sh            # 🩺 健康检查
+│   ├── deployment/                    # 📦 兼容目录（已迁移到deploy）
+│   │   └── README.md                  # 📖 迁移说明
 │   ├── migration/                     # 🗄️ 迁移脚本
 │   │   ├── migrate_to_pgvector.sh     # 🗂️ pgvector迁移
 │   │   ├── init_prompt_system.py      # 📝 初始化提示系统
@@ -461,7 +465,8 @@ Industry-AI-Flow/
 │   │   ├── setup_local.sh             # 🏠 本地环境设置
 │   │   ├── verify_env.sh              # ✅ 环境验证
 │   │   ├── setup_test_database.sh     # 🗄️ 测试数据库设置
-│   │   └── install_pgvector_pg14.sh   # 🐘 pgvector安装
+│   │   ├── install_pgvector_pg14.sh   # 🐘 pgvector安装
+│   │   └── install_python313_paddleocr.sh # 🧩 Python3.13安装
 │   ├── testing/                       # 🧪 测试脚本
 │   │   ├── quick_test.sh              # ⚡ 快速测试
 │   │   ├── test_ocr.py                # 📷 OCR测试
@@ -474,12 +479,16 @@ Industry-AI-Flow/
 │   │   ├── test_llama_cpp_integration.py # 🦙 llama.cpp集成测试
 │   │   ├── test_llama_cpp_simple.py   # 🦙 简单llama.cpp测试
 │   │   └── create_test_image.py       # 🖼️ 创建测试图像
-│   └── utilities/                     # 🛠️ 实用工具脚本
-│       ├── README.md                  # 📖 实用工具说明
-│       ├── compare_configs.py         # ⚙️ 配置比较
-│       ├── generate_test_embeddings.py # 🎯 生成测试嵌入
-│       ├── import_csv_datasets.py     # 📊 导入CSV数据集
-│       └── import_docs.py             # 📄 导入文档
+│   ├── utilities/                     # 🛠️ 实用工具脚本
+│   │   ├── README.md                  # 📖 实用工具说明
+│   │   ├── compare_configs.py         # ⚙️ 配置比较
+│   │   ├── generate_test_embeddings.py # 🎯 生成测试嵌入
+│   │   ├── import_csv_datasets.py     # 📊 导入CSV数据集
+│   │   └── import_docs.py             # 📄 导入文档
+│   └── versioning/                    # 🧭 Python版本治理脚本
+│       ├── version_manager.py         # 🔎 兼容性分析
+│       ├── python_version_checker.py  # ✅ 版本检查器
+│       └── advanced_version_manager.py # 🧠 高级版本治理
 
 ├── 📁 docs/                           # 📚 项目文档中心
 │   ├── README.md                      # 📖 文档导航索引
@@ -513,9 +522,16 @@ Industry-AI-Flow/
 │   ├── kubernetes/                    # ☸️ Kubernetes配置
 │   └── monitoring/                    # 📊 监控配置
 
-├── 📁 streamlit/                      # 🎨 Streamlit前端界面
-│   ├── streamlit_app.py               # 🎨 主应用界面
-│   └── streamlit_prompt_manager.py    # 📝 提示管理界面
+├── 📁 frontend/                       # 🎨 Next.js前端应用
+│   ├── src/                           # 📁 源代码目录
+│   │   ├── app/                       # 🏗️ Next.js App Router
+│   │   ├── components/                # 🧩 React组件库
+│   │   ├── contexts/                  # 🔄 React上下文
+│   │   ├── lib/                       # 📚 工具库
+│   │   └── styles/                    # 🎨 样式文件
+│   ├── public/                        # 🌐 静态资源
+│   ├── package.json                   # 📦 依赖配置
+│   └── next.config.js                 # ⚙️ Next.js配置
 
 ├── 📁 archive/                        # 📦 归档文档（.globalignore忽略）
 │   ├── research/                      # 🔬 过时的研究文档
@@ -680,23 +696,127 @@ Content-Type: application/json
 
 MIT License
 
-## 📚 文档导航
+## 📚 核心文档导航
 
-- **📖 [文档中心](docs/README.md)** - 完整的文档索引和导航
-- **🚀 [快速开始](.deprecated/guides/2026-02-12-batch3/QUICK_START_GUIDE.md)** - 5分钟快速上手
-- **⚙️ [安装指南](.deprecated/guides/2026-02-12-batch3/INSTALLATION_GUIDE.md)** - 详细的环境配置
-- **👨‍💻 [开发指南](docs/development/contributing.md)** - 参与项目开发
-- **🧪 [测试指南](docs/development/testing.md)** - 运行和编写测试
-- **📝 [测试用例](test_cases/README.md)** - 测试用例规格说明
-- **📦 [测试资源](test_resources/README.md)** - 测试数据和资源
-- **📖 [用户手册](docs/user-guide/basic-usage.md)** - 功能使用说明
+Industry AI Flow采用**分层分类**的文档管理策略，确保文档易于查找、维护和扩展。以下是按角色和用途组织的核心文档：
 
-## 🔗 相关链接
+### 📋 文档管理指南
+- **[核心文档指南](docs/CORE_DOCUMENTATION_GUIDE.md)** - 完整的文档管理策略和清单
 
-- **架构设计**：[系统架构](docs/architecture/)、[RAG设计](docs/architecture/rag-design.md)
-- **实现文档**：[API参考](docs/implementation/api-reference.md)、[部署指南](docs/implementation/deployment.md)
-- **开发资源**：[贡献指南](docs/development/contributing.md)、[代码规范](docs/development/code-style.md)
+### 🏗️ 架构设计（架构师、技术负责人）
 
-## 🗂️ 历史文档
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[系统架构总览](docs/ARCHITECTURE.md)** | 6层分层架构设计 | 架构师、技术负责人 | 每季度 |
+| **[详细系统架构图](docs/SYSTEM_ARCHITECTURE_DETAILED.md)** | 多层容器化架构详解 | 架构师、运维工程师 | 每季度 |
+| **[交互式架构图](docs/ARCHITECTURE_DIAGRAM.html)** | 可视化架构展示 | 所有技术成员 | 每季度 |
+| **[前端架构设计](docs/FRONTEND_ARCHITECTURE.md)** | Next.js前端架构 | 前端开发者、架构师 | 每月 |
 
-过时的研究文档、迁移记录和测试报告已归档到 `archive/` 目录（通过 `.globalignore` 忽略），如需查阅可进入该目录。
+### 👨‍💻 开发指南（开发团队）
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[API接口文档](docs/implementation/api-reference.md)** | REST API详细说明 | 前后端开发者 | 每月 |
+| **[代码规范指南](docs/development/code-style.md)** | 编码标准和最佳实践 | 所有开发者 | 每季度 |
+| **[贡献指南](docs/development/contributing.md)** | 参与开发流程 | 贡献者、新开发者 | 每季度 |
+| **[安全与租户配置](docs/implementation/security-and-tenant-guide.md)** | 安全架构和配置 | 开发者、运维 | 每季度 |
+
+### 🧪 测试与质量（测试团队）
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[测试策略与计划](docs/development/testing.md)** | 整体测试方法 | 测试负责人、QA | 每季度 |
+| **[建筑RAG多角色测试方案](docs/runbooks/construction-rag-multi-agent-test-plan.md)** | 架构/开发/QA协同验证方案 | 架构师、开发、QA | 每次知识库更新 |
+| **[E2E测试计划](docs/FRONTEND_E2E_TEST_PLAN.md)** | 端到端测试方案 | 测试工程师、开发者 | 每月 |
+| **[测试用例库](test_cases/README.md)** | 详细测试用例集合 | 测试工程师 | 每月 |
+| **[测试资源管理](test_resources/README.md)** | 测试数据和资源 | 测试团队 | 每月 |
+
+### 🚀 部署与运维（运维团队）
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[部署指南](docs/implementation/deployment.md)** | 生产环境配置 | 运维工程师 | 每季度 |
+| **[全栈部署计划](docs/development/full-stack-deployment-smoke-plan.md)** | 完整部署流程 | 运维、开发者 | 每季度 |
+| **[建筑RAG初始化Runbook](docs/runbooks/construction-rag-kb-init.md)** | 建筑知识库初始化与调参总流程 | QA、AI工程师、架构师 | 每次知识库更新 |
+| **[建筑RAG增量操作卡](docs/runbooks/construction-rag-opcard-incremental.md)** | 日常文档更新快速流程 | QA、AI工程师 | 日常 |
+| **[建筑RAG全量重建操作卡](docs/runbooks/construction-rag-opcard-full-rebuild.md)** | 调参与全量重建标准流程 | QA、AI工程师、架构师 | 大版本变更 |
+| **[版本管理指南](docs/development/version-management-guide.md)** | 版本控制和发布 | 运维、发布经理 | 每季度 |
+
+### 📖 用户指南（最终用户、管理员）
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[基础使用指南](docs/user/basic-usage.md)** | 功能使用说明 | 最终用户 | 每月 |
+| **[Prompt管理指南](docs/developer/prompt-management.md)** | Prompt系统使用 | 管理员、用户 | 每月 |
+| **[意图分类指南](docs/developer/intent-classification.md)** | 意图系统详解 | 高级用户、管理员 | 每季度 |
+
+### 🔬 研究与规划（产品、架构）
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[项目路线图](docs/development/status/active/ROADMAP.md)** | 产品发展计划 | 产品经理、团队 | 每季度 |
+| **[实施路线图](research/implementation-roadmap.md)** | 技术实施计划 | 架构师、开发者 | 项目阶段 |
+| **[混合LLM评估](research/reports/hybrid-llm-evaluation-report.md)** | LLM技术选型 | 架构师、产品 | 项目阶段 |
+| **[RAG优化计划](research/plans/rag-workflow-deep-optimization-plan.md)** | RAG系统优化 | 架构师、开发者 | 项目阶段 |
+
+### 📊 项目状态与报告
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[项目状态报告](docs/development/status/active/PROJECT_STATUS_UPDATE.md)** | 项目进展汇报 | 管理层、团队 | 每周 |
+| **[问题跟踪](docs/development/status/active/ISSUES_TRACKER.md)** | 问题管理和跟踪 | 所有团队成员 | 实时 |
+| **[测试执行报告](docs/FRONTEND_E2E_TEST_REPORT_2026-02-18.md)** | 测试结果和分析 | 项目经理、团队 | 每次发布 |
+| **[代码审查报告](docs/reports/CODE_REVIEW_REPORT.md)** | 代码质量分析 | 技术负责人、开发者 | 每次发布 |
+| **[文档优化报告](docs/DOCUMENTATION_OPTIMIZATION_REPORT.md)** | 文档管理系统优化 | 文档负责人、团队 | 项目阶段 |
+
+### 🛠️ 工具与脚本
+
+| 文档 | 描述 | 目标读者 | 更新频率 |
+|------|------|----------|----------|
+| **[脚本工具中心](scripts/README.md)** | 工具脚本集合 | 开发者、运维 | 每月 |
+| **[部署脚本指南](scripts/deploy/README.md)** | 自动化部署脚本 | 运维工程师 | 每季度 |
+| **[监控脚本指南](scripts/monitoring/README.md)** | 监控和告警脚本 | 运维、SRE | 每季度 |
+
+## 📈 文档质量保证
+
+### 文档维护标准
+- **版本控制**：所有文档纳入Git管理
+- **定期审查**：核心文档每季度审查一次
+- **更新流程**：文档变更需经过团队评审
+- **质量检查**：使用标准化模板和检查清单
+
+### 文档分类体系
+```
+📚 文档体系
+├── 🏗️ 架构设计（技术决策、系统设计）
+├── 👨‍💻 开发指南（编码、API、配置）
+├── 🧪 测试质量（测试用例、报告）
+├── 🚀 部署运维（部署、监控、维护）
+├── 📖 用户指南（使用说明、管理）
+├── 🔬 研究规划（技术选型、路线图）
+├── 📊 项目状态（进展、报告、问题）
+└── 🛠️ 工具脚本（自动化、工具）
+```
+
+### 查找文档的快速指南
+1. **按角色查找**：使用上方的表格按目标读者筛选
+2. **按用途查找**：参考文档分类体系
+3. **按关键词搜索**：在仓库中搜索相关术语
+4. **查看最新更新**：关注高更新频率的文档
+
+## 🔄 文档贡献流程
+
+我们欢迎所有团队成员贡献文档改进：
+1. **发现问题**：在GitHub Issues中报告文档问题
+2. **提出改进**：创建改进建议或直接提交PR
+3. **团队评审**：文档变更需经过至少2人评审
+4. **合并发布**：通过评审后合并到主分支
+
+## 🗂️ 历史文档归档
+
+过时的研究文档、迁移记录和测试报告已归档到以下目录：
+- `.deprecated/` - 已废弃的指南和报告
+- `docs/deprecated/` - 已废弃的技术文档
+- `temp/reports/` - 临时性报告和分析
+
+这些目录通过`.gitignore`规则管理，如需查阅历史文档可进入相应目录。
