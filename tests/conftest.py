@@ -78,6 +78,17 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: mark test as an integration test")
     config.addinivalue_line("markers", "performance: mark test as a performance test")
     config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line(
+        "markers", "legacy_chinese: historical Chinese-language or Chinese-font suites"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Tag Chinese-specific historical tests for optional exclusion."""
+    for item in items:
+        node = item.nodeid.lower()
+        if "chinese" in node or "matplotlib_chinese" in node:
+            item.add_marker(pytest.mark.legacy_chinese)
 
 
 # Custom markers for different test categories

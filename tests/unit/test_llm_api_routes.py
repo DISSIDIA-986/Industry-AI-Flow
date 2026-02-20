@@ -12,6 +12,7 @@ from backend.services.demo_mode_service import (
     DEMO_MODE_LOCAL_SAFE,
     get_demo_mode_service,
 )
+from backend.services.language_policy import RAG_CHINESE_QUERY_UNSUPPORTED
 from backend.security.context import TenantContext
 from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.llm_integration.types import (
@@ -201,6 +202,36 @@ async def test_enhanced_query_compat_route(monkeypatch):
     assert observed["top_k"] == 5
     assert observed["temperature"] == 0.2
     assert observed["max_tokens"] == 128
+
+
+@pytest.mark.asyncio
+async def test_enhanced_query_rejects_chinese_input(monkeypatch):
+    class _FakeRAG:
+        def query(self, question, top_k=None, temperature=None, max_tokens=None):
+            return {
+                "query_id": "q-blocked",
+                "question": question,
+                "answer": "should-not-run",
+                "sources": [],
+                "retrieved_chunks": [],
+                "search_weights": {"vector_weight": 0.7, "bm25_weight": 0.3},
+            }
+
+    monkeypatch.setattr(enhanced_query_routes, "get_rag_instance", lambda: _FakeRAG())
+
+    app = _build_app()
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        resp = await client.post(
+            "/api/v1/query",
+            json={"question": "请分析这个工程项目"},
+        )
+
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["code"] == RAG_CHINESE_QUERY_UNSUPPORTED
+    assert "English" in detail["message"]
 
 
 @pytest.mark.asyncio

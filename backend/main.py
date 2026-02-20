@@ -14,14 +14,14 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from backend.api.document_management_routes import router as document_management_router
 from backend.api.enhanced_query_routes import router as enhanced_query_router
 
-# 导入新的API路由
+# ENAPIEN
 from backend.api.auth_routes import router as auth_router
 from backend.api.cost_estimation_routes import router as cost_estimation_router
 from backend.api.demo_mode_routes import router as demo_mode_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
-from backend.api.prompt_routes import router as prompt_router  # P0修复：注册Prompt路由
+from backend.api.prompt_routes import router as prompt_router  # P0EN:ENPromptEN
 from backend.api.workflow_query_routes import (
     router as workflow_query_router,
 )  # Phase 2 scaffold
@@ -34,13 +34,14 @@ from backend.security.memory_guard import memory_guard
 from backend.security.sanitizer import sanitize_identifier, sanitize_text
 from backend.services.audit_logger import audit_logger
 from backend.services.cache.query_cache import query_cache
+from backend.services.language_policy import ensure_rag_english_query
 from backend.services.security import persist_temp_file, validate_and_buffer_upload
 
-# 配置日志
+# EN
 configure_logging()
 logger = logging.getLogger(__name__)
 
-# 检查环境变量
+# EN
 try:
     from backend.config import settings
 except ImportError:
@@ -54,7 +55,7 @@ ALLOWED_UPLOAD_EXTENSIONS = (
 MAX_UPLOAD_BYTES = settings.max_upload_size_bytes if settings else 10 * 1024 * 1024
 TEMP_DATA_ROOT = settings.temp_data_dir if settings else "/tmp/luncheon_data"
 
-# 延迟导入服务模块，避免启动时的循环依赖
+# EN,EN
 rag_engine = None
 unified_orchestrator = None
 code_executor = None
@@ -143,7 +144,10 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Luncheon AI Flow - Enhanced RAG & Code Analysis",
-    description="融合知识问答、用户反馈、文档管理和数据分析能力的智能系统",
+    description=(
+        "Enterprise API for RAG, workflow orchestration, code execution, "
+        "and data analysis."
+    ),
     version="2.0.0",
     lifespan=lifespan,
     dependencies=[Depends(secure_endpoint)],
@@ -152,7 +156,7 @@ register_error_handlers(app)
 if settings and settings.enable_metrics:
     setup_metrics(app)
 
-# 注册新的API路由
+# ENAPIEN
 app.include_router(feedback_router, prefix="/api/v1", tags=["feedback"])
 app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
@@ -160,14 +164,14 @@ app.include_router(
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
 app.include_router(auth_router)
 app.include_router(cost_estimation_router)
-app.include_router(llm_dispatch_router)  # llm_dispatch_routes已包含prefix
-app.include_router(llm_cost_router)  # llm_cost_routes已包含prefix
+app.include_router(llm_dispatch_router)  # llm_dispatch_routesENprefix
+app.include_router(llm_cost_router)  # llm_cost_routesENprefix
 app.include_router(demo_mode_router)
 # prompt_routes already has prefix "/api/prompts", avoid double-prefixing to "/api/v1/api/prompts".
-app.include_router(prompt_router, tags=["prompts"])  # P0修复：注册Prompt路由
+app.include_router(prompt_router, tags=["prompts"])  # P0EN:ENPromptEN
 app.include_router(workflow_query_router)
 
-# RAG引擎将通过lazy loading初始化
+# RAGENlazy loadingEN
 
 
 class QueryRequest(BaseModel):
@@ -278,7 +282,7 @@ class VisualizationRequest(BaseModel):
 
 
 def get_memory_usage() -> float:
-    """获取当前进程内存使用(MB)"""
+    """Return current process memory usage in MB."""
     process = psutil.Process(os.getpid())
     return round(process.memory_info().rss / 1024 / 1024, 2)
 
@@ -316,7 +320,7 @@ def _resolve_data_file_for_analysis(data_file: str) -> str:
 @app.get("/api/v1/health")
 @app.get("/health")
 async def health(tenant: TenantContext = Depends(get_current_tenant)):
-    """健康检查"""
+    """Service health check endpoint."""
     execution_health: Dict[str, Any] = {
         "healthy": code_executor is not None,
         "mode": getattr(settings, "code_execution_provider", "docker"),
@@ -365,7 +369,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
 @app.get("/api/v1/environment")
 @app.get("/environment")
 async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
-    """获取执行环境信息"""
+    """Return execution environment capabilities."""
     try:
         from backend.tools.code_execution import get_execution_environment_info
 
@@ -393,7 +397,7 @@ async def upload_document(
     file: UploadFile = File(...),
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """上传文档文件"""
+    """Upload a user document and store a sanitized temporary copy."""
     try:
         content, safe_name = await validate_and_buffer_upload(
             file,
@@ -408,7 +412,7 @@ async def upload_document(
             "sanitized_filename": safe_name,
             "file_path": file_path,
             "size": len(content),
-            "message": "文件上传成功",
+            "message": "Document uploaded successfully.",
         }
         log_audit(
             action="document.upload",
@@ -432,7 +436,7 @@ async def upload_document(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 
 @app.post("/api/v1/data/upload")
@@ -441,7 +445,7 @@ async def upload_data_file(
     file: UploadFile = File(...),
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """上传数据文件（CSV、Excel等）"""
+    """Upload a data file (CSV, Excel, JSON, or TXT)."""
     try:
         allowed_extensions = (".csv", ".xlsx", ".xls", ".json", ".txt")
         content, safe_name = await validate_and_buffer_upload(
@@ -458,7 +462,7 @@ async def upload_data_file(
             "sanitized_filename": safe_name,
             "size": len(content),
             "file_type": os.path.splitext(file.filename)[1].lower(),
-            "message": "数据文件上传成功",
+            "message": "Data file uploaded successfully.",
         }
         log_audit(
             action="data.upload",
@@ -482,7 +486,7 @@ async def upload_data_file(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"数据文件上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Data upload failed: {str(e)}")
 
 
 @app.post("/api/v1/rag/query")
@@ -490,9 +494,11 @@ async def upload_data_file(
 async def rag_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """RAG查询接口"""
+    """Run a RAG query and return answer plus retrieval metadata."""
     try:
-        rag = get_rag_engine()  # 使用lazy loading获取RAG引擎
+        ensure_rag_english_query(request.question, field="question")
+
+        rag = get_rag_engine()
         cache_hit = query_cache.get(
             tenant.tenant_id if tenant else settings.default_tenant_id,
             request.question,
@@ -538,6 +544,14 @@ async def rag_query(
             },
         )
         return result
+    except HTTPException as exc:
+        log_audit(
+            action="rag.query",
+            tenant=tenant,
+            status="error",
+            detail={"error": str(exc.detail)},
+        )
+        raise
     except Exception as e:
         log_audit(
             action="rag.query",
@@ -545,7 +559,11 @@ async def rag_query(
             status="error",
             detail={"error": str(e)},
         )
-        return {"error": str(e), "question": request.question, "answer": "系统错误，请查看日志"}
+        return {
+            "error": str(e),
+            "question": request.question,
+            "answer": "Unable to process this query due to an internal error.",
+        }
 
 
 @app.post("/api/v1/unified/query")
@@ -553,7 +571,7 @@ async def rag_query(
 async def unified_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """统一查询接口 - 融合RAG和代码分析"""
+    """Run the unified orchestrator query pipeline."""
     try:
         orchestrator = get_unified_orchestrator()
         enforce_memory_guard("unified.query")
@@ -592,7 +610,7 @@ async def unified_query(
 async def execute_code(
     request: CodeExecutionRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """代码执行接口"""
+    """Execute user-provided code in the configured runtime."""
     try:
         from backend.tools.code_execution import code_execution_tool
 
@@ -626,7 +644,7 @@ async def execute_code(
 async def validate_code(
     request: Dict[str, str], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """代码验证接口"""
+    """Validate code syntax and security constraints."""
     try:
         from backend.tools.code_execution import code_validation_tool
 
@@ -658,7 +676,7 @@ async def validate_code(
 async def analyze_data(
     request: DataAnalysisRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """数据分析接口"""
+    """Run data analysis on an uploaded dataset."""
     try:
         from backend.tools.data_analysis import data_analysis_tool
 
@@ -712,7 +730,7 @@ async def analyze_data(
 async def preprocess_data(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """数据预处理接口"""
+    """Apply data preprocessing operations."""
     try:
         from backend.tools.data_analysis import data_preprocessing_tool
 
@@ -744,7 +762,7 @@ async def preprocess_data(
 async def generate_visualization(
     request: VisualizationRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """可视化生成接口"""
+    """Generate a visualization from uploaded data."""
     try:
         from backend.tools.visualization import visualization_tool
 
@@ -783,7 +801,7 @@ async def generate_visualization(
 async def generate_advanced_visualization(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """高级可视化接口"""
+    """Generate advanced visualizations using composite settings."""
     try:
         from backend.tools.visualization import advanced_visualization_tool
 
@@ -815,7 +833,7 @@ async def generate_advanced_visualization(
 async def generate_dashboard(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """仪表板生成接口"""
+    """Generate dashboard artifacts for uploaded datasets."""
     try:
         from backend.tools.visualization import dashboard_generation_tool
 
@@ -847,11 +865,11 @@ async def generate_dashboard(
 async def get_visualization_file(
     filename: str, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """获取可视化文件"""
+    """Download a generated visualization file."""
     try:
         safe_name = os.path.basename(filename)
         if safe_name != filename:
-            raise HTTPException(status_code=400, detail="非法的文件名")
+            raise HTTPException(status_code=400, detail="Invalid file name.")
 
         file_path = os.path.join(TEMP_DATA_ROOT, safe_name)
         if os.path.exists(file_path):
@@ -869,7 +887,7 @@ async def get_visualization_file(
             status="error",
             detail={"filename": safe_name, "reason": "not_found"},
         )
-        raise HTTPException(status_code=404, detail="文件不存在")
+        raise HTTPException(status_code=404, detail="Visualization file not found.")
     except HTTPException:
         raise
     except Exception as e:
@@ -879,7 +897,9 @@ async def get_visualization_file(
             status="error",
             detail={"filename": filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"文件获取失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve visualization: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

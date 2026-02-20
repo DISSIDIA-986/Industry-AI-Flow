@@ -10,6 +10,7 @@ from backend.services.demo_mode_service import (
     DEMO_MODE_LIVE_HYBRID,
     get_demo_mode_service,
 )
+from backend.services.language_policy import RAG_CHINESE_QUERY_UNSUPPORTED
 
 
 class _FakeWorkflowRunner:
@@ -164,3 +165,22 @@ async def test_workflow_query_records_audit_and_metrics(monkeypatch):
     assert recorded["audit"][0]["action"] == "workflow.query"
     assert recorded["metrics"]
     assert recorded["metrics"][0]["status"] == "success"
+
+
+@pytest.mark.asyncio
+async def test_workflow_query_rejects_chinese_input():
+    app = FastAPI()
+    app.include_router(router)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        resp = await client.post(
+            "/api/v1/workflow/query",
+            json={"query": "请帮我分析成本风险"},
+        )
+
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["code"] == RAG_CHINESE_QUERY_UNSUPPORTED
+    assert "English" in detail["message"]

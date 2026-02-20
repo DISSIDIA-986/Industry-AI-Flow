@@ -3,7 +3,7 @@
 # ==========================================
 # Simplifies common development and deployment tasks
 
-.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-demo-smoke-live-gate test-data-analysis-gate test-prompt-baseline-gate test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint capstone-env-setup capstone-env-check fullstack-up fullstack-down fullstack-smoke test-construction-rag-e2e rebuild-construction-kb test-construction-rag-full check-structure
+.PHONY: help install dev-setup test lint format clean docker-build docker-run docs examples test-comprehensive utilities test-phase1-gate test-kpi-gate test-rollback-rehearsal test-schema-rehearsal test-observability-replay test-legacy-regression test-cost-estimation-gate test-demo-mode-gate test-demo-smoke test-demo-smoke-gate test-demo-smoke-live-gate test-data-analysis-gate test-prompt-baseline-gate test-language-compliance test-release-gate export-prompt-catalog prompt-admin prompt-admin-demo frontend-install frontend-dev frontend-build frontend-lint test-frontend-layout-nav-gate capstone-env-setup capstone-env-check fullstack-up fullstack-down fullstack-smoke test-construction-rag-e2e rebuild-construction-kb test-construction-rag-full check-structure
 
 # Default target
 .DEFAULT_GOAL := help
@@ -265,7 +265,13 @@ test-data-analysis-gate: ## Run data-analysis runtime/contract gate
 			tests/unit/test_no_absolute_paths_in_tests.py \
 			tests/integration/test_data_analysis_runtime_gate.py
 
+test-language-compliance: ## Enforce runtime English-only policy for frontend/backend
+	@echo "🌐 Running runtime language compliance gate..."
+	@PYTHON_BIN=$$(if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi); \
+	$$PYTHON_BIN scripts/testing/check_runtime_english_compliance.py
+
 test-release-gate: ## Run end-to-end release gates (KPI + rollback + schema + replay + legacy)
+	@$(MAKE) test-language-compliance
 	@$(MAKE) test-prompt-baseline-gate
 	@$(MAKE) test-cost-estimation-gate
 	@$(MAKE) test-demo-mode-gate
@@ -415,6 +421,10 @@ frontend-lint: ## Run frontend lint checks
 frontend-build: ## Build frontend for production
 	@echo "🏗️ Building frontend..."
 	cd frontend && npm run build
+
+test-frontend-layout-nav-gate: ## Run frontend Playwright layout/navbar regression gate (mock + live API)
+	@echo "🧭 Running frontend layout/navbar regression gate..."
+	bash scripts/testing/run_frontend_layout_nav_gate.sh
 
 run-prod: ## Run application in production mode
 	@echo "🏭 Running application in production mode..."
