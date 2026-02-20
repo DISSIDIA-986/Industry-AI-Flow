@@ -17,6 +17,7 @@ from backend.observability.workflow_metrics import (
 )
 from backend.services.audit_logger import audit_logger
 from backend.services.demo_mode_service import get_demo_mode_service
+from backend.services.language_policy import ensure_rag_english_query
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["workflow"])
 logger = logging.getLogger(__name__)
@@ -190,6 +191,8 @@ async def workflow_query(
     request: WorkflowQueryRequest,
     workflow: WorkflowRunner = Depends(get_workflow_runner),
 ) -> WorkflowQueryResponse:
+    ensure_rag_english_query(request.query, field="query")
+
     started = asyncio.get_running_loop().time()
     trace_id = str(uuid4())
     session_id = request.session_id or trace_id

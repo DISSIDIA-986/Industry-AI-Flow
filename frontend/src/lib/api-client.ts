@@ -50,8 +50,18 @@ function buildRuntimeHeaders(config: RuntimeAppConfig = {}, extraHeaders?: Heade
 async function parseError(response: Response): Promise<string> {
   try {
     const payload = await response.json()
-    if (payload?.detail) {
-      return String(payload.detail)
+    const detail = payload?.detail
+    if (typeof detail === 'string') {
+      return detail
+    }
+    if (detail && typeof detail === 'object') {
+      if (typeof detail.message === 'string') {
+        return detail.message
+      }
+      return JSON.stringify(detail)
+    }
+    if (typeof payload?.message === 'string') {
+      return payload.message
     }
     return JSON.stringify(payload)
   } catch {
