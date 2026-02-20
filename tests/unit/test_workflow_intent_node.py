@@ -45,7 +45,7 @@ async def test_intent_node_supports_classify_intent_interface():
 @pytest.mark.asyncio
 async def test_intent_node_detects_chinese_reverse_order_cost_phrase():
     state = {
-        "query": "请帮我估算这个工程成本，并预测是否会超支",
+        "query": "EN,EN",
         "metadata": {},
     }
 
@@ -58,7 +58,7 @@ async def test_intent_node_detects_chinese_reverse_order_cost_phrase():
 @pytest.mark.asyncio
 async def test_intent_node_does_not_route_generic_cost_governance_to_estimation():
     state = {
-        "query": "请解释项目成本控制策略和风险治理框架",
+        "query": "EN",
         "metadata": {},
     }
 

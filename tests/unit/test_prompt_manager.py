@@ -1,7 +1,7 @@
 """
-Prompt管理服务单元测试
+PromptEN
 
-测试PromptManager的模板渲染、版本控制和A/B测试功能
+ENPromptManagerEN,ENA/BEN
 """
 
 import pytest
@@ -17,11 +17,11 @@ from backend.services.prompt_manager import (
 
 
 class TestPromptManager:
-    """PromptManager单元测试类"""
+    """PromptManagerEN"""
 
     @pytest.fixture
     def mock_db_pool(self):
-        """创建模拟数据库连接池"""
+        """EN"""
         pool = Mock()
         conn = Mock()
         pool.acquire.return_value.__aenter__.return_value = conn
@@ -29,22 +29,22 @@ class TestPromptManager:
 
     @pytest.fixture
     def manager(self, mock_db_pool):
-        """创建Prompt管理器实例"""
+        """ENPromptEN"""
         return PromptManager(mock_db_pool)
 
     def test_initialization(self, manager):
-        """测试初始化"""
+        """EN"""
         assert manager is not None
         assert hasattr(manager, '_cache')
         assert hasattr(manager, '_jinja_env')
-        # 验证使用SandboxedEnvironment
+        # ENSandboxedEnvironment
         from jinja2 import SandboxedEnvironment
         assert isinstance(manager._jinja_env, SandboxedEnvironment)
 
     @pytest.mark.asyncio
     async def test_get_prompt_from_cache(self, manager):
-        """测试从缓存获取Prompt"""
-        # 模拟缓存命中
+        """ENPrompt"""
+        # EN
         prompt_info = PromptInfo(
             id="1",
             name="test_prompt",
@@ -65,7 +65,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_basic(self, manager):
-        """测试基本模板渲染"""
+        """EN"""
         template = "Hello {{ name }}!"
         variables = {"name": "World"}
         
@@ -75,7 +75,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_multiple_variables(self, manager):
-        """测试多变量模板渲染"""
+        """EN"""
         template = "User: {{ username }}, Email: {{ email }}, Age: {{ age }}"
         variables = {
             "username": "test_user",
@@ -89,7 +89,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_with_conditionals(self, manager):
-        """测试条件语句渲染"""
+        """EN"""
         template = "{% if show_greeting %}Hello!{% else %}Goodbye!{% endif %}"
         
         result1 = await manager._render_template(template, {"show_greeting": True})
@@ -100,7 +100,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_with_loops(self, manager):
-        """测试循环渲染"""
+        """EN"""
         template = "{% for item in items %}{{ item }} {% endfor %}"
         variables = {"items": ["a", "b", "c"]}
         
@@ -110,7 +110,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_with_filters(self, manager):
-        """测试过滤器使用"""
+        """EN"""
         template = "{{ text|upper }}"
         variables = {"text": "hello"}
         
@@ -120,17 +120,17 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_render_template_missing_variable(self, manager):
-        """测试缺失变量处理"""
+        """EN"""
         template = "Hello {{ name }}!"
-        variables = {}  # 缺少name变量
+        variables = {}  # ENnameEN
         
-        # Jinja2默认会渲染为空字符串
+        # Jinja2EN
         result = await manager._render_template(template, variables)
         assert result == "Hello !"
 
     @pytest.mark.asyncio
     async def test_render_template_with_none_value(self, manager):
-        """测试None值处理"""
+        """ENNoneEN"""
         template = "Value: {{ value }}"
         variables = {"value": None}
         
@@ -139,7 +139,7 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_extract_variables(self, manager):
-        """测试变量提取"""
+        """EN"""
         template = "Hello {{ name }}, your email is {{ email }}"
         
         variables = await manager._extract_variables(template)
@@ -149,39 +149,39 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_sandboxed_template_security(self, manager):
-        """测试沙箱模板安全性"""
-        # 尝试执行危险操作（应该被沙箱阻止）
+        """EN"""
+        # EN(EN)
         dangerous_templates = [
-            "{{ ''.__class__.__mro__[1].__subclasses__()[40] }}",  # 尝试访问危险类
-            "{{ config.items() }}",  # 尝试访问配置
-            "{{ ''.__class__.__base__ }}",  # 尝试访问基类
+            "{{ ''.__class__.__mro__[1].__subclasses__()[40] }}",  # EN
+            "{{ config.items() }}",  # EN
+            "{{ ''.__class__.__base__ }}",  # EN
         ]
         
         for template in dangerous_templates:
             try:
                 result = await manager._render_template(template, {})
-                # 沙箱应该阻止或返回安全结果
+                # EN
                 assert "__class__" not in result or "Sandboxed" in str(result)
             except Exception as e:
-                # 沙箱应该抛出安全异常
+                # EN
                 assert "security" in str(e).lower() or "sandbox" in str(e).lower() or "blocked" in str(e).lower()
 
     @pytest.mark.asyncio
     async def test_autoescape_enabled(self, manager):
-        """测试自动转义启用"""
+        """EN"""
         template = "User input: {{ user_input }}"
         variables = {"user_input": "<script>alert('xss')</script>"}
         
         result = await manager._render_template(template, variables)
         
-        # 验证HTML被转义
+        # ENHTMLEN
         assert "<script>" not in result
         assert "&lt;script&gt;" in result or "script" not in result
 
     @pytest.mark.asyncio
     async def test_cache_expiration(self, manager):
-        """测试缓存过期"""
-        # 添加过期缓存
+        """EN"""
+        # EN
         prompt_info = PromptInfo(
             id="1",
             name="test",
@@ -193,17 +193,17 @@ class TestPromptManager:
             updated_at=datetime.now()
         )
         
-        # 设置已过期的时间
+        # EN
         expired_time = datetime.now() - timedelta(seconds=1)
         manager._cache["test:test:1"] = (prompt_info, expired_time)
         
-        # 缓存应该过期，从数据库获取（这里会失败因为没有数据库）
-        # 主要验证缓存过期逻辑
+        # EN,EN(EN)
+        # EN
         assert manager._cache["test:test:1"][1] < datetime.now()
 
     @pytest.mark.asyncio
     async def test_cache_tenant_isolation(self, manager):
-        """测试租户缓存隔离"""
+        """EN"""
         prompt_info1 = PromptInfo(
             id="1",
             name="shared",
@@ -226,11 +226,11 @@ class TestPromptManager:
             updated_at=datetime.now()
         )
         
-        # 为不同租户缓存相同名称的Prompt
+        # ENPrompt
         manager._cache["tenant1:test:1"] = (prompt_info1, datetime.now() + timedelta(minutes=5))
         manager._cache["tenant2:test:1"] = (prompt_info2, datetime.now() + timedelta(minutes=5))
         
-        # 验证租户隔离
+        # EN
         cached1 = manager._cache.get("tenant1:test:1")
         cached2 = manager._cache.get("tenant2:test:1")
         
@@ -240,7 +240,7 @@ class TestPromptManager:
         assert cached2[0].template == "Tenant2"
 
     def test_prompt_info_dataclass(self):
-        """测试PromptInfo数据类"""
+        """ENPromptInfoEN"""
         now = datetime.now()
         info = PromptInfo(
             id="1",
@@ -261,23 +261,23 @@ class TestPromptManager:
         assert info.metadata == {"key": "value"}
 
     def test_prompt_variable_dataclass(self):
-        """测试PromptVariable数据类"""
+        """ENPromptVariableEN"""
         var = PromptVariable(
             name="username",
             type="string",
             required=True,
             default_value=None,
-            description="用户名"
+            description="EN"
         )
         
         assert var.name == "username"
         assert var.type == "string"
         assert var.required is True
-        assert var.description == "用户名"
+        assert var.description == "EN"
 
     @pytest.mark.asyncio
     async def test_concurrent_template_rendering(self, manager):
-        """测试并发模板渲染"""
+        """EN"""
         import threading
         import asyncio
         
@@ -292,14 +292,14 @@ class TestPromptManager:
             except Exception as e:
                 errors.append(e)
         
-        # 创建100个并发渲染任务
+        # EN100EN
         tasks = [render_concurrently(i) for i in range(100)]
         await asyncio.gather(*tasks)
         
-        # 验证没有错误
-        assert len(errors) == 0, f"并发渲染错误: {errors}"
+        # EN
+        assert len(errors) == 0, f"EN: {errors}"
         
-        # 验证所有渲染结果正确
+        # EN
         assert len(results) == 100
         for i, result in enumerate(results):
             assert result == f"Hello User{i}!"
@@ -315,13 +315,13 @@ class TestPromptManager:
         ("{{ text|capitalize }}", {"text": "hello"}, "Hello"),
     ])
     async def test_template_rendering_parametrized(self, manager, template, variables, expected):
-        """参数化测试模板渲染"""
+        """EN"""
         result = await manager._render_template(template, variables)
         assert result == expected
 
     @pytest.mark.asyncio
     async def test_template_with_newlines(self, manager):
-        """测试包含换行的模板"""
+        """EN"""
         template = """
         Line 1: {{ line1 }}
         Line 2: {{ line2 }}
@@ -341,57 +341,57 @@ class TestPromptManager:
 
     @pytest.mark.asyncio
     async def test_template_with_special_characters(self, manager):
-        """测试特殊字符处理"""
+        """EN"""
         template = "Special: {{ chars }}"
         variables = {"chars": "!@#$%^&*()[]{}|\\:;\"'<>?,./"}
         
         result = await manager._render_template(template, variables)
         
         assert "!@#$%^&*()" in result
-        # 验证特殊字符被正确处理
+        # EN
 
     @pytest.mark.asyncio
     async def test_template_with_unicode(self, manager):
-        """测试Unicode支持"""
-        template = "中文: {{ chinese }}, Emoji: {{ emoji }}"
+        """ENUnicodeEN"""
+        template = "EN: {{ chinese }}, Emoji: {{ emoji }}"
         variables = {
-            "chinese": "测试",
+            "chinese": "EN",
             "emoji": "😀🎉"
         }
         
         result = await manager._render_template(template, variables)
         
-        assert "中文: 测试" in result
+        assert "EN: EN" in result
         assert "Emoji: 😀🎉" in result
 
     @pytest.mark.asyncio
     async def test_trim_blocks_enabled(self, manager):
-        """测试trim_blocks选项"""
-        # 验证trim_blocks启用（在初始化时设置）
+        """ENtrim_blocksEN"""
+        # ENtrim_blocksEN(EN)
         template = "{% if show %}\n  Content\n{% endif %}"
         variables = {"show": True}
         
         result = await manager._render_template(template, variables)
         
-        # trim_blocks应该去除第一个换行符后的换行
+        # trim_blocksEN
         assert "Content" in result
 
     @pytest.mark.asyncio
     async def test_lstrip_blocks_enabled(self, manager):
-        """测试lstrip_blocks选项"""
-        # 验证lstrip_blocks启用（在初始化时设置）
+        """ENlstrip_blocksEN"""
+        # ENlstrip_blocksEN(EN)
         template = "  {% if show %}Content{% endif %}"
         variables = {"show": True}
         
         result = await manager._render_template(template, variables)
         
-        # lstrip_blocks应该去除标签前的空格
+        # lstrip_blocksEN
         assert result.startswith("Content")
 
     @pytest.mark.asyncio
     async def test_template_injection_prevention(self, manager):
-        """测试模板注入防护"""
-        # 尝试注入Jinja2代码
+        """EN"""
+        # ENJinja2EN
         malicious_inputs = [
             "{{ ''.__class__ }}",
             "{{ config }}",
@@ -402,13 +402,13 @@ class TestPromptManager:
         for malicious_input in malicious_inputs:
             try:
                 result = await manager._render_template(malicious_input, {})
-                # 沙箱应该阻止危险操作
-                # 结果不应该包含敏感类名或危险信息
+                # EN
+                # EN
                 assert "module" not in result.lower()
                 assert "class" not in result.lower() or len(result) < 100
             except (SecurityError, AttributeError, TypeError):
-                # 沙箱应该抛出异常
+                # EN
                 pass
             except Exception as e:
-                # 其他异常也可接受（沙箱阻止）
+                # EN(EN)
                 pass

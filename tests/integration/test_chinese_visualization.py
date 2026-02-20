@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-测试中文字体支持的可视化分析
+EN
 """
 
 import os
@@ -13,58 +13,58 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-# 添加项目路径
+# EN
 sys.path.append(str(Path(__file__).parent))
 
-# 导入中文字体支持
+# EN
 try:
     from backend.utils.matplotlib_chinese_support import setup_chinese_matplotlib
 
     setup_chinese_matplotlib()
-    print("✅ 中文字体支持已启用")
+    print("✅ EN")
 except ImportError:
-    print("⚠️ 中文字体支持模块未找到，使用备用方案")
+    print("⚠️ EN,EN")
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 
 def test_chinese_visualization():
-    """测试中文可视化功能"""
+    """EN"""
     print("=" * 60)
-    print("🇨🇳 测试中文字体可视化功能")
+    print("🇨🇳 EN")
     print("=" * 60)
 
-    # 加载数据
+    # EN
     data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
-    print(f"📊 数据加载成功: {df.shape}")
+    print(f"📊 EN: {df.shape}")
 
-    # 创建输出目录
+    # EN
     output_dir = Path("chinese_visualization_output")
     output_dir.mkdir(exist_ok=True)
 
     generated_charts = []
 
-    # 图表1: 房价分布分析（中文标题和标签）
+    # EN1: EN(EN)
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
     plt.hist(df["price"], bins=30, alpha=0.7, color="skyblue", edgecolor="black")
-    plt.title("房价分布直方图", fontsize=14, fontweight="bold")
-    plt.xlabel("房价（卢比）", fontsize=12)
-    plt.ylabel("频次", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
+    plt.xlabel("EN(EN)", fontsize=12)
+    plt.ylabel("EN", fontsize=12)
 
     plt.subplot(1, 3, 2)
     plt.boxplot(df["price"])
-    plt.title("房价箱线图", fontsize=14, fontweight="bold")
-    plt.ylabel("房价（卢比）", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
+    plt.ylabel("EN(EN)", fontsize=12)
 
     plt.subplot(1, 3, 3)
-    # 房价分档分析
+    # EN
     price_bins = [0, 3000000, 5000000, 7000000, 10000000, float("inf")]
-    price_labels = ["经济型", "舒适型", "中档型", "高档型", "豪华型"]
+    price_labels = ["EN", "EN", "EN", "EN", "EN"]
     df["price_category"] = pd.cut(
         df["price"], bins=price_bins, labels=price_labels, right=False
     )
@@ -74,38 +74,38 @@ def test_chinese_visualization():
     plt.bar(
         category_counts.index, category_counts.values, color=colors, edgecolor="black"
     )
-    plt.title("房价分档分布", fontsize=14, fontweight="bold")
-    plt.xlabel("房价档次", fontsize=12)
-    plt.ylabel("房屋数量", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN", fontsize=12)
     plt.xticks(rotation=15)
 
     plt.tight_layout()
-    chart1 = output_dir / "房价分布分析_中文.png"
+    chart1 = output_dir / "EN_EN.png"
     plt.savefig(chart1, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart1)
-    print("✅ 房价分布图已生成（中文标题）")
+    print("✅ EN(EN)")
 
-    # 图表2: 房屋特征与房价关系
+    # EN2: EN
     plt.figure(figsize=(16, 10))
 
-    # 面积-价格关系
+    # EN-EN
     plt.subplot(2, 3, 1)
     plt.scatter(df["area"], df["price"], alpha=0.6, color="coral", edgecolor="black")
-    plt.xlabel("房屋面积（平方英尺）", fontsize=12)
-    plt.ylabel("房价（卢比）", fontsize=12)
-    plt.title("面积-价格关系", fontsize=14, fontweight="bold")
+    plt.xlabel("EN(EN)", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN-EN", fontsize=14, fontweight="bold")
 
-    # 卧室数量与平均价格
+    # EN
     plt.subplot(2, 3, 2)
     bedroom_avg = df.groupby("bedrooms")["price"].mean()
     bars = plt.bar(
         bedroom_avg.index, bedroom_avg.values, color="lightblue", edgecolor="black"
     )
-    plt.xlabel("卧室数量", fontsize=12)
-    plt.ylabel("平均房价（卢比）", fontsize=12)
-    plt.title("卧室数量与平均价格", fontsize=14, fontweight="bold")
-    # 添加数值标签
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -116,19 +116,19 @@ def test_chinese_visualization():
             va="bottom",
         )
 
-    # 装修状态与价格
+    # EN
     plt.subplot(2, 3, 3)
     furnish_avg = df.groupby("furnishingstatus")["price"].mean()
-    furnish_labels = {"furnished": "精装修", "semi-furnished": "半装修", "unfurnished": "毛坯房"}
+    furnish_labels = {"furnished": "EN", "semi-furnished": "EN", "unfurnished": "EN"}
     furnish_avg.index = furnish_avg.index.map(furnish_labels)
     colors_furnish = ["#FF6B6B", "#4ECDC4", "#45B7D1"]
     bars = plt.bar(
         furnish_avg.index, furnish_avg.values, color=colors_furnish, edgecolor="black"
     )
-    plt.xlabel("装修状态", fontsize=12)
-    plt.ylabel("平均房价（卢比）", fontsize=12)
-    plt.title("装修状态与平均价格", fontsize=14, fontweight="bold")
-    # 添加数值标签
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -139,10 +139,10 @@ def test_chinese_visualization():
             va="bottom",
         )
 
-    # 是否临主路与价格
+    # EN
     plt.subplot(2, 3, 4)
     mainroad_avg = df.groupby("mainroad")["price"].mean()
-    mainroad_labels = {"yes": "临主路", "no": "不临主路"}
+    mainroad_labels = {"yes": "EN", "no": "EN"}
     mainroad_avg.index = mainroad_avg.index.map(mainroad_labels)
     colors_mainroad = ["#96CEB4", "#FFEAA7"]
     bars = plt.bar(
@@ -151,9 +151,9 @@ def test_chinese_visualization():
         color=colors_mainroad,
         edgecolor="black",
     )
-    plt.xlabel("地理位置", fontsize=12)
-    plt.ylabel("平均房价（卢比）", fontsize=12)
-    plt.title("地理位置与平均价格", fontsize=14, fontweight="bold")
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -164,16 +164,16 @@ def test_chinese_visualization():
             va="bottom",
         )
 
-    # 空调配置与价格
+    # EN
     plt.subplot(2, 3, 5)
     ac_avg = df.groupby("airconditioning")["price"].mean()
-    ac_labels = {"yes": "有空调", "no": "无空调"}
+    ac_labels = {"yes": "EN", "no": "EN"}
     ac_avg.index = ac_avg.index.map(ac_labels)
     colors_ac = ["#FF6B6B", "#DDA0DD"]
     bars = plt.bar(ac_avg.index, ac_avg.values, color=colors_ac, edgecolor="black")
-    plt.xlabel("空调配置", fontsize=12)
-    plt.ylabel("平均房价（卢比）", fontsize=12)
-    plt.title("空调配置与平均价格", fontsize=14, fontweight="bold")
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -184,15 +184,15 @@ def test_chinese_visualization():
             va="bottom",
         )
 
-    # 车位数量与价格
+    # EN
     plt.subplot(2, 3, 6)
     parking_avg = df.groupby("parking")["price"].mean()
     bars = plt.bar(
         parking_avg.index, parking_avg.values, color="lightgreen", edgecolor="black"
     )
-    plt.xlabel("停车位数量", fontsize=12)
-    plt.ylabel("平均房价（卢比）", fontsize=12)
-    plt.title("停车位数量与平均价格", fontsize=14, fontweight="bold")
+    plt.xlabel("EN", fontsize=12)
+    plt.ylabel("EN(EN)", fontsize=12)
+    plt.title("EN", fontsize=14, fontweight="bold")
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -204,37 +204,37 @@ def test_chinese_visualization():
         )
 
     plt.tight_layout()
-    chart2 = output_dir / "房屋特征价格关系_中文.png"
+    chart2 = output_dir / "EN_EN.png"
     plt.savefig(chart2, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart2)
-    print("✅ 房屋特征价格关系图已生成（中文标签）")
+    print("✅ EN(EN)")
 
-    # 图表3: 特征相关性热力图
+    # EN3: EN
     plt.figure(figsize=(12, 10))
 
-    # 准备中文特征名映射
+    # EN
     feature_names = {
-        "price": "房价",
-        "area": "面积",
-        "bedrooms": "卧室数",
-        "bathrooms": "浴室数",
-        "stories": "楼层数",
-        "mainroad": "临主路",
-        "guestroom": "客房",
-        "basement": "地下室",
-        "hotwaterheating": "热水供应",
-        "airconditioning": "空调",
-        "parking": "停车位",
-        "prefarea": "优选区域",
-        "furnishingstatus": "装修状态",
+        "price": "EN",
+        "area": "EN",
+        "bedrooms": "EN",
+        "bathrooms": "EN",
+        "stories": "EN",
+        "mainroad": "EN",
+        "guestroom": "EN",
+        "basement": "EN",
+        "hotwaterheating": "EN",
+        "airconditioning": "EN",
+        "parking": "EN",
+        "prefarea": "EN",
+        "furnishingstatus": "EN",
     }
 
-    # 选择数值特征进行相关性分析
+    # EN
     numeric_features = ["price", "area", "bedrooms", "bathrooms", "stories", "parking"]
     correlation_matrix = df[numeric_features].corr()
 
-    # 重命名索引和列名
+    # EN
     correlation_matrix.index = [
         feature_names.get(col, col) for col in correlation_matrix.index
     ]
@@ -254,19 +254,19 @@ def test_chinese_visualization():
         fmt=".3f",
         annot_kws={"size": 10},
     )
-    plt.title("房屋特征相关性热力图", fontsize=16, fontweight="bold", pad=20)
+    plt.title("EN", fontsize=16, fontweight="bold", pad=20)
     plt.tight_layout()
 
-    chart3 = output_dir / "房屋特征相关性热力图_中文.png"
+    chart3 = output_dir / "EN_EN.png"
     plt.savefig(chart3, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart3)
-    print("✅ 相关性热力图已生成（中文标签）")
+    print("✅ EN(EN)")
 
-    # 图表4: 综合分析仪表板
+    # EN4: EN
     plt.figure(figsize=(20, 12))
 
-    # 左上：价格分布和统计
+    # EN:EN
     plt.subplot(2, 4, 1)
     plt.hist(df["price"], bins=20, alpha=0.7, color="lightcoral", edgecolor="black")
     plt.axvline(
@@ -274,14 +274,14 @@ def test_chinese_visualization():
         color="red",
         linestyle="--",
         linewidth=2,
-        label=f'平均值: {df["price"].mean():,.0f}',
+        label=f'EN: {df["price"].mean():,.0f}',
     )
-    plt.xlabel("房价（卢比）")
-    plt.ylabel("频次")
-    plt.title("房价分布", fontweight="bold")
+    plt.xlabel("EN(EN)")
+    plt.ylabel("EN")
+    plt.title("EN", fontweight="bold")
     plt.legend()
 
-    # 右上：面积分布
+    # EN:EN
     plt.subplot(2, 4, 2)
     plt.hist(df["area"], bins=20, alpha=0.7, color="lightblue", edgecolor="black")
     plt.axvline(
@@ -289,20 +289,20 @@ def test_chinese_visualization():
         color="red",
         linestyle="--",
         linewidth=2,
-        label=f'平均值: {df["area"].mean():,.0f}',
+        label=f'EN: {df["area"].mean():,.0f}',
     )
-    plt.xlabel("面积（平方英尺）")
-    plt.ylabel("频次")
-    plt.title("面积分布", fontweight="bold")
+    plt.xlabel("EN(EN)")
+    plt.ylabel("EN")
+    plt.title("EN", fontweight="bold")
     plt.legend()
 
-    # 中上：分类特征饼图
+    # EN:EN
     plt.subplot(2, 4, 3)
     furnish_counts = df["furnishingstatus"].value_counts()
     furnish_labels_map = {
-        "furnished": "精装修",
-        "semi-furnished": "半装修",
-        "unfurnished": "毛坯房",
+        "furnished": "EN",
+        "semi-furnished": "EN",
+        "unfurnished": "EN",
     }
     labels = [furnish_labels_map.get(x, x) for x in furnish_counts.index]
     colors = ["#FF6B6B", "#4ECDC4", "#45B7D1"]
@@ -314,54 +314,54 @@ def test_chinese_visualization():
         colors=colors,
         explode=explode,
     )
-    plt.title("装修状态分布", fontweight="bold")
+    plt.title("EN", fontweight="bold")
 
-    # 右上2：临主路分布
+    # EN2:EN
     plt.subplot(2, 4, 4)
     mainroad_counts = df["mainroad"].value_counts()
-    mainroad_labels_map = {"yes": "临主路", "no": "不临主路"}
+    mainroad_labels_map = {"yes": "EN", "no": "EN"}
     labels = [mainroad_labels_map.get(x, x) for x in mainroad_counts.index]
     colors = ["#96CEB4", "#FFEAA7"]
     plt.pie(mainroad_counts.values, labels=labels, autopct="%1.1f%%", colors=colors)
-    plt.title("临主路分布", fontweight="bold")
+    plt.title("EN", fontweight="bold")
 
-    # 下方左：箱线图对比
+    # EN:EN
     plt.subplot(2, 4, 5)
-    # 按装修状态的价格箱线图
+    # EN
     df.boxplot(column="price", by="furnishingstatus", ax=plt.gca())
-    plt.xlabel("装修状态")
-    plt.ylabel("房价（卢比）")
-    plt.title("不同装修状态的价格分布", fontweight="bold")
-    plt.xticks([1, 2, 3], ["精装修", "半装修", "毛坯房"])
+    plt.xlabel("EN")
+    plt.ylabel("EN(EN)")
+    plt.title("EN", fontweight="bold")
+    plt.xticks([1, 2, 3], ["EN", "EN", "EN"])
 
-    # 下方左2：卧室数vs价格
+    # EN2:ENvsEN
     plt.subplot(2, 4, 6)
     bedroom_data = [
         df[df["bedrooms"] == i]["price"].values for i in sorted(df["bedrooms"].unique())
     ]
     plt.boxplot(bedroom_data)
-    plt.xlabel("卧室数量")
-    plt.ylabel("房价（卢比）")
-    plt.title("不同卧室数的价格分布", fontweight="bold")
+    plt.xlabel("EN")
+    plt.ylabel("EN(EN)")
+    plt.title("EN", fontweight="bold")
     plt.grid(True, alpha=0.3)
 
-    # 下方右：关键统计指标
+    # EN:EN
     plt.subplot(2, 4, 7)
-    stats_text = f"""房价统计关键指标：
+    stats_text = f"""EN:
 
-样本数量: {len(df):,} 套
+EN: {len(df):,} EN
 
-价格统计:
-• 平均值: {df['price'].mean():,.0f} 卢比
-• 中位数: {df['price'].median():,.0f} 卢比
-• 标准差: {df['price'].std():,.0f} 卢比
-• 最小值: {df['price'].min():,.0f} 卢比
-• 最大值: {df['price'].max():,.0f} 卢比
+EN:
+• EN: {df['price'].mean():,.0f} EN
+• EN: {df['price'].median():,.0f} EN
+• EN: {df['price'].std():,.0f} EN
+• EN: {df['price'].min():,.0f} EN
+• EN: {df['price'].max():,.0f} EN
 
-面积统计:
-• 平均值: {df['area'].mean():,.0f} 平方英尺
-• 中位数: {df['area'].median():,.0f} 平方英尺
-• 范围: {df['area'].min():,} - {df['area'].max():,} 平方英尺
+EN:
+• EN: {df['area'].mean():,.0f} EN
+• EN: {df['area'].median():,.0f} EN
+• EN: {df['area'].min():,} - {df['area'].max():,} EN
 """
     plt.text(
         0.05,
@@ -373,24 +373,24 @@ def test_chinese_visualization():
         fontfamily="monospace",
     )
     plt.axis("off")
-    plt.title("关键统计指标", fontweight="bold")
+    plt.title("EN", fontweight="bold")
 
-    # 下方右2：市场洞察
+    # EN2:EN
     plt.subplot(2, 4, 8)
-    insights_text = f"""市场洞察总结：
+    insights_text = f"""EN:
 
-🏠 价格档次分布:
-• 经济型: {len(df[df['price'] < 3000000]):,} 套
-• 舒适型: {len(df[(df['price'] >= 3000000) & (df['price'] < 5000000)]):,} 套
-• 中档型: {len(df[(df['price'] >= 5000000) & (df['price'] < 7000000)]):,} 套
-• 高档型: {len(df[(df['price'] >= 7000000) & (df['price'] < 10000000)]):,} 套
-• 豪华型: {len(df[df['price'] >= 10000000]):,} 套
+🏠 EN:
+• EN: {len(df[df['price'] < 3000000]):,} EN
+• EN: {len(df[(df['price'] >= 3000000) & (df['price'] < 5000000)]):,} EN
+• EN: {len(df[(df['price'] >= 5000000) & (df['price'] < 7000000)]):,} EN
+• EN: {len(df[(df['price'] >= 7000000) & (df['price'] < 10000000)]):,} EN
+• EN: {len(df[df['price'] >= 10000000]):,} EN
 
-🔑 关键发现:
-• 面积与房价相关性: {df[['area', 'price']].corr().iloc[0,1]:.3f}
-• 主路房比例: {df[df['mainroad'] == 'yes'].shape[0]/len(df)*100:.1f}%
-• 精装修比例: {df[df['furnishingstatus'] == 'furnished'].shape[0]/len(df)*100:.1f}%
-• 有空调比例: {df[df['airconditioning'] == 'yes'].shape[0]/len(df)*100:.1f}%
+🔑 EN:
+• EN: {df[['area', 'price']].corr().iloc[0,1]:.3f}
+• EN: {df[df['mainroad'] == 'yes'].shape[0]/len(df)*100:.1f}%
+• EN: {df[df['furnishingstatus'] == 'furnished'].shape[0]/len(df)*100:.1f}%
+• EN: {df[df['airconditioning'] == 'yes'].shape[0]/len(df)*100:.1f}%
 """
     plt.text(
         0.05,
@@ -401,51 +401,51 @@ def test_chinese_visualization():
         verticalalignment="top",
     )
     plt.axis("off")
-    plt.title("市场洞察", fontweight="bold")
+    plt.title("EN", fontweight="bold")
 
     plt.tight_layout()
-    chart4 = output_dir / "房价综合分析仪表板_中文.png"
+    chart4 = output_dir / "EN_EN.png"
     plt.savefig(chart4, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
     generated_charts.append(chart4)
-    print("✅ 综合分析仪表板已生成（中文）")
+    print("✅ EN(EN)")
 
     return generated_charts, output_dir
 
 
 def test_chinese_text_rendering():
-    """测试中文文本渲染"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("📝 测试中文文本渲染")
+    print("📝 EN")
     print("=" * 60)
 
     plt.figure(figsize=(12, 8))
 
-    # 创建一个包含多种中文文本的图表
+    # EN
     plt.subplot(2, 2, 1)
     x = np.linspace(0, 10, 100)
     y1 = np.sin(x)
     y2 = np.cos(x)
 
-    plt.plot(x, y1, label="正弦波", linewidth=2, color="blue")
-    plt.plot(x, y2, label="余弦波", linewidth=2, color="red")
-    plt.title("三角函数图像", fontsize=14, fontweight="bold")
-    plt.xlabel("X轴（弧度）")
-    plt.ylabel("Y轴值")
+    plt.plot(x, y1, label="EN", linewidth=2, color="blue")
+    plt.plot(x, y2, label="EN", linewidth=2, color="red")
+    plt.title("EN", fontsize=14, fontweight="bold")
+    plt.xlabel("XEN(EN)")
+    plt.ylabel("YEN")
     plt.legend()
     plt.grid(True, alpha=0.3)
 
     plt.subplot(2, 2, 2)
-    categories = ["经济型", "舒适型", "中档型", "高档型", "豪华型"]
+    categories = ["EN", "EN", "EN", "EN", "EN"]
     values = [25, 30, 20, 15, 10]
     colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"]
 
     bars = plt.bar(categories, values, color=colors, edgecolor="black")
-    plt.title("房屋类型分布", fontsize=14, fontweight="bold")
-    plt.xlabel("房屋类型")
-    plt.ylabel("占比（%）")
+    plt.title("EN", fontsize=14, fontweight="bold")
+    plt.xlabel("EN")
+    plt.ylabel("EN(%)")
 
-    # 添加数值标签
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(
@@ -457,21 +457,21 @@ def test_chinese_text_rendering():
         )
 
     plt.subplot(2, 2, 3)
-    # 绘制饼图
+    # EN
     sizes = [35, 25, 20, 15, 5]
-    labels = ["一室户", "两室户", "三室户", "四室户", "五室及以上"]
+    labels = ["EN", "EN", "EN", "EN", "EN"]
     explode = (0.05, 0.05, 0.05, 0.05, 0.1)
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
 
     plt.pie(sizes, explode=explode, labels=labels, autopct="%1.1f%%", colors=colors)
-    plt.title("户型分布", fontsize=14, fontweight="bold")
+    plt.title("EN", fontsize=14, fontweight="bold")
 
     plt.subplot(2, 2, 4)
-    # 测试复杂的中文文本
+    # EN
     plt.text(
         0.5,
         0.8,
-        "中文字体测试",
+        "EN",
         ha="center",
         va="center",
         fontsize=16,
@@ -481,7 +481,7 @@ def test_chinese_text_rendering():
     plt.text(
         0.5,
         0.6,
-        "支持中文显示！",
+        "EN!",
         ha="center",
         va="center",
         fontsize=14,
@@ -491,7 +491,7 @@ def test_chinese_text_rendering():
     plt.text(
         0.5,
         0.4,
-        "包含标点符号：，。！？",
+        "EN:,.!?",
         ha="center",
         va="center",
         fontsize=12,
@@ -501,7 +501,7 @@ def test_chinese_text_rendering():
     plt.text(
         0.5,
         0.2,
-        "数字和单位：123.45万元",
+        "EN:123.45EN",
         ha="center",
         va="center",
         fontsize=12,
@@ -509,55 +509,55 @@ def test_chinese_text_rendering():
         transform=plt.gca().transAxes,
     )
 
-    plt.title("中文文本渲染测试", fontsize=14, fontweight="bold")
+    plt.title("EN", fontsize=14, fontweight="bold")
     plt.axis("off")
 
     plt.tight_layout()
 
-    # 保存图表
+    # EN
     output_dir = Path("chinese_visualization_output")
     output_dir.mkdir(exist_ok=True)
 
-    chart_path = output_dir / "中文文本渲染测试.png"
+    chart_path = output_dir / "EN.png"
     plt.savefig(chart_path, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close()
 
-    print("✅ 中文文本渲染测试完成")
+    print("✅ EN")
     return chart_path
 
 
 def main():
-    """主函数"""
-    print("🚀 开始中文字体支持测试")
-    print("🎯 验证matplotlib中文显示功能")
+    """EN"""
+    print("🚀 EN")
+    print("🎯 ENmatplotlibEN")
 
     try:
-        # 测试1: 中文可视化
+        # EN1: EN
         charts, output_dir = test_chinese_visualization()
-        print(f"\n📊 中文可视化测试完成")
-        print(f"   生成图表数量: {len(charts)}")
-        print(f"   输出目录: {output_dir}")
+        print(f"\n📊 EN")
+        print(f"   EN: {len(charts)}")
+        print(f"   EN: {output_dir}")
 
-        # 测试2: 中文文本渲染
+        # EN2: EN
         text_chart = test_chinese_text_rendering()
-        print(f"   文本渲染测试: {text_chart}")
+        print(f"   EN: {text_chart}")
 
-        # 列出生成的文件
-        print(f"\n📁 生成的文件:")
+        # EN
+        print(f"\n📁 EN:")
         all_files = list(output_dir.glob("*.png"))
         for i, file in enumerate(all_files, 1):
             file_size = file.stat().st_size
             print(f"   {i}. {file.name} ({file_size:,} bytes)")
 
-        print(f"\n🎉 中文字体支持测试成功!")
-        print("✅ 所有图表标题、标签、图例中的中文都能正确显示")
-        print("✅ 字体加载稳定，不影响绘图性能")
-        print("✅ 支持复杂中文文本渲染")
+        print(f"\n🎉 EN!")
+        print("✅ EN,EN,EN")
+        print("✅ EN,EN")
+        print("✅ EN")
 
         return True
 
     except Exception as e:
-        print(f"❌ 测试失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
 
         traceback.print_exc()

@@ -1,8 +1,8 @@
 """
-脱敏服务单元测试
+EN
 
-测试RedactionService的敏感信息识别和脱敏功能
-包含异常处理和降级策略测试
+ENRedactionServiceEN
+EN
 """
 
 import pytest
@@ -21,15 +21,15 @@ class _RaisingPattern:
 
 
 class TestRedactionService:
-    """RedactionService单元测试类"""
+    """RedactionServiceEN"""
 
     @pytest.fixture
     def service(self):
-        """创建脱敏服务实例"""
+        """EN"""
         return RedactionService()
 
     def test_redact_empty_text(self, service):
-        """测试空文本脱敏"""
+        """EN"""
         result = service.redact("")
         assert result.text == ""
         assert result.hit_count == 0
@@ -37,7 +37,7 @@ class TestRedactionService:
         assert result.replacements == {}
 
     def test_redact_no_sensitive_info(self, service):
-        """测试无敏感信息文本"""
+        """EN"""
         text = "This is a normal text without any sensitive information."
         result = service.redact(text)
         
@@ -47,7 +47,7 @@ class TestRedactionService:
         assert result.replacements == {}
 
     def test_redact_email(self, service):
-        """测试邮箱脱敏"""
+        """EN"""
         text = "Contact me at test@example.com for more information."
         result = service.redact(text)
         
@@ -58,7 +58,7 @@ class TestRedactionService:
         assert result.replacements["email"] == 1
 
     def test_redact_multiple_emails(self, service):
-        """测试多个邮箱脱敏"""
+        """EN"""
         text = "Emails: alice@company.com, bob@example.org, charlie@test.net"
         result = service.redact(text)
         
@@ -70,7 +70,7 @@ class TestRedactionService:
         assert result.replacements["email"] == 3
 
     def test_redact_chinese_phone(self, service):
-        """测试中国手机号脱敏"""
+        """EN"""
         test_cases = [
             "13800138000",
             "+8613800138000",
@@ -88,7 +88,7 @@ class TestRedactionService:
             assert "phone_cn" in result.categories
 
     def test_redact_us_phone(self, service):
-        """测试美国手机号脱敏"""
+        """EN"""
         test_cases = [
             "123-456-7890",
             "(123) 456-7890",
@@ -106,12 +106,12 @@ class TestRedactionService:
             assert "phone_us" in result.categories
 
     def test_redact_id_like_numbers(self, service):
-        """测试身份证号类数字脱敏"""
+        """EN"""
         test_cases = [
-            "123456789012345",  # 15位
-            "123456789012345678",  # 18位
-            "12345678901234567X",  # 18位带X
-            "12345678901234567x",  # 18位带x
+            "123456789012345",  # 15EN
+            "123456789012345678",  # 18EN
+            "12345678901234567X",  # 18ENX
+            "12345678901234567x",  # 18ENx
         ]
         
         for id_num in test_cases:
@@ -124,7 +124,7 @@ class TestRedactionService:
             assert "id_like" in result.categories
 
     def test_redact_ipv4(self, service):
-        """测试IPv4地址脱敏"""
+        """ENIPv4EN"""
         test_cases = [
             "192.168.1.1",
             "10.0.0.1",
@@ -142,7 +142,7 @@ class TestRedactionService:
             assert "ipv4" in result.categories
 
     def test_redact_multiple_categories(self, service):
-        """测试多种敏感信息同时脱敏"""
+        """EN"""
         text = """
         User information:
         Email: user@example.com
@@ -153,45 +153,45 @@ class TestRedactionService:
         
         result = service.redact(text)
         
-        # 验证所有敏感信息都被脱敏
+        # EN
         assert "user@example.com" not in result.text
         assert "13800138000" not in result.text
         assert "192.168.1.100" not in result.text
         assert "123456789012345678" not in result.text
         
-        # 验证替换标记
+        # EN
         assert "<REDACTED_EMAIL>" in result.text
         assert "<REDACTED_PHONE_CN>" in result.text
         assert "<REDACTED_IPV4>" in result.text
         assert "<REDACTED_ID_LIKE>" in result.text
         
-        # 验证统计
+        # EN
         assert result.hit_count == 4
         assert len(result.categories) == 4
         assert len(result.replacements) == 4
 
     def test_redact_partial_matches(self, service):
-        """测试部分匹配（不应脱敏）"""
-        # 这些不应该被匹配为敏感信息
+        """EN(EN)"""
+        # EN
         test_cases = [
-            "123",  # 太短
-            "12345678901234",  # 14位，不够15位
-            "test@example",  # 不完整的邮箱
-            "192.168.1",  # 不完整的IP
-            "1380013800",  # 10位，不是手机号
+            "123",  # EN
+            "12345678901234",  # 14EN,EN15EN
+            "test@example",  # EN
+            "192.168.1",  # ENIP
+            "1380013800",  # 10EN,EN
         ]
         
         for text in test_cases:
             result = service.redact(text)
-            assert result.text == text  # 应该保持不变
+            assert result.text == text  # EN
             assert result.hit_count == 0
 
     def test_redact_with_special_characters(self, service):
-        """测试特殊字符文本脱敏"""
+        """EN"""
         text = 'Email: "test@example.com" <test@example.com> (test@example.com)'
         result = service.redact(text)
         
-        # 邮箱应该被脱敏，但特殊字符应该保留
+        # EN,EN
         assert "test@example.com" not in result.text
         assert result.text.count("<REDACTED_EMAIL>") == 3
         assert '"' in result.text
@@ -201,33 +201,33 @@ class TestRedactionService:
         assert ')' in result.text
 
     def test_redact_unicode_text(self, service):
-        """测试Unicode文本脱敏"""
-        text = "中文邮箱：测试@例子.com，手机号：13800138000"
+        """ENUnicodeEN"""
+        text = "EN:EN@EN.com,EN:13800138000"
         result = service.redact(text)
         
-        assert "测试@例子.com" not in result.text
+        assert "EN@EN.com" not in result.text
         assert "13800138000" not in result.text
         assert "<REDACTED_EMAIL>" in result.text
         assert "<REDACTED_PHONE_CN>" in result.text
-        assert "中文邮箱：" in result.text
-        assert "手机号：" in result.text
+        assert "EN:" in result.text
+        assert "EN:" in result.text
 
     def test_redact_large_text(self, service):
-        """测试大文本脱敏性能"""
-        # 创建包含多个敏感信息的大文本
+        """EN"""
+        # EN
         base_text = "Email: user{id}@example.com, Phone: 1380013{id:04d}"
         large_text = "\n".join([base_text.format(id=i) for i in range(100)])
         
         result = service.redact(large_text)
         
-        # 验证所有敏感信息都被脱敏
-        assert result.hit_count == 200  # 100个邮箱 + 100个手机号
+        # EN
+        assert result.hit_count == 200  # 100EN + 100EN
         assert result.text.count("<REDACTED_EMAIL>") == 100
         assert result.text.count("<REDACTED_PHONE_CN>") == 100
 
     def test_redact_exception_handling(self, service):
-        """测试异常处理降级策略"""
-        # 模拟正则表达式抛出异常
+        """EN"""
+        # EN
         with patch.dict(
             service.PATTERNS,
             {"email": _RaisingPattern("Pattern error")},
@@ -236,15 +236,15 @@ class TestRedactionService:
             text = "Email: test@example.com"
             result = service.redact(text)
             
-            # 降级策略：异常时返回原始文本
+            # EN:EN
             assert result.text == text
             assert result.hit_count == 0
             assert result.categories == []
             assert result.replacements == {}
 
     def test_redact_multiple_exceptions(self, service):
-        """测试多个异常情况"""
-        # 模拟多个模式都抛出异常
+        """EN"""
+        # EN
         with patch.dict(
             service.PATTERNS,
             {
@@ -256,20 +256,20 @@ class TestRedactionService:
             text = "Email: test@example.com, Phone: 13800138000"
             result = service.redact(text)
 
-            # 降级策略：异常时返回原始文本
+            # EN:EN
             assert result.text == text
             assert result.hit_count == 0
 
     def test_redact_result_dataclass(self):
-        """测试RedactionResult数据类"""
+        """ENRedactionResultEN"""
         result = RedactionResult(
-            text="脱敏后的文本",
+            text="EN",
             hit_count=2,
             categories=["email", "phone"],
             replacements={"email": 1, "phone": 1}
         )
         
-        assert result.text == "脱敏后的文本"
+        assert result.text == "EN"
         assert result.hit_count == 2
         assert result.categories == ["email", "phone"]
         assert result.replacements == {"email": 1, "phone": 1}
@@ -284,13 +284,13 @@ class TestRedactionService:
         ("+1-123-456-7890", 1),
     ])
     def test_redact_parametrized(self, service, text, expected_hits):
-        """参数化测试不同文本"""
+        """EN"""
         result = service.redact(text)
         assert result.hit_count == expected_hits
 
     def test_redact_pattern_coverage(self, service):
-        """测试模式覆盖完整性"""
-        # 验证所有模式都被测试覆盖
+        """EN"""
+        # EN
         test_cases = {
             "email": "test@example.com",
             "phone_cn": "13800138000",

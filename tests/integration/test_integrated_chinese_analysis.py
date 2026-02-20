@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-完整的集成中文数据分析测试
-验证 RAG 数据分析节点的中文支持功能
+EN
+EN RAG EN
 """
 
 import os
@@ -14,24 +14,24 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-# 添加项目路径
+# EN
 sys.path.append(str(Path(__file__).parent))
 
-# 导入中文字体支持
+# EN
 try:
     from backend.utils.matplotlib_chinese_support import setup_chinese_matplotlib
 
     setup_chinese_matplotlib()
-    print("✅ 中文字体支持已启用")
+    print("✅ EN")
 except ImportError:
-    print("⚠️ 中文字体支持模块未找到，使用备用方案")
+    print("⚠️ EN,EN")
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 
 def generate_chinese_eda_code():
-    """生成包含中文字体支持的EDA分析代码"""
+    """ENEDAEN"""
 
     analysis_code = '''
 import pandas as pd
@@ -44,135 +44,135 @@ import sys
 import os
 warnings.filterwarnings('ignore')
 
-# 设置中文字体支持
+# EN
 try:
-    # 尝试导入中文字体支持模块
+    # EN
     if '/app/utils' not in sys.path:
         sys.path.insert(0, '/app/utils')
     import matplotlib_chinese_support
     matplotlib_chinese_support.setup_chinese_matplotlib()
-    print("✓ 已启用中文字体支持")
+    print("✓ EN")
 except ImportError:
-    # 备用方案：手动设置中文字体
+    # EN:EN
     plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
-    print("✓ 使用备用中文字体配置")
+    print("✓ EN")
 
-# 创建输出目录
+# EN
 output_dir = '/workspace/output'
 os.makedirs(output_dir, exist_ok=True)
 
 def comprehensive_housing_eda(df):
-    """全面的房价数据探索性数据分析"""
+    """EN"""
 
     print("="*60)
-    print("房价数据探索性数据分析报告")
+    print("EN")
     print("="*60)
 
-    # 1. 数据概览
-    print("\\n📊 1. 数据概览")
-    print(f"数据集形状: {df.shape}")
-    print(f"特征数量: {len(df.columns)}")
-    print(f"缺失值总数: {df.isnull().sum().sum()}")
+    # 1. EN
+    print("\\n📊 1. EN")
+    print(f"EN: {df.shape}")
+    print(f"EN: {len(df.columns)}")
+    print(f"EN: {df.isnull().sum().sum()}")
 
-    # 2. 描述性统计
-    print("\\n📈 2. 描述性统计")
+    # 2. EN
+    print("\\n📈 2. EN")
     print(df.describe())
 
-    # 3. 价格分析
-    print("\\n💰 3. 价格分析")
+    # 3. EN
+    print("\\n💰 3. EN")
 
-    # 价格分布图
+    # EN
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
     plt.hist(df['price'], bins=30, alpha=0.7, color='skyblue', edgecolor='black')
-    plt.title('房价分布直方图', fontsize=14, fontweight='bold')
-    plt.xlabel('房价（卢比）', fontsize=12)
-    plt.ylabel('频次', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
+    plt.xlabel('EN(EN)', fontsize=12)
+    plt.ylabel('EN', fontsize=12)
     plt.axvline(df['price'].mean(), color='red', linestyle='--',
-               label=f'平均值: {df["price"].mean():,.0f}')
+               label=f'EN: {df["price"].mean():,.0f}')
     plt.legend()
 
     plt.subplot(1, 3, 2)
     plt.boxplot(df['price'])
-    plt.title('房价箱线图', fontsize=14, fontweight='bold')
-    plt.ylabel('房价（卢比）', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
+    plt.ylabel('EN(EN)', fontsize=12)
 
     plt.subplot(1, 3, 3)
-    # 价格分档
+    # EN
     price_bins = [0, 3000000, 5000000, 7000000, 10000000, float('inf')]
-    price_labels = ['经济型', '舒适型', '中档型', '高档型', '豪华型']
+    price_labels = ['EN', 'EN', 'EN', 'EN', 'EN']
     df['price_category'] = pd.cut(df['price'], bins=price_bins, labels=price_labels, right=False)
     category_counts = df['price_category'].value_counts()
 
     colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
     plt.bar(category_counts.index, category_counts.values, color=colors, edgecolor='black')
-    plt.title('房价分档分布', fontsize=14, fontweight='bold')
-    plt.xlabel('房价档次', fontsize=12)
-    plt.ylabel('房屋数量', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN', fontsize=12)
     plt.xticks(rotation=15)
 
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/房价分布分析.png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(f'{output_dir}/EN.png', dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
 
-    # 4. 特征关系分析
-    print("\\n🏠 4. 特征关系分析")
+    # 4. EN
+    print("\\n🏠 4. EN")
 
     plt.figure(figsize=(16, 12))
 
-    # 面积-价格关系
+    # EN-EN
     plt.subplot(2, 3, 1)
     plt.scatter(df['area'], df['price'], alpha=0.6, color='coral', edgecolor='black')
-    plt.xlabel('房屋面积（平方英尺）', fontsize=12)
-    plt.ylabel('房价（卢比）', fontsize=12)
-    plt.title('面积-价格关系', fontsize=14, fontweight='bold')
+    plt.xlabel('EN(EN)', fontsize=12)
+    plt.ylabel('EN(EN)', fontsize=12)
+    plt.title('EN-EN', fontsize=14, fontweight='bold')
 
-    # 添加趋势线
+    # EN
     z = np.polyfit(df['area'], df['price'], 1)
     p = np.poly1d(z)
     plt.plot(df['area'], p(df['area']), "r--", alpha=0.8, linewidth=2)
 
-    # 卧室数量与价格
+    # EN
     plt.subplot(2, 3, 2)
     bedroom_avg = df.groupby('bedrooms')['price'].mean()
     bars = plt.bar(bedroom_avg.index, bedroom_avg.values, color='lightblue', edgecolor='black')
-    plt.xlabel('卧室数量', fontsize=12)
-    plt.ylabel('平均房价（卢比）', fontsize=12)
-    plt.title('卧室数量与平均价格', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN(EN)', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
 
-    # 添加数值标签
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:,.0f}', ha='center', va='bottom', fontsize=10)
 
-    # 装修状态分析
+    # EN
     plt.subplot(2, 3, 3)
     furnish_stats = df.groupby('furnishingstatus').agg({
         'price': ['mean', 'count']
     }).round(0)
 
-    furnish_labels = {'furnished': '精装修', 'semi-furnished': '半装修', 'unfurnished': '毛坯房'}
+    furnish_labels = {'furnished': 'EN', 'semi-furnished': 'EN', 'unfurnished': 'EN'}
     furnish_stats.index = furnish_stats.index.map(furnish_labels)
 
     ax = furnish_stats['price']['mean'].plot(kind='bar', color=['#FF6B6B', '#4ECDC4', '#45B7D1'],
                                                    edgecolor='black')
-    plt.xlabel('装修状态', fontsize=12)
-    plt.ylabel('平均房价（卢比）', fontsize=12)
-    plt.title('装修状态与平均价格', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN(EN)', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
 
-    # 在柱子上方添加数量标签
+    # EN
     for i, (status, row) in enumerate(furnish_stats.iterrows()):
         count = row['price']['count']
-        plt.text(i, row['price']['mean'] * 1.02, f'{count}套',
+        plt.text(i, row['price']['mean'] * 1.02, f'{count}EN',
                 ha='center', fontsize=10, fontweight='bold')
 
-    # 基础设施分析
+    # EN
     plt.subplot(2, 3, 4)
     infrastructure_features = ['mainroad', 'guestroom', 'basement', 'airconditioning', 'hotwaterheating']
-    infrastructure_labels = ['临主路', '客房', '地下室', '空调', '热水供应']
+    infrastructure_labels = ['EN', 'EN', 'EN', 'EN', 'EN']
 
     avg_prices = []
     for feature in infrastructure_features:
@@ -182,64 +182,64 @@ def comprehensive_housing_eda(df):
         avg_prices.append(premium)
 
     bars = plt.bar(infrastructure_labels, avg_prices, color='lightgreen', edgecolor='black')
-    plt.xlabel('基础设施', fontsize=12)
-    plt.ylabel('价格溢价（%）', fontsize=12)
-    plt.title('基础设施对房价的影响', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN(%)', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
     plt.xticks(rotation=15)
 
-    # 添加数值标签
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:.1f}%', ha='center', va='bottom', fontsize=10)
 
-    # 车位数分析
+    # EN
     plt.subplot(2, 3, 5)
     parking_avg = df.groupby('parking')['price'].mean()
     bars = plt.bar(parking_avg.index, parking_avg.values, color='orange', edgecolor='black')
-    plt.xlabel('停车位数量', fontsize=12)
-    plt.ylabel('平均房价（卢比）', fontsize=12)
-    plt.title('停车位数量与平均价格', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN(EN)', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
 
-    # 优选区域分析
+    # EN
     plt.subplot(2, 3, 6)
     prefarea_avg = df.groupby('prefarea')['price'].mean()
-    prefarea_labels = {'yes': '优选区域', 'no': '普通区域'}
+    prefarea_labels = {'yes': 'EN', 'no': 'EN'}
     prefarea_avg.index = prefarea_avg.index.map(prefarea_labels)
 
     bars = plt.bar(prefarea_avg.index, prefarea_avg.values,
                    color=['#96CEB4', '#FFEAA7'], edgecolor='black')
-    plt.xlabel('区域类型', fontsize=12)
-    plt.ylabel('平均房价（卢比）', fontsize=12)
-    plt.title('区域类型与平均价格', fontsize=14, fontweight='bold')
+    plt.xlabel('EN', fontsize=12)
+    plt.ylabel('EN(EN)', fontsize=12)
+    plt.title('EN', fontsize=14, fontweight='bold')
 
-    # 添加数值标签
+    # EN
     for i, bar in enumerate(bars):
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:,.0f}', ha='center', va='bottom', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/房屋特征关系分析.png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(f'{output_dir}/EN.png', dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
 
-    # 5. 相关性分析
-    print("\\n🔗 5. 相关性分析")
+    # 5. EN
+    print("\\n🔗 5. EN")
 
     plt.figure(figsize=(12, 10))
 
-    # 选择数值特征
+    # EN
     numeric_features = ['price', 'area', 'bedrooms', 'bathrooms', 'stories', 'parking']
     correlation_matrix = df[numeric_features].corr()
 
-    # 创建中文特征名映射
+    # EN
     feature_names = {
-        'price': '房价',
-        'area': '面积',
-        'bedrooms': '卧室数',
-        'bathrooms': '浴室数',
-        'stories': '楼层数',
-        'parking': '停车位'
+        'price': 'EN',
+        'area': 'EN',
+        'bedrooms': 'EN',
+        'bathrooms': 'EN',
+        'stories': 'EN',
+        'parking': 'EN'
     }
 
     correlation_matrix.index = [feature_names.get(col, col) for col in correlation_matrix.index]
@@ -249,21 +249,21 @@ def comprehensive_housing_eda(df):
     sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='coolwarm',
                 center=0, square=True, linewidths=0.5, fmt='.3f',
                 annot_kws={'size': 10})
-    plt.title('房屋特征相关性热力图', fontsize=16, fontweight='bold', pad=20)
+    plt.title('EN', fontsize=16, fontweight='bold', pad=20)
     plt.tight_layout()
 
-    plt.savefig(f'{output_dir}/特征相关性热力图.png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(f'{output_dir}/EN.png', dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
 
-    # 6. 综合洞察报告
-    print("\\n📋 6. 综合洞察报告")
+    # 6. EN
+    print("\\n📋 6. EN")
 
     insights = {
         "dataset_overview": {
             "total_records": len(df),
             "total_features": len(df.columns),
             "missing_values": int(df.isnull().sum().sum()),
-            "data_quality": "优秀" if df.isnull().sum().sum() == 0 else "需要处理"
+            "data_quality": "EN" if df.isnull().sum().sum() == 0 else "EN"
         },
         "price_analysis": {
             "mean_price": float(df['price'].mean()),
@@ -289,48 +289,48 @@ def comprehensive_housing_eda(df):
                               df[df['airconditioning'] == 'no']['price'].mean() - 1)
         },
         "visualization_files": [
-            "房价分布分析.png",
-            "房屋特征关系分析.png",
-            "特征相关性热力图.png"
+            "EN.png",
+            "EN.png",
+            "EN.png"
         ]
     }
 
-    print("📊 关键发现:")
-    print(f"   • 总记录数: {insights['dataset_overview']['total_records']:,}")
-    print(f"   • 平均房价: {insights['price_analysis']['mean_price']:,.0f} 卢比")
-    print(f"   • 价格区间: {insights['price_analysis']['price_range']['min']:,.0f} - {insights['price_analysis']['price_range']['max']:,.0f} 卢比")
-    print(f"   • 面积-房价相关性: {insights['key_correlations']['area_price_correlation']:.3f}")
-    print(f"   • 精装修溢价: {insights['market_insights']['furnished_premium']:.1%}")
-    print(f"   • 主路位置溢价: {insights['market_insights']['mainroad_premium']:.1%}")
-    print(f"   • 空调配置溢价: {insights['market_insights']['ac_premium']:.1%}")
+    print("📊 EN:")
+    print(f"   • EN: {insights['dataset_overview']['total_records']:,}")
+    print(f"   • EN: {insights['price_analysis']['mean_price']:,.0f} EN")
+    print(f"   • EN: {insights['price_analysis']['price_range']['min']:,.0f} - {insights['price_analysis']['price_range']['max']:,.0f} EN")
+    print(f"   • EN-EN: {insights['key_correlations']['area_price_correlation']:.3f}")
+    print(f"   • EN: {insights['market_insights']['furnished_premium']:.1%}")
+    print(f"   • EN: {insights['market_insights']['mainroad_premium']:.1%}")
+    print(f"   • EN: {insights['market_insights']['ac_premium']:.1%}")
 
-    # 保存分析报告
-    with open(f'{output_dir}/分析报告.json', 'w', encoding='utf-8') as f:
+    # EN
+    with open(f'{output_dir}/EN.json', 'w', encoding='utf-8') as f:
         json.dump(insights, f, indent=2, ensure_ascii=False)
 
-    print(f"\\n✅ 分析完成！")
-    print(f"📁 所有图表已保存到: {output_dir}")
-    print(f"📋 分析报告已保存到: {output_dir}/分析报告.json")
+    print(f"\\n✅ EN!")
+    print(f"📁 EN: {output_dir}")
+    print(f"📋 EN: {output_dir}/EN.json")
 
     return insights
 
-# 执行分析
+# EN
 if __name__ == "__main__":
-    # 这里会由系统动态设置数据文件路径
+    # EN
     data_file = "/workspace/data/Housing.csv"  # This path is used in Docker environment; for local testing: "test_resources/datasets/Housing.csv"
 
     try:
-        # 读取数据
+        # EN
         df = pd.read_csv(data_file)
-        print(f"✅ 数据加载成功: {df.shape}")
+        print(f"✅ EN: {df.shape}")
 
-        # 执行分析
+        # EN
         results = comprehensive_housing_eda(df)
 
-        print(f"\\n🎉 房价数据分析完成！")
+        print(f"\\n🎉 EN!")
 
     except Exception as e:
-        print(f"❌ 分析失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
         traceback.print_exc()
 '''
@@ -339,34 +339,34 @@ if __name__ == "__main__":
 
 
 def test_integrated_chinese_analysis():
-    """测试集成中文分析功能"""
+    """EN"""
     print("=" * 60)
-    print("🇨🇳 测试集成中文数据分析功能")
+    print("🇨🇳 EN")
     print("=" * 60)
 
     try:
-        # 生成包含中文支持的EDA代码
-        print("📝 生成中文EDA分析代码...")
+        # ENEDAEN
+        print("📝 ENEDAEN...")
         chinese_eda_code = generate_chinese_eda_code()
 
-        print("✅ 代码生成成功，包含以下中文支持功能:")
-        print("   • 自动中文字体配置")
-        print("   • 中文图表标题和标签")
-        print("   • 中文分析报告")
-        print("   • 中文数据洞察")
+        print("✅ EN,EN:")
+        print("   • EN")
+        print("   • EN")
+        print("   • EN")
+        print("   • EN")
 
-        # 在本地环境执行代码以验证
-        print("\n🔄 在本地环境验证代码执行...")
+        # EN
+        print("\n🔄 EN...")
 
-        # 准备本地执行环境
+        # EN
         exec_globals = {}
         exec(chinese_eda_code, exec_globals)
 
-        print("✅ 中文分析代码验证成功!")
+        print("✅ EN!")
         return True
 
     except Exception as e:
-        print(f"❌ 集成测试失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
 
         traceback.print_exc()
@@ -374,51 +374,51 @@ def test_integrated_chinese_analysis():
 
 
 def main():
-    """主函数"""
-    print("🚀 开始集成中文数据分析测试")
-    print("🎯 验证 RAG 数据分析节点的中文支持集成")
+    """EN"""
+    print("🚀 EN")
+    print("🎯 EN RAG EN")
 
     success = test_integrated_chinese_analysis()
 
     print("\n" + "=" * 60)
-    print("📊 集成测试总结")
+    print("📊 EN")
     print("=" * 60)
 
     if success:
-        print("🎉 集成中文分析测试成功!")
-        print("✅ 中文字体支持已完全集成到数据分析系统")
-        print("✅ 代码生成包含自动中文配置")
-        print("✅ 可视化图表支持中文标题和标签")
-        print("✅ 分析报告支持中文输出")
-        print("✅ Docker 环境中文支持已配置")
+        print("🎉 EN!")
+        print("✅ EN")
+        print("✅ EN")
+        print("✅ EN")
+        print("✅ EN")
+        print("✅ Docker EN")
 
-        print("\n🔧 已更新的组件:")
-        print("   • Dockerfile.data-analysis - 增强中文字体")
-        print("   • backend/tools/data_analysis.py - 集成中文支持")
-        print("   • backend/tools/iterative_code_execution.py - 中文提示")
-        print("   • backend/utils/matplotlib_chinese_support.py - 中文模块")
+        print("\n🔧 EN:")
+        print("   • Dockerfile.data-analysis - EN")
+        print("   • backend/tools/data_analysis.py - EN")
+        print("   • backend/tools/iterative_code_execution.py - EN")
+        print("   • backend/utils/matplotlib_chinese_support.py - EN")
 
-        print("\n📈 测试结果验证:")
-        print("   ✅ 图表标题: 正确显示中文")
-        print("   ✅ 轴标签: 正确显示中文")
-        print("   ✅ 图例: 正确显示中文")
-        print("   ✅ 文本注释: 正确显示中文")
-        print("   ✅ 数值标签: 正确显示中文")
-        print("   ✅ 负号显示: 正确处理")
+        print("\n📈 EN:")
+        print("   ✅ EN: EN")
+        print("   ✅ EN: EN")
+        print("   ✅ EN: EN")
+        print("   ✅ EN: EN")
+        print("   ✅ EN: EN")
+        print("   ✅ EN: EN")
 
-        print("\n🚀 系统已完全支持中文可视化!")
-        print("下一步建议:")
-        print("1. 构建 Docker 镜像测试中文环境")
-        print("2. 部署到生产环境验证中文支持")
-        print("3. 提供更多中文数据集进行测试")
-        print("4. 优化中文显示性能和样式")
+        print("\n🚀 EN!")
+        print("EN:")
+        print("1. EN Docker EN")
+        print("2. EN")
+        print("3. EN")
+        print("4. EN")
 
     else:
-        print("⚠️ 集成测试失败")
-        print("🔧 需要检查的组件:")
-        print("- 中文字体支持模块")
-        print("- 数据分析工具集成")
-        print("- Docker 环境配置")
+        print("⚠️ EN")
+        print("🔧 EN:")
+        print("- EN")
+        print("- EN")
+        print("- Docker EN")
 
     return success
 

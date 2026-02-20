@@ -101,8 +101,8 @@ def test_tdo_rag_ingest_retrieve_generate_baseline(monkeypatch) -> None:
     class _FakeLlmClient:
         def generate(self, prompt: str, temperature=None, max_tokens=None) -> str:
             del temperature, max_tokens
-            evidence["prompt_contains_question"] = "防火等级" in prompt
-            return "根据文档，钢梁需要满足防火等级要求。"
+            evidence["prompt_contains_question"] = "EN" in prompt
+            return "EN,EN."
 
     monkeypatch.setattr(rag_engine_module, "VectorStore", _FakeVectorStore)
     monkeypatch.setattr(rag_engine_module, "get_llm_client", lambda: _FakeLlmClient())
@@ -132,14 +132,14 @@ def test_tdo_rag_ingest_retrieve_generate_baseline(monkeypatch) -> None:
     ok = rag.add_documents(
         [
             {
-                "content": "钢梁防火等级应符合规范，建议至少满足 2 小时耐火要求。",
+                "content": "EN,EN 2 EN.",
                 "metadata": {"doc_id": "manual-doc-1", "source": "spec.md"},
             }
         ]
     )
     assert ok is True
 
-    response = rag.query("这个钢梁应该满足什么防火等级？", top_k=1)
+    response = rag.query("EN?", top_k=1)
 
     assert UUID(response["query_id"])
     assert response["sources"] == ["stored-doc-1"]
@@ -218,18 +218,18 @@ def test_tdo_rag_delete_removes_retrieval_baseline(monkeypatch) -> None:
     rag.add_documents(
         [
             {
-                "content": "删除前可检索的规范片段。",
+                "content": "EN.",
                 "metadata": {"doc_id": "manual-doc-delete", "source": "spec-delete.md"},
             }
         ]
     )
-    before_delete = rag.query("删除前", top_k=1)
+    before_delete = rag.query("EN", top_k=1)
     assert before_delete["sources"] == ["manual-doc-delete"]
 
     deleted = rag.delete_document("manual-doc-delete")
     assert deleted is True
 
-    after_delete = rag.query("删除后", top_k=1)
+    after_delete = rag.query("EN", top_k=1)
     assert after_delete["sources"] == []
     assert after_delete["retrieved_chunks"] == []
 

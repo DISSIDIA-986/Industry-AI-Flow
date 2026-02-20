@@ -3,8 +3,8 @@
 """
 User Feedback Impact on RAG System Testing Suite
 
-测试用户反馈对RAG系统的影响和改进效果
-包括反馈收集、系统学习、检索优化、回答质量提升等
+ENRAGEN
+EN,EN,EN,EN
 """
 
 import asyncio
@@ -22,7 +22,7 @@ import pytest
 
 
 class FeedbackType(Enum):
-    """反馈类型"""
+    """EN"""
 
     POSITIVE = "positive"
     NEGATIVE = "negative"
@@ -33,7 +33,7 @@ class FeedbackType(Enum):
 
 
 class FeedbackCategory(Enum):
-    """反馈分类"""
+    """EN"""
 
     ANSWER_QUALITY = "answer_quality"
     RELEVANCE = "relevance"
@@ -45,7 +45,7 @@ class FeedbackCategory(Enum):
 
 
 class LearningAlgorithm(Enum):
-    """学习算法类型"""
+    """EN"""
 
     REINFORCEMENT_LEARNING = "reinforcement_learning"
     GRADIENT_DESCENT = "gradient_descent"
@@ -56,7 +56,7 @@ class LearningAlgorithm(Enum):
 
 @dataclass
 class UserFeedback:
-    """用户反馈"""
+    """EN"""
 
     id: str
     query: str
@@ -74,7 +74,7 @@ class UserFeedback:
 
 @dataclass
 class RAGPerformanceMetrics:
-    """RAG性能指标"""
+    """RAGEN"""
 
     retrieval_accuracy: float = 0.0
     answer_relevance: float = 0.0
@@ -86,20 +86,20 @@ class RAGPerformanceMetrics:
 
 @dataclass
 class FeedbackTestCase:
-    """反馈测试用例"""
+    """EN"""
 
     name: str
     description: str
     feedback_scenarios: List[UserFeedback]
     learning_algorithm: LearningAlgorithm
     expected_improvement: Dict[str, float]
-    test_duration: int = 300  # 秒
+    test_duration: int = 300  # EN
     improvement_threshold: float = 0.1
 
 
 @dataclass
 class FeedbackTestResult:
-    """反馈测试结果"""
+    """EN"""
 
     test_case: str
     learning_algorithm: str
@@ -114,30 +114,30 @@ class FeedbackTestResult:
 
 
 class MockRAGSystem:
-    """模拟RAG系统"""
+    """ENRAGEN"""
 
     def __init__(self):
-        self.vector_database = {}  # 模拟向量数据库
-        self.retrieval_weights = np.random.rand(100)  # 检索权重
+        self.vector_database = {}  # EN
+        self.retrieval_weights = np.random.rand(100)  # EN
         self.generation_params = {"temperature": 0.7, "max_tokens": 2000, "top_p": 0.9}
         self.performance_history = []
         self.learning_rate = 0.01
 
     def retrieve_documents(self, query: str, top_k: int = 5) -> List[Tuple[str, float]]:
-        """检索文档"""
-        # 模拟文档检索
-        docs = [f"文档1: 关于{query}的相关信息", f"文档2: {query}的详细说明", f"文档3: {query}的补充材料"]
+        """EN"""
+        # EN
+        docs = [f"EN1: EN{query}EN", f"EN2: {query}EN", f"EN3: {query}EN"]
         scores = np.random.dirichlet(np.ones(len(docs)), size=1)[0]
         return list(zip(docs, scores.tolist()))
 
     def generate_answer(self, query: str, retrieved_docs: List[str]) -> str:
-        """生成回答"""
-        # 基于检索文档生成回答
+        """EN"""
+        # EN
         context = " ".join(retrieved_docs)
-        return f"基于相关文档，关于'{query}'的回答是：{context[:100]}..."
+        return f"EN,EN'{query}'EN:{context[:100]}..."
 
     def get_current_performance(self) -> RAGPerformanceMetrics:
-        """获取当前性能指标"""
+        """EN"""
         return RAGPerformanceMetrics(
             retrieval_accuracy=np.random.uniform(0.6, 0.9),
             answer_relevance=np.random.uniform(0.5, 0.8),
@@ -150,7 +150,7 @@ class MockRAGSystem:
     def update_from_feedback(
         self, feedback: UserFeedback, algorithm: LearningAlgorithm
     ):
-        """根据反馈更新系统"""
+        """EN"""
         if algorithm == LearningAlgorithm.REINFORCEMENT_LEARNING:
             self._reinforcement_update(feedback)
         elif algorithm == LearningAlgorithm.GRADIENT_DESCENT:
@@ -161,47 +161,47 @@ class MockRAGSystem:
             self._online_learning_update(feedback)
 
     def _reinforcement_update(self, feedback: UserFeedback):
-        """强化学习更新"""
+        """EN"""
         reward = feedback.rating
         if feedback.feedback_type == FeedbackType.POSITIVE:
             reward += 0.2
         elif feedback.feedback_type == FeedbackType.NEGATIVE:
             reward -= 0.2
 
-        # 更新检索权重
+        # EN
         self.retrieval_weights += (
             self.learning_rate * reward * np.random.randn(len(self.retrieval_weights))
         )
         self.retrieval_weights = np.clip(self.retrieval_weights, 0, 1)
 
     def _gradient_descent_update(self, feedback: UserFeedback):
-        """梯度下降更新"""
+        """EN"""
         target_quality = feedback.rating
-        current_quality = np.random.uniform(0.5, 0.8)  # 模拟当前质量
+        current_quality = np.random.uniform(0.5, 0.8)  # EN
         error = target_quality - current_quality
 
-        # 更新生成参数
+        # EN
         self.generation_params["temperature"] += self.learning_rate * error * 0.1
         self.generation_params["temperature"] = np.clip(
             self.generation_params["temperature"], 0.1, 2.0
         )
 
     def _bayesian_update(self, feedback: UserFeedback):
-        """贝叶斯优化更新"""
-        # 模拟贝叶斯更新
+        """EN"""
+        # EN
         alpha = 1 + feedback.rating * 10
         beta = 1 + (1 - feedback.rating) * 10
 
-        # 更新性能分布
+        # EN
         performance_mean = alpha / (alpha + beta)
-        # 这里可以更新系统的参数分布
+        # EN
 
     def _online_learning_update(self, feedback: UserFeedback):
-        """在线学习更新"""
-        # 立即根据反馈调整
+        """EN"""
+        # EN
         adjustment = (feedback.rating - 0.5) * self.learning_rate
 
-        # 调整检索策略
+        # EN
         if feedback.category == FeedbackCategory.RETRIEVAL_ACCURACY:
             self.retrieval_weights += adjustment * np.random.randn(
                 len(self.retrieval_weights)
@@ -210,7 +210,7 @@ class MockRAGSystem:
 
 
 class UserFeedbackRAGTester:
-    """用户反馈对RAG系统影响测试器"""
+    """ENRAGEN"""
 
     def __init__(self):
         self.rag_system = MockRAGSystem()
@@ -221,15 +221,15 @@ class UserFeedbackRAGTester:
     async def collect_feedback_batch(
         self, scenarios: List[Dict[str, Any]]
     ) -> List[UserFeedback]:
-        """批量收集反馈"""
+        """EN"""
         feedback_batch = []
 
         for scenario in scenarios:
-            # 模拟用户查询
-            query = scenario.get("query", "测试查询")
-            answer = scenario.get("answer", "测试回答")
+            # EN
+            query = scenario.get("query", "EN")
+            answer = scenario.get("answer", "EN")
 
-            # 模拟反馈生成
+            # EN
             feedback = UserFeedback(
                 id=str(uuid.uuid4()),
                 query=query,
@@ -250,17 +250,17 @@ class UserFeedbackRAGTester:
     async def simulate_learning_process(
         self, test_case: FeedbackTestCase
     ) -> FeedbackTestResult:
-        """模拟学习过程"""
+        """EN"""
         start_time = time.time()
 
-        # 获取基线性能
+        # EN
         baseline_metrics = self.rag_system.get_current_performance()
 
-        # 处理反馈并学习
+        # EN
         feedback_processed = 0
         performance_history = [baseline_metrics]
 
-        # 分批处理反馈
+        # EN
         batch_size = 10
         feedback_batches = [
             test_case.feedback_scenarios[i : i + batch_size]
@@ -270,18 +270,18 @@ class UserFeedbackRAGTester:
         convergence_start = None
 
         for batch_idx, batch in enumerate(feedback_batches):
-            # 处理当前批次
+            # EN
             for feedback in batch:
                 self.rag_system.update_from_feedback(
                     feedback, test_case.learning_algorithm
                 )
                 feedback_processed += 1
 
-            # 评估当前性能
+            # EN
             current_metrics = self.rag_system.get_current_performance()
             performance_history.append(current_metrics)
 
-            # 检查收敛
+            # EN
             if len(performance_history) >= 3:
                 recent_improvement = self._calculate_improvement(
                     performance_history[-3], performance_history[-1]
@@ -292,27 +292,27 @@ class UserFeedbackRAGTester:
                 ):
                     convergence_start = time.time()
 
-            # 模拟处理延迟
+            # EN
             await asyncio.sleep(0.1)
 
-        # 获取最终性能
+        # EN
         improved_metrics = self.rag_system.get_current_performance()
 
-        # 计算改进
+        # EN
         improvements = self._calculate_improvements(baseline_metrics, improved_metrics)
 
-        # 计算学习效率
+        # EN
         total_time = time.time() - start_time
         learning_efficiency = (
             sum(improvements.values()) / total_time if total_time > 0 else 0
         )
 
-        # 计算收敛时间
+        # EN
         convergence_time = (
             (convergence_start - start_time) if convergence_start else total_time
         )
 
-        # 评估成功性
+        # EN
         success = self._evaluate_learning_success(
             improvements, test_case.expected_improvement
         )
@@ -333,12 +333,12 @@ class UserFeedbackRAGTester:
     def _calculate_improvement(
         self, baseline: RAGPerformanceMetrics, current: RAGPerformanceMetrics
     ) -> float:
-        """计算单项改进"""
+        """EN"""
         improvements = [
             current.retrieval_accuracy - baseline.retrieval_accuracy,
             current.answer_relevance - baseline.answer_relevance,
             current.user_satisfaction - baseline.user_satisfaction,
-            -current.response_time + baseline.response_time,  # 响应时间改进是负的
+            -current.response_time + baseline.response_time,  # EN
             current.coverage - baseline.coverage,
             current.diversity - baseline.diversity,
         ]
@@ -347,13 +347,13 @@ class UserFeedbackRAGTester:
     def _calculate_improvements(
         self, baseline: RAGPerformanceMetrics, current: RAGPerformanceMetrics
     ) -> Dict[str, float]:
-        """计算各项改进"""
+        """EN"""
         return {
             "retrieval_accuracy": current.retrieval_accuracy
             - baseline.retrieval_accuracy,
             "answer_relevance": current.answer_relevance - baseline.answer_relevance,
             "user_satisfaction": current.user_satisfaction - baseline.user_satisfaction,
-            "response_time": baseline.response_time - current.response_time,  # 负值表示改进
+            "response_time": baseline.response_time - current.response_time,  # EN
             "coverage": current.coverage - baseline.coverage,
             "diversity": current.diversity - baseline.diversity,
         }
@@ -363,7 +363,7 @@ class UserFeedbackRAGTester:
         actual_improvements: Dict[str, float],
         expected_improvements: Dict[str, float],
     ) -> bool:
-        """评估学习是否成功"""
+        """EN"""
         for metric, expected in expected_improvements.items():
             if metric in actual_improvements:
                 if actual_improvements[metric] < expected:
@@ -373,13 +373,13 @@ class UserFeedbackRAGTester:
     async def test_feedback_loop_effectiveness(
         self, algorithm: LearningAlgorithm
     ) -> FeedbackTestResult:
-        """测试反馈回路有效性"""
-        # 创建测试场景
+        """EN"""
+        # EN
         feedback_scenarios = self._generate_feedback_scenarios(50)
 
         test_case = FeedbackTestCase(
-            name=f"反馈回路测试-{algorithm.value}",
-            description=f"测试{algorithm.value}算法的反馈回路效果",
+            name=f"EN-{algorithm.value}",
+            description=f"EN{algorithm.value}EN",
             feedback_scenarios=feedback_scenarios,
             learning_algorithm=algorithm,
             expected_improvement={
@@ -393,7 +393,7 @@ class UserFeedbackRAGTester:
         return await self.simulate_learning_process(test_case)
 
     def _generate_feedback_scenarios(self, count: int) -> List[UserFeedback]:
-        """生成反馈场景"""
+        """EN"""
         scenarios = []
         feedback_types = [
             FeedbackType.POSITIVE,
@@ -404,12 +404,12 @@ class UserFeedbackRAGTester:
 
         for i in range(count):
             scenario = {
-                "query": f"查询问题_{i+1}",
-                "answer": f"回答内容_{i+1}",
+                "query": f"EN_{i+1}",
+                "answer": f"EN_{i+1}",
                 "type": np.random.choice([ft.value for ft in feedback_types]),
                 "category": np.random.choice([c.value for c in categories]),
-                "rating": np.random.beta(2, 1.5),  # 偏向正评分
-                "comment": f"用户评论_{i+1}",
+                "rating": np.random.beta(2, 1.5),  # EN
+                "comment": f"EN_{i+1}",
             }
             scenarios.append(scenario)
 
@@ -417,26 +417,26 @@ class UserFeedbackRAGTester:
         return feedback_list
 
     async def test_adaptive_learning(self) -> FeedbackTestResult:
-        """测试自适应学习"""
-        # 创建渐进式改进的反馈场景
+        """EN"""
+        # EN
         feedback_scenarios = []
 
-        # 初始阶段：负反馈较多
+        # EN:EN
         for i in range(20):
             scenario = {
-                "query": f"学习查询_{i+1}",
-                "answer": f"学习回答_{i+1}",
+                "query": f"EN_{i+1}",
+                "answer": f"EN_{i+1}",
                 "type": np.random.choice(["negative", "neutral"], p=[0.7, 0.3]),
                 "rating": np.random.uniform(0.2, 0.5),
                 "category": "answer_quality",
             }
             feedback_scenarios.append(scenario)
 
-        # 中期阶段：混合反馈
+        # EN:EN
         for i in range(20):
             scenario = {
-                "query": f"改进查询_{i+1}",
-                "answer": f"改进回答_{i+1}",
+                "query": f"EN_{i+1}",
+                "answer": f"EN_{i+1}",
                 "type": np.random.choice(
                     ["positive", "negative", "neutral"], p=[0.4, 0.3, 0.3]
                 ),
@@ -447,11 +447,11 @@ class UserFeedbackRAGTester:
             }
             feedback_scenarios.append(scenario)
 
-        # 后期阶段：正反馈较多
+        # EN:EN
         for i in range(10):
             scenario = {
-                "query": f"优化查询_{i+1}",
-                "answer": f"优化回答_{i+1}",
+                "query": f"EN_{i+1}",
+                "answer": f"EN_{i+1}",
                 "type": np.random.choice(["positive", "neutral"], p=[0.8, 0.2]),
                 "rating": np.random.uniform(0.7, 0.95),
                 "category": "answer_quality",
@@ -461,8 +461,8 @@ class UserFeedbackRAGTester:
         feedback_list = await self.collect_feedback_batch(feedback_scenarios)
 
         test_case = FeedbackTestCase(
-            name="自适应学习测试",
-            description="测试系统在不同反馈阶段的自适应学习能力",
+            name="EN",
+            description="EN",
             feedback_scenarios=feedback_list,
             learning_algorithm=LearningAlgorithm.ONLINE_LEARNING,
             expected_improvement={"user_satisfaction": 0.3, "answer_relevance": 0.2},
@@ -472,8 +472,8 @@ class UserFeedbackRAGTester:
         return await self.simulate_learning_process(test_case)
 
     async def test_feedback_quality_impact(self) -> Dict[str, FeedbackTestResult]:
-        """测试反馈质量对学习效果的影响"""
-        # 生成不同质量的反馈
+        """EN"""
+        # EN
         quality_levels = {
             "high_quality": {"rating_range": (0.8, 1.0), "detail_level": "detailed"},
             "medium_quality": {"rating_range": (0.5, 0.8), "detail_level": "simple"},
@@ -487,22 +487,22 @@ class UserFeedbackRAGTester:
             for i in range(30):
                 rating = np.random.uniform(*config["rating_range"])
                 scenario = {
-                    "query": f"质量测试查询_{quality}_{i+1}",
-                    "answer": f"质量测试回答_{quality}_{i+1}",
+                    "query": f"EN_{quality}_{i+1}",
+                    "answer": f"EN_{quality}_{i+1}",
                     "type": "positive" if rating > 0.6 else "negative",
                     "rating": rating,
                     "category": "answer_quality",
-                    "comment": f"详细评论"
+                    "comment": f"EN"
                     if config["detail_level"] == "detailed"
-                    else "简单评论",
+                    else "EN",
                 }
                 feedback_scenarios.append(scenario)
 
             feedback_list = await self.collect_feedback_batch(feedback_scenarios)
 
             test_case = FeedbackTestCase(
-                name=f"反馈质量测试-{quality}",
-                description=f"测试{quality}反馈对学习效果的影响",
+                name=f"EN-{quality}",
+                description=f"EN{quality}EN",
                 feedback_scenarios=feedback_list,
                 learning_algorithm=LearningAlgorithm.REINFORCEMENT_LEARNING,
                 expected_improvement={"user_satisfaction": 0.15},
@@ -515,20 +515,20 @@ class UserFeedbackRAGTester:
         return results
 
     async def test_long_term_learning(self) -> FeedbackTestResult:
-        """测试长期学习效果"""
-        # 模拟长期学习过程
+        """EN"""
+        # EN
         feedback_scenarios = []
 
-        # 生成100个反馈场景，模拟几周的使用
-        for day in range(7):  # 7天
-            for feedback_per_day in range(15):  # 每天15个反馈
-                # 模拟学习曲线：开始反馈较差，逐渐改善
+        # EN100EN,EN
+        for day in range(7):  # 7EN
+            for feedback_per_day in range(15):  # EN15EN
+                # EN:EN,EN
                 base_rating = 0.3 + (day / 7) * 0.4
                 rating = np.clip(np.random.normal(base_rating, 0.1), 0.0, 1.0)
 
                 scenario = {
-                    "query": f"长期学习_第{day+1}天_反馈{feedback_per_day+1}",
-                    "answer": f"长期学习回答_{day}_{feedback_per_day}",
+                    "query": f"EN_EN{day+1}EN_EN{feedback_per_day+1}",
+                    "answer": f"EN_{day}_{feedback_per_day}",
                     "type": "positive" if rating > 0.5 else "negative",
                     "rating": rating,
                     "category": np.random.choice(
@@ -540,8 +540,8 @@ class UserFeedbackRAGTester:
         feedback_list = await self.collect_feedback_batch(feedback_scenarios)
 
         test_case = FeedbackTestCase(
-            name="长期学习效果测试",
-            description="测试系统在长期反馈学习中的改进效果",
+            name="EN",
+            description="EN",
             feedback_scenarios=feedback_list,
             learning_algorithm=LearningAlgorithm.BAYESIAN_OPTIMIZATION,
             expected_improvement={
@@ -556,11 +556,11 @@ class UserFeedbackRAGTester:
         return await self.simulate_learning_process(test_case)
 
     async def run_comprehensive_feedback_tests(self) -> Dict[str, Any]:
-        """运行综合反馈测试"""
-        print("🚀 开始用户反馈对RAG系统影响的综合测试")
+        """EN"""
+        print("🚀 ENRAGEN")
 
-        # 1. 测试不同学习算法的效果
-        print("🧠 测试不同学习算法的效果...")
+        # 1. EN
+        print("🧠 EN...")
         algorithm_results = []
         algorithms = [
             LearningAlgorithm.REINFORCEMENT_LEARNING,
@@ -574,22 +574,22 @@ class UserFeedbackRAGTester:
             algorithm_results.append(result)
             self.test_results.append(result)
 
-        # 2. 测试自适应学习
-        print("🎯 测试自适应学习能力...")
+        # 2. EN
+        print("🎯 EN...")
         adaptive_result = await self.test_adaptive_learning()
         self.test_results.append(adaptive_result)
 
-        # 3. 测试反馈质量影响
-        print("📊 测试反馈质量对学习效果的影响...")
+        # 3. EN
+        print("📊 EN...")
         quality_results = await self.test_feedback_quality_impact()
         self.test_results.extend(quality_results.values())
 
-        # 4. 测试长期学习效果
-        print("⏰ 测试长期学习效果...")
+        # 4. EN
+        print("⏰ EN...")
         long_term_result = await self.test_long_term_learning()
         self.test_results.append(long_term_result)
 
-        # 生成测试报告
+        # EN
         report = self._generate_feedback_test_report(
             algorithm_results, adaptive_result, quality_results, long_term_result
         )
@@ -611,9 +611,9 @@ class UserFeedbackRAGTester:
         quality_results: Dict[str, FeedbackTestResult],
         long_term_result: FeedbackTestResult,
     ) -> Dict[str, Any]:
-        """生成反馈测试报告"""
+        """EN"""
 
-        # 算法比较
+        # EN
         algorithm_performance = {}
         for result in algorithm_results:
             algorithm_performance[result.learning_algorithm] = {
@@ -623,12 +623,12 @@ class UserFeedbackRAGTester:
                 "improvements": result.improvements,
             }
 
-        # 找出最佳算法
+        # EN
         best_algorithm = max(
             algorithm_performance.items(), key=lambda x: x[1]["learning_efficiency"]
         )[0]
 
-        # 反馈质量影响分析
+        # EN
         quality_impact = {}
         for quality, result in quality_results.items():
             quality_impact[quality] = {
@@ -637,7 +637,7 @@ class UserFeedbackRAGTester:
                 "convergence_time": result.convergence_time,
             }
 
-        # 学习曲线分析
+        # EN
         learning_curves = {}
         for result in self.test_results:
             if hasattr(result, "performance_history") and result.performance_history:
@@ -647,7 +647,7 @@ class UserFeedbackRAGTester:
                     "history": result.performance_history,
                 }
 
-        # 总体统计
+        # EN
         total_tests = len(self.test_results)
         successful_tests = sum(1 for result in self.test_results if result.success)
         avg_learning_efficiency = (
@@ -662,7 +662,7 @@ class UserFeedbackRAGTester:
             else 0
         )
 
-        # 计算总体改进
+        # EN
         overall_improvements = {}
         metrics = [
             "retrieval_accuracy",
@@ -709,25 +709,25 @@ class UserFeedbackRAGTester:
         }
 
     def _generate_feedback_recommendations(self) -> List[str]:
-        """生成反馈系统改进建议"""
+        """EN"""
         recommendations = []
 
-        # 分析算法性能
+        # EN
         algorithm_results = [
-            result for result in self.test_results if "反馈回路测试" in result.test_case
+            result for result in self.test_results if "EN" in result.test_case
         ]
         if algorithm_results:
             best_result = max(algorithm_results, key=lambda x: x.learning_efficiency)
             worst_result = min(algorithm_results, key=lambda x: x.learning_efficiency)
 
-            recommendations.append(f"推荐使用 {best_result.learning_algorithm} 算法，学习效率最高")
+            recommendations.append(f"EN {best_result.learning_algorithm} EN,EN")
 
             if worst_result.learning_efficiency < best_result.learning_efficiency * 0.5:
-                recommendations.append(f"考虑停用或改进 {worst_result.learning_algorithm} 算法")
+                recommendations.append(f"EN {worst_result.learning_algorithm} EN")
 
-        # 分析反馈质量影响
+        # EN
         quality_results = [
-            result for result in self.test_results if "反馈质量测试" in result.test_case
+            result for result in self.test_results if "EN" in result.test_case
         ]
         if quality_results:
             high_quality = next(
@@ -742,114 +742,114 @@ class UserFeedbackRAGTester:
                     high_quality.learning_efficiency
                     > low_quality.learning_efficiency * 1.5
                 ):
-                    recommendations.append("提高反馈质量收集机制，鼓励用户提供详细反馈")
+                    recommendations.append("EN,EN")
 
-        # 分析学习效率
+        # EN
         avg_efficiency = sum(
             result.learning_efficiency for result in self.test_results
         ) / len(self.test_results)
         if avg_efficiency < 0.1:
-            recommendations.append("整体学习效率偏低，建议调整学习率或改进算法")
+            recommendations.append("EN,EN")
         elif avg_efficiency > 0.5:
-            recommendations.append("学习效率良好，可以考虑扩大反馈应用范围")
+            recommendations.append("EN,EN")
 
-        # 分析收敛时间
+        # EN
         avg_convergence = sum(
             result.convergence_time for result in self.test_results
         ) / len(self.test_results)
         if avg_convergence > 30:
-            recommendations.append("收敛时间较长，建议优化算法加速收敛过程")
+            recommendations.append("EN,EN")
 
-        # 分析长期学习效果
+        # EN
         long_term_results = [
-            result for result in self.test_results if "长期学习" in result.test_case
+            result for result in self.test_results if "EN" in result.test_case
         ]
         if long_term_results:
             long_term_result = long_term_results[0]
             if long_term_result.success:
-                recommendations.append("长期学习效果良好，系统具有持续改进能力")
+                recommendations.append("EN,EN")
             else:
-                recommendations.append("长期学习效果有限，建议加强长期记忆机制")
+                recommendations.append("EN,EN")
 
         if not recommendations:
-            recommendations.append("反馈系统测试全部通过，用户反馈机制运行良好")
+            recommendations.append("EN,EN")
 
         return recommendations
 
 
-# pytest测试用例
+# pytestEN
 @pytest.mark.asyncio
 async def test_feedback_rag_impact_comprehensive():
-    """测试用户反馈对RAG系统的综合影响"""
+    """ENRAGEN"""
     tester = UserFeedbackRAGTester()
     results = await tester.run_comprehensive_feedback_tests()
 
-    assert results["success"], "用户反馈对RAG系统影响测试应该成功"
-    assert results["summary"]["success_rate"] >= 0.7, "测试成功率应该至少70%"
-    assert results["summary"]["average_learning_efficiency"] > 0, "学习效率应该为正"
-    assert len(results["algorithm_results"]) >= 3, "应该测试至少3种学习算法"
+    assert results["success"], "ENRAGEN"
+    assert results["summary"]["success_rate"] >= 0.7, "EN70%"
+    assert results["summary"]["average_learning_efficiency"] > 0, "EN"
+    assert len(results["algorithm_results"]) >= 3, "EN3EN"
 
 
 @pytest.mark.asyncio
 async def test_reinforcement_learning_feedback():
-    """测试强化学习反馈机制"""
+    """EN"""
     tester = UserFeedbackRAGTester()
     result = await tester.test_feedback_loop_effectiveness(
         LearningAlgorithm.REINFORCEMENT_LEARNING
     )
 
-    assert result.success, "强化学习反馈应该成功"
-    assert result.feedback_processed > 0, "应该处理反馈"
-    assert result.learning_efficiency > 0, "学习效率应该为正"
-    assert any(imp > 0 for imp in result.improvements.values()), "应该有至少一项指标改进"
+    assert result.success, "EN"
+    assert result.feedback_processed > 0, "EN"
+    assert result.learning_efficiency > 0, "EN"
+    assert any(imp > 0 for imp in result.improvements.values()), "EN"
 
 
 @pytest.mark.asyncio
 async def test_adaptive_learning_capability():
-    """测试自适应学习能力"""
+    """EN"""
     tester = UserFeedbackRAGTester()
     result = await tester.test_adaptive_learning()
 
-    assert result.success, "自适应学习应该成功"
-    assert result.feedback_processed >= 40, "应该处理足够多的反馈"
-    assert result.improvements.get("user_satisfaction", 0) > 0, "用户满意度应该改进"
+    assert result.success, "EN"
+    assert result.feedback_processed >= 40, "EN"
+    assert result.improvements.get("user_satisfaction", 0) > 0, "EN"
 
 
 @pytest.mark.asyncio
 async def test_feedback_quality_impact():
-    """测试反馈质量对学习效果的影响"""
+    """EN"""
     tester = UserFeedbackRAGTester()
     results = await tester.test_feedback_quality_impact()
 
-    assert len(results) == 3, "应该测试3种质量水平的反馈"
+    assert len(results) == 3, "EN3EN"
 
-    # 高质量反馈应该比低质量反馈效果更好
+    # EN
     high_quality_efficiency = results["high_quality"].learning_efficiency
     low_quality_efficiency = results["low_quality"].learning_efficiency
 
-    assert high_quality_efficiency >= low_quality_efficiency, "高质量反馈应该比低质量反馈效果更好"
+    assert high_quality_efficiency >= low_quality_efficiency, "EN"
 
 
 @pytest.mark.asyncio
 async def test_long_term_learning_effectiveness():
-    """测试长期学习效果"""
+    """EN"""
     tester = UserFeedbackRAGTester()
     result = await tester.test_long_term_learning()
 
-    assert result.feedback_processed >= 100, "应该处理长期反馈"
-    assert result.convergence_time > 0, "应该有收敛时间"
+    assert result.feedback_processed >= 100, "EN"
+    assert result.convergence_time > 0, "EN"
 
-    # 长期学习应该显示改进
+    # EN
     total_improvement = sum(result.improvements.values())
-    assert total_improvement > 0, "长期学习应该产生整体改进"
+    assert total_improvement > 0, "EN"
 
 
 @pytest.mark.asyncio
 async def test_feedback_integration_stability():
-    """测试反馈集成的稳定性"""
+    """EN"""
     tester = UserFeedbackRAGTester()
 
-    # 运行多次相同的测试
+    # EN
     results = []
     for i in range(3):
         result = await tester.test_feedback_loop_effectiveness(
@@ -857,56 +857,56 @@ async def test_feedback_integration_stability():
         )
         results.append(result)
 
-    # 检查结果的一致性
+    # EN
     efficiencies = [r.learning_efficiency for r in results]
     efficiency_std = np.std(efficiencies)
 
-    # 标准差应该相对较小，表明结果稳定
-    assert efficiency_std < np.mean(efficiencies) * 0.5, "测试结果应该相对稳定"
+    # EN,EN
+    assert efficiency_std < np.mean(efficiencies) * 0.5, "EN"
 
 
 if __name__ == "__main__":
-    # 运行综合测试
+    # EN
     async def main():
         tester = UserFeedbackRAGTester()
         results = await tester.run_comprehensive_feedback_tests()
 
         print("\n" + "=" * 60)
-        print("🔄 用户反馈对RAG系统影响测试完成")
+        print("🔄 ENRAGEN")
         print("=" * 60)
 
         if results["success"]:
             summary = results["summary"]
-            print(f"✅ 总测试数: {summary['total_tests']}")
-            print(f"✅ 成功测试数: {summary['successful_tests']}")
-            print(f"📊 成功率: {summary['success_rate']:.1%}")
-            print(f"🧠 平均学习效率: {summary['average_learning_efficiency']:.4f}")
-            print(f"⏱️ 平均收敛时间: {summary['average_convergence_time']:.2f}秒")
-            print(f"🏆 最佳算法: {summary['best_algorithm']}")
+            print(f"✅ EN: {summary['total_tests']}")
+            print(f"✅ EN: {summary['successful_tests']}")
+            print(f"📊 EN: {summary['success_rate']:.1%}")
+            print(f"🧠 EN: {summary['average_learning_efficiency']:.4f}")
+            print(f"⏱️ EN: {summary['average_convergence_time']:.2f}EN")
+            print(f"🏆 EN: {summary['best_algorithm']}")
 
-            print("\n📈 算法性能比较:")
+            print("\n📈 EN:")
             for algo, perf in summary["algorithm_performance"].items():
                 print(f"  {algo}:")
-                print(f"    成功: {'✅' if perf['success'] else '❌'}")
-                print(f"    学习效率: {perf['learning_efficiency']:.4f}")
-                print(f"    收敛时间: {perf['convergence_time']:.2f}s")
+                print(f"    EN: {'✅' if perf['success'] else '❌'}")
+                print(f"    EN: {perf['learning_efficiency']:.4f}")
+                print(f"    EN: {perf['convergence_time']:.2f}s")
 
-            print("\n📊 反馈质量影响:")
+            print("\n📊 EN:")
             for quality, impact in summary["quality_impact_analysis"].items():
                 print(
-                    f"  {quality}: 学习效率 {impact['learning_efficiency']:.4f}, "
-                    f"总改进 {impact['total_improvement']:.4f}"
+                    f"  {quality}: EN {impact['learning_efficiency']:.4f}, "
+                    f"EN {impact['total_improvement']:.4f}"
                 )
 
-            print("\n🎯 总体改进效果:")
+            print("\n🎯 EN:")
             for metric, improvement in summary["overall_improvements"].items():
                 status = "📈" if improvement > 0 else "📉"
                 print(f"  {metric}: {status} {improvement:.4f}")
 
-            print("\n💡 改进建议:")
+            print("\n💡 EN:")
             for i, rec in enumerate(summary["recommendations"], 1):
                 print(f"  {i}. {rec}")
         else:
-            print(f"❌ 测试失败: 未知错误")
+            print(f"❌ EN: EN")
 
     asyncio.run(main())

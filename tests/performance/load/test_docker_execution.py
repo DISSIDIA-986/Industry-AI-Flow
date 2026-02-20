@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-测试 Docker 代码执行功能
+EN Docker EN
 """
 
 import os
@@ -9,14 +9,16 @@ from pathlib import Path
 
 import pandas as pd
 
-# 添加项目路径
+# EN
 sys.path.append(str(Path(__file__).parent))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+HOUSING_DATASET_PATH = str(REPO_ROOT / "test_resources/datasets/Housing.csv")
 
 
 def test_docker_connectivity():
-    """测试Docker连接"""
+    """ENDockerEN"""
     print("=" * 60)
-    print("🐳 测试 Docker 连接")
+    print("🐳 EN Docker EN")
     print("=" * 60)
 
     try:
@@ -24,15 +26,15 @@ def test_docker_connectivity():
 
         client = docker.from_env()
 
-        # 测试Docker连接
+        # ENDockerEN
         client.ping()
-        print("✅ Docker 连接成功!")
+        print("✅ Docker EN!")
 
-        # 检查现有镜像
+        # EN
         images = client.images.list()
-        print(f"📦 发现 {len(images)} 个 Docker 镜像")
+        print(f"📦 EN {len(images)} EN Docker EN")
 
-        # 检查是否已有分析镜像
+        # EN
         analysis_images = [
             img
             for img in images
@@ -40,26 +42,26 @@ def test_docker_connectivity():
         ]
 
         if analysis_images:
-            print("✅ 发现数据分析镜像:")
+            print("✅ EN:")
             for img in analysis_images:
                 print(f"   {', '.join(img.tags)}")
             return True, client
         else:
-            print("⚠️ 未发现数据分析镜像，需要构建")
+            print("⚠️ EN,EN")
             return False, client
 
     except Exception as e:
-        print(f"❌ Docker 连接失败: {e}")
+        print(f"❌ Docker EN: {e}")
         return False, None
 
 
 def test_code_execution_without_docker():
-    """测试不使用Docker的代码执行"""
+    """ENDockerEN"""
     print("\n" + "=" * 60)
-    print("⚙️ 测试 Python 代码执行（本地环境）")
+    print("⚙️ EN Python EN(EN)")
     print("=" * 60)
 
-    # 测试 Housing 数据分析的代码
+    # EN Housing EN
     test_code = '''
 import pandas as pd
 import numpy as np
@@ -69,38 +71,38 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
-# 设置matplotlib
+# ENmatplotlib
 plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['savefig.dpi'] = 150
 plt.rcParams['figure.dpi'] = 100
 
 def analyze_housing_data():
-    """分析房价数据"""
+    """EN"""
 
-    print("=== 房价数据分析开始 ===")
+    print("=== EN ===")
 
-    # 1. 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    # 1. EN
+    data_path = "__HOUSING_DATASET_PATH__"
     df = pd.read_csv(data_path)
 
-    print(f"数据加载成功: {df.shape}")
-    print(f"列名: {list(df.columns)}")
+    print(f"EN: {df.shape}")
+    print(f"EN: {list(df.columns)}")
 
-    # 2. 基础统计
-    print("\\n=== 基础统计信息 ===")
-    print(f"价格范围: {df['price'].min():,.0f} - {df['price'].max():,.0f}")
-    print(f"平均价格: {df['price'].mean():,.0f}")
-    print(f"平均面积: {df['area'].mean():,.0f} sq.ft")
+    # 2. EN
+    print("\\n=== EN ===")
+    print(f"EN: {df['price'].min():,.0f} - {df['price'].max():,.0f}")
+    print(f"EN: {df['price'].mean():,.0f}")
+    print(f"EN: {df['area'].mean():,.0f} sq.ft")
 
-    # 3. 相关性分析
+    # 3. EN
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     correlation = df[numeric_cols].corr()['price'].sort_values(ascending=False)
-    print("\\n=== 价格相关性排名 ===")
+    print("\\n=== EN ===")
     for feature, corr in correlation.items():
         if feature != 'price':
             print(f"{feature}: {corr:.3f}")
 
-    # 4. 创建分析结果
+    # 4. EN
     results = {
         "total_records": len(df),
         "price_stats": {
@@ -119,52 +121,52 @@ def analyze_housing_data():
         "feature_importance": correlation.abs().sort_values(ascending=False)[1:].to_dict()
     }
 
-    print("\\n=== 分析完成 ===")
-    print(f"处理了 {results['total_records']} 条记录")
-    print(f"最重要的特征: {list(results['feature_importance'].keys())[:3]}")
+    print("\\n=== EN ===")
+    print(f"EN {results['total_records']} EN")
+    print(f"EN: {list(results['feature_importance'].keys())[:3]}")
 
     return results
 
-# 执行分析
+# EN
 if __name__ == "__main__":
     results = analyze_housing_data()
-    print(f"\\n分析结果摘要: {len(results)} 个主要指标")
-'''
+    print(f"\\nEN: {len(results)} EN")
+'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
 
     try:
-        # 创建临时脚本文件
+        # EN
         script_path = Path("temp_analysis_script.py")
         with open(script_path, "w", encoding="utf-8") as f:
             f.write(test_code)
 
-        # 设置输出目录
+        # EN
         output_dir = Path("temp/reports/docker_test_output")
         output_dir.mkdir(exist_ok=True)
 
-        # 修改脚本以支持输出保存
+        # EN
         modified_code = (
             test_code
             + """
 import json
 
-# 保存分析结果
+# EN
 output_file = Path("temp/reports/docker_test_output/analysis_results.json")
 results = analyze_housing_data()
 
 with open(output_file, 'w', encoding='utf-8') as f:
     json.dump(results, f, indent=2, ensure_ascii=False)
 
-print(f"\\n结果已保存到: {output_file}")
+print(f"\\nEN: {output_file}")
 """
         )
 
-        # 执行脚本
+        # EN
         exec_globals = {}
         exec(modified_code, exec_globals)
 
-        print("✅ 代码执行成功!")
+        print("✅ EN!")
 
-        # 检查结果文件
+        # EN
         result_file = Path("temp/reports/docker_test_output/analysis_results.json")
         if result_file.exists():
             import json
@@ -172,15 +174,15 @@ print(f"\\n结果已保存到: {output_file}")
             with open(result_file, "r", encoding="utf-8") as f:
                 results = json.load(f)
 
-            print("📊 分析结果:")
-            print(f"   总记录数: {results['total_records']}")
-            print(f"   平均价格: {results['price_stats']['mean']:,.0f}")
+            print("📊 EN:")
+            print(f"   EN: {results['total_records']}")
+            print(f"   EN: {results['price_stats']['mean']:,.0f}")
             print(
-                f"   价格范围: {results['price_stats']['min']:,.0f} - {results['price_stats']['max']:,.0f}"
+                f"   EN: {results['price_stats']['min']:,.0f} - {results['price_stats']['max']:,.0f}"
             )
 
-            # 显示特征重要性
-            print("   特征重要性排名:")
+            # EN
+            print("   EN:")
             for i, (feature, importance) in enumerate(
                 list(results["feature_importance"].items())[:5], 1
             ):
@@ -188,11 +190,11 @@ print(f"\\n结果已保存到: {output_file}")
 
             return True, results
         else:
-            print("⚠️ 未找到结果文件")
+            print("⚠️ EN")
             return False, None
 
     except Exception as e:
-        print(f"❌ 代码执行失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
 
         traceback.print_exc()
@@ -200,9 +202,9 @@ print(f"\\n结果已保存到: {output_file}")
 
 
 def test_advanced_analysis():
-    """测试高级分析功能"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("🧠 测试高级数据分析功能")
+    print("🧠 EN")
     print("=" * 60)
 
     advanced_code = '''
@@ -216,18 +218,18 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def advanced_housing_analysis():
-    """高级房价分析 - 机器学习建模"""
+    """EN - EN"""
 
-    print("=== 高级房价分析开始 ===")
+    print("=== EN ===")
 
-    # 1. 数据预处理
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    # 1. EN
+    data_path = "__HOUSING_DATASET_PATH__"
     df = pd.read_csv(data_path)
 
-    print(f"原始数据形状: {df.shape}")
+    print(f"EN: {df.shape}")
 
-    # 2. 特征工程
-    # 处理分类变量
+    # 2. EN
+    # EN
     categorical_cols = ['mainroad', 'guestroom', 'basement',
                        'hotwaterheating', 'airconditioning', 'prefarea', 'furnishingstatus']
 
@@ -235,25 +237,25 @@ def advanced_housing_analysis():
     for col in categorical_cols:
         df[col] = le.fit_transform(df[col])
 
-    print(f"特征工程完成，处理后形状: {df.shape}")
+    print(f"EN,EN: {df.shape}")
 
-    # 3. 准备数据
+    # 3. EN
     X = df.drop('price', axis=1)
     y = df['price']
 
-    # 4. 分割数据
+    # 4. EN
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    print(f"训练集大小: {X_train.shape}")
-    print(f"测试集大小: {X_test.shape}")
+    print(f"EN: {X_train.shape}")
+    print(f"EN: {X_test.shape}")
 
-    # 5. 训练模型
+    # 5. EN
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
-    # 6. 预测和评估
+    # 6. EN
     y_pred = model.predict(X_test)
 
     mae = mean_absolute_error(y_test, y_pred)
@@ -261,21 +263,21 @@ def advanced_housing_analysis():
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, y_pred)
 
-    # 7. 特征重要性
+    # 7. EN
     feature_importance = pd.DataFrame({
         'feature': X.columns,
         'importance': model.feature_importances_
     }).sort_values('importance', ascending=False)
 
-    print("\\n=== 模型评估结果 ===")
-    print(f"平均绝对误差 (MAE): {mae:,.0f}")
-    print(f"均方根误差 (RMSE): {rmse:,.0f}")
-    print(f"R² 分数: {r2:.3f}")
+    print("\\n=== EN ===")
+    print(f"EN (MAE): {mae:,.0f}")
+    print(f"EN (RMSE): {rmse:,.0f}")
+    print(f"R² EN: {r2:.3f}")
 
-    print("\\n=== 特征重要性排名 ===")
+    print("\\n=== EN ===")
     print(feature_importance.head(10))
 
-    # 8. 创建结果摘要
+    # 8. EN
     results = {
         "model_performance": {
             "mae": float(mae),
@@ -292,47 +294,47 @@ def advanced_housing_analysis():
         }
     }
 
-    print("\\n=== 高级分析完成 ===")
-    print(f"模型R²分数: {r2:.3f}")
-    print(f"最重要的特征: {feature_importance.iloc[0]['feature']}")
+    print("\\n=== EN ===")
+    print(f"ENR²EN: {r2:.3f}")
+    print(f"EN: {feature_importance.iloc[0]['feature']}")
 
     return results
 
-# 执行高级分析
+# EN
 if __name__ == "__main__":
     results = advanced_housing_analysis()
-    print(f"\\n高级分析完成，生成了 {len(results)} 个主要指标")
-'''
+    print(f"\\nEN,EN {len(results)} EN")
+'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
 
     try:
-        # 创建临时脚本
+        # EN
         script_path = Path("advanced_analysis_script.py")
         with open(script_path, "w", encoding="utf-8") as f:
             f.write(advanced_code)
 
-        # 执行高级分析
+        # EN
         exec_globals = {}
         exec(advanced_code, exec_globals)
 
-        print("✅ 高级分析执行成功!")
+        print("✅ EN!")
         return True, exec_globals.get("results", {})
 
     except ImportError as e:
         if "sklearn" in str(e):
-            print("⚠️ scikit-learn 未安装，跳过机器学习测试")
+            print("⚠️ scikit-learn EN,EN")
             return None, None
         else:
-            print(f"❌ 高级分析失败: {e}")
+            print(f"❌ EN: {e}")
             return False, None
     except Exception as e:
-        print(f"❌ 高级分析失败: {e}")
+        print(f"❌ EN: {e}")
         return False, None
 
 
 def test_visualization_generation():
-    """测试可视化生成"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("📊 测试可视化图表生成")
+    print("📊 EN")
     print("=" * 60)
 
     visualization_code = '''
@@ -345,16 +347,16 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def generate_visualizations():
-    """生成多种可视化图表"""
+    """EN"""
 
-    print("=== 开始生成可视化图表 ===")
+    print("=== EN ===")
 
-    # 创建输出目录
+    # EN
     output_dir = Path("temp/reports/docker_test_output/visualizations")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 加载数据
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    # EN
+    data_path = "__HOUSING_DATASET_PATH__"
     df = pd.read_csv(data_path)
 
     plt.style.use('default')
@@ -362,29 +364,29 @@ def generate_visualizations():
 
     generated_charts = []
 
-    # 1. 价格分布图（直方图 + 密度图）
+    # 1. EN(EN + EN)
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
     plt.hist(df['price'], bins=30, alpha=0.7, color='skyblue', edgecolor='black')
-    plt.title('价格分布直方图')
-    plt.xlabel('价格')
-    plt.ylabel('频次')
+    plt.title('EN')
+    plt.xlabel('EN')
+    plt.ylabel('EN')
 
     plt.subplot(1, 2, 2)
     plt.hist(df['price'], bins=30, alpha=0.3, density=True, color='skyblue')
     df['price'].plot(kind='kde', color='red', linewidth=2)
-    plt.title('价格密度图')
-    plt.xlabel('价格')
-    plt.ylabel('密度')
+    plt.title('EN')
+    plt.xlabel('EN')
+    plt.ylabel('EN')
 
     plt.tight_layout()
     chart1_path = output_dir / "price_distribution_analysis.png"
     plt.savefig(chart1_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
     generated_charts.append(str(chart1_path))
-    print("✅ 1. 价格分布图已生成")
+    print("✅ 1. EN")
 
-    # 2. 面积-价格散点图（按装修状态分类）
+    # 2. EN-EN(EN)
     plt.figure(figsize=(10, 6))
     colors = {'furnished': 'gold', 'semi-furnished': 'lightblue', 'unfurnished': 'lightgreen'}
 
@@ -394,9 +396,9 @@ def generate_visualizations():
                    alpha=0.6, c=colors.get(furnish_status, 'gray'),
                    label=furnish_status, edgecolors='black', linewidth=0.5)
 
-    plt.xlabel('面积 (sq.ft)')
-    plt.ylabel('价格')
-    plt.title('面积-价格关系（按装修状态分类）')
+    plt.xlabel('EN (sq.ft)')
+    plt.ylabel('EN')
+    plt.title('EN-EN(EN)')
     plt.legend()
     plt.grid(True, alpha=0.3)
 
@@ -404,9 +406,9 @@ def generate_visualizations():
     plt.savefig(chart2_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
     generated_charts.append(str(chart2_path))
-    print("✅ 2. 面积-价格散点图已生成")
+    print("✅ 2. EN-EN")
 
-    # 3. 特征相关性热力图
+    # 3. EN
     plt.figure(figsize=(12, 8))
     numeric_df = df.select_dtypes(include=[np.number])
     correlation_matrix = numeric_df.corr()
@@ -414,18 +416,18 @@ def generate_visualizations():
     mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
     sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='coolwarm',
                 center=0, square=True, linewidths=0.5, fmt='.2f')
-    plt.title('特征相关性热力图')
+    plt.title('EN')
     plt.tight_layout()
 
     chart3_path = output_dir / "correlation_heatmap_enhanced.png"
     plt.savefig(chart3_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
     generated_charts.append(str(chart3_path))
-    print("✅ 3. 相关性热力图已生成")
+    print("✅ 3. EN")
 
-    # 4. 分类特征分析（多子图）
+    # 4. EN(EN)
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    fig.suptitle('分类特征分布分析', fontsize=16)
+    fig.suptitle('EN', fontsize=16)
 
     categorical_features = ['mainroad', 'guestroom', 'basement', 'hotwaterheating', 'airconditioning', 'prefarea']
     colors_list = ['lightcoral', 'lightgreen', 'lightskyblue', 'gold', 'lightpink', 'lightgray']
@@ -436,10 +438,10 @@ def generate_visualizations():
 
         axes[row, col].bar(value_counts.index, value_counts.values,
                           color=color, alpha=0.8, edgecolor='black')
-        axes[row, col].set_title(f'{feature} 分布')
-        axes[row, col].set_ylabel('频次')
+        axes[row, col].set_title(f'{feature} EN')
+        axes[row, col].set_ylabel('EN')
 
-        # 添加数值标签
+        # EN
         for j, v in enumerate(value_counts.values):
             axes[row, col].text(j, v + max(value_counts) * 0.01, str(v),
                                ha='center', fontweight='bold')
@@ -449,53 +451,53 @@ def generate_visualizations():
     plt.savefig(chart4_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
     generated_charts.append(str(chart4_path))
-    print("✅ 4. 分类特征分析图已生成")
+    print("✅ 4. EN")
 
-    # 5. 价格箱线图（按不同特征分组）
+    # 5. EN(EN)
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('价格分布箱线图分析', fontsize=16)
+    fig.suptitle('EN', fontsize=16)
 
-    # 按卧室数
+    # EN
     df.boxplot(column='price', by='bedrooms', ax=axes[0,0])
-    axes[0,0].set_title('按卧室数分组的价格分布')
-    axes[0,0].set_xlabel('卧室数')
+    axes[0,0].set_title('EN')
+    axes[0,0].set_xlabel('EN')
 
-    # 按装修状态
+    # EN
     df.boxplot(column='price', by='furnishingstatus', ax=axes[0,1])
-    axes[0,1].set_title('按装修状态分组的价格分布')
-    axes[0,1].set_xlabel('装修状态')
+    axes[0,1].set_title('EN')
+    axes[0,1].set_xlabel('EN')
 
-    # 按是否主路
+    # EN
     df.boxplot(column='price', by='mainroad', ax=axes[1,0])
-    axes[1,0].set_title('按是否临主路分组的价格分布')
-    axes[1,0].set_xlabel('是否临主路')
+    axes[1,0].set_title('EN')
+    axes[1,0].set_xlabel('EN')
 
-    # 按空调配置
+    # EN
     df.boxplot(column='price', by='airconditioning', ax=axes[1,1])
-    axes[1,1].set_title('按空调配置分组的价格分布')
-    axes[1,1].set_xlabel('空调配置')
+    axes[1,1].set_title('EN')
+    axes[1,1].set_xlabel('EN')
 
     plt.tight_layout()
     chart5_path = output_dir / "price_boxplot_analysis.png"
     plt.savefig(chart5_path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
     generated_charts.append(str(chart5_path))
-    print("✅ 5. 价格箱线图分析已生成")
+    print("✅ 5. EN")
 
-    print(f"\\n=== 可视化生成完成 ===")
-    print(f"总共生成了 {len(generated_charts)} 个图表")
-    print(f"图表保存位置: {output_dir}")
+    print(f"\\n=== EN ===")
+    print(f"EN {len(generated_charts)} EN")
+    print(f"EN: {output_dir}")
 
     return generated_charts, output_dir
 
-# 执行可视化生成
+# EN
 if __name__ == "__main__":
     charts, output_dir = generate_visualizations()
-    print(f"\\n可视化任务完成，生成了 {len(charts)} 个文件")
-'''
+    print(f"\\nEN,EN {len(charts)} EN")
+'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
 
     try:
-        # 执行可视化代码
+        # EN
         exec_globals = {}
         exec(visualization_code, exec_globals)
 
@@ -503,19 +505,19 @@ if __name__ == "__main__":
             charts = exec_globals["charts"]
             output_dir = exec_globals.get("output_dir")
 
-            print("📊 生成的图表:")
+            print("📊 EN:")
             for i, chart_path in enumerate(charts, 1):
                 chart_name = Path(chart_path).name
                 print(f"   {i}. {chart_name}")
 
-            print(f"\\n📁 图表目录: {output_dir}")
+            print(f"\\n📁 EN: {output_dir}")
             return True, charts
         else:
-            print("⚠️ 未生成图表")
+            print("⚠️ EN")
             return False, []
 
     except Exception as e:
-        print(f"❌ 可视化生成失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
 
         traceback.print_exc()
@@ -523,89 +525,89 @@ if __name__ == "__main__":
 
 
 def main():
-    """主测试函数"""
-    print("🚀 开始 Docker 代码执行功能测试")
-    print("🎯 测试完整的 RAG 数据分析节点")
+    """EN"""
+    print("🚀 EN Docker EN")
+    print("🎯 EN RAG EN")
 
-    # 测试1: Docker连接
+    # EN1: DockerEN
     docker_available, client = test_docker_connectivity()
 
-    # 测试2: 基础代码执行（本地环境）
+    # EN2: EN(EN)
     print("\n" + "=" * 60)
-    print("测试 2/4: 基础代码执行")
+    print("EN 2/4: EN")
     print("=" * 60)
     code_success, basic_results = test_code_execution_without_docker()
 
-    # 测试3: 高级分析功能
+    # EN3: EN
     print("\n" + "=" * 60)
-    print("测试 3/4: 高级数据分析")
+    print("EN 3/4: EN")
     print("=" * 60)
     advanced_success, advanced_results = test_advanced_analysis()
 
-    # 测试4: 可视化生成
+    # EN4: EN
     print("\n" + "=" * 60)
-    print("测试 4/4: 可视化图表生成")
+    print("EN 4/4: EN")
     print("=" * 60)
     viz_success, charts = test_visualization_generation()
 
-    # 测试总结
+    # EN
     print("\n" + "=" * 60)
-    print("📊 测试总结")
+    print("📊 EN")
     print("=" * 60)
 
     tests = [
-        ("Docker连接", docker_available),
-        ("基础代码执行", code_success),
-        ("高级数据分析", advanced_success if advanced_success is not None else False),
-        ("可视化生成", viz_success),
+        ("DockerEN", docker_available),
+        ("EN", code_success),
+        ("EN", advanced_success if advanced_success is not None else False),
+        ("EN", viz_success),
     ]
 
     success_count = 0
     for test_name, success in tests:
         if success is not None:
-            status = "✅ 成功" if success else "❌ 失败"
+            status = "✅ EN" if success else "❌ EN"
             print(f"   {test_name}: {status}")
             if success:
                 success_count += 1
         else:
-            print(f"   {test_name}: ⚠️ 跳过")
+            print(f"   {test_name}: ⚠️ EN")
 
-    overall_success = success_count >= 3  # 至少3个测试通过
+    overall_success = success_count >= 3  # EN3EN
 
     if overall_success:
-        print(f"\n🎉 核心功能测试通过! ({success_count}/{len(tests)})")
-        print("📈 RAG 数据分析节点基础功能验证成功")
+        print(f"\n🎉 EN! ({success_count}/{len(tests)})")
+        print("📈 RAG EN")
 
         if basic_results:
-            print(f"💰 Housing 数据集分析结果:")
-            print(f"   总记录数: {basic_results['total_records']}")
-            print(f"   平均价格: {basic_results['price_stats']['mean']:,.0f}")
-            print(f"   面积-价格相关性: {basic_results['correlations']['area']:.3f}")
+            print(f"💰 Housing EN:")
+            print(f"   EN: {basic_results['total_records']}")
+            print(f"   EN: {basic_results['price_stats']['mean']:,.0f}")
+            print(f"   EN-EN: {basic_results['correlations']['area']:.3f}")
 
         if advanced_results:
-            print(f"\n🧠 机器学习模型性能:")
+            print(f"\n🧠 EN:")
             perf = advanced_results["model_performance"]
-            print(f"   R² 分数: {perf['r2_score']:.3f}")
-            print(f"   平均误差: {perf['mae']:,.0f}")
+            print(f"   R² EN: {perf['r2_score']:.3f}")
+            print(f"   EN: {perf['mae']:,.0f}")
 
         if charts:
-            print(f"\n📊 可视化图表:")
-            print(f"   生成数量: {len(charts)}")
-            print(f"   包含类型: 分布图、散点图、热力图、箱线图等")
+            print(f"\n📊 EN:")
+            print(f"   EN: {len(charts)}")
+            print(f"   EN: EN,EN,EN,EN")
 
-        print("\n🔧 下一步建议:")
-        print("1. 构建 Docker 镜像: ./scripts/deploy/build_data_analysis_docker.sh")
-        print("2. 测试完整的 LangChain 1.0 集成")
-        print("3. 验证自我修复机制在 Docker 环境中的表现")
-        print("4. 使用更多样化的数据集进行测试")
+        print("\n🔧 EN:")
+        print("1. EN Docker EN: ./scripts/deploy/build_data_analysis_docker.sh")
+        print("2. EN LangChain 1.0 EN")
+        print("3. EN Docker EN")
+        print("4. EN")
 
     else:
-        print(f"\n⚠️ 测试结果不理想 ({success_count}/{len(tests)})")
-        print("🔧 需要检查的组件:")
-        print("- Docker 安装和配置")
-        print("- Python 依赖包")
-        print("- 数据文件路径")
-        print("- 系统权限设置")
+        print(f"\n⚠️ EN ({success_count}/{len(tests)})")
+        print("🔧 EN:")
+        print("- Docker EN")
+        print("- Python EN")
+        print("- EN")
+        print("- EN")
 
     return overall_success
 
