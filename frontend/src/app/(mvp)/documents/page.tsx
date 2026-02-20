@@ -15,7 +15,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([
     {
       id: '1',
-      name: '建筑成本估算指南.pdf',
+      name: 'Construction Cost Estimating Guide.pdf',
       type: 'PDF',
       size: '2.4 MB',
       uploadedAt: new Date('2026-02-13'),
@@ -23,7 +23,7 @@ export default function DocumentsPage() {
     },
     {
       id: '2',
-      name: '项目风险评估报告.docx',
+      name: 'Project Risk Assessment Report.docx',
       type: 'Word',
       size: '1.8 MB',
       uploadedAt: new Date('2026-02-12'),
@@ -31,7 +31,7 @@ export default function DocumentsPage() {
     },
     {
       id: '3',
-      name: '施工进度表.xlsx',
+      name: 'construction schedule.xlsx',
       type: 'Excel',
       size: '3.2 MB',
       uploadedAt: new Date('2026-02-11'),
@@ -39,7 +39,7 @@ export default function DocumentsPage() {
     },
     {
       id: '4',
-      name: '材料成本数据.csv',
+      name: 'Material cost data.csv',
       type: 'CSV',
       size: '850 KB',
       uploadedAt: new Date('2026-02-10'),
@@ -61,11 +61,11 @@ export default function DocumentsPage() {
     setUploading(true)
     
     try {
-      // 使用API客户端上传文档
+      // useAPIClient upload documents
       const { documentApi } = await import('@/lib/api-client')
       const response = await documentApi.uploadDocuments(selectedFiles)
       
-      // 添加新文档到列表
+      // Add new document to list
       const newDocuments: Document[] = response.documents.map((doc: {
         id: string
         name: string
@@ -85,11 +85,11 @@ export default function DocumentsPage() {
       setDocuments(prev => [...newDocuments, ...prev])
       setSelectedFiles([])
       
-      // 清空文件输入
+      // Clear file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement
       if (fileInput) fileInput.value = ''
       
-      // 模拟文档处理状态更新
+      // Simulate document processing status updates
       setTimeout(() => {
         setDocuments(prev => prev.map(doc => 
           newDocuments.some(newDoc => newDoc.id === doc.id) 
@@ -100,20 +100,20 @@ export default function DocumentsPage() {
       
     } catch (error) {
       console.error('Upload error:', error)
-      alert('文件上传失败，请重试')
+      alert('File upload failed, please try again')
     } finally {
       setUploading(false)
     }
   }
 
   const handleDelete = (id: string) => {
-    if (confirm('确定要删除这个文档吗？')) {
+    if (confirm('Are you sure you want to delete this document?')) {
       setDocuments(prev => prev.filter(doc => doc.id !== id))
     }
   }
 
   const handlePreview = (document: Document) => {
-    alert(`预览文档: ${document.name}\n\n类型: ${document.type}\n大小: ${document.size}\n上传时间: ${document.uploadedAt.toLocaleDateString()}`)
+    alert(`Preview document: ${document.name}\n\ntype: ${document.type}\nsize: ${document.size}\nUpload time: ${document.uploadedAt.toLocaleDateString()}`)
   }
 
   const getStatusColor = (status: Document['status']) => {
@@ -127,27 +127,27 @@ export default function DocumentsPage() {
 
   const getStatusText = (status: Document['status']) => {
     switch (status) {
-      case 'processed': return '已处理'
-      case 'processing': return '处理中'
-      case 'error': return '处理失败'
-      default: return '未知状态'
+      case 'processed': return 'Processed'
+      case 'processing': return 'Processing'
+      case 'error': return 'Processing failed'
+      default: return 'unknown status'
     }
   }
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">文档管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
         <p className="text-gray-600 mt-2">
-          上传和管理您的项目文档，支持PDF、Word、Excel、CSV等格式
+          Upload and manage your project documents. Supports PDF, Word, Excel, and CSV formats.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 上传区域 */}
+        {/* Upload area */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-medium text-gray-900 mb-4">上传文档</h3>
+            <h3 className="font-medium text-gray-900 mb-4">Upload documents</h3>
             
             <div className="space-y-4">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
@@ -166,10 +166,10 @@ export default function DocumentsPage() {
                     </svg>
                   </div>
                   <div className="text-gray-700">
-                    点击选择文件或拖放到这里
+                    Click to select file or drag and drop here
                   </div>
                   <div className="text-sm text-gray-500 mt-2">
-                    支持 PDF, Word, Excel, CSV, TXT
+                    support PDF, Word, Excel, CSV, TXT
                   </div>
                 </label>
               </div>
@@ -177,7 +177,7 @@ export default function DocumentsPage() {
               {selectedFiles.length > 0 && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="text-sm font-medium text-gray-900 mb-2">
-                    已选择 {selectedFiles.length} 个文件
+                    Selected {selectedFiles.length} files
                   </div>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {selectedFiles.map((file, index) => (
@@ -197,31 +197,31 @@ export default function DocumentsPage() {
                 disabled={selectedFiles.length === 0 || uploading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading ? '上传中...' : '开始上传'}
+                {uploading ? 'Uploading...' : 'Start uploading'}
               </button>
             </div>
 
-            {/* 使用说明 */}
+            {/* Instructions for use */}
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <h4 className="font-medium text-gray-900 mb-2">使用说明</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Instructions for use</h4>
               <ul className="space-y-1 text-sm text-gray-600">
-                <li>• 单个文件最大支持 50MB</li>
-                <li>• 支持批量上传多个文件</li>
-                <li>• 上传后文档会自动处理和分析</li>
-                <li>• 处理完成后可在聊天中查询文档内容</li>
+                <li>• Maximum support for a single file 50MB</li>
+                <li>• Support batch upload of multiple files</li>
+                <li>• Documents are automatically processed and analyzed after uploading</li>
+                <li>• After the processing is completed, the document content can be queried in the chat</li>
               </ul>
             </div>
           </div>
         </div>
 
-        {/* 文档列表 */}
+        {/* Document list */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="font-medium text-gray-900">文档列表</h3>
+                <h3 className="font-medium text-gray-900">Document list</h3>
                 <div className="text-sm text-gray-500">
-                  共 {documents.length} 个文档
+                  common {documents.length} documents
                 </div>
               </div>
             </div>
@@ -231,22 +231,22 @@ export default function DocumentsPage() {
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      文档名称
+                      file name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      类型
+                      type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      大小
+                      size
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      上传时间
+                      Upload time
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      状态
+                      state
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
+                      operate
                     </th>
                   </tr>
                 </thead>
@@ -285,13 +285,13 @@ export default function DocumentsPage() {
                             onClick={() => handlePreview(document)}
                             className="text-blue-600 hover:text-blue-900"
                           >
-                            预览
+                            Preview
                           </button>
                           <button
                             onClick={() => handleDelete(document.id)}
                             className="text-red-600 hover:text-red-900"
                           >
-                            删除
+                            delete
                           </button>
                         </div>
                       </td>
@@ -303,28 +303,28 @@ export default function DocumentsPage() {
 
             {documents.length === 0 && (
               <div className="text-center py-12">
-                <div className="text-gray-400 mb-2">暂无文档</div>
+                <div className="text-gray-400 mb-2">No document yet</div>
                 <div className="text-sm text-gray-500">
-                  上传您的第一个文档开始使用
+                  Upload your first document to get started
                 </div>
               </div>
             )}
           </div>
 
-          {/* 统计信息 */}
+          {/* Statistics */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">总文档数</div>
+              <div className="text-sm text-gray-500 mb-1">Total number of documents</div>
               <div className="text-2xl font-bold text-gray-900">{documents.length}</div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">已处理</div>
+              <div className="text-sm text-gray-500 mb-1">Processed</div>
               <div className="text-2xl font-bold text-green-600">
                 {documents.filter(d => d.status === 'processed').length}
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">总大小</div>
+              <div className="text-sm text-gray-500 mb-1">total size</div>
               <div className="text-2xl font-bold text-blue-600">
                 {documents.reduce((total, doc) => {
                   const size = parseFloat(doc.size)

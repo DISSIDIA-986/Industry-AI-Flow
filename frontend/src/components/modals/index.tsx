@@ -32,16 +32,16 @@ export function Modal({
   const modalContent = (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        {/* 背景遮罩 */}
+        {/* background mask */}
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
           onClick={onClose}
         />
         
-        {/* 模态框内容 */}
+        {/* Modal box content */}
         <div className={`relative w-full ${sizeClasses[size]}`}>
           <div className="relative bg-white rounded-xl shadow-xl">
-            {/* 标题栏 */}
+            {/* title bar */}
             {(title || showCloseButton) && (
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 {title && (
@@ -62,7 +62,7 @@ export function Modal({
               </div>
             )}
             
-            {/* 内容区域 */}
+            {/* content area */}
             <div className="px-6 py-4">
               {children}
             </div>
@@ -92,8 +92,8 @@ export function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmText = '确认',
-  cancelText = '取消',
+  confirmText = 'confirm',
+  cancelText = 'Cancel',
   variant = 'info'
 }: ConfirmModalProps) {
   const variantClasses = {
@@ -143,8 +143,8 @@ interface LoadingModalProps {
 
 export function LoadingModal({ 
   isOpen, 
-  title = '处理中', 
-  message = '请稍候...' 
+  title = 'Processing', 
+  message = 'Please wait...' 
 }: LoadingModalProps) {
   return (
     <Modal

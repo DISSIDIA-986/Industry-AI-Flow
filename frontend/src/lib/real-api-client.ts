@@ -1,5 +1,5 @@
-// 真实后端API客户端
-// 用于集成实际的FastAPI后端服务
+// real backendAPIclient
+// for integrating actualFastAPIBackend services
 
 class RealApiError extends Error {
   constructor(
@@ -11,11 +11,29 @@ class RealApiError extends Error {
   }
 }
 
-// 真实API配置
-const REAL_API_BASE_URL = process.env.NEXT_PUBLIC_REAL_API_URL || 'http://localhost:8001/api/v1'
-const REAL_API_TIMEOUT = 60000 // 60秒超时（AI查询可能需要更长时间）
+// realityAPIConfiguration (unify the front-end homologous proxy to avoid environment drift caused by direct connection to the back-end)
+const REAL_API_BASE_URL = '/api/backend/api/v1'
+const REAL_API_TIMEOUT = 60000 // 60seconds timeout (AIQuery may take longer)
+const ALLOW_SYNTHETIC_REAL_API_FALLBACK =
+  process.env.NEXT_PUBLIC_ALLOW_SYNTHETIC_REAL_API_FALLBACK === 'true'
+const ALLOW_HYBRID_MOCK_FALLBACK =
+  process.env.NEXT_PUBLIC_ALLOW_HYBRID_MOCK_FALLBACK === 'true'
 
-// 创建真实API客户端
+function assertBackendHealthy(health: SystemHealth): void {
+  if (health.status !== 'ok') {
+    throw new RealApiError(503, 'Backend service is unavailable')
+  }
+}
+
+function shouldFallbackToSyntheticData(): boolean {
+  return ALLOW_SYNTHETIC_REAL_API_FALLBACK
+}
+
+function shouldFallbackToMockApi(): boolean {
+  return ALLOW_HYBRID_MOCK_FALLBACK
+}
+
+// create realityAPIclient
 const createRealApiClient = () => {
   const client = {
     async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -55,9 +73,9 @@ const createRealApiClient = () => {
           throw error
         }
         if (error instanceof Error && error.name === 'AbortError') {
-          throw new RealApiError(408, '请求超时，请稍后重试')
+          throw new RealApiError(408, 'Request timed out, please try again later')
         }
-        throw new RealApiError(500, '网络错误，请检查网络连接')
+        throw new RealApiError(500, 'Network error, please check network connection')
       }
     },
     
@@ -87,12 +105,12 @@ const createRealApiClient = () => {
   return client
 }
 
-// 真实API客户端实例
+// realityAPIClient instance
 export const realApi = createRealApiClient()
 
-// 真实API类型定义
+// realityAPItype definition
 
-// 工作流查询请求
+// Workflow query request
 export interface RealWorkflowQueryRequest {
   query: string
   context?: string
@@ -102,7 +120,7 @@ export interface RealWorkflowQueryRequest {
   max_tokens?: number
 }
 
-// 工作流查询响应
+// Workflow query response
 export interface RealWorkflowQueryResponse {
   id?: string
   query: string
@@ -129,7 +147,7 @@ export interface RealWorkflowQueryResponse {
   model?: string
 }
 
-// 文档上传请求
+// Document upload request
 export interface RealDocumentUploadRequest {
   file: File
   metadata?: {
@@ -140,7 +158,7 @@ export interface RealDocumentUploadRequest {
   }
 }
 
-// 文档上传响应
+// Document upload response
 export interface RealDocumentUploadResponse {
   id: string
   filename: string
@@ -152,7 +170,7 @@ export interface RealDocumentUploadResponse {
   metadata?: Record<string, any>
 }
 
-// 成本估算请求
+// Cost estimate request
 export interface RealCostEstimationRequest {
   project_type: string
   location: string
@@ -163,7 +181,7 @@ export interface RealCostEstimationRequest {
   additional_params?: Record<string, any>
 }
 
-// 成本估算响应
+// cost estimate response
 export interface RealCostEstimationResponse {
   id: string
   project_type: string
@@ -188,7 +206,7 @@ export interface RealCostEstimationResponse {
   timestamp: string
 }
 
-// 系统健康状态
+// System health status
 export interface SystemHealth {
   status: 'ok' | 'warning' | 'error'
   memory_usage_mb: number
@@ -201,14 +219,20 @@ export interface SystemHealth {
   }>
 }
 
-// 真实API服务
+// realityAPIServe
 export const realApiService = {
-  // 系统健康检查
+  // System health check
   async checkHealth(): Promise<SystemHealth> {
     try {
-      return await realApi.get<SystemHealth>('/health')
+      const response = await fetch('/api/backend/api/v1/health', {
+        method: 'GET',
+      })
+      if (!response.ok) {
+        throw new RealApiError(response.status, response.statusText)
+      }
+      return await response.json()
     } catch (error) {
-      console.warn('健康检查失败:', error)
+      console.warn('Health check failed:', error)
       return {
         status: 'error',
         memory_usage_mb: 0,
@@ -219,27 +243,27 @@ export const realApiService = {
     }
   },
   
-  // 工作流查询
+  // Workflow query
   async sendWorkflowQuery(request: RealWorkflowQueryRequest): Promise<RealWorkflowQueryResponse> {
     try {
       return await realApi.post<RealWorkflowQueryResponse>('/workflow/query', request)
     } catch (error) {
-      console.error('工作流查询失败:', error)
+      console.error('Workflow query failed:', error)
       throw error
     }
   },
   
-  // 统一查询（RAG查询）
+  // Unified query (RAGQuery)
   async sendUnifiedQuery(query: string): Promise<RealWorkflowQueryResponse> {
     try {
       return await realApi.post<RealWorkflowQueryResponse>('/unified/query', { query })
     } catch (error) {
-      console.error('统一查询失败:', error)
+      console.error('Unified query failed:', error)
       throw error
     }
   },
   
-  // 文档上传
+  // Document upload
   async uploadDocument(file: File, metadata?: any): Promise<RealDocumentUploadResponse> {
     try {
       const formData = new FormData()
@@ -257,159 +281,182 @@ export const realApiService = {
       })
       
       if (!response.ok) {
-        throw new RealApiError(response.status, '文档上传失败')
+        throw new RealApiError(response.status, 'Document upload failed')
       }
       
       return await response.json()
     } catch (error) {
-      console.error('文档上传失败:', error)
+      console.error('Document upload failed:', error)
       throw error
     }
   },
   
-  // 获取文档列表
+  // Get document list
   async getDocuments(): Promise<RealDocumentUploadResponse[]> {
     try {
       return await realApi.get<RealDocumentUploadResponse[]>('/documents')
     } catch (error) {
-      console.error('获取文档列表失败:', error)
-      return []
+      if (shouldFallbackToSyntheticData()) {
+        console.warn('Failed to get the list of documents, returning an empty list (explicitly enabledfallback）:', error)
+        return []
+      }
+      console.error('Failed to get document list, not enabledfallback:', error)
+      throw new RealApiError(503, 'Failed to get document list')
     }
   },
   
-  // 成本估算
+  // cost estimate
   async estimateCost(request: RealCostEstimationRequest): Promise<RealCostEstimationResponse> {
     try {
       return await realApi.post<RealCostEstimationResponse>('/cost-estimation/predict', request)
     } catch (error) {
-      console.error('成本估算失败:', error)
+      console.error('Cost estimate failed:', error)
       throw error
     }
   },
   
-  // 批量成本估算
+  // Batch Cost Estimation
   async estimateCostBatch(requests: RealCostEstimationRequest[]): Promise<RealCostEstimationResponse[]> {
     try {
       return await realApi.post<RealCostEstimationResponse[]>('/cost-estimation/predict/batch', requests)
     } catch (error) {
-      console.error('批量成本估算失败:', error)
+      console.error('Batch cost estimation failed:', error)
       throw error
     }
   },
   
-  // 获取查询历史
+  // Get query history
   async getQueryHistory(): Promise<RealWorkflowQueryResponse[]> {
     try {
-      // 注意：后端可能需要实现这个端点
+      // NOTE: The backend may need to implement this endpoint
       return await realApi.get<RealWorkflowQueryResponse[]>('/query/history')
     } catch (error) {
-      console.warn('获取查询历史失败，返回模拟数据:', error)
-      // 返回模拟数据作为fallback
-      return [
-        {
-          query: '估算一个20层办公楼在多伦多的成本风险',
-          response: '基于当前市场数据，20层办公楼在多伦多的成本风险中等偏高...',
-          intent: {
-            type: 'cost_estimation',
-            confidence: 0.92,
-            description: '成本估算查询'
+      if (shouldFallbackToSyntheticData()) {
+        console.warn('Failed to get query history using sample data (explicitly enabledfallback）:', error)
+        return [
+          {
+            query: 'Estimating the cost risk of a 20-story office building in Toronto',
+            response: 'Based on current market data, the cost risk of a 20-story office building in Toronto is moderate to high....',
+            intent: {
+              type: 'cost_estimation',
+              confidence: 0.92,
+              description: 'Cost estimate inquiry'
+            },
+            timestamp: new Date().toISOString(),
+            confidence: 0.91
           },
-          timestamp: new Date().toISOString(),
-          confidence: 0.91
-        },
-        {
-          query: '医疗医院项目成本超支的可能原因有哪些？',
-          response: '医疗医院项目成本超支的主要原因包括：1. 设计变更 2. 材料价格上涨...',
-          intent: {
-            type: 'risk_analysis',
-            confidence: 0.88,
-            description: '风险分析查询'
-          },
-          timestamp: new Date(Date.now() - 86400000).toISOString(), // 1天前
-          confidence: 0.87
-        }
-      ]
+          {
+            query: 'What are the possible causes of cost overruns on medical hospital projects?',
+            response: 'The main causes of cost overruns in medical hospital projects include: 1. Design changes 2. Material prices rise...',
+            intent: {
+              type: 'risk_analysis',
+              confidence: 0.88,
+              description: 'Risk analysis query'
+            },
+            timestamp: new Date(Date.now() - 86400000).toISOString(), // 1days ago
+            confidence: 0.87
+          }
+        ]
+      }
+      console.warn('Failed to obtain query history, not enabledfallback，Return an explicit error:', error)
+      throw new RealApiError(503, 'Query history interface is unavailable')
     }
   },
   
-  // 获取可用模型
+  // Get available models
   async getAvailableModels(): Promise<string[]> {
     try {
       return await realApi.get<string[]>('/query/models')
     } catch (error) {
-      console.warn('获取模型列表失败:', error)
-      return ['gpt-4', 'claude-3', 'gemini-pro']
+      if (shouldFallbackToSyntheticData()) {
+        console.warn('Failed to get list of models, using sample model (explicitly enabledfallback）:', error)
+        return ['gpt-4', 'claude-3', 'gemini-pro']
+      }
+      console.warn('Failed to get model list, not enabledfallback，Return an explicit error:', error)
+      throw new RealApiError(503, 'Model list interface is not available')
     }
   },
   
-  // 切换模型
+  // Switch model
   async switchModel(model: string): Promise<{ success: boolean; message: string }> {
     try {
       return await realApi.post<{ success: boolean; message: string }>('/query/switch-model', { model })
     } catch (error) {
-      console.error('切换模型失败:', error)
+      console.error('Failed to switch model:', error)
       throw error
     }
   }
 }
 
-// 混合API客户端 - 优先使用真实API，失败时回退到模拟API
+// mixAPIclient - Prioritize the use of realAPI，Fallback to simulation on failureAPI
 export const createHybridApiClient = (mockApi: any) => {
   return {
-    // 工作流查询 - 优先真实API
+    // Workflow query - Prioritize truthAPI
     async sendWorkflowQuery(request: RealWorkflowQueryRequest): Promise<RealWorkflowQueryResponse> {
       try {
-        console.log('尝试使用真实API进行工作流查询...')
+        console.log('try to use realAPIMake workflow queries...')
         const health = await realApiService.checkHealth()
-        if (health.status === 'ok') {
-          return await realApiService.sendWorkflowQuery(request)
-        }
+        assertBackendHealthy(health)
+        return await realApiService.sendWorkflowQuery(request)
       } catch (error) {
-        console.log('真实API失败，使用模拟API:', error)
+        console.warn('realityAPIfail:', error)
+        if (shouldFallbackToMockApi()) {
+          console.warn('Blending enabledfallback，fallback to simulationAPI')
+          return mockApi.sendQuery(request)
+        }
+        throw error instanceof Error
+          ? error
+          : new RealApiError(500, 'Workflow query failed')
       }
-      
-      // 回退到模拟API
-      return mockApi.sendQuery(request)
     },
     
-    // 文档上传 - 优先真实API
+    // Document upload - Prioritize truthAPI
     async uploadDocument(file: File, metadata?: any): Promise<RealDocumentUploadResponse> {
       try {
-        console.log('尝试使用真实API上传文档...')
+        console.log('try to use realAPIUpload documents...')
         const health = await realApiService.checkHealth()
-        if (health.status === 'ok') {
-          return await realApiService.uploadDocument(file, metadata)
-        }
+        assertBackendHealthy(health)
+        return await realApiService.uploadDocument(file, metadata)
       } catch (error) {
-        console.log('真实API失败，使用模拟API:', error)
+        console.warn('realityAPIfail:', error)
+        if (shouldFallbackToMockApi()) {
+          console.warn('Blending enabledfallback，fallback to simulationAPI')
+          return mockApi.uploadDocument(file, metadata)
+        }
+        throw error instanceof Error
+          ? error
+          : new RealApiError(500, 'Document upload failed')
       }
-      
-      // 回退到模拟API
-      return mockApi.uploadDocument(file, metadata)
     },
     
-    // 成本估算 - 优先真实API
+    // cost estimate - Prioritize truthAPI
     async estimateCost(request: RealCostEstimationRequest): Promise<RealCostEstimationResponse> {
       try {
-        console.log('尝试使用真实API进行成本估算...')
+        console.log('try to use realAPIMake a cost estimate...')
         const health = await realApiService.checkHealth()
-        if (health.status === 'ok') {
-          return await realApiService.estimateCost(request)
-        }
+        assertBackendHealthy(health)
+        return await realApiService.estimateCost(request)
       } catch (error) {
-        console.log('真实API失败，使用模拟API:', error)
+        console.warn('realityAPIfail:', error)
+        if (shouldFallbackToMockApi()) {
+          console.warn('Blending enabledfallback，fallback to simulationAPI')
+          return mockApi.estimateCost(request)
+        }
+        throw error instanceof Error
+          ? error
+          : new RealApiError(500, 'Cost estimate failed')
       }
-      
-      // 回退到模拟API
-      return mockApi.estimateCost(request)
     },
     
-    // 其他方法...
+    // Other methods...
     async getQueryHistory() {
       try {
         return await realApiService.getQueryHistory()
       } catch (error) {
-        return mockApi.getQueryHistory()
+        if (shouldFallbackToMockApi()) {
+          return mockApi.getQueryHistory()
+        }
+        throw error
       }
     },
     
@@ -417,7 +464,10 @@ export const createHybridApiClient = (mockApi: any) => {
       try {
         return await realApiService.getDocuments()
       } catch (error) {
-        return mockApi.getDocuments()
+        if (shouldFallbackToMockApi()) {
+          return mockApi.getDocuments()
+        }
+        throw error
       }
     },
     
@@ -425,7 +475,10 @@ export const createHybridApiClient = (mockApi: any) => {
       try {
         return await realApiService.getAvailableModels()
       } catch (error) {
-        return mockApi.getAvailableModels()
+        if (shouldFallbackToMockApi()) {
+          return mockApi.getAvailableModels()
+        }
+        throw error
       }
     }
   }

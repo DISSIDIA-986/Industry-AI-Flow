@@ -24,13 +24,13 @@ export default function OverviewDashboardPage() {
       setStats({
         totalProjects: kpiData.totalProjects,
         activeQueries: kpiData.activeProjects,
-        documentsProcessed: 156, // 模拟数据
+        documentsProcessed: 156, // simulated data
         costSavings: Math.round(kpiData.budgetUtilization * 10000)
       })
       
-      setChartData(timeSeriesData.slice(0, 6)) // 只显示最近6个月
+      setChartData(timeSeriesData.slice(0, 6)) // Only show the last 6 months
     } catch (error) {
-      console.error('加载数据失败:', error)
+      console.error('Failed to load data:', error)
     }
   }
 
@@ -40,102 +40,102 @@ export default function OverviewDashboardPage() {
   }, [])
 
   const quickActions = [
-    { title: '开始新查询', description: '与AI助手对话', href: '/workflow-chat', color: 'blue' },
-    { title: '上传文档', description: '处理和分析文档', href: '/documents', color: 'green' },
-    { title: '数据仪表板', description: '查看详细分析', href: '/data-dashboard', color: 'purple' },
-    { title: '成本估算', description: '估算项目成本', href: '/cost-estimation', color: 'orange' }
+    { title: 'Start a new query', description: 'andAIAssistant conversation', href: '/workflow-chat', color: 'blue' },
+    { title: 'Upload documents', description: 'Process and analyze documents', href: '/documents', color: 'green' },
+    { title: 'Data dashboard', description: 'View detailed analysis', href: '/data-dashboard', color: 'purple' },
+    { title: 'cost estimate', description: 'Estimate project costs', href: '/cost-estimation', color: 'orange' }
   ]
 
   const recentActivities = [
-    { id: 1, type: 'query', description: '分析了建筑成本风险', time: '10分钟前' },
-    { id: 2, type: 'document', description: '上传了项目报告.pdf', time: '30分钟前' },
-    { id: 3, type: 'analysis', description: '生成了成本分析图表', time: '1小时前' },
-    { id: 4, type: 'system', description: '系统更新完成', time: '2小时前' }
+    { id: 1, type: 'query', description: 'Construction cost risks analyzed', time: '10minutes ago' },
+    { id: 2, type: 'document', description: 'Project report uploaded.pdf', time: '30minutes ago' },
+    { id: 3, type: 'analysis', description: 'Cost analysis chart generated', time: '1hours ago' },
+    { id: 4, type: 'system', description: 'System update completed', time: '2hours ago' }
   ]
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* 欢迎横幅 */}
+        {/* welcome banner */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 mb-8 text-white">
           <h1 className="text-3xl font-bold mb-2">
-            欢迎回来，{user?.name || '用户'}！
+            welcome back,{user?.name || 'user'}！
           </h1>
           <p className="text-blue-100">
-            您有 {stats.activeQueries} 个活跃查询和 {stats.documentsProcessed} 个已处理文档
+            you have {stats.activeQueries} active queries and {stats.documentsProcessed} processed documents
           </p>
         </div>
 
-        {/* 统计卡片 */}
+        {/* Statistics cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard 
-            title="总项目数" 
+            title="Total number of items" 
             value={stats.totalProjects}
             change="+12%"
           />
           
           <MetricCard 
-            title="活跃查询" 
+            title="active query" 
             value={stats.activeQueries}
-            change="+3 今日"
+            change="+3 today"
           />
           
           <MetricCard 
-            title="处理文档" 
+            title="Process documents" 
             value={stats.documentsProcessed}
-            change="+8 本周"
+            change="+8 this week"
           />
           
           <MetricCard 
-            title="成本节省" 
+            title="cost savings" 
             value={`$${stats.costSavings.toLocaleString()}`}
-            change="+15% 效率提升"
+            change="+15% Efficiency improvement"
           />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 成本趋势图表 */}
+          {/* Cost Trend Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">成本趋势</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">cost trends</h2>
             {chartData ? (
               <LineChartComponent 
                 data={chartData}
-                title="最近6个月成本变化"
+                title="Cost changes in the last 6 months"
                 height={250}
               />
             ) : (
               <div className="h-64 flex items-center justify-center">
-                <div className="text-gray-400">加载图表数据...</div>
+                <div className="text-gray-400">Load chart data...</div>
               </div>
             )}
           </div>
 
-          {/* 项目类型分布 */}
+          {/* Project type distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">项目类型分布</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Project type distribution</h2>
             {chartData ? (
               <BarChartComponent 
                 data={[
-                  { name: '住宅', value: 35 },
-                  { name: '商业', value: 28 },
-                  { name: '工业', value: 22 },
-                  { name: '基础设施', value: 15 }
+                  { name: 'Residential', value: 35 },
+                  { name: 'Business', value: 28 },
+                  { name: 'industry', value: 22 },
+                  { name: 'infrastructure', value: 15 }
                 ]}
-                title="项目类型占比"
+                title="Proportion of project types"
                 height={250}
               />
             ) : (
               <div className="h-64 flex items-center justify-center">
-                <div className="text-gray-400">加载图表数据...</div>
+                <div className="text-gray-400">Load chart data...</div>
               </div>
             )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          {/* 快速操作 */}
+          {/* Quick operation */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">快速操作</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick operation</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {quickActions.map((action, index) => (
                 <Link
@@ -146,16 +146,16 @@ export default function OverviewDashboardPage() {
                   <div className={`text-${action.color}-600 font-medium mb-1`}>{action.title}</div>
                   <div className="text-sm text-gray-600">{action.description}</div>
                   <div className="mt-2 text-sm text-gray-400 group-hover:text-gray-600">
-                    点击开始 →
+                    Click to start →
                   </div>
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* 最近活动 */}
+          {/* Recent activities */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">最近活动</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent activities</h2>
             <div className="space-y-4">
               {recentActivities.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3">
@@ -174,31 +174,31 @@ export default function OverviewDashboardPage() {
           </div>
         </div>
 
-        {/* 系统状态 */}
+        {/* System status */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">系统状态</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">System status</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">前端服务</div>
+              <div className="text-sm font-medium text-gray-500">Front-end service</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <div className="text-green-600 font-medium">运行正常</div>
+                <div className="text-green-600 font-medium">Running normally</div>
               </div>
             </div>
             
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">后端API</div>
+              <div className="text-sm font-medium text-gray-500">rear endAPI</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <div className="text-green-600 font-medium">运行正常</div>
+                <div className="text-green-600 font-medium">Running normally</div>
               </div>
             </div>
             
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">数据可视化</div>
+              <div className="text-sm font-medium text-gray-500">data visualization</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <div className="text-green-600 font-medium">已启用</div>
+                <div className="text-green-600 font-medium">Enabled</div>
               </div>
             </div>
           </div>
