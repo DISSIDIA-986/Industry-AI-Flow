@@ -23,7 +23,7 @@ class RedactionService:
     PATTERNS = {
         # Unicode-aware email matcher with delimiter guards.
         "email": re.compile(
-            r"[^\s@<>()\[\]{}\"'，。；：,:]+@[^\s@<>()\[\]{}\"'，。；：,:]+\.[^\s@<>()\[\]{}\"'，。；：,:]+"
+            r"[^\s@<>()\[\]{}\"',.;:,:]+@[^\s@<>()\[\]{}\"',.;:,:]+\.[^\s@<>()\[\]{}\"',.;:,:]+"
         ),
         "phone_cn": re.compile(r"\b(?:\+?86[- ]?)?1[3-9]\d{9}\b"),
         # US number requires explicit separators/parentheses to avoid over-matching plain 10-digit ids.
@@ -36,13 +36,13 @@ class RedactionService:
 
     def redact(self, text: str) -> RedactionResult:
         """
-        脱敏处理，包含异常处理和降级策略
+        EN,EN
         
         Args:
-            text: 需要脱敏的文本
+            text: EN
             
         Returns:
-            RedactionResult: 脱敏结果，异常时返回原始文本
+            RedactionResult: EN,EN
         """
         if not text:
             return RedactionResult(text="", hit_count=0, categories=[], replacements={})
@@ -69,7 +69,7 @@ class RedactionService:
                 replacements=replacements,
             )
         except Exception as e:
-            # 降级策略：脱敏失败时返回原始文本并记录警告
+            # EN:EN
             logger.warning(f"Redaction failed: {e}, returning original text")
             return RedactionResult(
                 text=text,

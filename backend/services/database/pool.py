@@ -1,11 +1,11 @@
 """
-数据库连接池配置
+EN
 
-提供异步数据库连接池工厂函数，支持Prompt API和Workflow系统。
-修复prompt_routes依赖断裂问题。
+EN,ENPrompt APIENWorkflowEN.
+ENprompt_routesEN.
 
-创建时间: 2026-02-09
-参考: research/architecture/rag-workflow-implementation-details.md
+EN: 2026-02-09
+EN: research/architecture/rag-workflow-implementation-details.md
 """
 
 import asyncpg
@@ -19,13 +19,13 @@ _db_pool = None
 
 async def get_database_pool() -> asyncpg.Pool:
     """
-    获取数据库连接池（单例模式）
+    EN(EN)
 
     Returns:
-        asyncpg.Pool: 数据库连接池
+        asyncpg.Pool: EN
 
     Raises:
-        Exception: 连接池创建失败
+        Exception: EN
     """
     global _db_pool
 
@@ -43,7 +43,7 @@ async def get_database_pool() -> asyncpg.Pool:
 
 
 async def close_database_pool():
-    """关闭数据库连接池"""
+    """EN"""
     global _db_pool
 
     if _db_pool:

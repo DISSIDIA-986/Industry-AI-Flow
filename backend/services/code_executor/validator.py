@@ -76,6 +76,7 @@ class CodeValidator:
         "collections",
         "itertools",
         "functools",
+        "warnings",
     }
 
     # Dangerous patterns

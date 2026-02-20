@@ -1,4 +1,4 @@
-"""代码执行服务 - Docker 沙箱环境"""
+"""EN - Docker EN"""
 
 import json
 import logging
@@ -19,49 +19,49 @@ logger = logging.getLogger(__name__)
 
 
 class CodeExecutionError(Exception):
-    """代码执行异常"""
+    """EN"""
 
     pass
 
 
 class DockerCodeExecutor:
-    """Docker 沙箱代码执行器"""
+    """Docker EN"""
 
     def __init__(self):
-        """初始化 Docker 客户端"""
+        """EN Docker EN"""
         try:
             self.client = docker.from_env()
-            # 测试 Docker 连接
+            # EN Docker EN
             self.client.ping()
-            logger.info("Docker 客户端连接成功")
+            logger.info("Docker EN")
         except DockerException as e:
-            logger.error(f"Docker 连接失败: {e}")
-            raise CodeExecutionError(f"Docker 不可用: {e}")
+            logger.error(f"Docker EN: {e}")
+            raise CodeExecutionError(f"Docker EN: {e}")
 
     def _prepare_workspace(self) -> str:
-        """准备临时工作空间"""
+        """EN"""
         workspace_id = f"workspace_{uuid.uuid4().hex[:8]}"
         workspace_path = Path(settings.temp_data_dir) / workspace_id
         workspace_path.mkdir(parents=True, exist_ok=True)
         return str(workspace_path)
 
     def _cleanup_workspace(self, workspace_path: str):
-        """清理临时工作空间"""
+        """EN"""
         try:
             import shutil
 
             shutil.rmtree(workspace_path, ignore_errors=True)
-            logger.info(f"清理工作空间: {workspace_path}")
+            logger.info(f"EN: {workspace_path}")
         except Exception as e:
-            logger.warning(f"清理工作空间失败: {e}")
+            logger.warning(f"EN: {e}")
 
     def _validate_code(self, code: str) -> List[str]:
-        """代码安全检查"""
+        """EN"""
         import ast
 
         errors = []
 
-        # 危险操作黑名单
+        # EN
         blacklisted_operations = [
             "os.system",
             "subprocess.call",
@@ -78,34 +78,34 @@ class DockerCodeExecutor:
         ]
 
         try:
-            # AST 解析检查
+            # AST EN
             tree = ast.parse(code)
 
             for node in ast.walk(tree):
-                # 检查函数调用
+                # EN
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
                         func_name = node.func.id
                         if func_name in ["exec", "eval", "compile"]:
-                            errors.append(f"禁止使用函数: {func_name}")
+                            errors.append(f"EN: {func_name}")
                     elif isinstance(node.func, ast.Attribute):
                         if isinstance(node.func.value, ast.Name):
                             full_name = f"{node.func.value.id}.{node.func.attr}"
                             if any(op in full_name for op in blacklisted_operations):
-                                errors.append(f"禁止使用操作: {full_name}")
+                                errors.append(f"EN: {full_name}")
 
-                # 检查导入语句
+                # EN
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         if alias.name in ["os", "subprocess", "sys"]:
-                            errors.append(f"禁止导入模块: {alias.name}")
+                            errors.append(f"EN: {alias.name}")
 
                 if isinstance(node, ast.ImportFrom):
                     if node.module in ["os", "subprocess", "sys"]:
-                        errors.append(f"禁止从模块导入: {node.module}")
+                        errors.append(f"EN: {node.module}")
 
         except SyntaxError as e:
-            errors.append(f"语法错误: {e}")
+            errors.append(f"EN: {e}")
 
         return errors
 
@@ -116,31 +116,31 @@ class DockerCodeExecutor:
         timeout: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        在 Docker 沙箱中执行 Python 代码
+        EN Docker EN Python EN
 
         Args:
-            code: 要执行的 Python 代码
-            data_files: 数据文件路径列表
-            timeout: 执行超时时间（秒）
+            code: EN Python EN
+            data_files: EN
+            timeout: EN(EN)
 
         Returns:
-            执行结果字典，包含:
-            - success: 是否成功
-            - stdout: 标准输出
-            - stderr: 标准错误
-            - exit_code: 退出码
-            - execution_time: 执行时间
-            - visualizations: 生成的可视化文件列表
+            EN,EN:
+            - success: EN
+            - stdout: EN
+            - stderr: EN
+            - exit_code: EN
+            - execution_time: EN
+            - visualizations: EN
         """
         if timeout is None:
             timeout = settings.code_execution_timeout
 
-        # 代码安全检查
+        # EN
         validation_errors = self._validate_code(code)
         if validation_errors:
             return {
                 "success": False,
-                "error": "代码安全检查失败",
+                "error": "Code validation failed.",
                 "validation_errors": validation_errors,
                 "stdout": "",
                 "stderr": "",
@@ -149,16 +149,16 @@ class DockerCodeExecutor:
                 "visualizations": [],
             }
 
-        # 准备工作空间
+        # EN
         workspace_path = self._prepare_workspace()
 
         try:
-            # 写入代码文件
+            # EN
             code_file = Path(workspace_path) / "script.py"
             with open(code_file, "w", encoding="utf-8") as f:
                 f.write(code)
 
-            # 准备数据文件映射
+            # EN
             volumes = {workspace_path: {"bind": "/workspace", "mode": "rw"}}
 
             if data_files:
@@ -168,14 +168,14 @@ class DockerCodeExecutor:
                         container_path = f"/workspace/data/{file_name}"
                         volumes[file_path] = {"bind": container_path, "mode": "ro"}
 
-            # 准备执行命令
+            # EN
             command = ["python", "/workspace/script.py"]
 
-            # 资源限制
+            # EN
             mem_limit = settings.code_execution_memory_limit
             cpu_limit = float(settings.code_execution_cpu_limit)
 
-            # 执行容器
+            # EN
             start_time = time.time()
 
             try:
@@ -186,17 +186,17 @@ class DockerCodeExecutor:
                     mem_limit=mem_limit,
                     cpu_quota=int(cpu_limit * 100000),  # Docker CPU quota
                     cpu_period=100000,
-                    network_mode="none",  # 禁用网络访问
+                    network_mode="none",  # EN
                     remove=True,
                     detach=False,
                     stdout=True,
                     stderr=True,
-                    user="1000:1000",  # 非root用户
+                    user="1000:1000",  # ENrootEN
                 )
 
                 execution_time = time.time() - start_time
 
-                # 解析输出
+                # EN
                 stdout = (
                     container.decode("utf-8")
                     if isinstance(container, bytes)
@@ -205,7 +205,7 @@ class DockerCodeExecutor:
                 stderr = ""
                 exit_code = 0
 
-                # 如果是容器对象，获取输出
+                # EN,EN
                 if hasattr(container, "logs"):
                     try:
                         logs = container.logs(stdout=True, stderr=True)
@@ -213,7 +213,7 @@ class DockerCodeExecutor:
                     except:
                         pass
 
-                # 检查生成的可视化文件
+                # EN
                 visualizations = self._find_visualization_files(workspace_path)
 
                 return {
@@ -230,7 +230,7 @@ class DockerCodeExecutor:
                 execution_time = time.time() - start_time
                 return {
                     "success": False,
-                    "error": "容器执行错误",
+                    "error": "Code execution failed.",
                     "stdout": e.stdout.decode("utf-8") if e.stdout else "",
                     "stderr": e.stderr.decode("utf-8") if e.stderr else str(e),
                     "exit_code": e.exit_status,
@@ -242,7 +242,7 @@ class DockerCodeExecutor:
             except subprocess.TimeoutExpired:
                 return {
                     "success": False,
-                    "error": f"代码执行超时（{timeout}秒）",
+                    "error": f"Execution timed out after {timeout} seconds.",
                     "stdout": "",
                     "stderr": "Execution timeout",
                     "exit_code": -1,
@@ -252,10 +252,10 @@ class DockerCodeExecutor:
                 }
 
         except Exception as e:
-            logger.error(f"代码执行异常: {e}")
+            logger.error(f"Code execution error: {e}")
             return {
                 "success": False,
-                "error": f"执行异常: {str(e)}",
+                "error": f"Code execution service error: {str(e)}",
                 "stdout": "",
                 "stderr": str(e),
                 "exit_code": -1,
@@ -265,11 +265,11 @@ class DockerCodeExecutor:
             }
 
         finally:
-            # 延迟清理工作空间（给API调用时间获取结果）
+            # EN(ENAPIEN)
             import threading
 
             def cleanup_later():
-                time.sleep(60)  # 60秒后清理
+                time.sleep(60)  # 60EN
                 self._cleanup_workspace(workspace_path)
 
             cleanup_thread = threading.Thread(target=cleanup_later)
@@ -277,16 +277,16 @@ class DockerCodeExecutor:
             cleanup_thread.start()
 
     def _find_visualization_files(self, workspace_path: str) -> List[Dict[str, str]]:
-        """查找生成的可视化文件"""
+        """EN"""
         visualizations = []
         workspace = Path(workspace_path)
 
-        # 支持的可视化文件格式
+        # EN
         viz_extensions = [".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf"]
 
         for file_path in workspace.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in viz_extensions:
-                # 读取文件内容（如果是文本文件）
+                # EN(EN)
                 content = None
                 if file_path.suffix.lower() in [".html", ".svg"]:
                     try:
@@ -299,7 +299,7 @@ class DockerCodeExecutor:
                     {
                         "filename": file_path.name,
                         "path": str(file_path),
-                        "type": file_path.suffix.lower()[1:],  # 去掉点号
+                        "type": file_path.suffix.lower()[1:],  # EN
                         "size": file_path.stat().st_size,
                         "content": content,
                     }
@@ -308,9 +308,9 @@ class DockerCodeExecutor:
         return visualizations
 
 
-# 全局执行器实例
+# EN
 try:
     code_executor = DockerCodeExecutor()
 except CodeExecutionError:
-    logger.warning("Docker 不可用，代码执行功能将被禁用")
+    logger.warning("Docker EN,EN")
     code_executor = None

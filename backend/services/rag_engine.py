@@ -57,36 +57,36 @@ class SimpleRAG:
         enable_feedback: bool = True,
     ):
         """
-        初始化 RAG 系统
+        EN RAG EN
 
         Args:
-            use_hybrid_search: 是否使用混合检索（BM25 + 向量）
-            use_reranker: 是否使用重排序模块
-            enable_feedback: 是否启用反馈机制
+            use_hybrid_search: EN(BM25 + EN)
+            use_reranker: EN
+            enable_feedback: EN
         """
         self.vectorstore = VectorStore()
-        self.llm_client = get_llm_client()  # 使用工厂方法获取客户端
+        self.llm_client = get_llm_client()  # EN
         self.use_hybrid_search = use_hybrid_search
         self.use_reranker = use_reranker
         self.enable_feedback = enable_feedback
 
-        # 记录后端信息
+        # EN
         backend_status = get_backend_status()
-        logger.info(f"✅ RAG 引擎初始化完成 - 后端: {backend_status.get('backend', 'unknown')}")
+        logger.info(f"✅ RAG EN - EN: {backend_status.get('backend', 'unknown')}")
 
-        # Phase 2 Step 2: 初始化混合检索器
+        # Phase 2 Step 2: EN
         if use_hybrid_search:
             self.hybrid_retriever = HybridRetriever(self.vectorstore)
         else:
             self.hybrid_retriever = None
 
-        # Phase 2 Step 3: 初始化重排序器
+        # Phase 2 Step 3: EN
         if use_reranker:
             self.reranker = Reranker()
         else:
             self.reranker = None
 
-        # 初始化反馈管理器
+        # EN
         if enable_feedback:
             self.feedback_manager = FeedbackManager(self.vectorstore, self.reranker)
         else:
@@ -121,19 +121,19 @@ class SimpleRAG:
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> dict:
-        """RAG查询流程"""
+        """RAGEN"""
         if top_k is None:
             top_k = settings.top_k
 
-        # 生成查询ID用于反馈跟踪
+        # ENIDEN
         query_id = str(uuid.uuid4())
 
-        # 获取自适应搜索权重（如果启用反馈）
+        # EN(EN)
         vector_weight, bm25_weight = self._get_adaptive_search_weights()
 
-        # Phase 2 Step 2: 使用混合检索或纯向量检索
+        # Phase 2 Step 2: EN
         if self.use_hybrid_search and self.hybrid_retriever:
-            # 混合检索（BM25 + 向量），先获取更多候选（top_k * 2）
+            # EN(BM25 + EN),EN(top_k * 2)
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             similar_chunks = self.hybrid_retriever.search(
                 query=question,
@@ -142,24 +142,24 @@ class SimpleRAG:
                 bm25_weight=bm25_weight,
             )
         else:
-            # 纯向量检索（Phase 1 方法）
+            # EN(Phase 1 EN)
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             query_embedding = embed_query_text(question)
             similar_chunks = self.vectorstore.similarity_search(
                 query_embedding, top_k=retrieve_k
             )
 
-        # Phase 2 Step 3: 使用重排序器精排
+        # Phase 2 Step 3: EN
         if self.use_reranker and self.reranker and similar_chunks:
             similar_chunks = self.reranker.rerank(
                 query=question, documents=similar_chunks, top_k=top_k
             )
 
-        # 3. 构建提示词
-        # 为每个文档块添加编号，提高可读性
+        # 3. EN
+        # EN,EN
         context_parts = []
         for i, chunk in enumerate(similar_chunks, 1):
-            context_parts.append(f"[文档{i}]\n{chunk['content']}")
+            context_parts.append(f"[EN{i}]\n{chunk['content']}")
         context = "\n\n".join(context_parts)
 
         memory_payload = {}
@@ -174,7 +174,7 @@ class SimpleRAG:
 
         prompt = self._build_prompt(question, context, memory_payload)
 
-        # 4. LLM生成答案
+        # 4. LLMEN
         answer = self.llm_client.generate(
             prompt, temperature=temperature, max_tokens=max_tokens
         )
@@ -194,7 +194,7 @@ class SimpleRAG:
         if memory_session is not None:
             self._record_memory_interaction(memory_session, question, answer)
 
-        # 5. 返回结果
+        # 5. EN
         return {
             "query_id": query_id,
             "question": question,
@@ -209,24 +209,24 @@ class SimpleRAG:
         }
 
     def _get_adaptive_search_weights(self) -> tuple:
-        """获取自适应搜索权重"""
+        """EN"""
         if not self.feedback_manager:
-            return 0.7, 0.3  # 默认权重
+            return 0.7, 0.3  # EN
 
         try:
-            # 获取最近的反馈统计
+            # EN
             stats = self.feedback_manager.get_feedback_statistics(days=1)
-            if stats.total_queries >= 5:  # 至少有5个反馈才调整
+            if stats.total_queries >= 5:  # EN5EN
                 if stats.success_rate < 0.5:
-                    # 成功率低，增加向量搜索权重
+                    # EN,EN
                     return 0.8, 0.2
                 elif stats.success_rate > 0.8:
-                    # 成功率高，略微增加关键词权重
+                    # EN,EN
                     return 0.6, 0.4
         except Exception as e:
             logger.warning(f"Failed to get adaptive search weights: {e}")
 
-        return 0.7, 0.3  # 默认权重
+        return 0.7, 0.3  # EN
 
     def _build_prompt(
         self,
@@ -234,25 +234,25 @@ class SimpleRAG:
         context: str,
         memory_payload: Optional[dict] = None,
     ) -> str:
-        """构建提示词"""
+        """EN"""
         memory_context = self._format_memory_payload(memory_payload or {})
-        return f"""你是一个专业的技术问答助手。请基于以下参考文档回答用户问题。
+        return f"""EN.EN.
 
-**重要指示**：
-1. 仔细阅读所有参考文档
-2. 只使用文档中的信息回答
-3. 如果文档中没有相关信息，明确说"我不知道"
-4. 回答要准确、简洁、专业
+**EN**:
+1. EN
+2. EN
+3. EN,EN"EN"
+4. EN,EN,EN
 
-**会话上下文**：
+**EN**:
 {memory_context}
 
-**参考文档**：
+**EN**:
 {context}
 
-**用户问题**：{question}
+**EN**:{question}
 
-**你的回答**："""
+**EN**:"""
 
     @staticmethod
     def _format_memory_payload(memory_payload: dict) -> str:
@@ -261,14 +261,14 @@ class SimpleRAG:
         long_term = memory_payload.get("long_term") or []
 
         if not short_term and not summary and not long_term:
-            return "无历史上下文。"
+            return "EN."
 
         lines: list[str] = []
         if summary:
-            lines.append(f"- 会话摘要: {summary}")
+            lines.append(f"- EN: {summary}")
 
         if short_term:
-            lines.append("- 最近对话:")
+            lines.append("- EN:")
             for entry in short_term[-6:]:
                 role = entry.get("role", "unknown")
                 content = str(entry.get("content", "")).strip()
@@ -276,7 +276,7 @@ class SimpleRAG:
                     lines.append(f"  - {role}: {content[:240]}")
 
         if long_term:
-            lines.append("- 相关长期记忆:")
+            lines.append("- EN:")
             for item in long_term[:3]:
                 content = item.get("content")
                 if isinstance(content, dict):
@@ -350,7 +350,7 @@ class SimpleRAG:
         retrieved_chunks: list = None,
         feedback_weight: float = 1.0,
     ) -> bool:
-        """提交用户反馈"""
+        """EN"""
         if not self.feedback_manager:
             logger.warning("Feedback system is not enabled")
             return False
@@ -375,7 +375,7 @@ class SimpleRAG:
             return False
 
     def get_feedback_statistics(self, days: int = 7) -> dict:
-        """获取反馈统计信息"""
+        """EN"""
         if not self.feedback_manager:
             return {"message": "Feedback system is not enabled"}
 
@@ -396,7 +396,7 @@ class SimpleRAG:
     def get_high_quality_documents(
         self, min_score: float = 0.5, limit: int = 100
     ) -> list:
-        """获取高质量文档列表"""
+        """EN"""
         if not self.feedback_manager:
             return []
 
@@ -408,19 +408,19 @@ class SimpleRAG:
 
     def add_documents(self, documents: list) -> bool:
         """
-        添加文档到RAG系统
+        ENRAGEN
 
         Args:
-            documents: 文档列表,每个文档包含content和metadata
+            documents: EN,ENcontentENmetadata
 
         Returns:
-            bool: 是否成功
+            bool: EN
         """
         try:
             from backend.services.core.chunker import chunk_text
             from backend.services.core.embedder import embed_texts
 
-            # 分块
+            # EN
             all_chunks = []
 
             for doc in documents:
@@ -444,7 +444,7 @@ class SimpleRAG:
                         }
                     )
 
-            # 向量化并存储
+            # EN
             texts = [chunk["content"] for chunk in all_chunks]
             embeddings = embed_texts(texts)
 
@@ -493,16 +493,16 @@ class SimpleRAG:
 
     def delete_document(self, doc_id: str) -> bool:
         """
-        删除文档
+        EN
 
         Args:
-            doc_id: 文档ID
+            doc_id: ENID
 
         Returns:
-            bool: 是否成功
+            bool: EN
         """
         try:
-            # 删除文档的所有chunks
+            # ENchunks
             self.vectorstore.delete_by_doc_id(doc_id)
             if self.hybrid_retriever and hasattr(
                 self.hybrid_retriever, "invalidate_bm25_index"

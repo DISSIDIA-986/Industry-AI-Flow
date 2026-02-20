@@ -1,5 +1,5 @@
 """
-数据库驱动的RAG优化引擎 - 基于持久化数据的智能优化
+ENRAGEN - EN
 """
 
 import datetime
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationRecommendation:
-    """优化建议"""
+    """EN"""
 
     optimization_type: str
     target_config: Dict[str, Any]
@@ -31,7 +31,7 @@ class OptimizationRecommendation:
 
 
 class DatabaseDrivenOptimizer:
-    """数据库驱动的RAG优化引擎"""
+    """ENRAGEN"""
 
     def __init__(self, vectorstore: VectorStore):
         self.vectorstore = vectorstore
@@ -42,42 +42,42 @@ class DatabaseDrivenOptimizer:
         self, optimization_scope: str = "global"
     ) -> List[OptimizationRecommendation]:
         """
-        分析并生成优化建议
+        EN
 
         Args:
-            optimization_scope: 优化范围 ("global", "session", "document_type")
+            optimization_scope: EN ("global", "session", "document_type")
 
         Returns:
-            优化建议列表
+            EN
         """
         recommendations = []
 
         try:
-            # 1. 分析查询性能模式
+            # 1. EN
             performance_recommendations = self._analyze_query_performance_patterns(
                 optimization_scope
             )
             recommendations.extend(performance_recommendations)
 
-            # 2. 分析反馈驱动的优化机会
+            # 2. EN
             feedback_recommendations = self._analyze_feedback_driven_optimizations(
                 optimization_scope
             )
             recommendations.extend(feedback_recommendations)
 
-            # 3. 分析配置使用效率
+            # 3. EN
             config_recommendations = self._analyze_configuration_efficiency(
                 optimization_scope
             )
             recommendations.extend(config_recommendations)
 
-            # 4. 分析文档质量和检索相关性
+            # 4. EN
             doc_recommendations = self._analyze_document_quality_patterns(
                 optimization_scope
             )
             recommendations.extend(doc_recommendations)
 
-            # 按预期改善程度排序
+            # EN
             recommendations.sort(key=lambda x: x.expected_improvement, reverse=True)
 
             logger.info(
@@ -92,11 +92,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_query_performance_patterns(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """分析查询性能模式"""
+        """EN"""
         recommendations = []
 
         try:
-            # 获取性能分析数据
+            # EN
             analytics = self.session_manager.get_rag_performance_analytics(days=7)
 
             if not analytics.get("performance_summary"):
@@ -105,9 +105,9 @@ class DatabaseDrivenOptimizer:
             perf_summary = analytics["performance_summary"]
             config_usage = analytics.get("configuration_usage", [])
 
-            # 分析响应时间模式
+            # EN
             avg_response_time = perf_summary.get("avg_response_time")
-            if avg_response_time and avg_response_time > 3.0:  # 超过3秒
+            if avg_response_time and avg_response_time > 3.0:  # EN3EN
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="response_time_optimization",
@@ -125,10 +125,10 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # 分析检索分数模式
+            # EN
             avg_retrieval_score = perf_summary.get("avg_retrieval_score")
-            if avg_retrieval_score and avg_retrieval_score < 0.6:  # 检索分数过低
-                # 分析最佳配置
+            if avg_retrieval_score and avg_retrieval_score < 0.6:  # EN
+                # EN
                 best_config = self._find_best_performing_config(config_usage)
                 if best_config:
                     recommendations.append(
@@ -145,9 +145,9 @@ class DatabaseDrivenOptimizer:
                         )
                     )
 
-            # 分析重排序效果
+            # EN
             avg_reranking_score = perf_summary.get("avg_reranking_score")
-            if avg_reranking_score and avg_reranking_score < 0.5:  # 重排序效果不佳
+            if avg_reranking_score and avg_reranking_score < 0.5:  # EN
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="reranking_optimization",
@@ -171,11 +171,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_feedback_driven_optimizations(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """分析反馈驱动的优化机会"""
+        """EN"""
         recommendations = []
 
         try:
-            # 获取反馈统计
+            # EN
             feedback_stats = self.feedback_manager.get_feedback_statistics(days=7)
 
             if feedback_stats.total_queries < settings.min_feedback_for_optimization:
@@ -183,8 +183,8 @@ class DatabaseDrivenOptimizer:
 
             success_rate = feedback_stats.success_rate
 
-            # 分析成功率模式
-            if success_rate < 0.6:  # 成功率过低
+            # EN
+            if success_rate < 0.6:  # EN
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="comprehensive_retrieval_enhancement",
@@ -201,7 +201,7 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # 分析部分有帮助的反馈
+            # EN
             if feedback_stats.partially_helpful_count > feedback_stats.helpful_count:
                 recommendations.append(
                     OptimizationRecommendation(
@@ -218,9 +218,9 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # 分析无帮助反馈的具体模式
+            # EN
             if feedback_stats.not_helpful_count > 0:
-                # 获取具体的负面反馈查询
+                # EN
                 negative_queries = self._get_negative_feedback_patterns()
                 if negative_queries:
                     recommendations.append(
@@ -246,11 +246,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_configuration_efficiency(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """分析配置使用效率"""
+        """EN"""
         recommendations = []
 
         try:
-            # 获取自适应配置使用情况
+            # EN
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -278,11 +278,11 @@ class DatabaseDrivenOptimizer:
             if not config_analysis:
                 return recommendations
 
-            # 找出表现最好和最差的配置
+            # EN
             best_configs = [row for row in config_analysis if row[2] > 0.7]
             worst_configs = [row for row in config_analysis if row[2] < 0.4]
 
-            # 为表现差的配置提供建议
+            # EN
             for (
                 config_type,
                 config_key,
@@ -290,7 +290,7 @@ class DatabaseDrivenOptimizer:
                 usage_count,
                 max_score,
             ) in worst_configs:
-                # 找到对应类型的最佳配置
+                # EN
                 best_match = next(
                     (row for row in best_configs if row[0] == config_type), None
                 )
@@ -318,11 +318,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_document_quality_patterns(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """分析文档质量模式"""
+        """EN"""
         recommendations = []
 
         try:
-            # 获取低质量文档
+            # EN
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -364,7 +364,7 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # 分析高质量文档模式
+            # EN
             cur = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -411,17 +411,17 @@ class DatabaseDrivenOptimizer:
         return recommendations
 
     def _find_best_performing_config(self, config_usage: List[Dict]) -> Optional[Dict]:
-        """找出表现最佳的配置"""
+        """EN"""
         if not config_usage:
             return None
 
-        # 按平均响应时间和使用次数找最佳配置
+        # EN
         best_config = None
         best_score = -1
 
         for config in config_usage:
             if config["avg_response_time"] and config["usage_count"] >= 3:
-                # 综合评分：响应时间越低越好，使用次数越高越好
+                # EN:EN,EN
                 score = config["usage_count"] / (config["avg_response_time"] + 1)
                 if score > best_score:
                     best_score = score
@@ -430,7 +430,7 @@ class DatabaseDrivenOptimizer:
         return best_config
 
     def _get_negative_feedback_patterns(self) -> List[str]:
-        """获取负面反馈的查询模式"""
+        """EN"""
         try:
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
@@ -456,11 +456,11 @@ class DatabaseDrivenOptimizer:
             return []
 
     def apply_optimization(self, recommendation: OptimizationRecommendation) -> bool:
-        """应用优化建议"""
+        """EN"""
         try:
             logger.info(f"Applying optimization: {recommendation.optimization_type}")
 
-            # 根据优化类型应用不同的优化策略
+            # EN
             if recommendation.optimization_type == "retrieval_weight_adjustment":
                 return self._apply_retrieval_weight_optimization(recommendation)
             elif recommendation.optimization_type == "response_time_optimization":
@@ -484,9 +484,9 @@ class DatabaseDrivenOptimizer:
     def _apply_retrieval_weight_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """应用检索权重优化"""
+        """EN"""
         try:
-            # 保存新的自适应配置
+            # EN
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
                 config_type="retrieval_weights",
@@ -505,7 +505,7 @@ class DatabaseDrivenOptimizer:
     def _apply_response_time_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """应用响应时间优化"""
+        """EN"""
         try:
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
@@ -525,7 +525,7 @@ class DatabaseDrivenOptimizer:
     def _apply_reranking_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """应用重排序优化"""
+        """EN"""
         try:
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
@@ -545,13 +545,13 @@ class DatabaseDrivenOptimizer:
     def _apply_document_quality_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """应用文档质量优化"""
+        """EN"""
         try:
-            # 这里可以实现文档重新处理或删除的逻辑
+            # EN
             doc_ids = recommendation.target_config.get("document_ids", [])
             logger.info(f"Marked {len(doc_ids)} documents for quality improvement")
 
-            # 触发文档重新处理任务
+            # EN
             for doc_id in doc_ids:
                 self.session_manager.trigger_optimization(
                     trigger_type="document_reprocessing",
@@ -567,12 +567,12 @@ class DatabaseDrivenOptimizer:
     def _apply_document_boosting_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """应用文档提升优化"""
+        """EN"""
         try:
             doc_ids = recommendation.target_config.get("document_ids", [])
             boost_factor = recommendation.target_config.get("boost_factor", 1.5)
 
-            # 保存文档提升配置
+            # EN
             config_value = {"document_ids": doc_ids, "boost_factor": boost_factor}
 
             self.session_manager.save_adaptive_config(
@@ -592,7 +592,7 @@ class DatabaseDrivenOptimizer:
             return False
 
     def process_pending_optimizations(self) -> int:
-        """处理待处理的优化任务"""
+        """EN"""
         processed_count = 0
 
         try:
@@ -606,7 +606,7 @@ class DatabaseDrivenOptimizer:
                     trigger_type = optimization["trigger_type"]
                     trigger_data = optimization["trigger_data"]
 
-                    # 处理优化任务
+                    # EN
                     if trigger_type == "document_reprocessing":
                         success = self._process_document_reprocessing(trigger_data)
                     elif trigger_type == "query_rewrite":
@@ -619,7 +619,7 @@ class DatabaseDrivenOptimizer:
                         )
                         continue
 
-                    # 更新处理状态
+                    # EN
                     status = "completed" if success else "failed"
                     result = {"processed": True, "trigger_type": trigger_type}
                     error_message = None if success else "Processing failed"
@@ -645,15 +645,15 @@ class DatabaseDrivenOptimizer:
         return processed_count
 
     def _process_document_reprocessing(self, trigger_data: Dict) -> bool:
-        """处理文档重新处理任务"""
+        """EN"""
         try:
             doc_id = trigger_data.get("doc_id")
             reason = trigger_data.get("reason", "unknown")
 
-            # 这里可以实现文档重新处理逻辑
+            # EN
             logger.info(f"Reprocessing document {doc_id} due to: {reason}")
 
-            # 实际实现中，这里应该调用文档处理管道重新处理文档
+            # EN,EN
             return True
 
         except Exception as e:
@@ -661,12 +661,12 @@ class DatabaseDrivenOptimizer:
             return False
 
     def _process_query_rewrite(self, trigger_data: Dict) -> bool:
-        """处理查询重写任务"""
+        """EN"""
         try:
             original_query = trigger_data.get("original_query")
             query_id = trigger_data.get("query_id")
 
-            # 这里可以实现查询重写逻辑
+            # EN
             logger.info(f"Rewriting query {query_id}: {original_query}")
 
             return True
@@ -676,12 +676,12 @@ class DatabaseDrivenOptimizer:
             return False
 
     def _process_config_update(self, trigger_data: Dict) -> bool:
-        """处理配置更新任务"""
+        """EN"""
         try:
             config_type = trigger_data.get("config_type")
             config_updates = trigger_data.get("updates", {})
 
-            # 应用配置更新
+            # EN
             for key, value in config_updates.items():
                 self.session_manager.save_adaptive_config(
                     config_type=config_type, config_key=key, config_value=value

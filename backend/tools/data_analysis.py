@@ -101,22 +101,22 @@ def data_analysis_tool(
                 }
             )
 
-            logger.info(f"数据分析完成，类型: {analysis_type}")
+            logger.info(f"Data analysis completed, type: {analysis_type}")
             return analysis_result
         else:
             return {
                 "success": False,
-                "error": f"数据分析执行失败: {result.get('error', 'Unknown error')}",
+                "error": f"Data analysis execution failed: {result.get('error', 'Unknown error')}",
                 "analysis_type": analysis_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
             }
 
     except Exception as e:
-        logger.error(f"数据分析工具异常: {e}")
+        logger.error(f"Data analysis tool error: {e}")
         return {
             "success": False,
-            "error": f"工具异常: {str(e)}",
+            "error": f"Tool error: {str(e)}",
             "analysis_type": analysis_type,
         }
 
@@ -194,22 +194,22 @@ def data_preprocessing_tool(
                 }
             )
 
-            logger.info(f"数据预处理完成，操作: {operations}")
+            logger.info(f"Data preprocessing completed, operations: {operations}")
             return preprocessing_result
         else:
             return {
                 "success": False,
-                "error": f"数据预处理失败: {result.get('error', 'Unknown error')}",
+                "error": f"Data preprocessing failed: {result.get('error', 'Unknown error')}",
                 "operations_applied": operations,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
             }
 
     except Exception as e:
-        logger.error(f"数据预处理工具异常: {e}")
+        logger.error(f"Data preprocessing tool error: {e}")
         return {
             "success": False,
-            "error": f"工具异常: {str(e)}",
+            "error": f"Tool error: {str(e)}",
             "operations_applied": operations,
         }
 

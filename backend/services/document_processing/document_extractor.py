@@ -1,12 +1,12 @@
 """
-文档内容提取器
+EN
 
-支持多种文档格式:
+EN:
 - PDF (PyPDF2 + OCR)
 - Word (python-docx)
 - Excel (openpyxl)
-- 图像 (PaddleOCR)
-- 文本文件
+- EN (PaddleOCR)
+- EN
 """
 
 import logging
@@ -19,19 +19,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DocumentContent:
-    """文档提取结果"""
+    """EN"""
 
-    text: str  # 提取的文本
-    metadata: dict  # 元数据
-    method: str  # 提取方法
-    file_type: str  # 文件类型
+    text: str  # EN
+    metadata: dict  # EN
+    method: str  # EN
+    file_type: str  # EN
 
 
 class DocumentExtractor:
     """
-    文档内容提取器
+    EN
 
-    自动检测文档类型并使用适当的方法提取内容
+    EN
     """
 
     SUPPORTED_EXTENSIONS = {
@@ -51,10 +51,10 @@ class DocumentExtractor:
 
     def __init__(self, use_ocr: bool = True):
         """
-        初始化文档提取器
+        EN
 
         Args:
-            use_ocr: 是否使用OCR处理图像和PDF
+            use_ocr: ENOCRENPDF
         """
         self.use_ocr = use_ocr
         self.ocr_processor = None
@@ -67,35 +67,35 @@ class DocumentExtractor:
 
                 self.ocr_processor = OCRProcessor()
             except Exception as e:
-                logger.warning(f"OCR初始化失败: {e}")
+                logger.warning(f"OCREN: {e}")
 
     def extract(self, file_path: Union[str, Path]) -> DocumentContent:
         """
-        提取文档内容
+        EN
 
         Args:
-            file_path: 文档文件路径
+            file_path: EN
 
         Returns:
-            DocumentContent对象
+            DocumentContentEN
 
         Raises:
-            ValueError: 不支持的文件类型
-            FileNotFoundError: 文件不存在
+            ValueError: EN
+            FileNotFoundError: EN
         """
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"文件不存在: {file_path}")
+            raise FileNotFoundError(f"EN: {file_path}")
 
-        # 检测文件类型
+        # EN
         file_ext = file_path.suffix.lower()
         if file_ext not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError(f"不支持的文件类型: {file_ext}")
+            raise ValueError(f"EN: {file_ext}")
 
         file_type = self.SUPPORTED_EXTENSIONS[file_ext]
 
-        # 根据类型提取内容
+        # EN
         if file_type == "pdf":
             return self._extract_pdf(file_path)
         elif file_type == "word":
@@ -107,10 +107,10 @@ class DocumentExtractor:
         elif file_type == "image":
             return self._extract_image(file_path)
         else:
-            raise ValueError(f"未实现的文件类型处理: {file_type}")
+            raise ValueError(f"EN: {file_type}")
 
     def _extract_pdf(self, file_path: Path) -> DocumentContent:
-        """提取PDF内容"""
+        """ENPDFEN"""
         try:
             from PyPDF2 import PdfReader
 
@@ -122,10 +122,10 @@ class DocumentExtractor:
                 if page_text.strip():
                     text_parts.append(page_text)
                 elif self.use_ocr and self.ocr_processor:
-                    # 文本提取失败，尝试OCR
-                    logger.info(f"PDF第{page_num+1}页无文本，尝试OCR")
-                    # 注: 完整实现需要pdf2image转换
-                    # 这里简化处理
+                    # EN,ENOCR
+                    logger.info(f"PDFEN{page_num+1}EN,ENOCR")
+                    # EN: ENpdf2imageEN
+                    # EN
 
             full_text = "\n\n".join(text_parts)
 
@@ -143,27 +143,27 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"PDF提取失败: {e}")
+            logger.error(f"PDFEN: {e}")
             raise
 
     def _extract_word(self, file_path: Path) -> DocumentContent:
-        """提取Word文档内容"""
+        """ENWordEN"""
         try:
             from docx import Document
 
             doc = Document(file_path)
 
-            # 提取段落文本
+            # EN
             paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
 
-            # 提取表格文本
+            # EN
             tables_text = []
             for table in doc.tables:
                 for row in table.rows:
                     row_text = " | ".join(cell.text for cell in row.cells)
                     tables_text.append(row_text)
 
-            # 合并所有文本
+            # EN
             all_text = "\n".join(paragraphs)
             if tables_text:
                 all_text += "\n\n" + "\n".join(tables_text)
@@ -181,11 +181,11 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"Word文档提取失败: {e}")
+            logger.error(f"WordEN: {e}")
             raise
 
     def _extract_excel(self, file_path: Path) -> DocumentContent:
-        """提取Excel内容"""
+        """ENExcelEN"""
         try:
             import openpyxl
 
@@ -195,12 +195,12 @@ class DocumentExtractor:
             for sheet_name in workbook.sheetnames:
                 sheet = workbook[sheet_name]
 
-                # 提取工作表数据
+                # EN
                 sheet_text = [f"### {sheet_name} ###"]
 
                 for row in sheet.iter_rows(values_only=True):
                     row_values = [str(cell) if cell is not None else "" for cell in row]
-                    if any(row_values):  # 跳过空行
+                    if any(row_values):  # EN
                         sheet_text.append(" | ".join(row_values))
 
                 sheets_text.append("\n".join(sheet_text))
@@ -220,13 +220,13 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"Excel提取失败: {e}")
+            logger.error(f"ExcelEN: {e}")
             raise
 
     def _extract_text(self, file_path: Path) -> DocumentContent:
-        """提取文本文件内容"""
+        """EN"""
         try:
-            # 尝试多种编码
+            # EN
             encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
 
             for encoding in encodings:
@@ -250,26 +250,26 @@ class DocumentExtractor:
                 except UnicodeDecodeError:
                     continue
 
-            raise ValueError("无法使用支持的编码读取文本文件")
+            raise ValueError("EN")
 
         except Exception as e:
-            logger.error(f"文本提取失败: {e}")
+            logger.error(f"EN: {e}")
             raise
 
     def _extract_image(self, file_path: Path) -> DocumentContent:
-        """提取图像中的文本（使用OCR）"""
+        """EN(ENOCR)"""
         if not self.use_ocr or not self.ocr_processor:
-            raise ValueError("OCR未启用或不可用")
+            raise ValueError("OCREN")
 
         try:
             from PIL import Image
 
-            # 读取图像元数据
+            # EN
             with Image.open(file_path) as img:
                 width, height = img.size
                 mode = img.mode
 
-            # 执行OCR
+            # ENOCR
             ocr_result = self.ocr_processor.process(file_path)
 
             metadata = {
@@ -288,24 +288,24 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"图像OCR提取失败: {e}")
+            logger.error(f"ENOCREN: {e}")
             raise
 
 
-# 便捷函数
+# EN
 def process_document(
     file_path: Union[str, Path],
     use_ocr: bool = True,
 ) -> DocumentContent:
     """
-    处理文档并提取内容（便捷函数）
+    EN(EN)
 
     Args:
-        file_path: 文档文件路径
-        use_ocr: 是否使用OCR
+        file_path: EN
+        use_ocr: ENOCR
 
     Returns:
-        DocumentContent对象
+        DocumentContentEN
     """
     extractor = DocumentExtractor(use_ocr=use_ocr)
     return extractor.extract(file_path)

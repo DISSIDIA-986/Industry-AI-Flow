@@ -63,7 +63,7 @@ class DispatchService:
         if not text:
             return 0.0
         lowered = text.lower()
-        if "i don't know" in lowered or "不知道" in text or "无法确定" in text:
+        if "i don't know" in lowered or "EN" in text or "EN" in text:
             return 0.55
         base = 0.55
         length_boost = min(len(text), 600) / 1500

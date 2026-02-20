@@ -54,7 +54,7 @@ class LongTermMemoryStore:
             )
             conn.commit()
         except Exception as exc:
-            logger.warning("无法初始化对话记忆表: %s", exc)
+            logger.warning("EN: %s", exc)
         finally:
             if "cur" in locals():
                 cur.close()
@@ -103,7 +103,7 @@ class LongTermMemoryStore:
             return memory_id
         except Exception as exc:
             conn.rollback()
-            logger.error("写入长期记忆失败: %s", exc)
+            logger.error("EN: %s", exc)
             raise
         finally:
             cur.close()
@@ -172,7 +172,7 @@ class LongTermMemoryStore:
                 )
             return memories
         except Exception as exc:
-            logger.error("搜索长期记忆失败: %s", exc)
+            logger.error("EN: %s", exc)
             return []
         finally:
             cur.close()

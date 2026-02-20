@@ -1,6 +1,6 @@
 """
-Prompt管理服务 - 集中式Prompt管理、版本控制、性能评估
-支持动态Prompt选择、A/B测试、智能优化等功能
+PromptEN - ENPromptEN,EN,EN
+ENPromptEN,A/BEN,EN
 """
 
 import asyncio
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class PromptStatus(Enum):
-    """Prompt状态枚举"""
+    """PromptEN"""
 
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -31,7 +31,7 @@ class PromptStatus(Enum):
 
 
 class ExperimentStatus(Enum):
-    """实验状态枚举"""
+    """EN"""
 
     ACTIVE = "active"
     PAUSED = "paused"
@@ -41,7 +41,7 @@ class ExperimentStatus(Enum):
 
 @dataclass
 class PromptVariable:
-    """Prompt变量定义"""
+    """PromptEN"""
 
     name: str
     type: str = "string"  # string, number, boolean, json
@@ -54,7 +54,7 @@ class PromptVariable:
 
 @dataclass
 class PromptInfo:
-    """Prompt信息数据类"""
+    """PromptEN"""
 
     id: uuid.UUID
     name: str
@@ -78,13 +78,13 @@ class PromptInfo:
 
     @property
     def success_rate(self) -> float:
-        """计算成功率"""
+        """EN"""
         if self.usage_count == 0:
             return 0.0
         return self.success_count / self.usage_count
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """EN"""
         data = asdict(self)
         data["variables"] = (
             [asdict(var) for var in self.variables] if self.variables else []
@@ -95,7 +95,7 @@ class PromptInfo:
 
 @dataclass
 class UsageLog:
-    """使用记录数据类"""
+    """EN"""
 
     prompt_id: uuid.UUID
     session_id: Optional[str]
@@ -112,15 +112,15 @@ class UsageLog:
 
 
 class PromptManager:
-    """Prompt管理器 - 核心服务类"""
+    """PromptEN - EN"""
 
     def __init__(self, db_pool: asyncpg.Pool, cache_ttl: int = 300):
         """
-        初始化Prompt管理器
+        ENPromptEN
 
         Args:
-            db_pool: 数据库连接池
-            cache_ttl: 缓存过期时间（秒）
+            db_pool: EN
+            cache_ttl: EN(EN)
         """
         self.db_pool = db_pool
         self.cache_ttl = cache_ttl
@@ -132,10 +132,10 @@ class PromptManager:
         )
         self._jinja_env.policies['ext.require_sandboxed'] = True
 
-        # 预编译正则表达式
+        # EN
         self._variable_pattern = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
-        logger.info("Prompt管理器初始化完成")
+        logger.info("PromptEN")
 
     async def get_prompt(
         self,
@@ -146,29 +146,29 @@ class PromptManager:
         enable_experiments: bool = True,
     ) -> Tuple[PromptInfo, str]:
         """
-        获取最优Prompt并渲染模板
+        ENPromptEN
 
         Args:
-            name: Prompt名称
-            category: Prompt分类
-            context: 使用上下文，用于智能选择
-            variables: 变量值字典
-            enable_experiments: 是否启用A/B测试
+            name: PromptEN
+            category: PromptEN
+            context: EN,EN
+            variables: EN
+            enable_experiments: ENA/BEN
 
         Returns:
-            Tuple[PromptInfo, str]: (Prompt信息, 渲染后的内容)
+            Tuple[PromptInfo, str]: (PromptEN, EN)
         """
         cache_key = f"{category}:{name}"
 
-        # 检查缓存
+        # EN
         if cache_key in self._cache:
             prompt_info, cached_at = self._cache[cache_key]
             if datetime.now() - cached_at < timedelta(seconds=self.cache_ttl):
-                logger.debug(f"从缓存获取Prompt: {cache_key}")
+                logger.debug(f"ENPrompt: {cache_key}")
                 rendered_content = self._render_template(prompt_info.content, variables)
                 return prompt_info, rendered_content
 
-        # 获取最优Prompt
+        # ENPrompt
         if enable_experiments:
             prompt_info = await self._get_prompt_with_experiment(
                 name, category, context
@@ -177,38 +177,38 @@ class PromptManager:
             prompt_info = await self._get_best_prompt(name, category, context)
 
         if not prompt_info:
-            raise ValueError(f"未找到Prompt: {category}/{name}")
+            raise ValueError(f"ENPrompt: {category}/{name}")
 
-        # 更新缓存
+        # EN
         self._cache[cache_key] = (prompt_info, datetime.now())
 
-        # 渲染模板
+        # EN
         rendered_content = self._render_template(prompt_info.content, variables)
 
-        # 记录使用（异步，不阻塞返回）
+        # EN(EN,EN)
         asyncio.create_task(
             self._record_usage_start(prompt_info.id, context, variables)
         )
 
-        logger.info(f"获取Prompt成功: {category}/{name} v{prompt_info.version}")
+        logger.info(f"ENPromptEN: {category}/{name} v{prompt_info.version}")
         return prompt_info, rendered_content
 
     async def _get_best_prompt(
         self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
-        获取最佳Prompt版本
+        ENPromptEN
 
         Args:
-            name: Prompt名称
-            category: Prompt分类
-            context: 使用上下文
+            name: PromptEN
+            category: PromptEN
+            context: EN
 
         Returns:
-            PromptInfo: 最佳Prompt信息
+            PromptInfo: ENPromptEN
         """
         async with self.db_pool.acquire() as conn:
-            # 查询活跃版本，按性能评分和优先级排序
+            # EN,EN
             query = """
                 SELECT p.*,
                        COALESCE(
@@ -235,18 +235,18 @@ class PromptManager:
         self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
-        获取包含A/B测试的Prompt
+        ENA/BENPrompt
 
         Args:
-            name: Prompt名称
-            category: Prompt分类
-            context: 使用上下文
+            name: PromptEN
+            category: PromptEN
+            context: EN
 
         Returns:
-            PromptInfo: 实验选择的Prompt信息
+            PromptInfo: ENPromptEN
         """
         async with self.db_pool.acquire() as conn:
-            # 查询是否有活跃的A/B测试
+            # ENA/BEN
             experiment_query = """
                 SELECT pe.*, pa.id as a_id, pb.id as b_id,
                        pa.performance_score as a_score, pb.performance_score as b_score
@@ -261,10 +261,10 @@ class PromptManager:
             experiment_row = await conn.fetchrow(experiment_query, name, category)
 
             if not experiment_row:
-                # 没有活跃实验，获取最佳Prompt
+                # EN,ENPrompt
                 return await self._get_best_prompt(name, category, context)
 
-            # A/B测试逻辑：使用确定性分配，避免同一会话在短窗口内抖动。
+            # A/BEN:EN,EN.
             use_a = (
                 self._allocate_experiment_bucket(
                     name=name,
@@ -277,12 +277,12 @@ class PromptManager:
 
             selected_id = experiment_row["a_id"] if use_a else experiment_row["b_id"]
 
-            # 记录实验使用
+            # EN
             await self._record_experiment_usage(
                 experiment_row["id"], selected_id, context
             )
 
-            # 获取选中的Prompt
+            # ENPrompt
             prompt_query = """
                 SELECT p.*,
                        COALESCE(
@@ -301,51 +301,51 @@ class PromptManager:
             if prompt_row:
                 return self._row_to_prompt_info(prompt_row)
 
-            # 备选方案：获取最佳Prompt
+            # EN:ENPrompt
             return await self._get_best_prompt(name, category, context)
 
     def _render_template(
         self, template_content: str, variables: Optional[Dict[str, Any]]
     ) -> str:
         """
-        渲染Prompt模板
+        ENPromptEN
 
         Args:
-            template_content: 模板内容
-            variables: 变量字典
+            template_content: EN
+            variables: EN
 
         Returns:
-            str: 渲染后的内容
+            str: EN
         """
         if not variables:
             variables = {}
 
         try:
-            # 使用Jinja2渲染
+            # ENJinja2EN
             template = self._jinja_env.from_string(template_content)
             rendered = template.render(**variables)
 
-            # 清理多余的空行
+            # EN
             rendered = re.sub(r"\n\s*\n\s*\n", "\n\n", rendered)
             rendered = rendered.strip()
 
             return rendered
 
         except Exception as e:
-            logger.error(f"模板渲染失败: {e}")
-            # 降级到简单变量替换
+            logger.error(f"EN: {e}")
+            # EN
             return self._simple_variable_replace(template_content, variables)
 
     def _simple_variable_replace(self, content: str, variables: Dict[str, Any]) -> str:
         """
-        简单变量替换（降级方案）
+        EN(EN)
 
         Args:
-            content: 原始内容
-            variables: 变量字典
+            content: EN
+            variables: EN
 
         Returns:
-            str: 替换后的内容
+            str: EN
         """
 
         def replace_match(match):
@@ -356,21 +356,21 @@ class PromptManager:
 
     def extract_variables(self, content: str) -> List[str]:
         """
-        从模板内容中提取变量名
+        EN
 
         Args:
-            content: 模板内容
+            content: EN
 
         Returns:
-            List[str]: 变量名列表
+            List[str]: EN
         """
         try:
-            # 使用Jinja2解析
+            # ENJinja2EN
             ast = self._jinja_env.parse(content)
             variables = list(meta.find_undeclared_variables(ast))
             return sorted(set(variables))
         except Exception:
-            # 降级到正则表达式提取
+            # EN
             matches = self._variable_pattern.findall(content)
             return sorted(set(matches))
 
@@ -388,36 +388,36 @@ class PromptManager:
         created_by: Optional[str] = None,
     ) -> PromptInfo:
         """
-        创建新Prompt
+        ENPrompt
 
         Args:
-            name: Prompt名称
-            category: Prompt分类
-            content: Prompt内容
-            subcategory: 子分类
-            version: 版本号
-            variables: 变量定义
-            metadata: 元数据
-            priority: 优先级
-            tags: 标签列表
-            created_by: 创建者
+            name: PromptEN
+            category: PromptEN
+            content: PromptEN
+            subcategory: EN
+            version: EN
+            variables: EN
+            metadata: EN
+            priority: EN
+            tags: EN
+            created_by: EN
 
         Returns:
-            PromptInfo: 创建的Prompt信息
+            PromptInfo: ENPromptEN
         """
-        # 自动提取变量
+        # EN
         if variables is None:
             extracted_vars = self.extract_variables(content)
             variables = [PromptVariable(name=var) for var in extracted_vars]
 
-        # 验证版本唯一性
+        # EN
         existing = await self._get_prompt_by_version(name, category, version)
         if existing:
-            raise ValueError(f"版本已存在: {category}/{name} v{version}")
+            raise ValueError(f"EN: {category}/{name} v{version}")
 
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
-                # 创建Prompt记录
+                # ENPromptEN
                 prompt_id = uuid.uuid4()
 
                 insert_query = """
@@ -444,20 +444,20 @@ class PromptManager:
                     created_by,
                 )
 
-                # 处理标签
+                # EN
                 if tags:
                     await self._add_tags_to_prompt(conn, prompt_id, tags)
 
-                # 标记为最新版本
+                # EN
                 await self._mark_as_latest_version(conn, name, category, prompt_id)
 
-                # 清除缓存
+                # EN
                 cache_key = f"{category}:{name}"
                 self._cache.pop(cache_key, None)
 
                 prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
-                logger.info(f"创建Prompt成功: {category}/{name} v{version}")
+                logger.info(f"ENPromptEN: {category}/{name} v{version}")
                 return prompt_info
 
     async def update_prompt(
@@ -473,39 +473,39 @@ class PromptManager:
         create_new_version: bool = True,
     ) -> PromptInfo:
         """
-        更新Prompt
+        ENPrompt
 
         Args:
             prompt_id: Prompt ID
-            content: 新内容
-            variables: 变量定义
-            metadata: 元数据
-            priority: 优先级
-            tags: 标签列表
-            change_description: 变更描述
-            updated_by: 更新者
-            create_new_version: 是否创建新版本
+            content: EN
+            variables: EN
+            metadata: EN
+            priority: EN
+            tags: EN
+            change_description: EN
+            updated_by: EN
+            create_new_version: EN
 
         Returns:
-            PromptInfo: 更新后的Prompt信息
+            PromptInfo: ENPromptEN
         """
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
-                # 获取当前Prompt
+                # ENPrompt
                 current = await self._get_prompt_by_id(prompt_id)
                 if not current:
-                    raise ValueError(f"Prompt不存在: {prompt_id}")
+                    raise ValueError(f"PromptEN: {prompt_id}")
 
                 if create_new_version:
-                    # 创建新版本
+                    # EN
                     new_version = self._increment_version(current.version)
 
-                    # 保存当前版本到历史
+                    # EN
                     await self._save_version_to_history(
                         conn, current, change_description
                     )
 
-                    # 创建新版本记录
+                    # EN
                     new_variables = variables or current.variables
                     if content:
                         new_variables = [
@@ -539,19 +539,19 @@ class PromptManager:
                         updated_by,
                     )
 
-                    # 更新旧版本标记
+                    # EN
                     await self._mark_as_latest_version(
                         conn, current.name, current.category, new_prompt_id
                     )
 
-                    # 处理标签
+                    # EN
                     if tags is not None:
                         await self._update_prompt_tags(conn, new_prompt_id, tags)
 
                     prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
                 else:
-                    # 直接更新当前版本
+                    # EN
                     update_fields = []
                     update_values = []
                     param_count = 1
@@ -594,25 +594,25 @@ class PromptManager:
 
                     row = await conn.fetchrow(update_query, *update_values)
 
-                    # 处理标签
+                    # EN
                     if tags is not None:
                         await self._update_prompt_tags(conn, prompt_id, tags)
 
                     prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
-                # 清除缓存
+                # EN
                 cache_key = f"{prompt_info.category}:{prompt_info.name}"
                 self._cache.pop(cache_key, None)
 
-                logger.info(f"更新Prompt成功: {prompt_info.category}/{prompt_info.name}")
+                logger.info(f"ENPromptEN: {prompt_info.category}/{prompt_info.name}")
                 return prompt_info
 
     async def record_usage_log(self, log: UsageLog) -> None:
         """
-        记录Prompt使用日志
+        ENPromptEN
 
         Args:
-            log: 使用记录
+            log: EN
         """
         async with self.db_pool.acquire() as conn:
             insert_query = """
@@ -642,13 +642,13 @@ class PromptManager:
 
     async def get_prompt_performance(self, prompt_id: uuid.UUID) -> Dict[str, Any]:
         """
-        获取Prompt性能统计
+        ENPromptEN
 
         Args:
             prompt_id: Prompt ID
 
         Returns:
-            Dict[str, Any]: 性能统计数据
+            Dict[str, Any]: EN
         """
         async with self.db_pool.acquire() as conn:
             query = """
@@ -705,12 +705,12 @@ class PromptManager:
         top_limit: int = 10,
     ) -> Dict[str, Any]:
         """
-        获取Prompt使用汇总统计（按时间窗口）。
+        ENPromptEN(EN).
 
         Args:
-            days: 统计窗口天数
-            category: 可选分类过滤
-            top_limit: 热门Prompt返回数量
+            days: EN
+            category: EN
+            top_limit: ENPromptEN
         """
         days = max(1, int(days))
         top_limit = max(1, int(top_limit))
@@ -859,7 +859,7 @@ class PromptManager:
         metrics: Optional[Dict[str, Any]] = None,
         created_by: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """创建Prompt A/B实验。"""
+        """ENPrompt A/BEN."""
         if prompt_a_id == prompt_b_id:
             raise ValueError("prompt_a_id and prompt_b_id must be different")
         if traffic_split <= 0 or traffic_split >= 1:
@@ -916,7 +916,7 @@ class PromptManager:
         limit: int = 20,
         offset: int = 0,
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """分页查询实验列表。"""
+        """EN."""
         limit = max(1, int(limit))
         offset = max(0, int(offset))
 
@@ -961,7 +961,7 @@ class PromptManager:
         return [self._experiment_row_to_dict(row) for row in rows], total
 
     async def get_experiment(self, experiment_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        """获取单个实验详情。"""
+        """EN."""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT
@@ -982,7 +982,7 @@ class PromptManager:
     async def update_experiment_traffic(
         self, experiment_id: uuid.UUID, traffic_split: float
     ) -> Optional[Dict[str, Any]]:
-        """更新实验流量比例。"""
+        """EN."""
         if traffic_split <= 0 or traffic_split >= 1:
             raise ValueError("traffic_split must be between 0 and 1")
 
@@ -1001,7 +1001,7 @@ class PromptManager:
     async def update_experiment_status(
         self, experiment_id: uuid.UUID, status: str
     ) -> Optional[Dict[str, Any]]:
-        """更新实验状态。"""
+        """EN."""
         normalized = status.lower().strip()
         self._validate_experiment_status(normalized)
 
@@ -1017,11 +1017,11 @@ class PromptManager:
 
         return self._experiment_row_to_dict(row) if row else None
 
-    # 私有方法实现...
+    # EN...
     async def _get_prompt_by_version(
         self, name: str, category: str, version: str
     ) -> Optional[PromptInfo]:
-        """根据版本获取Prompt"""
+        """ENPrompt"""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT p.*,
@@ -1041,7 +1041,7 @@ class PromptManager:
             return self._row_to_prompt_info_with_tags(row, []) if row else None
 
     async def _get_prompt_by_id(self, prompt_id: uuid.UUID) -> Optional[PromptInfo]:
-        """根据ID获取Prompt"""
+        """ENIDENPrompt"""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT p.*,
@@ -1063,8 +1063,8 @@ class PromptManager:
     async def _mark_as_latest_version(
         self, conn, name: str, category: str, prompt_id: uuid.UUID
     ) -> None:
-        """标记为最新版本"""
-        # 取消同name-category的其他版本的latest标记
+        """EN"""
+        # ENname-categoryENlatestEN
         await conn.execute(
             """
             UPDATE prompts
@@ -1076,7 +1076,7 @@ class PromptManager:
             prompt_id,
         )
 
-        # 设置当前版本为latest
+        # ENlatest
         await conn.execute(
             "UPDATE prompts SET is_latest = true WHERE id = $1", prompt_id
         )
@@ -1084,7 +1084,7 @@ class PromptManager:
     async def _save_version_to_history(
         self, conn, prompt_info: PromptInfo, description: Optional[str]
     ) -> None:
-        """保存版本到历史表"""
+        """EN"""
         await conn.execute(
             """
             INSERT INTO prompt_versions (
@@ -1111,7 +1111,7 @@ class PromptManager:
         )
 
     def _increment_version(self, current_version: str) -> str:
-        """版本号递增"""
+        """EN"""
         try:
             parts = current_version.split(".")
             if len(parts) == 3:
@@ -1125,9 +1125,9 @@ class PromptManager:
     async def _add_tags_to_prompt(
         self, conn, prompt_id: uuid.UUID, tags: List[str]
     ) -> None:
-        """为Prompt添加标签"""
+        """ENPromptEN"""
         for tag_name in tags:
-            # 确保标签存在
+            # EN
             await conn.execute(
                 """
                 INSERT INTO prompt_tags (name) VALUES ($1)
@@ -1136,7 +1136,7 @@ class PromptManager:
                 tag_name,
             )
 
-            # 关联标签
+            # EN
             await conn.execute(
                 """
                 INSERT INTO prompt_tag_relations (prompt_id, tag_id)
@@ -1150,18 +1150,18 @@ class PromptManager:
     async def _update_prompt_tags(
         self, conn, prompt_id: uuid.UUID, tags: List[str]
     ) -> None:
-        """更新Prompt标签"""
-        # 删除现有标签
+        """ENPromptEN"""
+        # EN
         await conn.execute(
             "DELETE FROM prompt_tag_relations WHERE prompt_id = $1", prompt_id
         )
 
-        # 添加新标签
+        # EN
         if tags:
             await self._add_tags_to_prompt(conn, prompt_id, tags)
 
     def _row_to_prompt_info(self, row) -> PromptInfo:
-        """数据库行转PromptInfo"""
+        """ENPromptInfo"""
         variables_data = json.loads(row["variables"]) if row["variables"] else []
         variables = [PromptVariable(**var_data) for var_data in variables_data]
 
@@ -1190,7 +1190,7 @@ class PromptManager:
         )
 
     def _row_to_prompt_info_with_tags(self, row, tags: List[str] = None) -> PromptInfo:
-        """数据库行转PromptInfo（带标签）"""
+        """ENPromptInfo(EN)"""
         prompt_info = self._row_to_prompt_info(row)
 
         if tags:
@@ -1203,8 +1203,8 @@ class PromptManager:
     async def _record_usage_start(
         self, prompt_id: uuid.UUID, context: Optional[Dict], variables: Optional[Dict]
     ) -> None:
-        """记录使用开始（异步）"""
-        # 这里可以扩展为更复杂的记录逻辑
+        """EN(EN)"""
+        # EN
         pass
 
     async def _record_experiment_usage(
@@ -1213,14 +1213,14 @@ class PromptManager:
         selected_prompt_id: uuid.UUID,
         context: Optional[Dict],
     ) -> None:
-        """记录实验使用"""
-        # 这里可以实现更详细的实验跟踪逻辑
+        """EN"""
+        # EN
         pass
 
     async def clear_cache(
         self, category: Optional[str] = None, name: Optional[str] = None
     ):
-        """清除缓存"""
+        """EN"""
         if category and name:
             cache_key = f"{category}:{name}"
             self._cache.pop(cache_key, None)
@@ -1228,7 +1228,7 @@ class PromptManager:
             self._cache.clear()
 
     async def get_cache_stats(self) -> Dict[str, Any]:
-        """获取缓存统计"""
+        """EN"""
         return {
             "cache_size": len(self._cache),
             "cache_ttl": self.cache_ttl,
@@ -1236,7 +1236,7 @@ class PromptManager:
         }
 
     async def health_check(self) -> Dict[str, Any]:
-        """健康检查"""
+        """EN"""
         try:
             async with self.db_pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
@@ -1286,7 +1286,7 @@ class PromptManager:
         return f"{category}:{name}:{identity}"
 
     def _experiment_row_to_dict(self, row: Any) -> Dict[str, Any]:
-        """实验查询记录标准化。"""
+        """EN."""
         if not row:
             return {}
         metrics = row["metrics"] if "metrics" in row else {}

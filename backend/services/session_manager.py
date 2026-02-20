@@ -1,5 +1,5 @@
 """
-会话管理模块 - 处理用户会话和反馈的持久化存储
+EN - EN
 """
 
 import datetime
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionStatus(Enum):
-    """会话状态"""
+    """EN"""
 
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -25,7 +25,7 @@ class SessionStatus(Enum):
 
 
 class QueryPhase(Enum):
-    """查询阶段"""
+    """EN"""
 
     INITIAL = "initial"
     REFINED = "refined"
@@ -34,7 +34,7 @@ class QueryPhase(Enum):
 
 @dataclass
 class SessionMessage:
-    """会话消息"""
+    """EN"""
 
     message_id: str
     session_id: str
@@ -44,7 +44,7 @@ class SessionMessage:
     metadata: Optional[Dict] = None
 
     def to_dict(self) -> Dict:
-        """转换为字典"""
+        """EN"""
         return {
             "message_id": self.message_id,
             "session_id": self.session_id,
@@ -56,7 +56,7 @@ class SessionMessage:
 
     @classmethod
     def from_dict(cls, data: Dict) -> "SessionMessage":
-        """从字典创建实例"""
+        """EN"""
         return cls(
             message_id=data["message_id"],
             session_id=data["session_id"],
@@ -69,7 +69,7 @@ class SessionMessage:
 
 @dataclass
 class UserSession:
-    """用户会话"""
+    """EN"""
 
     session_id: str
     user_id: Optional[str] = None
@@ -86,19 +86,19 @@ class UserSession:
 
 
 class SessionManager:
-    """会话管理器 - 处理会话和消息的持久化"""
+    """EN - EN"""
 
     def __init__(self, vectorstore: VectorStore):
         self.vectorstore = vectorstore
         self._init_database()
 
     def _init_database(self):
-        """初始化会话管理相关的数据库表"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 创建用户会话表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -114,7 +114,7 @@ class SessionManager:
             """
             )
 
-            # 创建会话消息表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS session_messages (
@@ -129,7 +129,7 @@ class SessionManager:
             """
             )
 
-            # 创建RAG状态表 - 用于跟踪RAG系统状态和优化
+            # ENRAGEN - ENRAGEN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS rag_system_state (
@@ -148,7 +148,7 @@ class SessionManager:
             """
             )
 
-            # 创建反馈驱动的优化触发器表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS feedback_optimization_triggers (
@@ -164,7 +164,7 @@ class SessionManager:
             """
             )
 
-            # 创建自适应配置表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS adaptive_configurations (
@@ -181,7 +181,7 @@ class SessionManager:
             """
             )
 
-            # 创建索引
+            # EN
             indexes = [
                 "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON user_sessions(user_id)",
                 "CREATE INDEX IF NOT EXISTS idx_sessions_status ON user_sessions(status)",
@@ -201,7 +201,7 @@ class SessionManager:
                 except Exception as e:
                     logger.warning(f"Failed to create index: {e}")
 
-            # 创建更新时间的触发器
+            # EN
             cur.execute(
                 """
                 CREATE OR REPLACE FUNCTION update_rag_state_updated_at()
@@ -224,7 +224,7 @@ class SessionManager:
             """
             )
 
-            # 创建会话统计更新函数
+            # EN
             cur.execute(
                 """
                 CREATE OR REPLACE FUNCTION update_session_stats()
@@ -273,7 +273,7 @@ class SessionManager:
             conn.close()
 
     def create_session(self, user_id: str = None, metadata: Dict = None) -> str:
-        """创建新会话"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -303,7 +303,7 @@ class SessionManager:
     def add_message(
         self, session_id: str, message_type: str, content: Dict, metadata: Dict = None
     ) -> str:
-        """添加会话消息"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -345,7 +345,7 @@ class SessionManager:
         llm_config: Dict,
         performance_metrics: Dict = None,
     ):
-        """记录RAG系统状态"""
+        """ENRAGEN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -377,7 +377,7 @@ class SessionManager:
             conn.close()
 
     def trigger_optimization(self, trigger_type: str, trigger_data: Dict) -> str:
-        """触发优化任务"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -405,7 +405,7 @@ class SessionManager:
             conn.close()
 
     def get_pending_optimizations(self, limit: int = 10) -> List[Dict]:
-        """获取待处理的优化任务"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -448,7 +448,7 @@ class SessionManager:
         result: Dict = None,
         error_message: str = None,
     ):
-        """更新优化任务状态"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -487,7 +487,7 @@ class SessionManager:
         config_value: Dict,
         performance_score: float = None,
     ):
-        """保存自适应配置"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -518,7 +518,7 @@ class SessionManager:
             conn.close()
 
     def get_adaptive_config(self, config_type: str, config_key: str) -> Optional[Dict]:
-        """获取自适应配置"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -553,7 +553,7 @@ class SessionManager:
     def get_session_history(
         self, session_id: str, limit: int = 50
     ) -> List[SessionMessage]:
-        """获取会话历史"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -594,12 +594,12 @@ class SessionManager:
     def get_rag_performance_analytics(
         self, session_id: str = None, days: int = 7
     ) -> Dict:
-        """获取RAG性能分析数据"""
+        """ENRAGEN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 构建查询条件
+            # EN
             where_clause = "WHERE created_at > NOW() - INTERVAL '%s days'"
             params = [days]
 
@@ -607,7 +607,7 @@ class SessionManager:
                 where_clause += " AND session_id = %s"
                 params.append(session_id)
 
-            # 获取平均性能指标
+            # EN
             cur.execute(
                 f"""
                 SELECT
@@ -629,7 +629,7 @@ class SessionManager:
                 total_queries,
             ) = performance_data
 
-            # 获取配置使用统计
+            # EN
             cur.execute(
                 f"""
                 SELECT
@@ -682,12 +682,12 @@ class SessionManager:
             conn.close()
 
     def cleanup_old_sessions(self, days: int = 30) -> int:
-        """清理旧会话数据"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 归档旧会话
+            # EN
             cur.execute(
                 """
                 UPDATE user_sessions
@@ -700,7 +700,7 @@ class SessionManager:
 
             archived_count = cur.rowcount
 
-            # 获取要删除的消息的会话ID
+            # ENID
             cur.execute(
                 """
                 SELECT session_id FROM user_sessions
@@ -708,12 +708,12 @@ class SessionManager:
                 AND last_activity < NOW() - INTERVAL '%s days'
             """,
                 (days * 2,),
-            )  # 2倍时间后删除
+            )  # 2EN
 
             old_session_ids = [row[0] for row in cur.fetchall()]
 
             if old_session_ids:
-                # 删除相关消息和RAG状态
+                # ENRAGEN
                 cur.execute(
                     """
                     DELETE FROM session_messages
@@ -730,7 +730,7 @@ class SessionManager:
                     (old_session_ids,),
                 )
 
-                # 删除会话记录
+                # EN
                 cur.execute(
                     """
                     DELETE FROM user_sessions

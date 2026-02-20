@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 FRIENDLY_MESSAGES = {
-    400: "提交的参数有误，请检查后重试。",
-    401: "身份验证失败，请重新登录或检查凭证。",
-    403: "您没有执行该操作的权限。",
-    404: "资源不存在或已被移除。",
-    422: "请求格式不正确，请确认字段是否完整。",
-    429: "请求过于频繁，请稍后再试。",
-    500: "系统繁忙，请稍后再试。",
+    400: "The request is invalid. Please check your input.",
+    401: "Authentication is required to access this resource.",
+    403: "You are not allowed to perform this action.",
+    404: "The requested resource was not found.",
+    422: "Request validation failed. Please review the submitted fields.",
+    429: "Too many requests. Please retry later.",
+    500: "An internal server error occurred. Please try again later.",
 }
 
 
@@ -48,7 +48,9 @@ def register_error_handlers(app: FastAPI) -> None:
                 },
             )
         except HTTPException as exc:
-            friendly = FRIENDLY_MESSAGES.get(exc.status_code, "请求未成功，请稍后重试。")
+            friendly = FRIENDLY_MESSAGES.get(
+                exc.status_code, "An error occurred while processing your request."
+            )
             detail = exc.detail if isinstance(exc.detail, str) else exc.detail
             return JSONResponse(
                 status_code=exc.status_code,
