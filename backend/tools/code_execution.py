@@ -10,9 +10,25 @@ from backend.services.code_executor import (
     CodeExecutionError,
     code_executor,
     get_code_execution_manager,
+    validate_code,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _validation_failure_payload(validation_error: str, warnings: list[str]) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": "代码安全检查失败",
+        "validation_errors": [validation_error] if validation_error else [],
+        "warnings": warnings,
+        "stdout": "",
+        "stderr": validation_error or "",
+        "exit_code": -1,
+        "execution_time": 0,
+        "visualizations": [],
+        "output_files": {},
+    }
 
 
 @tool
@@ -75,6 +91,14 @@ def code_execution_tool(
             "execution_time": 0,
             "visualizations": [],
         }
+
+    # 一律先做静态安全校验，防止 manager 路径绕过校验。
+    validation = validate_code(code, strict_mode=True)
+    if not validation.is_valid:
+        return _validation_failure_payload(
+            validation_error=validation.error or "Unknown validation error",
+            warnings=validation.warnings,
+        )
 
     try:
         if manager is not None:
