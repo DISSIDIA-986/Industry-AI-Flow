@@ -238,19 +238,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import json
 import warnings
-import sys
-import os
 warnings.filterwarnings('ignore')
 
 # 设置中文字体支持
 try:
-    # 尝试导入中文字体支持模块
-    if '/app/utils' not in sys.path:
-        sys.path.insert(0, '/app/utils')
     import matplotlib_chinese_support
     matplotlib_chinese_support.setup_chinese_matplotlib()
     print("✓ 已启用中文字体支持")
-except ImportError:
+except Exception:
     # 备用方案：手动设置中文字体
     plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False

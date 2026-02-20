@@ -242,6 +242,24 @@ class VectorStore:
             conn.close()
             self._record_duration("chunks_count", start_time)
 
+    def delete_by_doc_id(self, doc_id: str) -> None:
+        """Delete a document and its chunks by document ID."""
+        conn = self.get_connection()
+        cur = conn.cursor()
+        start_time = time.monotonic()
+
+        try:
+            cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
+            cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
+            self._record_duration("delete_document", start_time)
+
     def _record_duration(self, query_type: str, start_time: float) -> None:
         duration = time.monotonic() - start_time
         record_db_query_duration(query_type, duration)
