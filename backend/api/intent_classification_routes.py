@@ -1,6 +1,6 @@
 """
-意图分类API路由
-提供完整的意图识别和路由功能的RESTful API
+Intent Classification API
+RESTful endpoints for intent classification workflows.
 """
 
 import asyncio
@@ -23,50 +23,52 @@ from backend.services.routing_decision import RoutingDecisionEngine
 
 logger = logging.getLogger(__name__)
 
-# 创建路由器
+# Router
 router = APIRouter(prefix="/api/intent", tags=["Intent Classification"])
 
-# 全局工作流实例（在实际应用中，应该通过依赖注入）
+# Singleton workflow instance
 _intent_workflow: Optional[IntentClassificationWorkflow] = None
 
 
-# 请求/响应模型
+# Request/response schemas
 class ClassifyRequest(BaseModel):
-    """分类请求模型"""
+    """API schema."""
 
-    query: str = Field(..., description="用户查询文本", min_length=1, max_length=2000)
-    session_id: str = Field(..., description="会话ID", min_length=1, max_length=100)
-    user_id: Optional[str] = Field(None, description="用户ID", max_length=100)
-    context: Optional[Dict[str, Any]] = Field(None, description="额外上下文信息")
-    thread_id: Optional[str] = Field(None, description="线程ID（用于多轮对话）")
+    query: str = Field(..., description="Description", min_length=1, max_length=2000)
+    session_id: str = Field(..., description="Session ID", min_length=1, max_length=100)
+    user_id: Optional[str] = Field(None, description="User ID", max_length=100)
+    context: Optional[Dict[str, Any]] = Field(None, description="Description")
+    thread_id: Optional[str] = Field(None, description="Thread ID")
 
 
 class ClassifyResponse(BaseModel):
-    """分类响应模型"""
+    """API schema."""
 
-    success: bool = Field(..., description="是否成功")
-    intent: Optional[str] = Field(None, description="识别的意图")
-    confidence: Optional[float] = Field(None, description="置信度")
-    reasoning: Optional[str] = Field(None, description="分类理由")
-    routing_decision: Optional[Dict[str, Any]] = Field(None, description="路由决策")
-    agent_response: Optional[str] = Field(None, description="Agent响应")
-    clarification_needed: bool = Field(False, description="是否需要澄清")
-    clarification_message: Optional[str] = Field(None, description="澄清消息")
-    processing_time_ms: Optional[int] = Field(None, description="处理时间（毫秒）")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
-    error: Optional[str] = Field(None, description="错误信息")
+    success: bool = Field(..., description="Description")
+    intent: Optional[str] = Field(None, description="Description")
+    confidence: Optional[float] = Field(None, description="Description")
+    reasoning: Optional[str] = Field(None, description="Description")
+    routing_decision: Optional[Dict[str, Any]] = Field(None, description="Description")
+    agent_response: Optional[str] = Field(None, description="Agent response text")
+    clarification_needed: bool = Field(False, description="Description")
+    clarification_message: Optional[str] = Field(None, description="Description")
+    processing_time_ms: Optional[int] = Field(
+        None, description="Processing time in milliseconds"
+    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Description")
+    error: Optional[str] = Field(None, description="Description")
 
 
 class ContinueWorkflowRequest(BaseModel):
-    """继续工作流请求模型"""
+    """API schema."""
 
-    user_response: str = Field(..., description="用户回应", min_length=1, max_length=2000)
-    session_id: str = Field(..., description="会话ID", min_length=1, max_length=100)
-    thread_id: Optional[str] = Field(None, description="线程ID")
+    user_response: str = Field(..., description="Description", min_length=1, max_length=2000)
+    session_id: str = Field(..., description="Session ID", min_length=1, max_length=100)
+    thread_id: Optional[str] = Field(None, description="Thread ID")
 
 
 class SessionContextResponse(BaseModel):
-    """会话上下文响应模型"""
+    """API schema."""
 
     session_id: str
     user_id: Optional[str]
@@ -81,7 +83,7 @@ class SessionContextResponse(BaseModel):
 
 
 class WorkflowStatsResponse(BaseModel):
-    """工作流统计响应模型"""
+    """API schema."""
 
     total_routes: int
     direct_routing_rate: float
@@ -93,27 +95,29 @@ class WorkflowStatsResponse(BaseModel):
 
 
 def get_intent_workflow() -> IntentClassificationWorkflow:
-    """获取意图分类工作流实例"""
+    """API schema."""
     global _intent_workflow
     if _intent_workflow is None:
-        raise HTTPException(status_code=500, detail="意图分类工作流未初始化")
+        raise HTTPException(
+            status_code=500, detail="Intent workflow is not initialized."
+        )
     return _intent_workflow
 
 
 async def initialize_intent_workflow():
-    """初始化意图分类工作流"""
+    """API schema."""
     global _intent_workflow
 
     try:
-        # 这里应该从配置或依赖注入获取服务实例
-        # 为了演示，我们创建模拟实例
+        # EN
+        # EN,EN
         from backend.config import get_database_pool
         from backend.services.llm_integration.llm_client import get_llm_client
 
         pool = await get_database_pool()
         llm_client = get_llm_client()
 
-        # 创建核心服务
+        # EN
         prompt_manager = PromptManager(pool)
         context_manager = ContextManager(storage_backend="memory")
         intent_classifier = IntentClassifier(
@@ -122,7 +126,7 @@ async def initialize_intent_workflow():
         )
         routing_engine = RoutingDecisionEngine()
 
-        # 创建工作流
+        # EN
         _intent_workflow = IntentClassificationWorkflow(
             intent_classifier=intent_classifier,
             context_manager=context_manager,
@@ -130,10 +134,10 @@ async def initialize_intent_workflow():
             prompt_manager=prompt_manager,
         )
 
-        logger.info("意图分类工作流初始化完成")
+        logger.info("Intent workflow initialized successfully.")
 
     except Exception as e:
-        logger.error(f"意图分类工作流初始化失败: {str(e)}")
+        logger.error(f"Failed to initialize intent workflow: {str(e)}")
         raise
 
 
@@ -143,18 +147,16 @@ async def classify_intent(
     background_tasks: BackgroundTasks,
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    意图分类和路由接口
-
-    该接口是核心入口点，接收用户查询并执行完整的意图识别、
-    分类、路由决策和Agent调度流程。
-    """
+    """Classify user intent and return routing decision metadata."""
     try:
         start_time = datetime.now()
 
-        logger.info(f"收到分类请求，会话ID: {request.session_id}, 查询: {request.query[:100]}...")
+        logger.info(
+            f"Classify request received. session_id={request.session_id}, "
+            f"query_preview={request.query[:100]}..."
+        )
 
-        # 执行完整的工作流
+        # EN
         result = await workflow.run_workflow(
             query=request.query,
             session_id=request.session_id,
@@ -162,10 +164,10 @@ async def classify_intent(
             thread_id=request.thread_id,
         )
 
-        # 计算处理时间
+        # EN
         processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-        # 构建响应
+        # EN
         response = ClassifyResponse(
             success=result["success"],
             intent=result.get("intent_result", {}).get("intent"),
@@ -180,7 +182,7 @@ async def classify_intent(
             error=result.get("error"),
         )
 
-        # 在后台记录使用日志
+        # EN
         background_tasks.add_task(
             log_classification_usage,
             request.session_id,
@@ -189,15 +191,15 @@ async def classify_intent(
             result,
         )
 
-        logger.info(f"分类请求处理完成，成功: {result['success']}")
+        logger.info(f"Classification completed. success={result['success']}")
         return response
 
     except Exception as e:
-        logger.error(f"意图分类API错误: {str(e)}")
+        logger.error(f"Intent classification API error: {str(e)}")
         return ClassifyResponse(
             success=False,
-            error=f"意图分类处理失败: {str(e)}",
-            agent_response="抱歉，处理您的请求时遇到了系统错误。请稍后重试。",
+            error=f"Internal classification error: {str(e)}",
+            agent_response="An internal error occurred while classifying the request.",
         )
 
 
@@ -207,22 +209,18 @@ async def continue_workflow(
     background_tasks: BackgroundTasks,
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    继续工作流接口
-
-    用于在澄清对话后继续执行工作流，处理用户的澄清回应。
-    """
+    """Continue a pending clarification workflow using user follow-up input."""
     try:
-        logger.info(f"收到继续工作流请求，会话ID: {request.session_id}")
+        logger.info(f"Continue request received. session_id={request.session_id}")
 
-        # 继续执行工作流
+        # EN
         result = await workflow.continue_workflow(
             user_response=request.user_response,
             session_id=request.session_id,
             thread_id=request.thread_id,
         )
 
-        # 构建响应
+        # EN
         response = ClassifyResponse(
             success=result["success"],
             intent=result.get("intent_result", {}).get("intent")
@@ -242,20 +240,20 @@ async def continue_workflow(
             error=result.get("error"),
         )
 
-        # 在后台记录使用日志
+        # EN
         background_tasks.add_task(
             log_continuation_usage, request.session_id, request.user_response, result
         )
 
-        logger.info(f"继续工作流请求处理完成，成功: {result['success']}")
+        logger.info(f"Continuation completed. success={result['success']}")
         return response
 
     except Exception as e:
-        logger.error(f"继续工作流API错误: {str(e)}")
+        logger.error(f"Intent continuation API error: {str(e)}")
         return ClassifyResponse(
             success=False,
-            error=f"继续工作流处理失败: {str(e)}",
-            agent_response="抱歉，处理您的回应时遇到了系统错误。请重新描述您的需求。",
+            error=f"Internal continuation error: {str(e)}",
+            agent_response="An internal error occurred while continuing the workflow.",
         )
 
 
@@ -264,24 +262,19 @@ async def get_session_context(
     session_id: str,
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    获取会话上下文接口
-
-    返回指定会话的详细上下文信息，包括历史记录、
-    用户偏好、文件信息等。
-    """
+    """Get aggregated session context information for a workflow session."""
     try:
-        logger.info(f"获取会话上下文，会话ID: {session_id}")
+        logger.info(f"Session context requested. session_id={session_id}")
 
-        # 获取会话上下文
+        # EN
         session_context = await workflow.context_manager.get_session_context(session_id)
 
-        # 获取增强上下文
+        # EN
         enhanced_context = await workflow.context_manager.get_enhanced_context(
             session_id=session_id, max_history=10, include_files=True
         )
 
-        # 构建响应
+        # EN
         response = SessionContextResponse(
             session_id=session_context.session_id,
             user_id=session_context.user_id,
@@ -295,12 +288,12 @@ async def get_session_context(
             session_duration_minutes=session_context.get_session_duration() / 60,
         )
 
-        logger.info(f"会话上下文获取完成，查询数: {response.query_count}")
+        logger.info(f"Session context loaded. query_count={response.query_count}")
         return response
 
     except Exception as e:
-        logger.error(f"获取会话上下文错误: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取会话上下文失败: {str(e)}")
+        logger.error(f"Failed to get session context: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Session context error: {str(e)}")
 
 
 @router.get("/session/{session_id}/patterns")
@@ -308,16 +301,11 @@ async def analyze_session_patterns(
     session_id: str,
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    分析会话模式接口
-
-    分析指定会话的行为模式，包括查询模式、意图演化、
-    时间分布等，用于用户行为分析和系统优化。
-    """
+    """Analyze interaction patterns and context evolution for one session."""
     try:
-        logger.info(f"分析会话模式，会话ID: {session_id}")
+        logger.info(f"Session pattern analysis requested. session_id={session_id}")
 
-        # 分析会话模式
+        # EN
         patterns = await workflow.context_manager.analyze_session_patterns(session_id)
 
         return {
@@ -328,30 +316,27 @@ async def analyze_session_patterns(
         }
 
     except Exception as e:
-        logger.error(f"分析会话模式错误: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"分析会话模式失败: {str(e)}")
+        logger.error(f"Failed to analyze session patterns: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Session pattern analysis error: {str(e)}"
+        )
 
 
 @router.get("/stats/workflow", response_model=WorkflowStatsResponse)
 async def get_workflow_statistics(
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    获取工作流统计接口
-
-    返回意图分类和路由系统的整体统计信息，
-    包括路由成功率、Agent使用情况、系统负载等。
-    """
+    """Return workflow-level routing and utilization statistics."""
     try:
-        logger.info("获取工作流统计信息")
+        logger.info("Workflow statistics requested.")
 
-        # 获取工作流统计
+        # EN
         stats = workflow.get_workflow_stats()
 
-        # 获取路由统计
+        # EN
         routing_stats = workflow.routing_engine.get_routing_statistics()
 
-        # 构建响应
+        # EN
         response = WorkflowStatsResponse(
             total_routes=routing_stats.get("total_routes", 0),
             direct_routing_rate=routing_stats.get("direct_routing_rate", 0.0),
@@ -364,12 +349,14 @@ async def get_workflow_statistics(
             system_load=workflow.routing_engine.system_status.system_load,
         )
 
-        logger.info(f"工作流统计获取完成，总路由数: {response.total_routes}")
+        logger.info(f"Workflow statistics ready. total_routes={response.total_routes}")
         return response
 
     except Exception as e:
-        logger.error(f"获取工作流统计错误: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取工作流统计失败: {str(e)}")
+        logger.error(f"Failed to get workflow statistics: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Workflow statistics error: {str(e)}"
+        )
 
 
 @router.post("/test/classification")
@@ -379,16 +366,11 @@ async def test_intent_classification(
     user_id: Optional[str] = None,
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    测试意图分类接口
-
-    专门用于测试意图分类功能，不执行完整的工作流，
-    只返回分类结果。
-    """
+    """Run a direct classifier test endpoint for diagnostics."""
     try:
-        logger.info(f"测试意图分类，查询: {query[:50]}...")
+        logger.info(f"Classification test request received. query_preview={query[:50]}...")
 
-        # 构建测试上下文
+        # EN
         test_context = QueryContext(
             session_id=session_id,
             user_id=user_id,
@@ -400,7 +382,7 @@ async def test_intent_classification(
             context_keywords=[],
         )
 
-        # 执行意图分类
+        # EN
         intent_result = await workflow.intent_classifier.classify_intent(
             query=query, context=test_context
         )
@@ -412,7 +394,7 @@ async def test_intent_classification(
         }
 
     except Exception as e:
-        logger.error(f"测试意图分类错误: {str(e)}")
+        logger.error(f"Classification test failed: {str(e)}")
         return {
             "success": False,
             "error": str(e),
@@ -424,13 +406,9 @@ async def test_intent_classification(
 async def health_check(
     workflow: IntentClassificationWorkflow = Depends(get_intent_workflow),
 ):
-    """
-    健康检查接口
-
-    检查意图分类系统各组件的健康状态。
-    """
+    """Return health status for intent workflow components."""
     try:
-        # 检查各组件健康状态
+        # EN
         classifier_health = await workflow.intent_classifier.health_check()
         context_health = await workflow.context_manager.health_check()
         routing_health = await workflow.routing_engine.health_check()
@@ -456,7 +434,7 @@ async def health_check(
         }
 
     except Exception as e:
-        logger.error(f"健康检查错误: {str(e)}")
+        logger.error(f"Health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "timestamp": datetime.now().isoformat(),
@@ -464,13 +442,13 @@ async def health_check(
         }
 
 
-# 后台任务函数
+# EN
 async def log_classification_usage(
     session_id: str, user_id: Optional[str], query: str, result: Dict[str, Any]
 ):
-    """记录分类使用日志"""
+    """API schema."""
     try:
-        # 这里可以将使用日志记录到数据库或日志系统
+        # EN
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "session_id": session_id,
@@ -483,16 +461,16 @@ async def log_classification_usage(
             "clarification_needed": result.get("clarification_needed", False),
         }
 
-        logger.info(f"分类使用日志: {json.dumps(log_entry, ensure_ascii=False)}")
+        logger.info(f"Classification usage log: {json.dumps(log_entry, ensure_ascii=False)}")
 
     except Exception as e:
-        logger.error(f"记录分类使用日志失败: {str(e)}")
+        logger.error(f"Failed to write classification usage log: {str(e)}")
 
 
 async def log_continuation_usage(
     session_id: str, user_response: str, result: Dict[str, Any]
 ):
-    """记录继续工作流使用日志"""
+    """API schema."""
     try:
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -502,14 +480,14 @@ async def log_continuation_usage(
             "clarification_needed": result.get("clarification_needed", False),
         }
 
-        logger.info(f"继续工作流使用日志: {json.dumps(log_entry, ensure_ascii=False)}")
+        logger.info(f"Continuation usage log: {json.dumps(log_entry, ensure_ascii=False)}")
 
     except Exception as e:
-        logger.error(f"记录继续工作流使用日志失败: {str(e)}")
+        logger.error(f"Failed to write continuation usage log: {str(e)}")
 
 
-# 初始化函数
+# EN
 async def initialize_intent_routes():
-    """初始化意图分类路由"""
+    """API schema."""
     await initialize_intent_workflow()
-    logger.info("意图分类API路由初始化完成")
+    logger.info("Intent classification API routes initialized.")

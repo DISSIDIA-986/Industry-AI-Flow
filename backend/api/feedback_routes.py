@@ -1,5 +1,5 @@
 """
-反馈系统API路由
+Feedback API routes
 """
 
 import logging
@@ -14,12 +14,12 @@ from backend.services.rag_engine import SimpleRAG
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 全局RAG实例
+# Feedback-enabled RAG singleton
 rag_instance = None
 
 
 def get_rag_instance():
-    """获取RAG实例"""
+    """Feedback-enabled RAG singleton"""
     global rag_instance
     if rag_instance is None:
         rag_instance = SimpleRAG(enable_feedback=settings.enable_feedback_system)
@@ -27,7 +27,7 @@ def get_rag_instance():
 
 
 class FeedbackRequest(BaseModel):
-    """反馈请求模型"""
+    """Feedback schema."""
 
     query_id: str
     question: str
@@ -39,14 +39,14 @@ class FeedbackRequest(BaseModel):
 
 
 class FeedbackResponse(BaseModel):
-    """反馈响应模型"""
+    """Feedback schema."""
 
     success: bool
     message: str
 
 
 class FeedbackStatisticsResponse(BaseModel):
-    """反馈统计响应模型"""
+    """Feedback schema."""
 
     total_queries: int
     helpful_count: int
@@ -59,13 +59,13 @@ class FeedbackStatisticsResponse(BaseModel):
 @router.post("/feedback", response_model=FeedbackResponse)
 async def submit_feedback(request: FeedbackRequest):
     """
-    提交用户反馈
+    EN
 
     Args:
-        request: 反馈请求
+        request: EN
 
     Returns:
-        反馈提交结果
+        EN
     """
     try:
         if not settings.enable_feedback_system:
@@ -99,13 +99,13 @@ async def submit_feedback(request: FeedbackRequest):
 @router.get("/feedback/statistics", response_model=FeedbackStatisticsResponse)
 async def get_feedback_statistics(days: int = 7):
     """
-    获取反馈统计信息
+    EN
 
     Args:
-        days: 统计天数（默认7天）
+        days: EN(EN7EN)
 
     Returns:
-        反馈统计信息
+        EN
     """
     try:
         if not settings.enable_feedback_system:
@@ -132,14 +132,14 @@ async def get_feedback_statistics(days: int = 7):
 @router.get("/feedback/high-quality-documents")
 async def get_high_quality_documents(min_score: float = 0.5, limit: int = 100):
     """
-    获取高质量文档列表
+    EN
 
     Args:
-        min_score: 最低质量分数
-        limit: 返回数量限制
+        min_score: EN
+        limit: EN
 
     Returns:
-        高质量文档列表
+        EN
     """
     try:
         if not settings.enable_feedback_system:
@@ -168,21 +168,21 @@ async def trigger_manual_reranking(
     optimization_strategy: str = Body("adjust_weights", embed=True),
 ):
     """
-    手动触发重排序优化
+    EN
 
     Args:
-        query_id: 查询ID
-        optimization_strategy: 优化策略
+        query_id: ENID
+        optimization_strategy: EN
 
     Returns:
-        优化结果
+        EN
     """
     try:
         if not settings.enable_feedback_system:
             raise HTTPException(status_code=403, detail="Feedback system is disabled")
 
-        # 这里可以实现手动触发重排序的逻辑
-        # 实际应用中可能需要异步任务队列
+        # EN
+        # EN
 
         logger.info(
             f"Manual reranking triggered for query {query_id} with strategy {optimization_strategy}"
