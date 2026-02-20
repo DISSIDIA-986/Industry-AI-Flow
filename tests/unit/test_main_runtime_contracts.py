@@ -138,3 +138,29 @@ async def test_health_reports_execution_provider_health_snapshot(monkeypatch):
     assert payload["docker_available"] is False
     assert payload["code_execution_available"] is False
     assert payload["code_execution"]["providers"]["docker"]["status"] == "daemon_unreachable"
+
+
+@pytest.mark.asyncio
+async def test_health_reports_embedding_backend_status(monkeypatch):
+    monkeypatch.setattr(
+        "backend.services.core.embedder.embedding_backend_status",
+        lambda: {
+            "ready": False,
+            "backend": "fallback_hash",
+            "fallback_active": True,
+            "reason": "sentence_transformers_unavailable",
+            "loaded": False,
+            "model": "mock-model",
+            "dimension": 768,
+        },
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        resp = await client.get("/api/v1/health")
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["embedding"]["backend"] == "fallback_hash"
+    assert payload["embedding"]["fallback_active"] is True

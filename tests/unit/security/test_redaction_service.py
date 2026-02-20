@@ -7,7 +7,17 @@
 
 import pytest
 from unittest.mock import patch
-from backend.services.security.redaction_service import RedactionService, RedactionResult
+
+from backend.services.security.redaction_service import RedactionResult, RedactionService
+
+
+class _RaisingPattern:
+    def __init__(self, message: str):
+        self.message = message
+
+    def subn(self, repl, text):
+        del repl, text
+        raise Exception(self.message)
 
 
 class TestRedactionService:
@@ -205,7 +215,7 @@ class TestRedactionService:
     def test_redact_large_text(self, service):
         """测试大文本脱敏性能"""
         # 创建包含多个敏感信息的大文本
-        base_text = "Email: user{id}@example.com, Phone: 13800{id}000"
+        base_text = "Email: user{id}@example.com, Phone: 1380013{id:04d}"
         large_text = "\n".join([base_text.format(id=i) for i in range(100)])
         
         result = service.redact(large_text)
@@ -218,7 +228,11 @@ class TestRedactionService:
     def test_redact_exception_handling(self, service):
         """测试异常处理降级策略"""
         # 模拟正则表达式抛出异常
-        with patch.object(service.PATTERNS['email'], 'subn', side_effect=Exception("Pattern error")):
+        with patch.dict(
+            service.PATTERNS,
+            {"email": _RaisingPattern("Pattern error")},
+            clear=False,
+        ):
             text = "Email: test@example.com"
             result = service.redact(text)
             
@@ -231,14 +245,20 @@ class TestRedactionService:
     def test_redact_multiple_exceptions(self, service):
         """测试多个异常情况"""
         # 模拟多个模式都抛出异常
-        with patch.object(service.PATTERNS['email'], 'subn', side_effect=Exception("Email error")):
-            with patch.object(service.PATTERNS['phone_cn'], 'subn', side_effect=Exception("Phone error")):
-                text = "Email: test@example.com, Phone: 13800138000"
-                result = service.redact(text)
-                
-                # 降级策略：异常时返回原始文本
-                assert result.text == text
-                assert result.hit_count == 0
+        with patch.dict(
+            service.PATTERNS,
+            {
+                "email": _RaisingPattern("Email error"),
+                "phone_cn": _RaisingPattern("Phone error"),
+            },
+            clear=False,
+        ):
+            text = "Email: test@example.com, Phone: 13800138000"
+            result = service.redact(text)
+
+            # 降级策略：异常时返回原始文本
+            assert result.text == text
+            assert result.hit_count == 0
 
     def test_redact_result_dataclass(self):
         """测试RedactionResult数据类"""
