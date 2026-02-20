@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""测试智谱 GLM-4 API 集成 - LangChain 1.0 Agent"""
+"""EN GLM-4 API EN - LangChain 1.0 Agent"""
 
 import os
 import sys
 
 from dotenv import load_dotenv
 
-# 加载环境变量
+# EN
 load_dotenv()
 
 from langchain_anthropic import ChatAnthropic
@@ -16,28 +16,28 @@ from backend.config import settings
 
 
 def test_zhipu_basic_connection():
-    """测试1: 智谱 API 基础连接"""
+    """EN1: EN API EN"""
     print("=" * 70)
-    print("测试1: 智谱 GLM-4 API 基础连接测试")
+    print("EN1: EN GLM-4 API EN")
     print("=" * 70)
 
-    # 验证配置
-    print(f"\n📋 配置信息:")
+    # EN
+    print(f"\n📋 EN:")
     print(
         f"  - API Key: {settings.zhipu_api_key[:20]}..."
         if settings.zhipu_api_key
-        else "  - ❌ API Key未配置"
+        else "  - ❌ API KeyEN"
     )
     print(f"  - Base URL: {settings.zhipu_base_url}")
     print(f"  - Model: {settings.zhipu_model}")
     print(f"  - Timeout: {settings.api_timeout_ms/1000}s")
 
     if not settings.zhipu_api_key:
-        print("\n❌ 错误: ZHIPU_API_KEY 未配置，请在 .env 文件中设置")
+        print("\n❌ EN: ZHIPU_API_KEY EN,EN .env EN")
         return False
 
     try:
-        # 初始化 ChatAnthropic（智谱兼容接口）
+        # EN ChatAnthropic(EN)
         llm = ChatAnthropic(
             model=settings.zhipu_model,
             api_key=settings.zhipu_api_key,
@@ -46,18 +46,18 @@ def test_zhipu_basic_connection():
             temperature=0,
         )
 
-        # 测试简单调用
-        print("\n🚀 发送测试请求...")
-        response = llm.invoke([HumanMessage(content="你好，请用一句话介绍你自己。")])
+        # EN
+        print("\n🚀 EN...")
+        response = llm.invoke([HumanMessage(content="EN,EN.")])
 
-        print(f"\n✅ 智谱 API 连接成功!")
-        print(f"\n📨 响应内容:")
+        print(f"\n✅ EN API EN!")
+        print(f"\n📨 EN:")
         print(f"  {response.content[:200]}...")
 
         return True
 
     except Exception as e:
-        print(f"\n❌ 智谱 API 连接失败: {e}")
+        print(f"\n❌ EN API EN: {e}")
         import traceback
 
         traceback.print_exc()
@@ -65,17 +65,17 @@ def test_zhipu_basic_connection():
 
 
 def test_zhipu_with_agent():
-    """测试2: 智谱 API 与 LangChain 1.0 Agent 集成"""
+    """EN2: EN API EN LangChain 1.0 Agent EN"""
     print("\n" + "=" * 70)
-    print("测试2: 智谱 GLM-4 + LangChain 1.0 Agent 集成测试")
+    print("EN2: EN GLM-4 + LangChain 1.0 Agent EN")
     print("=" * 70)
 
-    # 临时设置 LLM Provider 为智谱
+    # EN LLM Provider EN
     original_provider = os.getenv("LLM_PROVIDER")
     os.environ["LLM_PROVIDER"] = "zhipu"
 
     try:
-        # 重新加载配置
+        # EN
         from importlib import reload
 
         from backend import config
@@ -83,39 +83,39 @@ def test_zhipu_with_agent():
         reload(config)
         from backend.config import settings
 
-        print(f"\n📋 当前 LLM Provider: {settings.llm_provider}")
+        print(f"\n📋 EN LLM Provider: {settings.llm_provider}")
 
-        # 导入 Agent
+        # EN Agent
         from backend.agents.rag_agent import build_rag_agent
 
-        print("\n🔧 构建 RAG Agent（使用智谱 GLM-4）...")
+        print("\n🔧 EN RAG Agent(EN GLM-4)...")
         agent = build_rag_agent()
 
-        print("✅ Agent 构建成功!")
-        print(f"  - 工具数量: 2 (hybrid_retrieval_tool, rerank_tool)")
-        print(f"  - LLM: 智谱 {settings.zhipu_model}")
+        print("✅ Agent EN!")
+        print(f"  - EN: 2 (hybrid_retrieval_tool, rerank_tool)")
+        print(f"  - LLM: EN {settings.zhipu_model}")
 
-        # 测试简单对话（无工具调用）
-        print("\n🧪 测试简单对话（不触发工具）...")
-        test_question = "请用一句话解释什么是人工智能。"
+        # EN(EN)
+        print("\n🧪 EN(EN)...")
+        test_question = "EN."
 
         result = agent.invoke({"messages": [HumanMessage(content=test_question)]})
 
-        print(f"\n✅ Agent 响应成功!")
-        print(f"\n❓ 问题: {test_question}")
-        print(f"\n💬 回答: {result['messages'][-1].content[:300]}...")
+        print(f"\n✅ Agent EN!")
+        print(f"\n❓ EN: {test_question}")
+        print(f"\n💬 EN: {result['messages'][-1].content[:300]}...")
 
         return True
 
     except Exception as e:
-        print(f"\n❌ Agent 集成测试失败: {e}")
+        print(f"\n❌ Agent EN: {e}")
         import traceback
 
         traceback.print_exc()
         return False
 
     finally:
-        # 恢复原始配置
+        # EN
         if original_provider:
             os.environ["LLM_PROVIDER"] = original_provider
         else:
@@ -123,15 +123,15 @@ def test_zhipu_with_agent():
 
 
 def test_zhipu_tool_calling():
-    """测试3: 智谱 API 工具调用能力"""
+    """EN3: EN API EN"""
     print("\n" + "=" * 70)
-    print("测试3: 智谱 GLM-4 工具调用能力测试")
+    print("EN3: EN GLM-4 EN")
     print("=" * 70)
 
-    print("\n⚠️  注意: 此测试需要数据库中有文档数据")
-    print("如果数据库为空，工具调用会失败（预期行为）\n")
+    print("\n⚠️  EN: EN")
+    print("EN,EN(EN)\n")
 
-    # 设置为智谱
+    # EN
     os.environ["LLM_PROVIDER"] = "zhipu"
 
     try:
@@ -144,17 +144,17 @@ def test_zhipu_tool_calling():
 
         agent = build_rag_agent()
 
-        # 测试会触发工具调用的问题
-        test_question = "请帮我检索关于'机器学习'的文档，并总结主要内容。"
+        # EN
+        test_question = "EN'EN'EN,EN."
 
-        print(f"🧪 测试问题（会触发工具调用）:")
+        print(f"🧪 EN(EN):")
         print(f"  {test_question}")
-        print(f"\n🚀 开始执行...")
+        print(f"\n🚀 EN...")
 
         result = agent.invoke({"messages": [HumanMessage(content=test_question)]})
 
-        print(f"\n✅ 工具调用测试成功!")
-        print(f"\n💬 Agent 响应:")
+        print(f"\n✅ EN!")
+        print(f"\n💬 Agent EN:")
         print(f"  {result['messages'][-1].content[:400]}...")
 
         return True
@@ -162,14 +162,14 @@ def test_zhipu_tool_calling():
     except Exception as e:
         error_msg = str(e)
 
-        # 数据库连接失败是预期的（如果数据库为空）
+        # EN(EN)
         if "database" in error_msg.lower() or "connection" in error_msg.lower():
-            print(f"\n⚠️  数据库连接失败（预期行为）")
-            print(f"  Agent 正确触发了工具调用，但数据库未就绪")
-            print(f"  这证明智谱 API 的工具调用机制工作正常！")
+            print(f"\n⚠️  EN(EN)")
+            print(f"  Agent EN,EN")
+            print(f"  EN API EN!")
             return True
         else:
-            print(f"\n❌ 工具调用测试失败: {e}")
+            print(f"\n❌ EN: {e}")
             import traceback
 
             traceback.print_exc()
@@ -177,16 +177,16 @@ def test_zhipu_tool_calling():
 
 
 def test_provider_switching():
-    """测试4: LLM Provider 切换"""
+    """EN4: LLM Provider EN"""
     print("\n" + "=" * 70)
-    print("测试4: Ollama ↔ 智谱 Provider 切换测试")
+    print("EN4: Ollama ↔ EN Provider EN")
     print("=" * 70)
 
     providers = ["ollama", "zhipu"]
     results = {}
 
     for provider in providers:
-        print(f"\n🔄 切换到: {provider}")
+        print(f"\n🔄 EN: {provider}")
         os.environ["LLM_PROVIDER"] = provider
 
         try:
@@ -200,21 +200,21 @@ def test_provider_switching():
 
             agent = build_rag_agent()
 
-            # 简单测试
+            # EN
             if provider == "zhipu" and settings.zhipu_api_key:
-                result = agent.invoke({"messages": [HumanMessage(content="测试")]})
-                results[provider] = "✅ 成功"
+                result = agent.invoke({"messages": [HumanMessage(content="EN")]})
+                results[provider] = "✅ EN"
             elif provider == "ollama":
-                # Ollama 可能未运行
-                results[provider] = "⏭️  跳过（需要本地 Ollama 服务）"
+                # Ollama EN
+                results[provider] = "⏭️  EN(EN Ollama EN)"
             else:
-                results[provider] = "⏭️  跳过（API Key 未配置）"
+                results[provider] = "⏭️  EN(API Key EN)"
 
         except Exception as e:
-            results[provider] = f"❌ 失败: {str(e)[:50]}"
+            results[provider] = f"❌ EN: {str(e)[:50]}"
 
     print("\n" + "=" * 70)
-    print("Provider 切换测试结果:")
+    print("Provider EN:")
     for provider, result in results.items():
         print(f"  - {provider}: {result}")
 
@@ -222,22 +222,22 @@ def test_provider_switching():
 
 
 def main():
-    """主测试流程"""
+    """EN"""
     print("\n" + "=" * 70)
-    print("🚀 智谱 GLM-4 + LangChain 1.0 完整集成测试")
+    print("🚀 EN GLM-4 + LangChain 1.0 EN")
     print("=" * 70)
 
-    print("\n📍 测试环境:")
+    print("\n📍 EN:")
     print(f"  - Python: {sys.version.split()[0]}")
-    print(f"  - 工作目录: {os.getcwd()}")
-    print(f"  - .env 文件: {'✅ 已加载' if os.path.exists('.env') else '❌ 未找到'}")
+    print(f"  - EN: {os.getcwd()}")
+    print(f"  - .env EN: {'✅ EN' if os.path.exists('.env') else '❌ EN'}")
 
-    # 执行测试套件
+    # EN
     tests = [
-        ("基础连接", test_zhipu_basic_connection),
-        ("Agent 集成", test_zhipu_with_agent),
-        ("工具调用", test_zhipu_tool_calling),
-        ("Provider 切换", test_provider_switching),
+        ("EN", test_zhipu_basic_connection),
+        ("Agent EN", test_zhipu_with_agent),
+        ("EN", test_zhipu_tool_calling),
+        ("Provider EN", test_provider_switching),
     ]
 
     results = {}
@@ -245,27 +245,27 @@ def main():
         try:
             results[name] = test_func()
         except Exception as e:
-            print(f"\n❌ 测试 '{name}' 异常: {e}")
+            print(f"\n❌ EN '{name}' EN: {e}")
             results[name] = False
 
-    # 汇总结果
+    # EN
     print("\n" + "=" * 70)
-    print("📊 测试结果汇总")
+    print("📊 EN")
     print("=" * 70)
 
     for name, passed in results.items():
-        status = "✅ 通过" if passed else "❌ 失败"
+        status = "✅ EN" if passed else "❌ EN"
         print(f"  {name}: {status}")
 
     total = len(results)
     passed = sum(1 for v in results.values() if v)
 
-    print(f"\n总计: {passed}/{total} 测试通过")
+    print(f"\nEN: {passed}/{total} EN")
 
     if passed == total:
-        print("\n🎉 所有测试通过！智谱 GLM-4 集成成功！")
+        print("\n🎉 EN!EN GLM-4 EN!")
     else:
-        print(f"\n⚠️  {total - passed} 个测试失败，请检查配置")
+        print(f"\n⚠️  {total - passed} EN,EN")
 
 
 if __name__ == "__main__":
