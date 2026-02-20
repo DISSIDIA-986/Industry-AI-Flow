@@ -345,7 +345,7 @@ class AdvancedVersionManager:
                     {
                         "priority": "CRITICAL",
                         "issue": f'{summary["missing_critical_deps"]}个关键依赖缺失',
-                        "solution": "运行专用安装脚本: ./install_python313_paddleocr.sh",
+                        "solution": "运行专用安装脚本: ./scripts/setup/install_python313_paddleocr.sh",
                     }
                 )
 

@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 # 添加项目根目录到Python路径
-project_root = Path(__file__).parent
+project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 def test_rag_import():
@@ -118,7 +118,7 @@ def test_configuration():
     
     all_ok = True
     for config_file in config_files:
-        if Path(config_file).exists():
+        if (project_root / config_file).exists():
             print(f"✅ {config_file} 存在")
         else:
             print(f"❌ {config_file} 不存在")
@@ -128,6 +128,9 @@ def test_configuration():
 
 def main():
     """主函数"""
+    # 强制在项目根目录执行，避免相对路径受启动目录影响
+    os.chdir(project_root)
+
     print("=" * 60)
     print("🚀 Industry AI Flow - Capstone项目快速验证")
     print("=" * 60)

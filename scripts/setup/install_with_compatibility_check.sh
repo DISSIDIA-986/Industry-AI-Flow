@@ -264,7 +264,7 @@ main() {
     echo ""
     echo "📋 后续步骤:"
     echo "1. 激活虚拟环境: source venv/bin/activate"
-    echo "2. 运行版本检查: python version_manager.py"
+    echo "2. 运行版本检查: python scripts/versioning/version_manager.py"
     echo "3. 运行测试: python -m pytest tests/"
     echo ""
     echo "📁 生成的文件:"
