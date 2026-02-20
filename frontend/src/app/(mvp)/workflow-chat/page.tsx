@@ -28,7 +28,7 @@ export default function WorkflowChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是Industry AI Flow助手。我可以帮助您进行建筑成本估算、风险分析和数据查询。请问有什么可以帮助您的？',
+      content: 'Hello! I amIndustry AI Flowassistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -41,7 +41,7 @@ export default function WorkflowChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
 
-  // 检查API连接状态
+  // examineAPIconnection status
   useEffect(() => {
     const checkApiHealth = async () => {
       try {
@@ -53,12 +53,12 @@ export default function WorkflowChatPage() {
     }
     
     checkApiHealth()
-    // 每30秒检查一次API状态
+    // Check every 30 secondsAPIstate
     const interval = setInterval(checkApiHealth, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  // WebSocket连接管理
+  // WebSocketConnection management
   useEffect(() => {
     if (!useWebSocket) return
     
@@ -71,12 +71,12 @@ export default function WorkflowChatPage() {
     
     connectWebSocket()
     
-    // 监听连接状态变化
+    // Monitor connection status changes
     const unsubscribe = websocketService.onConnectionChange((connected) => {
       setWsStatus(connected ? 'connected' : 'disconnected')
     })
     
-    // 监听查询响应
+    // Listen for query responses
     const unsubscribeResponse = websocketService.onMessage('query_response', (data: QueryResponseData) => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -90,10 +90,10 @@ export default function WorkflowChatPage() {
       setLoading(false)
     })
     
-    // 监听通知
+    // Listen for notifications
     const unsubscribeNotification = websocketService.onMessage('notification', (data: unknown) => {
-      console.log('收到通知:', data)
-      // 这里可以添加通知显示逻辑
+      console.log('Notification received:', data)
+      // Here you can add notification display logic
     })
     
     return () => {
@@ -105,11 +105,11 @@ export default function WorkflowChatPage() {
   }, [useWebSocket])
 
   const quickPrompts = [
-    '估算一个20层办公楼在多伦多的成本风险',
-    '医疗医院项目成本超支的可能原因有哪些？',
-    '分析住宅项目的材料成本趋势',
-    '生成一个建筑项目的风险评估报告',
-    '比较不同施工方法的成本效益'
+    'Estimating the cost risk of a 20-story office building in Toronto',
+    'What are the possible causes of cost overruns on medical hospital projects?',
+    'Analyze material cost trends for residential projects',
+    'Generate a risk assessment report for a construction project',
+    'Compare the cost-effectiveness of different construction methods'
   ]
 
   const scrollToBottom = () => {
@@ -136,14 +136,14 @@ export default function WorkflowChatPage() {
 
     try {
       if (useWebSocket && wsStatus === 'connected') {
-        // 使用WebSocket发送查询
+        // useWebSocketSend inquiry
         const sent = websocketService.sendChatMessage(input)
         if (!sent) {
-          throw new Error('WebSocket发送失败')
+          throw new Error('WebSocketSending failed')
         }
-        // WebSocket响应将通过事件监听器处理
+        // WebSocketResponses will be handled via event listeners
       } else {
-        // 使用HTTP API发送查询
+        // useHTTP APISend inquiry
         const response = await workflowApi.sendQuery({ query: input })
         
         const aiMessage: Message = {
@@ -163,7 +163,7 @@ export default function WorkflowChatPage() {
       
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
-        content: '抱歉，处理您的查询时出现错误。请稍后重试。',
+        content: 'Sorry, an error occurred while processing your query. Please try again later.',
         sender: 'ai',
         timestamp: new Date()
       }
@@ -189,13 +189,13 @@ export default function WorkflowChatPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">工作流聊天</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Workflow chat</h1>
             <p className="text-gray-600 mt-2">
-              与AI助手对话，进行成本估算、风险分析和数据查询
+              andAIAssistant dialogue for cost estimation, risk analysis and data query
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            {/* WebSocket控制 */}
+            {/* WebSocketcontrol */}
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setUseWebSocket(!useWebSocket)}
@@ -205,33 +205,33 @@ export default function WorkflowChatPage() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                {useWebSocket ? 'WebSocket: 开' : 'WebSocket: 关'}
+                {useWebSocket ? 'WebSocket: open' : 'WebSocket: close'}
               </button>
               <div className={`w-2 h-2 rounded-full ${
                 wsStatus === 'connected' ? 'bg-green-500' :
                 wsStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
               }`}></div>
               <span className="text-xs text-gray-600">
-                {wsStatus === 'connected' ? '已连接' :
-                 wsStatus === 'connecting' ? '连接中...' : '未连接'}
+                {wsStatus === 'connected' ? 'Connected' :
+                 wsStatus === 'connecting' ? 'Connecting...' : 'Not connected'}
               </span>
             </div>
             
-            {/* API状态 */}
+            {/* APIstate */}
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${
                 apiStatus === 'connected' ? 'bg-green-500' :
                 apiStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
               }`}></div>
               <span className="text-sm text-gray-600">
-                {apiStatus === 'connected' ? 'API已连接' :
-                 apiStatus === 'disconnected' ? 'API未连接（使用模拟数据）' : '检查API状态...'}
+                {apiStatus === 'connected' ? 'APIConnected' :
+                 apiStatus === 'disconnected' ? 'APIConnection failed (please check backend)' : 'examineAPIstate...'}
               </span>
             </div>
           </div>
         </div>
         
-        {/* WebSocket状态提示 */}
+        {/* WebSocketStatus prompt */}
         {useWebSocket && (
           <div className={`mt-3 p-3 rounded-lg text-sm ${
             wsStatus === 'connected' 
@@ -241,19 +241,19 @@ export default function WorkflowChatPage() {
               : 'bg-red-50 text-red-800 border border-red-200'
           }`}>
             {wsStatus === 'connected' 
-              ? '✅ WebSocket实时连接已启用，消息将实时推送' 
+              ? '✅ WebSocketLive connection is enabled and messages will be pushed in real time' 
               : wsStatus === 'connecting'
-              ? '🔄 正在连接WebSocket服务...'
-              : '❌ WebSocket连接失败，已自动切换到HTTP API'}
+              ? '🔄 ConnectingWebSocketServe...'
+              : '❌ WebSocketConnection failed, automatically switched toHTTP API'}
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 聊天主区域 */}
+        {/* Main chat area */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            {/* 聊天消息区域 */}
+            {/* Chat message area */}
             <div className="h-[500px] overflow-y-auto p-4">
               {messages.map((message) => (
                 <div
@@ -269,32 +269,32 @@ export default function WorkflowChatPage() {
                   >
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     
-                    {/* 显示意图信息（仅AI消息） */}
+                    {/* Display intent information (onlyAIinformation) */}
                     {message.sender === 'ai' && message.intent && (
                       <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">意图识别:</span>
+                          <span className="font-medium">Intent recognition:</span>
                           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
                             {message.intent.description}
                           </span>
                         </div>
                         <div className="mt-1 text-xs text-gray-600">
-                          置信度: {(message.intent.confidence * 100).toFixed(1)}%
+                          Confidence: {(message.intent.confidence * 100).toFixed(1)}%
                         </div>
                       </div>
                     )}
                     
-                    {/* 显示来源信息（仅AI消息） */}
+                    {/* Show source information (onlyAIinformation) */}
                     {message.sender === 'ai' && message.sources && message.sources.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                        <div className="text-sm font-medium mb-2">参考来源:</div>
+                        <div className="text-sm font-medium mb-2">Reference sources:</div>
                         <div className="space-y-2">
                           {message.sources.map((source, index) => (
                             <div key={index} className="text-xs bg-white bg-opacity-50 p-2 rounded">
                               <div className="font-medium">{source.document_name}</div>
                               <div className="text-gray-600 truncate">{source.content}</div>
                               <div className="text-gray-500 mt-1">
-                                相关性: {(source.relevance * 100).toFixed(0)}%
+                                Relevance: {(source.relevance * 100).toFixed(0)}%
                               </div>
                             </div>
                           ))}
@@ -333,14 +333,14 @@ export default function WorkflowChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 输入区域 */}
+            {/* input area */}
             <div className="border-t border-gray-200 p-4">
               <div className="flex space-x-2">
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="输入您的问题或查询..."
+                  placeholder="Enter your question or query..."
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={2}
                   disabled={loading}
@@ -350,22 +350,22 @@ export default function WorkflowChatPage() {
                   disabled={loading || !input.trim()}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
                 >
-                  {loading ? '发送中...' : '发送'}
+                  {loading ? 'Sending...' : 'send'}
                 </button>
               </div>
               
               <div className="mt-3 text-sm text-gray-500">
-                按 Enter 发送，Shift + Enter 换行
+                according to Enter send,Shift + Enter newline
               </div>
             </div>
           </div>
         </div>
 
-        {/* 侧边栏 */}
+        {/* sidebar */}
         <div className="space-y-6">
-          {/* 快速提示 */}
+          {/* Quick Tips */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">快速提示</h3>
+            <h3 className="font-medium text-gray-900 mb-3">Quick Tips</h3>
             <div className="space-y-2">
               {quickPrompts.map((prompt, index) => (
                 <button
@@ -379,9 +379,9 @@ export default function WorkflowChatPage() {
             </div>
           </div>
 
-          {/* 用户信息 */}
+          {/* User information */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">用户信息</h3>
+            <h3 className="font-medium text-gray-900 mb-3">User information</h3>
             {user ? (
               <div className="space-y-2">
                 <div className="flex items-center space-x-3">
@@ -397,34 +397,34 @@ export default function WorkflowChatPage() {
                 </div>
                 <div className="pt-3 border-t border-gray-200">
                   <div className="text-sm text-gray-600">
-                    已发送 {messages.filter(m => m.sender === 'user').length} 条消息
+                    Sent {messages.filter(m => m.sender === 'user').length} messages
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-gray-500 text-sm">未登录</div>
+              <div className="text-gray-500 text-sm">Not logged in</div>
             )}
           </div>
 
-          {/* 功能说明 */}
+          {/* Function description */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">功能说明</h3>
+            <h3 className="font-medium text-gray-900 mb-3">Function description</h3>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></div>
-                <span>建筑成本估算和分析</span>
+                <span>Construction Cost Estimation and Analysis</span>
               </li>
               <li className="flex items-start">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></div>
-                <span>风险评估和预测</span>
+                <span>Risk assessment and forecasting</span>
               </li>
               <li className="flex items-start">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 mr-2"></div>
-                <span>数据查询和可视化</span>
+                <span>Data query and visualization</span>
               </li>
               <li className="flex items-start">
                 <div className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 mr-2"></div>
-                <span>报告生成和导出</span>
+                <span>Report generation and export</span>
               </li>
             </ul>
           </div>

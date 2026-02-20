@@ -20,7 +20,7 @@ export function FileUpload({
   accept = '.csv,.xlsx,.xls,.pdf,.txt,.json',
   maxSize = 10, // 10MB
   multiple = false,
-  label = '选择文件',
+  label = 'Select file',
   helpText,
   error,
   className = '' 
@@ -30,14 +30,14 @@ export function FileUpload({
 
   const validateFile = useCallback((file: File): string | null => {
     if (maxSize && file.size > maxSize * 1024 * 1024) {
-      return `文件大小不能超过 ${maxSize}MB`
+      return `File size cannot exceed ${maxSize}MB`
     }
     
     if (accept) {
       const acceptedTypes = accept.split(',').map(type => type.trim())
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
       if (!acceptedTypes.includes(fileExtension)) {
-        return `只支持以下格式: ${accept}`
+        return `Only the following formats are supported: ${accept}`
       }
     }
     
@@ -143,19 +143,19 @@ export function FileUpload({
           <div className="mt-4">
             <p className="text-sm text-gray-600">
               <span className="font-medium text-blue-600 hover:text-blue-500">
-                点击上传
+                Click to upload
               </span>{' '}
-              或拖拽文件到此处
+              Or drag and drop files here
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              支持 {accept}，最大 {maxSize}MB
+              support {accept}，maximum {maxSize}MB
             </p>
           </div>
           
           {fileName && (
             <div className="mt-4">
               <p className="text-sm text-gray-700">
-                已选择: <span className="font-medium">{fileName}</span>
+                Selected: <span className="font-medium">{fileName}</span>
               </p>
             </div>
           )}
@@ -194,7 +194,7 @@ export function FileList({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <h4 className="text-sm font-medium text-gray-700">已上传文件</h4>
+      <h4 className="text-sm font-medium text-gray-700">File uploaded</h4>
       <div className="space-y-2">
         {files.map((file) => (
           <div
@@ -216,10 +216,10 @@ export function FileList({
                     <span>{file.size}</span>
                     <span>{file.uploadedAt}</span>
                     {file.status === 'uploading' && (
-                      <span className="text-blue-600">上传中...</span>
+                      <span className="text-blue-600">Uploading...</span>
                     )}
                     {file.status === 'error' && (
-                      <span className="text-red-600">上传失败</span>
+                      <span className="text-red-600">Upload failed</span>
                     )}
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export function FileList({
                 <button
                   onClick={() => onDownload(file.id)}
                   className="text-gray-400 hover:text-gray-600"
-                  title="下载"
+                  title="download"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -253,7 +253,7 @@ export function FileList({
                 <button
                   onClick={() => onDelete(file.id)}
                   className="text-gray-400 hover:text-red-600"
-                  title="删除"
+                  title="delete"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -67,7 +67,7 @@ export default function OverviewPage() {
         title: "Platform Core",
         status: platform?.status ?? "unknown",
         details: platform
-          ? `memory ${platform.memory_usage_mb ?? "-"} MB · v${platform.version ?? "n/a"}`
+          ? `memory ${platform.memory_usage_mb ?? "-"} MB - v${platform.version ?? "n/a"}`
           : "Waiting for backend",
       },
       {
