@@ -16,20 +16,20 @@ import {
 } from '@/lib/api-client'
 
 const projectTypes = [
-  { value: 'commercial_office', label: '商业办公楼' },
-  { value: 'residential_highrise', label: '高层住宅' },
-  { value: 'hospital', label: '医院' },
-  { value: 'school', label: '学校' },
-  { value: 'shopping_mall', label: '购物中心' },
-  { value: 'industrial', label: '工业建筑' }
+  { value: 'commercial_office', label: 'commercial office building' },
+  { value: 'residential_highrise', label: 'high-rise residential' },
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'school', label: 'School' },
+  { value: 'shopping_mall', label: 'shopping center' },
+  { value: 'industrial', label: 'industrial building' }
 ]
 
 const locations = [
-  { value: 'Toronto', label: '多伦多' },
-  { value: 'Vancouver', label: '温哥华' },
-  { value: 'Montreal', label: '蒙特利尔' },
-  { value: 'Calgary', label: '卡尔加里' },
-  { value: 'Edmonton', label: '埃德蒙顿' }
+  { value: 'Toronto', label: 'toronto' },
+  { value: 'Vancouver', label: 'Vancouver' },
+  { value: 'Montreal', label: 'montreal' },
+  { value: 'Calgary', label: 'calgary' },
+  { value: 'Edmonton', label: 'edmonton' }
 ]
 
 const initialProject: CostProjectFeatures = {
@@ -74,7 +74,7 @@ export default function CostEstimationPage() {
       const response = await predictCost(runtimeConfig, project, confidence)
       setSingleResult(response.prediction)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '预测失败')
+      setError(err instanceof Error ? err.message : 'Prediction failed')
     } finally {
       setLoadingSingle(false)
     }
@@ -89,7 +89,7 @@ export default function CostEstimationPage() {
       const response = await predictCostBatch(runtimeConfig, batchRows, confidence)
       setBatchResults(response.predictions)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '批量预测失败')
+      setError(err instanceof Error ? err.message : 'Batch prediction failed')
     } finally {
       setLoadingBatch(false)
     }
@@ -107,22 +107,22 @@ export default function CostEstimationPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">成本估算</h1>
+        <h1 className="text-3xl font-bold text-gray-900">cost estimate</h1>
         <p className="text-gray-600 mt-2">
-          使用结构化回归模型进行建筑成本预测，而非自由形式的LLM猜测
+          Construction cost forecasting using structured regression models instead of free-formLLMguess
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 单项目预测 */}
+        {/* single project forecast */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>单项目成本预测</CardTitle>
+            <CardTitle>Single project cost forecast</CardTitle>
           </CardHeader>
           <CardContent>
             <Form>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormGroup label="项目类型">
+                <FormGroup label="Project type">
                   <Select
                     value={project.project_type}
                     onChange={(e) => updateField('project_type', e.target.value)}
@@ -130,7 +130,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="地点">
+                <FormGroup label="Place">
                   <Select
                     value={project.location}
                     onChange={(e) => updateField('location', e.target.value)}
@@ -138,7 +138,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="建筑面积 (平方英尺)">
+                <FormGroup label="Building area (square feet)">
                   <Input
                     type="number"
                     value={project.sqft}
@@ -146,7 +146,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="楼层数">
+                <FormGroup label="Number of floors">
                   <Input
                     type="number"
                     value={project.floors}
@@ -154,7 +154,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="预计成本 (CAD)">
+                <FormGroup label="Estimated cost (CAD)">
                   <Input
                     type="number"
                     value={project.estimated_cost_cad}
@@ -162,7 +162,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="承包商评分 (1-5)">
+                <FormGroup label="Contractor Rating (1-5)">
                   <Input
                     type="number"
                     step="0.1"
@@ -173,7 +173,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="复杂度评分 (1-10)">
+                <FormGroup label="complexity score (1-10)">
                   <Input
                     type="number"
                     min="1"
@@ -183,7 +183,7 @@ export default function CostEstimationPage() {
                   />
                 </FormGroup>
 
-                <FormGroup label="团队经验 (年)">
+                <FormGroup label="Team experience (Year)">
                   <Input
                     type="number"
                     value={project.team_experience_years}
@@ -193,7 +193,7 @@ export default function CostEstimationPage() {
               </div>
 
               <div className="mt-6">
-                <FormGroup label={`置信度: ${Math.round(confidence * 100)}%`}>
+                <FormGroup label={`Confidence: ${Math.round(confidence * 100)}%`}>
                   <Input
                     type="range"
                     min="0.5"
@@ -212,13 +212,13 @@ export default function CostEstimationPage() {
                   loading={loadingSingle}
                   disabled={loadingSingle}
                 >
-                  预测成本
+                  forecast cost
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={addToBatch}
                 >
-                  添加到批量队列
+                  Add to batch queue
                 </Button>
               </div>
 
@@ -231,19 +231,19 @@ export default function CostEstimationPage() {
               {singleResult && !loadingSingle && (
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-sm text-blue-600 font-medium">预测实际成本</div>
+                    <div className="text-sm text-blue-600 font-medium">Forecast actual costs</div>
                     <div className="text-2xl font-bold text-gray-900 mt-1">
                       ${singleResult.predicted_actual_cost_cad?.toLocaleString() || 'N/A'}
                     </div>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-sm text-green-600 font-medium">预测超支率</div>
+                    <div className="text-sm text-green-600 font-medium">Forecast overrun rate</div>
                     <div className="text-2xl font-bold text-gray-900 mt-1">
                       {singleResult.predicted_cost_overrun_pct?.toFixed(1) || 'N/A'}%
                     </div>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="text-sm text-purple-600 font-medium">预测区间</div>
+                    <div className="text-sm text-purple-600 font-medium">prediction interval</div>
                     <div className="text-sm text-gray-900 mt-1">
                       ${singleResult.prediction_interval_cad?.lower?.toLocaleString() || 'N/A'} - 
                       ${singleResult.prediction_interval_cad?.upper?.toLocaleString() || 'N/A'}
@@ -255,24 +255,24 @@ export default function CostEstimationPage() {
           </CardContent>
         </Card>
 
-        {/* 批量预测 */}
+        {/* Batch prediction */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>批量预测队列 ({batchRows.length})</CardTitle>
+              <CardTitle>Batch prediction queue ({batchRows.length})</CardTitle>
               <div className="flex space-x-2">
                 <Button
                   onClick={handleBatchPrediction}
                   loading={loadingBatch}
                   disabled={batchRows.length === 0 || loadingBatch}
                 >
-                  运行批量预测
+                  Run batch prediction
                 </Button>
                 <Button
                   variant="outline"
                   onClick={clearBatch}
                 >
-                  清空队列
+                  Clear the queue
                 </Button>
               </div>
             </div>
@@ -283,11 +283,11 @@ export default function CostEstimationPage() {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableHeader>项目类型</TableHeader>
-                      <TableHeader>地点</TableHeader>
-                      <TableHeader>建筑面积</TableHeader>
-                      <TableHeader>预计成本</TableHeader>
-                      <TableHeader>风险评分</TableHeader>
+                      <TableHeader>Project type</TableHeader>
+                      <TableHeader>Place</TableHeader>
+                      <TableHeader>Building area</TableHeader>
+                      <TableHeader>Estimated cost</TableHeader>
+                      <TableHeader>risk score</TableHeader>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -307,14 +307,14 @@ export default function CostEstimationPage() {
 
                 {batchResults.length > 0 && (
                   <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">批量预测结果</h4>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Batch prediction results</h4>
                     <Table>
                       <TableHead>
                         <TableRow>
                           <TableHeader>#</TableHeader>
-                          <TableHeader>预测成本</TableHeader>
-                          <TableHeader>超支率</TableHeader>
-                          <TableHeader>预测区间</TableHeader>
+                          <TableHeader>forecast cost</TableHeader>
+                          <TableHeader>Overspending rate</TableHeader>
+                          <TableHeader>prediction interval</TableHeader>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -340,7 +340,7 @@ export default function CostEstimationPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                从上方表单添加项目到批量队列
+                Add items to the bulk queue from the form above
               </div>
             )}
           </CardContent>

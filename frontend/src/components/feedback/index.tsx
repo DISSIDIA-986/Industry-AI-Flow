@@ -11,7 +11,7 @@ interface LoadingProps {
 
 export function Loading({ 
   message,
-  text = '加载中...', 
+  text = 'loading...', 
   size = 'md',
   fullScreen = false 
 }: LoadingProps) {
@@ -47,7 +47,7 @@ interface ErrorDisplayProps {
 }
 
 export function ErrorDisplay({ 
-  title = '出错了', 
+  title = 'something went wrong', 
   message, 
   onRetry,
   className = '' 
@@ -66,7 +66,7 @@ export function ErrorDisplay({
           onClick={onRetry}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          重试
+          Try again
         </button>
       )}
     </div>

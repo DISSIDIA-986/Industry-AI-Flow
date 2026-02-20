@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  // 初始化时从localStorage恢复状态
+  // When initialized fromlocalStoragerestore state
   useEffect(() => {
     const initAuth = () => {
       try {
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveAuthState(response.token, response.user)
       router.push('/overview')
     } catch (err: any) {
-      const errorMessage = err?.message || '登录失败，请检查邮箱和密码'
+      const errorMessage = err?.message || 'Login failed, please check your email and password'
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveAuthState(response.token, response.user)
       router.push('/overview')
     } catch (err: any) {
-      const errorMessage = err?.message || '注册失败，请稍后重试'
+      const errorMessage = err?.message || 'Registration failed, please try again later'
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout()
     } catch (err) {
       console.error('Logout API error:', err)
-      // 即使API失败，也要清除本地状态
+      // even thoughAPIIf it fails, the local status must also be cleared.
     } finally {
       clearAuthState()
       setLoading(false)

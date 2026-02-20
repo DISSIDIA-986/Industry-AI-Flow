@@ -13,7 +13,7 @@ interface ChartProps {
   title?: string
 }
 
-// 基础图表组件
+// Basic chart components
 export function LineChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
   return (
     <div className="w-full">
@@ -35,7 +35,7 @@ export function LineChartComponent({ data, width = '100%', height = 300, title }
 // Compatibility aliases for legacy imports.
 export const LineChart = LineChartComponent
 
-// 柱状图组件
+// Bar chart component
 export function BarChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
   return (
     <div className="w-full">
@@ -57,7 +57,7 @@ export function BarChartComponent({ data, width = '100%', height = 300, title }:
 // Compatibility aliases for legacy imports.
 export const BarChart = BarChartComponent
 
-// 饼图组件
+// Pie chart component
 export function PieChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
   
@@ -91,7 +91,7 @@ export function PieChartComponent({ data, width = '100%', height = 300, title }:
   )
 }
 
-// 面积图组件
+// Area chart component
 export function AreaChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
   return (
     <div className="w-full">
@@ -110,7 +110,7 @@ export function AreaChartComponent({ data, width = '100%', height = 300, title }
   )
 }
 
-// 雷达图组件
+// Radar chart component
 export function RadarChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
   return (
     <div className="w-full">
@@ -120,7 +120,7 @@ export function RadarChartComponent({ data, width = '100%', height = 300, title 
           <PolarGrid />
           <PolarAngleAxis dataKey="subject" />
           <PolarRadiusAxis />
-          <Radar name="指标" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+          <Radar name="index" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
           <Tooltip />
         </RadarChart>
       </ResponsiveContainer>
@@ -128,7 +128,7 @@ export function RadarChartComponent({ data, width = '100%', height = 300, title 
   )
 }
 
-// 仪表板卡片组件
+// Dashboard card component
 export function MetricCard({ title, value, change, icon }: { 
   title: string
   value: string | number
@@ -153,7 +153,7 @@ export function MetricCard({ title, value, change, icon }: {
   )
 }
 
-// 数据表格组件
+// Data table component
 export function DataTable({ data, columns }: { 
   data: any[]
   columns: { key: string; label: string; format?: (value: any) => string }[]
@@ -189,7 +189,7 @@ export function DataTable({ data, columns }: {
   )
 }
 
-// 导出所有组件
+// Export all components
 export default {
   LineChart: LineChartComponent,
   BarChart: BarChartComponent,

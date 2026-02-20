@@ -16,13 +16,13 @@ export default function Navbar() {
   }
 
   const navItems = [
-    { name: '仪表板', href: '/simple-dashboard' },
-    { name: '工作流聊天', href: '/workflow-chat' },
-    { name: '文档管理', href: '/documents-integrated' },
-    { name: '数据仪表板', href: '/data-dashboard' },
-    { name: '成本估算', href: '/cost-estimation' },
-    { name: 'API测试', href: '/api-integration-test' },
-    { name: '组件演示', href: '/components-demo' },
+    { name: 'Dashboard', href: '/simple-dashboard' },
+    { name: 'Workflow chat', href: '/workflow-chat' },
+    { name: 'Document management', href: '/documents-integrated' },
+    { name: 'Data dashboard', href: '/data-dashboard' },
+    { name: 'cost estimate', href: '/cost-estimation' },
+    { name: 'APItest', href: '/api-integration-test' },
+    { name: 'Component demo', href: '/components-demo' },
   ]
 
   return (
@@ -61,7 +61,7 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition"
                 >
-                  退出登录
+                  Log out
                 </button>
               </div>
             ) : (
@@ -70,18 +70,18 @@ export default function Navbar() {
                   href="/login"
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition"
                 >
-                  登录
+                  Log in
                 </Link>
                 <Link
                   href="/register"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
                 >
-                  注册
+                  register
                 </Link>
               </div>
             )}
 
-            {/* 移动端菜单按钮 */}
+            {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden ml-4 inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100"
@@ -112,7 +112,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* 移动端菜单 */}
+        {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
@@ -136,7 +136,7 @@ export default function Navbar() {
                     onClick={handleLogout}
                     className="w-full text-left text-gray-700 hover:text-blue-600 block px-3 py-2 text-base font-medium"
                   >
-                    退出登录
+                    Log out
                   </button>
                 </>
               )}
