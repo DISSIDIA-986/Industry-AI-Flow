@@ -305,17 +305,17 @@ class DockerExecutor:
         timeout: Optional[int] = None,
     ) -> dict:
         """
-        执行代码（兼容旧接口）
+        EN(EN)
 
         Args:
-            code: Python代码
-            data_files: 数据文件路径列表
-            timeout: 超时时间（秒）
+            code: PythonEN
+            data_files: EN
+            timeout: EN(EN)
 
         Returns:
-            执行结果字典
+            EN
         """
-        # 读取数据文件
+        # EN
         input_files = {}
         if data_files:
             for file_path in data_files:
@@ -326,7 +326,7 @@ class DockerExecutor:
                 except Exception as e:
                     return {
                         "success": False,
-                        "error": f"无法读取数据文件 {file_path}: {e}",
+                        "error": f"Failed to load data file {file_path}: {e}",
                         "stdout": "",
                         "stderr": "",
                         "exit_code": -1,
@@ -334,10 +334,10 @@ class DockerExecutor:
                         "visualizations": [],
                     }
 
-        # 执行代码
+        # EN
         result = self.execute(code, input_files, timeout=timeout)
 
-        # 转换为旧格式
+        # EN
         visualizations = [
             name
             for name in result.output_files.keys()
@@ -357,13 +357,13 @@ class DockerExecutor:
 
     def _validate_code(self, code: str) -> list[str]:
         """
-        验证代码（兼容旧接口）
+        EN(EN)
 
         Args:
-            code: Python代码
+            code: PythonEN
 
         Returns:
-            错误列表（空列表表示通过验证）
+            EN(EN)
         """
         from backend.services.code_executor.validator import validate_code
 

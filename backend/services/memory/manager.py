@@ -42,7 +42,7 @@ class ConversationMemoryManager:
             await self._update_summary(session)
             await self._extract_long_term_memory(session)
         except Exception as exc:  # pragma: no cover - defensive
-            logger.error("处理对话记忆失败: %s", exc)
+            logger.error("EN: %s", exc)
 
     async def _update_summary(self, session) -> None:
         history_size = len(session.interaction_history)
@@ -70,7 +70,7 @@ class ConversationMemoryManager:
             session.summary_memory = new_summary
             session.last_summary_record_index = history_size
             session.last_summary_time = datetime.utcnow()
-            logger.debug("更新会话摘要: %s", session.session_id)
+            logger.debug("EN: %s", session.session_id)
 
     async def _extract_long_term_memory(self, session) -> None:
         recent_interactions = session.interaction_history[-self.summary_trigger :]

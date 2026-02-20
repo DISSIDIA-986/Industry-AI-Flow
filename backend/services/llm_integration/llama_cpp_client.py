@@ -1,6 +1,6 @@
 """
-llama.cpp 客户端实现
-提供本地 GGUF 模型推理功能，支持 Metal 加速
+llama.cpp EN
+EN GGUF EN,EN Metal EN
 """
 import logging
 import os
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class LlamaCppClient:
-    """llama.cpp 客户端，支持 GGUF 格式模型"""
+    """llama.cpp EN,EN GGUF EN"""
 
     def __init__(
         self,
@@ -35,19 +35,19 @@ class LlamaCppClient:
         verbose: bool = False,
     ):
         """
-        初始化 llama.cpp 客户端
+        EN llama.cpp EN
 
         Args:
-            model_path: 模型文件路径
-            n_ctx: 上下文窗口大小
-            n_threads: CPU线程数（默认自动检测）
-            n_gpu_layers: GPU层数 (-1=全部使用GPU, 0=纯CPU)
-            n_batch: 批处理大小
-            verbose: 是否输出详细日志
+            model_path: EN
+            n_ctx: EN
+            n_threads: CPUEN(EN)
+            n_gpu_layers: GPUEN (-1=ENGPU, 0=ENCPU)
+            n_batch: EN
+            verbose: EN
         """
         if not LLAMA_CPP_AVAILABLE:
             raise ImportError(
-                "llama-cpp-python 未安装。请运行: "
+                "llama-cpp-python EN.EN: "
                 "CMAKE_ARGS='-DGGML_METAL=on' pip install llama-cpp-python"
             )
 
@@ -63,58 +63,58 @@ class LlamaCppClient:
         self.verbose = verbose
         self.model = None
 
-        # 验证模型文件
+        # EN
         if not self._validate_model_file():
-            raise FileNotFoundError(f"模型文件不存在或不可读: {self.model_path}")
+            raise FileNotFoundError(f"EN: {self.model_path}")
 
-        # 自动检测GPU
+        # ENGPU
         if self.n_gpu_layers == -1:
             self.n_gpu_layers = self._detect_gpu_layers()
 
-        # 加载模型
+        # EN
         self._load_model()
 
     def _validate_model_file(self) -> bool:
-        """验证模型文件"""
+        """EN"""
         model_path = Path(self.model_path)
 
         if not model_path.exists():
-            logger.error(f"模型文件不存在: {self.model_path}")
+            logger.error(f"EN: {self.model_path}")
             return False
 
         if not model_path.is_file():
-            logger.error(f"模型路径不是文件: {self.model_path}")
+            logger.error(f"EN: {self.model_path}")
             return False
 
         file_size = model_path.stat().st_size
-        if file_size < 1024 * 1024:  # 小于1MB可能不完整
-            logger.warning(f"模型文件过小，可能不完整: {file_size} bytes")
+        if file_size < 1024 * 1024:  # EN1MBEN
+            logger.warning(f"EN,EN: {file_size} bytes")
 
-        logger.info(f"✅ 模型文件验证通过: {self.model_path} ({file_size / (1024**3):.2f} GB)")
+        logger.info(f"✅ EN: {self.model_path} ({file_size / (1024**3):.2f} GB)")
         return True
 
     def _detect_gpu_layers(self) -> int:
-        """自动检测GPU并返回适当的层数"""
+        """ENGPUEN"""
         try:
             import torch
 
             if torch.backends.mps.is_available():
-                logger.info("✅ 检测到 Apple Silicon Metal，启用 GPU 加速")
-                return -1  # 使用所有GPU层
+                logger.info("✅ EN Apple Silicon Metal,EN GPU EN")
+                return -1  # ENGPUEN
         except ImportError:
-            logger.info("torch 未安装，跳过GPU检测")
+            logger.info("torch EN,ENGPUEN")
         except Exception as e:
-            logger.warning(f"GPU检测失败: {e}")
+            logger.warning(f"GPUEN: {e}")
 
-        logger.info("使用CPU推理模式")
-        return 0  # 纯CPU模式
+        logger.info("ENCPUEN")
+        return 0  # ENCPUEN
 
     def _load_model(self):
-        """加载模型"""
+        """EN"""
         try:
-            logger.info(f"开始加载模型: {Path(self.model_path).name}")
+            logger.info(f"EN: {Path(self.model_path).name}")
             logger.info(
-                f"配置 - 上下文: {self.n_ctx}, 线程: {self.n_threads}, GPU层: {self.n_gpu_layers}"
+                f"EN - EN: {self.n_ctx}, EN: {self.n_threads}, GPUEN: {self.n_gpu_layers}"
             )
 
             start_time = time.time()
@@ -128,23 +128,23 @@ class LlamaCppClient:
             )
 
             load_time = time.time() - start_time
-            logger.info(f"✅ 模型加载成功，耗时: {load_time:.2f}秒")
+            logger.info(f"✅ EN,EN: {load_time:.2f}EN")
 
-            # 测试模型
+            # EN
             self._test_model()
 
         except Exception as e:
-            logger.error(f"❌ 模型加载失败: {e}")
-            raise RuntimeError(f"无法加载模型 {self.model_path}: {e}")
+            logger.error(f"❌ EN: {e}")
+            raise RuntimeError(f"EN {self.model_path}: {e}")
 
     def _test_model(self):
-        """测试模型功能"""
+        """EN"""
         try:
             test_response = self.model("Hello", max_tokens=5, echo=False)
-            logger.info("✅ 模型功能测试通过")
+            logger.info("✅ EN")
         except Exception as e:
-            logger.error(f"❌ 模型功能测试失败: {e}")
-            raise RuntimeError(f"模型功能异常: {e}")
+            logger.error(f"❌ EN: {e}")
+            raise RuntimeError(f"EN: {e}")
 
     def generate(
         self,
@@ -159,23 +159,23 @@ class LlamaCppClient:
         **kwargs,
     ) -> str:
         """
-        生成文本（兼容 OllamaClient 接口）
+        EN(EN OllamaClient EN)
 
         Args:
-            prompt: 输入提示词
-            temperature: 温度参数
-            max_tokens: 最大生成token数
-            top_p: nucleus采样参数
-            top_k: top-k采样参数
-            repeat_penalty: 重复惩罚
-            stop: 停止词列表
-            stream: 是否流式输出（暂不支持）
-            **kwargs: 其他参数
+            prompt: EN
+            temperature: EN
+            max_tokens: ENtokenEN
+            top_p: nucleusEN
+            top_k: top-kEN
+            repeat_penalty: EN
+            stop: EN
+            stream: EN(EN)
+            **kwargs: EN
 
         Returns:
-            生成的文本
+            EN
         """
-        # 使用传入参数或默认值
+        # EN
         temperature = (
             temperature
             if temperature is not None
@@ -205,7 +205,7 @@ class LlamaCppClient:
             return response["choices"][0]["text"]
 
         except Exception as e:
-            logger.error(f"文本生成失败: {e}")
+            logger.error(f"EN: {e}")
             raise RuntimeError(f"LLM generation failed: {e}")
 
     def chat(
@@ -216,18 +216,18 @@ class LlamaCppClient:
         top_p: Optional[float] = None,
     ) -> str:
         """
-        对话模式生成（兼容 OllamaClient 接口）
+        EN(EN OllamaClient EN)
 
         Args:
-            messages: 消息列表 [{"role": "user", "content": "..."}]
-            temperature: 温度参数
-            max_tokens: 最大token数
-            top_p: nucleus采样参数
+            messages: EN [{"role": "user", "content": "..."}]
+            temperature: EN
+            max_tokens: ENtokenEN
+            top_p: nucleusEN
 
         Returns:
-            生成的回复
+            EN
         """
-        # 将消息列表转换为提示词
+        # EN
         prompt_parts = []
         for msg in messages:
             role = msg.get("role", "user")
@@ -246,7 +246,7 @@ class LlamaCppClient:
         )
 
     def get_model_info(self) -> Dict[str, Any]:
-        """获取模型信息"""
+        """EN"""
         return {
             "model": Path(self.model_path).name,
             "model_path": self.model_path,
@@ -259,7 +259,7 @@ class LlamaCppClient:
         }
 
     def get_current_config(self) -> Dict[str, Any]:
-        """获取当前配置（兼容 OllamaClient）"""
+        """EN(EN OllamaClient)"""
         return {
             "model": Path(self.model_path).name,
             "base_url": "local",
@@ -269,7 +269,7 @@ class LlamaCppClient:
         }
 
     def list_models(self) -> list:
-        """列出可用模型（兼容 OllamaClient）"""
+        """EN(EN OllamaClient)"""
         models_dir = Path("models")
         if models_dir.exists():
             return [
@@ -279,11 +279,11 @@ class LlamaCppClient:
         return []
 
     def update_config(self, **kwargs):
-        """更新配置（兼容 OllamaClient）"""
-        logger.info(f"更新配置: {kwargs}")
+        """EN(EN OllamaClient)"""
+        logger.info(f"EN: {kwargs}")
 
     def get_memory_usage(self) -> Dict[str, float]:
-        """获取内存使用情况"""
+        """EN"""
         process = psutil.Process(os.getpid())
         return {
             "memory_mb": round(process.memory_info().rss / 1024 / 1024, 2),
@@ -291,12 +291,12 @@ class LlamaCppClient:
         }
 
     def unload_model(self):
-        """卸载模型以释放内存"""
+        """EN"""
         if self.model:
             del self.model
             self.model = None
-            logger.info("✅ 模型已卸载，内存已释放")
+            logger.info("✅ EN,EN")
 
     def is_loaded(self) -> bool:
-        """检查模型是否已加载"""
+        """EN"""
         return self.model is not None

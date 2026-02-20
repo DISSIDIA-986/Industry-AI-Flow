@@ -1,5 +1,5 @@
 """
-反馈机制模块 - RAG系统的用户反馈和自适应优化
+EN - RAGEN
 """
 
 import datetime
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackType(Enum):
-    """反馈类型"""
+    """EN"""
 
     HELPFUL = "helpful"
     NOT_HELPFUL = "not_helpful"
@@ -27,7 +27,7 @@ class FeedbackType(Enum):
 
 @dataclass
 class UserFeedback:
-    """用户反馈数据结构"""
+    """EN"""
 
     query_id: str
     question: str
@@ -36,7 +36,7 @@ class UserFeedback:
     user_comment: Optional[str] = None
     timestamp: datetime.datetime = None
     retrieved_chunks: List[Dict] = None
-    feedback_weight: float = 1.0  # 反馈权重
+    feedback_weight: float = 1.0  # EN
 
     def __post_init__(self):
         if self.timestamp is None:
@@ -47,7 +47,7 @@ class UserFeedback:
 
 @dataclass
 class FeedbackStatistics:
-    """反馈统计信息"""
+    """EN"""
 
     total_queries: int
     helpful_count: int
@@ -58,7 +58,7 @@ class FeedbackStatistics:
 
 
 class FeedbackManager:
-    """反馈管理器 - 处理用户反馈并触发自适应优化"""
+    """EN - EN"""
 
     def __init__(self, vectorstore: VectorStore, reranker: Reranker = None):
         self.vectorstore = vectorstore
@@ -66,12 +66,12 @@ class FeedbackManager:
         self._init_database()
 
     def _init_database(self):
-        """初始化反馈相关的数据库表"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 创建反馈表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_feedback (
@@ -89,7 +89,7 @@ class FeedbackManager:
             """
             )
 
-            # 创建文档质量评分表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_quality_scores (
@@ -104,7 +104,7 @@ class FeedbackManager:
             """
             )
 
-            # 创建查询优化记录表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_optimization_log (
@@ -119,7 +119,7 @@ class FeedbackManager:
             """
             )
 
-            # 创建索引
+            # EN
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)"
             )
@@ -142,12 +142,12 @@ class FeedbackManager:
             conn.close()
 
     def record_feedback(self, feedback: UserFeedback) -> bool:
-        """记录用户反馈"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 插入反馈记录
+            # EN
             cur.execute(
                 """
                 INSERT INTO query_feedback
@@ -178,9 +178,9 @@ class FeedbackManager:
             conn.commit()
 
             if result:
-                # 更新文档质量评分
+                # EN
                 self._update_document_quality_scores(feedback)
-                # 触发自适应优化
+                # EN
                 self._trigger_adaptive_optimization(feedback)
                 logger.info(f"Feedback recorded for query {feedback.query_id}")
                 return True
@@ -196,7 +196,7 @@ class FeedbackManager:
             conn.close()
 
     def _update_document_quality_scores(self, feedback: UserFeedback):
-        """更新文档质量评分"""
+        """EN"""
         if not feedback.retrieved_chunks:
             return
 
@@ -211,12 +211,12 @@ class FeedbackManager:
                 if not doc_id:
                     continue
 
-                # 计算反馈对文档质量的影响
+                # EN
                 quality_delta = self._calculate_quality_impact(
                     feedback.feedback_type, feedback.feedback_weight
                 )
 
-                # 更新文档质量评分
+                # EN
                 cur.execute(
                     """
                     INSERT INTO document_quality_scores (doc_id, chunk_id, quality_score, helpful_count, not_helpful_count)
@@ -255,22 +255,22 @@ class FeedbackManager:
     def _calculate_quality_impact(
         self, feedback_type: FeedbackType, weight: float = 1.0
     ) -> float:
-        """计算反馈对文档质量的影响分数"""
+        """EN"""
         impact_scores = {
             FeedbackType.HELPFUL: 1.0,
-            FeedbackType.NOT_HELPFUL: -1.5,  # 负面反馈权重更高
+            FeedbackType.NOT_HELPFUL: -1.5,  # EN
             FeedbackType.PARTIALLY_HELPFUL: 0.3,
         }
         return impact_scores.get(feedback_type, 0.0) * weight
 
     def _trigger_adaptive_optimization(self, feedback: UserFeedback):
-        """触发自适应优化"""
+        """EN"""
         try:
-            # 检查是否需要触发重排序优化
+            # EN
             if feedback.feedback_type == FeedbackType.NOT_HELPFUL:
                 self._schedule_reranking_optimization(feedback)
 
-            # 检查是否需要查询重写
+            # EN
             if self._should_rewrite_query(feedback):
                 self._schedule_query_rewriting(feedback)
 
@@ -278,11 +278,11 @@ class FeedbackManager:
             logger.error(f"Failed to trigger adaptive optimization: {e}")
 
     def _schedule_reranking_optimization(self, feedback: UserFeedback):
-        """安排重排序优化"""
-        # 这里可以实现异步任务队列，当前简单实现
+        """EN"""
+        # EN,EN
         logger.info(f"Scheduling reranking optimization for query {feedback.query_id}")
 
-        # 基于负面反馈调整重排序权重
+        # EN
         if self.reranker:
             optimization_data = {
                 "query_id": feedback.query_id,
@@ -290,27 +290,27 @@ class FeedbackManager:
                 "feedback_type": feedback.feedback_type.value,
                 "retrieved_chunks": feedback.retrieved_chunks,
             }
-            # 在实际应用中，这里应该发送到任务队列
+            # EN,EN
             self._optimize_reranking_weights(optimization_data)
 
     def _optimize_reranking_weights(self, optimization_data: Dict):
-        """优化重排序权重"""
+        """EN"""
         try:
-            # 基于反馈调整重排序模型的权重
-            # 这里可以实现更复杂的机器学习优化逻辑
+            # EN
+            # EN
             logger.info(
                 f"Optimizing reranking weights based on feedback: {optimization_data}"
             )
 
-            # 简单实现：调整相似度和相关性权重
-            # 实际应用中可以使用更复杂的在线学习算法
+            # EN:EN
+            # EN
 
         except Exception as e:
             logger.error(f"Failed to optimize reranking weights: {e}")
 
     def _should_rewrite_query(self, feedback: UserFeedback) -> bool:
-        """判断是否需要重写查询"""
-        # 检查最近是否有类似的负面反馈
+        """EN"""
+        # EN
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -319,14 +319,14 @@ class FeedbackManager:
                 """
                 SELECT COUNT(*) FROM query_feedback
                 WHERE feedback_type = 'not_helpful'
-                AND question % %s  -- 使用PostgreSQL的模糊匹配
+                AND question % %s  -- ENPostgreSQLEN
                 AND created_at > NOW() - INTERVAL '24 hours'
             """,
                 (feedback.question,),
             )
 
             similar_negative_feedback = cur.fetchone()[0]
-            return similar_negative_feedback >= 2  # 如果24小时内有2次以上类似负面反馈
+            return similar_negative_feedback >= 2  # EN24EN2EN
 
         except Exception as e:
             logger.error(f"Failed to check query rewriting necessity: {e}")
@@ -336,7 +336,7 @@ class FeedbackManager:
             conn.close()
 
     def _schedule_query_rewriting(self, feedback: UserFeedback):
-        """安排查询重写"""
+        """EN"""
         logger.info(f"Scheduling query rewriting for query {feedback.query_id}")
 
         optimization_data = {
@@ -346,21 +346,21 @@ class FeedbackManager:
             "feedback_type": feedback.feedback_type.value,
         }
 
-        # 在实际应用中，这里应该发送到任务队列
+        # EN,EN
         self._rewrite_query(optimization_data)
 
     def _rewrite_query(self, optimization_data: Dict):
-        """重写查询以提高检索效果"""
+        """EN"""
         try:
-            # 实现查询扩展和重写逻辑
-            # 例如：添加同义词、扩展关键词等
+            # EN
+            # EN:EN,EN
             logger.info(f"Rewriting query: {optimization_data}")
 
         except Exception as e:
             logger.error(f"Failed to rewrite query: {e}")
 
     def get_feedback_statistics(self, days: int = 7) -> FeedbackStatistics:
-        """获取反馈统计信息"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -405,7 +405,7 @@ class FeedbackManager:
     def get_high_quality_documents(
         self, min_score: float = 0.5, limit: int = 100
     ) -> List[Dict]:
-        """获取高质量文档列表"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -446,22 +446,22 @@ class FeedbackManager:
     def adjust_search_weights(
         self, feedback_history: List[UserFeedback]
     ) -> Dict[str, float]:
-        """基于反馈历史调整搜索权重"""
+        """EN"""
         if not feedback_history:
             return {"vector_weight": 0.7, "bm25_weight": 0.3}
 
-        # 分析反馈模式并调整权重
+        # EN
         helpful_ratio = sum(
             1 for f in feedback_history if f.feedback_type == FeedbackType.HELPFUL
         ) / len(feedback_history)
 
-        # 如果成功率低，可能需要调整检索策略
+        # EN,EN
         if helpful_ratio < 0.5:
-            # 增加向量搜索权重，可能语义理解更重要
+            # EN,EN
             return {"vector_weight": 0.8, "bm25_weight": 0.2}
         elif helpful_ratio > 0.8:
-            # 成功率高，可以保持当前策略或略微增加关键词权重
+            # EN,EN
             return {"vector_weight": 0.6, "bm25_weight": 0.4}
         else:
-            # 默认平衡策略
+            # EN
             return {"vector_weight": 0.7, "bm25_weight": 0.3}

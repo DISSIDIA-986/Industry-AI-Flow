@@ -1,6 +1,6 @@
 """
-简化的意图分类器 - 无需数据库依赖的版本
-用于测试和独立运行场景
+EN - EN
+EN
 """
 
 import json
@@ -14,19 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 class IntentType(Enum):
-    """意图类型枚举"""
+    """EN"""
 
-    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # 知识检索类
-    DATA_ANALYSIS = "data_analysis"  # 数据分析类
-    COST_ESTIMATION = "cost_estimation"  # 成本估算类
-    DOCUMENT_PROCESSING = "document_processing"  # 文档处理类
-    CODE_EXECUTION = "code_execution"  # 代码执行类
-    UNCLEAR_INTENT = "unclear_intent"  # 意图不明确
+    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # EN
+    DATA_ANALYSIS = "data_analysis"  # EN
+    COST_ESTIMATION = "cost_estimation"  # EN
+    DOCUMENT_PROCESSING = "document_processing"  # EN
+    CODE_EXECUTION = "code_execution"  # EN
+    UNCLEAR_INTENT = "unclear_intent"  # EN
 
 
 @dataclass
 class SimpleIntentResult:
-    """简化的意图分类结果"""
+    """EN"""
 
     intent: IntentType
     confidence: float = 0.0
@@ -40,52 +40,52 @@ class SimpleIntentResult:
 
     @property
     def is_high_confidence(self) -> bool:
-        """判断是否为高置信度"""
+        """EN"""
         return self.confidence >= 0.7
 
     @property
     def is_uncertain(self) -> bool:
-        """判断是否意图不明确"""
+        """EN"""
         return self.confidence < 0.5
 
 
 class SimpleIntentClassifier:
     """
-    简化的意图分类器 - 基于规则的轻量级版本
+    EN - EN
 
-    不依赖数据库和复杂的LLM调用，适用于:
-    1. 测试环境
-    2. 快速原型开发
-    3. 资源受限场景
+    ENLLMEN,EN:
+    1. EN
+    2. EN
+    3. EN
     """
 
     def __init__(self, confidence_threshold: float = 0.7):
         """
-        初始化简化意图分类器
+        EN
 
         Args:
-            confidence_threshold: 置信度阈值
+            confidence_threshold: EN
         """
         self.confidence_threshold = confidence_threshold
 
-        # 关键词规则库
+        # EN
         self._keyword_rules = self._build_keyword_rules()
 
-        # 统计信息
+        # EN
         self.stats = {
             "total_classifications": 0,
             "high_confidence_count": 0,
             "intent_distribution": {},
         }
 
-        logger.info("简化意图分类器初始化完成")
+        logger.info("EN")
 
     def _build_keyword_rules(self) -> Dict[IntentType, Dict[str, Any]]:
-        """构建关键词规则库"""
+        """EN"""
         return {
             IntentType.KNOWLEDGE_RETRIEVAL: {
                 "keywords": [
-                    # 英文
+                    # EN
                     "what is",
                     "how does",
                     "explain",
@@ -99,31 +99,31 @@ class SimpleIntentClassifier:
                     "principle",
                     "mechanism",
                     "theory",
-                    # 中文
-                    "什么是",
-                    "如何",
-                    "怎么",
-                    "解释",
-                    "说明",
-                    "告诉我",
-                    "定义",
-                    "原理",
-                    "机制",
-                    "概念",
-                    "介绍",
+                    # EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
                 ],
                 "patterns": [
                     r"what\s+(is|are|does)",
                     r"how\s+(does|do|to)",
                     r"(explain|describe|tell)\s+me",
-                    r"什么是",
-                    r"如何.*工作",
+                    r"EN",
+                    r"EN.*EN",
                 ],
                 "priority": 1,
             },
             IntentType.DATA_ANALYSIS: {
                 "keywords": [
-                    # 英文 - 分析类
+                    # EN - EN
                     "analyze",
                     "analysis",
                     "statistics",
@@ -134,7 +134,7 @@ class SimpleIntentClassifier:
                     "aggregate",
                     "trend",
                     "pattern",
-                    # 英文 - 数据类
+                    # EN - EN
                     "data",
                     "dataset",
                     "csv",
@@ -146,7 +146,7 @@ class SimpleIntentClassifier:
                     "field",
                     "value",
                     "distribution",
-                    # 英文 - 查询类
+                    # EN - EN
                     "average",
                     "mean",
                     "median",
@@ -163,7 +163,7 @@ class SimpleIntentClassifier:
                     "correlation",
                     "variance",
                     "standard deviation",
-                    # 英文 - 比较类
+                    # EN - EN
                     "compare",
                     "comparison",
                     "versus",
@@ -173,7 +173,7 @@ class SimpleIntentClassifier:
                     "among",
                     "relation",
                     "relationship",
-                    # 英文 - 可视化类
+                    # EN - EN
                     "chart",
                     "graph",
                     "plot",
@@ -183,48 +183,48 @@ class SimpleIntentClassifier:
                     "scatter",
                     "bar chart",
                     "line plot",
-                    # 中文 - 分析类
-                    "分析",
-                    "统计",
-                    "计算",
-                    "汇总",
-                    "趋势",
-                    "模式",
-                    # 中文 - 数据类
-                    "数据",
-                    "数据集",
-                    "表格",
-                    "列",
-                    "行",
-                    "记录",
-                    "字段",
-                    "值",
-                    "分布",
-                    # 中文 - 查询类
-                    "平均",
-                    "均值",
-                    "中位数",
-                    "最大",
-                    "最小",
-                    "总和",
-                    "数量",
-                    "最高",
-                    "最低",
-                    "百分比",
-                    "比例",
-                    "相关",
-                    # 中文 - 比较类
-                    "对比",
-                    "比较",
-                    "差异",
-                    "之间",
-                    "关系",
-                    # 中文 - 可视化类
-                    "图表",
-                    "可视化",
-                    "柱状图",
-                    "折线图",
-                    "散点图",
+                    # EN - EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    # EN - EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    # EN - EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    # EN - EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    # EN - EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
                 ],
                 "patterns": [
                     r"(analyze|analysis|calculate)\s+",
@@ -234,12 +234,12 @@ class SimpleIntentClassifier:
                     r"what\s+(is|are)\s+the\s+(average|max|min|total)",
                     r"how\s+many",
                     r"(percentage|ratio)\s+of",
-                    r"分析.*数据",
-                    r"(平均|最大|最小|总和|数量)",
-                    r"(对比|比较).*数据",
-                    r"多少.*百分比",
+                    r"EN.*EN",
+                    r"(EN|EN|EN|EN|EN)",
+                    r"(EN|EN).*EN",
+                    r"EN.*EN",
                 ],
-                "priority": 2,  # 高优先级，因为数据分析更具体
+                "priority": 2,  # EN,EN
             },
             IntentType.COST_ESTIMATION: {
                 "keywords": [
@@ -250,26 +250,26 @@ class SimpleIntentClassifier:
                     "cost overrun",
                     "overrun",
                     "estimate cost",
-                    "预算",
-                    "成本",
-                    "估算",
-                    "造价",
-                    "超支",
-                    "成本预测",
-                    "预算预测",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
                 ],
                 "patterns": [
                     r"(cost|budget)\s+(estimate|estimation|forecast)",
                     r"(cost|budget)\s+overrun",
                     r"(estimate|predict).*(cost|budget)",
-                    r"(成本|预算).*(估算|预测)",
-                    r"(造价|超支).*(预测|估算)",
+                    r"(EN|EN).*(EN|EN)",
+                    r"(EN|EN).*(EN|EN)",
                 ],
                 "priority": 3,
             },
             IntentType.DOCUMENT_PROCESSING: {
                 "keywords": [
-                    # 英文
+                    # EN
                     "pdf",
                     "document",
                     "file",
@@ -287,31 +287,31 @@ class SimpleIntentClassifier:
                     "png",
                     "tiff",
                     "jpeg",
-                    # 中文
+                    # EN
                     "pdf",
-                    "文档",
-                    "文件",
-                    "图片",
-                    "照片",
-                    "扫描",
-                    "识别",
-                    "提取",
-                    "解析",
-                    "转换",
-                    "读取文档",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
                 ],
                 "patterns": [
                     r"(extract|read|parse)\s+(text|content)\s+from",
                     r"ocr\s+",
                     r"(pdf|document|image|file)\s+",
-                    r"提取.*文本",
-                    r"识别.*文档",
+                    r"EN.*EN",
+                    r"EN.*EN",
                 ],
                 "priority": 1,
             },
             IntentType.CODE_EXECUTION: {
                 "keywords": [
-                    # 英文
+                    # EN
                     "run",
                     "execute",
                     "code",
@@ -325,25 +325,25 @@ class SimpleIntentClassifier:
                     "process",
                     "batch",
                     "automation",
-                    # 中文
-                    "运行",
-                    "执行",
-                    "代码",
-                    "脚本",
-                    "程序",
-                    "计算",
-                    "算法",
-                    "函数",
-                    "实现",
-                    "处理",
-                    "批处理",
-                    "自动化",
+                    # EN
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
+                    "EN",
                 ],
                 "patterns": [
                     r"(run|execute)\s+(code|script|program)",
                     r"implement\s+",
-                    r"运行.*代码",
-                    r"执行.*脚本",
+                    r"EN.*EN",
+                    r"EN.*EN",
                 ],
                 "priority": 1,
             },
@@ -353,20 +353,20 @@ class SimpleIntentClassifier:
         self, query: str, context: Optional[Dict[str, Any]] = None
     ) -> SimpleIntentResult:
         """
-        分类用户意图
+        EN
 
         Args:
-            query: 用户查询
-            context: 可选的上下文信息（如上传的文件信息）
+            query: EN
+            context: EN(EN)
 
         Returns:
-            SimpleIntentResult: 分类结果
+            SimpleIntentResult: EN
         """
         try:
-            # 预处理查询
+            # EN
             processed_query = self._preprocess_query(query)
 
-            # 计算每个意图的得分
+            # EN
             intent_scores = {}
 
             for intent_type, rules in self._keyword_rules.items():
@@ -380,30 +380,30 @@ class SimpleIntentClassifier:
                         "keywords": matched_keywords,
                     }
 
-            # 基于上下文调整得分
+            # EN
             if context:
                 intent_scores = self._adjust_scores_with_context(intent_scores, context)
 
-            # 选择最高得分的意图
+            # EN
             if not intent_scores:
-                # 没有匹配任何规则
+                # EN
                 result = SimpleIntentResult(
                     intent=IntentType.UNCLEAR_INTENT,
                     confidence=0.3,
-                    reasoning="未能识别明确的意图模式",
-                    suggested_action="启动澄清对话确认用户意图",
+                    reasoning="EN",
+                    suggested_action="EN",
                 )
             else:
-                # 选择得分最高的意图
+                # EN
                 best_intent = max(intent_scores.items(), key=lambda x: x[1]["score"])
                 intent_type, intent_data = best_intent
 
-                # 计算置信度（归一化得分）
-                max_possible_score = 100.0  # 假设的最大得分
+                # EN(EN)
+                max_possible_score = 100.0  # EN
                 confidence = min(intent_data["score"] / max_possible_score, 1.0)
 
-                # 构建推理说明
-                reasoning = f"识别到{len(intent_data['keywords'])}个相关关键词: {', '.join(intent_data['keywords'][:3])}"
+                # EN
+                reasoning = f"EN{len(intent_data['keywords'])}EN: {', '.join(intent_data['keywords'][:3])}"
 
                 result = SimpleIntentResult(
                     intent=intent_type,
@@ -413,70 +413,70 @@ class SimpleIntentClassifier:
                     suggested_action=self._get_suggested_action(intent_type),
                 )
 
-            # 更新统计
+            # EN
             self._update_stats(result)
 
-            logger.info(f"意图分类: {result.intent.value} (置信度: {result.confidence:.2f})")
+            logger.info(f"EN: {result.intent.value} (EN: {result.confidence:.2f})")
             return result
 
         except Exception as e:
-            logger.error(f"意图分类失败: {e}")
+            logger.error(f"EN: {e}")
             return SimpleIntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
-                reasoning=f"分类过程出错: {str(e)}",
-                suggested_action="启动澄清对话确认用户意图",
+                reasoning=f"EN: {str(e)}",
+                suggested_action="EN",
             )
 
     def _preprocess_query(self, query: str) -> str:
-        """预处理查询文本"""
-        # 转小写
+        """EN"""
+        # EN
         processed = query.lower()
 
-        # 移除多余空白
+        # EN
         processed = re.sub(r"\s+", " ", processed).strip()
 
         return processed
 
     def _calculate_intent_score(self, query: str, rules: Dict[str, Any]) -> tuple:
         """
-        计算意图得分
+        EN
 
         Args:
-            query: 处理后的查询
-            rules: 意图规则
+            query: EN
+            rules: EN
 
         Returns:
-            tuple: (得分, 匹配的关键词列表)
+            tuple: (EN, EN)
         """
         score = 0.0
         matched_keywords = []
 
-        # 关键词匹配
+        # EN
         keywords = rules.get("keywords", [])
         for keyword in keywords:
             if keyword.lower() in query:
-                # 基础得分
+                # EN
                 base_score = 10.0
 
-                # 位置加权：出现在开头得分更高
+                # EN:EN
                 if query.startswith(keyword.lower()):
                     base_score *= 1.5
 
-                # 长度加权：更长的关键词得分更高
+                # EN:EN
                 if len(keyword.split()) > 1:
                     base_score *= 1.2
 
                 score += base_score
                 matched_keywords.append(keyword)
 
-        # 正则模式匹配
+        # EN
         patterns = rules.get("patterns", [])
         for pattern in patterns:
             if re.search(pattern, query, re.IGNORECASE):
-                score += 15.0  # 模式匹配得分更高
+                score += 15.0  # EN
 
-        # 优先级加权
+        # EN
         priority = rules.get("priority", 1)
         score *= priority
 
@@ -485,8 +485,8 @@ class SimpleIntentClassifier:
     def _adjust_scores_with_context(
         self, intent_scores: Dict[IntentType, Dict], context: Dict[str, Any]
     ) -> Dict[IntentType, Dict]:
-        """基于上下文调整得分"""
-        # 检查是否有上传的文件
+        """EN"""
+        # EN
         uploaded_files = context.get("uploaded_files", [])
 
         if uploaded_files:
@@ -494,7 +494,7 @@ class SimpleIntentClassifier:
                 file_type = file_info.get("type", "").lower()
                 file_ext = file_info.get("extension", "").lower()
 
-                # CSV/Excel文件增强数据分析意图
+                # CSV/ExcelEN
                 if file_ext in [".csv", ".xlsx", ".xls"] or "spreadsheet" in file_type:
                     if IntentType.DATA_ANALYSIS in intent_scores:
                         intent_scores[IntentType.DATA_ANALYSIS]["score"] *= 1.5
@@ -502,7 +502,7 @@ class SimpleIntentClassifier:
                             "detected_csv_file"
                         )
 
-                # PDF/图片文件增强文档处理意图
+                # PDF/EN
                 elif (
                     file_ext in [".pdf", ".jpg", ".png", ".jpeg", ".tiff"]
                     or "image" in file_type
@@ -517,19 +517,19 @@ class SimpleIntentClassifier:
         return intent_scores
 
     def _get_suggested_action(self, intent: IntentType) -> str:
-        """获取建议的处理动作"""
+        """EN"""
         actions = {
-            IntentType.KNOWLEDGE_RETRIEVAL: "调用RAG检索系统进行知识查询",
-            IntentType.DATA_ANALYSIS: "启动数据分析Agent处理数据任务",
-            IntentType.COST_ESTIMATION: "启动成本估算模型进行预算与超支预测",
-            IntentType.DOCUMENT_PROCESSING: "启动OCR Agent处理文档提取任务",
-            IntentType.CODE_EXECUTION: "启动代码执行Agent运行计算任务",
-            IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图",
+            IntentType.KNOWLEDGE_RETRIEVAL: "ENRAGEN",
+            IntentType.DATA_ANALYSIS: "ENAgentEN",
+            IntentType.COST_ESTIMATION: "EN",
+            IntentType.DOCUMENT_PROCESSING: "ENOCR AgentEN",
+            IntentType.CODE_EXECUTION: "ENAgentEN",
+            IntentType.UNCLEAR_INTENT: "EN",
         }
-        return actions.get(intent, "启动通用处理流程")
+        return actions.get(intent, "EN")
 
     def _update_stats(self, result: SimpleIntentResult):
-        """更新统计信息"""
+        """EN"""
         self.stats["total_classifications"] += 1
 
         if result.is_high_confidence:
@@ -541,7 +541,7 @@ class SimpleIntentClassifier:
         self.stats["intent_distribution"][intent_value] += 1
 
     def get_stats(self) -> Dict[str, Any]:
-        """获取分类器统计信息"""
+        """EN"""
         total = self.stats["total_classifications"]
         return {
             **self.stats,
@@ -551,5 +551,5 @@ class SimpleIntentClassifier:
         }
 
 
-# 全局实例
+# EN
 simple_intent_classifier = SimpleIntentClassifier()

@@ -1,6 +1,6 @@
 """
 LangChain 1.0 Prompt Manager Middleware
-提供动态Prompt选择、版本管理、A/B测试等功能的中间件集成
+ENPromptEN,EN,A/BEN
 """
 
 import asyncio
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PromptContext:
-    """Prompt上下文信息"""
+    """PromptEN"""
 
     user_request: str
     session_id: str
@@ -40,7 +40,7 @@ class PromptContext:
 
 
 class PromptUsageCallback(BaseCallbackHandler):
-    """Prompt使用回调处理器"""
+    """PromptEN"""
 
     def __init__(self, prompt_manager: PromptManager):
         self.prompt_manager = prompt_manager
@@ -49,26 +49,26 @@ class PromptUsageCallback(BaseCallbackHandler):
     async def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
-        """LLM开始时的回调"""
-        # 这里可以记录Prompt使用情况
+        """LLMEN"""
+        # ENPromptEN
         pass
 
     async def on_llm_end(self, response, **kwargs: Any) -> None:
-        """LLM结束时的回调"""
-        # 记录使用结果
+        """LLMEN"""
+        # EN
         pass
 
 
 class PromptManagerMiddleware:
     """
-    Prompt管理中间件
+    PromptEN
 
-    功能特性：
-    1. 动态Prompt选择
-    2. 自动变量注入
-    3. A/B测试集成
-    4. 性能监控
-    5. 使用记录
+    EN:
+    1. ENPromptEN
+    2. EN
+    3. A/BEN
+    4. EN
+    5. EN
     """
 
     def __init__(
@@ -79,20 +79,20 @@ class PromptManagerMiddleware:
         context_enrichers: Optional[List[Callable]] = None,
     ):
         """
-        初始化中间件
+        EN
 
         Args:
-            prompt_manager: Prompt管理器实例
-            enable_experiments: 是否启用A/B测试
-            enable_monitoring: 是否启用性能监控
-            context_enrichers: 上下文增强器列表
+            prompt_manager: PromptEN
+            enable_experiments: ENA/BEN
+            enable_monitoring: EN
+            context_enrichers: EN
         """
         self.prompt_manager = prompt_manager
         self.enable_experiments = enable_experiments
         self.enable_monitoring = enable_monitoring
         self.context_enrichers = context_enrichers or []
 
-        logger.info("Prompt管理中间件初始化完成")
+        logger.info("PromptEN")
 
     def create_prompt_chain(
         self,
@@ -101,24 +101,24 @@ class PromptManagerMiddleware:
         context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> Runnable:
         """
-        创建带有Prompt管理的执行链
+        ENPromptEN
 
         Args:
-            prompt_name: Prompt名称
-            category: Prompt分类
-            context_builder: 上下文构建器
+            prompt_name: PromptEN
+            category: PromptEN
+            context_builder: EN
 
         Returns:
-            Runnable: 可执行链
+            Runnable: EN
         """
 
         async def process_input(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """处理输入，注入Prompt"""
+            """EN,ENPrompt"""
             try:
-                # 构建上下文
+                # EN
                 prompt_context = self._build_context(inputs, context_builder)
 
-                # 获取最优Prompt
+                # ENPrompt
                 prompt_info, rendered_content = await self.prompt_manager.get_prompt(
                     name=prompt_name,
                     category=category,
@@ -127,7 +127,7 @@ class PromptManagerMiddleware:
                     enable_experiments=self.enable_experiments,
                 )
 
-                # 注入Prompt到输入
+                # ENPromptEN
                 enriched_inputs = inputs.copy()
                 enriched_inputs.update(
                     {
@@ -138,33 +138,33 @@ class PromptManagerMiddleware:
                     }
                 )
 
-                # 记录使用开始
+                # EN
                 if self.enable_monitoring:
                     self._record_usage_start(prompt_info.id, prompt_context)
 
-                logger.debug(f"Prompt注入成功: {category}/{prompt_name}")
+                logger.debug(f"PromptEN: {category}/{prompt_name}")
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"Prompt注入失败: {e}")
-                # 降级处理：返回原始输入
+                logger.error(f"PromptEN: {e}")
+                # EN:EN
                 return inputs
 
         async def process_output(
             outputs: Dict[str, Any], inputs: Dict[str, Any]
         ) -> Dict[str, Any]:
-            """处理输出，记录使用情况"""
+            """EN,EN"""
             try:
                 if "prompt_info" in inputs and "usage_start_time" in inputs:
                     prompt_info = inputs["prompt_info"]
                     usage_start_time = inputs["usage_start_time"]
 
-                    # 计算执行时间
+                    # EN
                     execution_time_ms = int(
                         (datetime.now() - usage_start_time).total_seconds() * 1000
                     )
 
-                    # 创建使用日志
+                    # EN
                     usage_log = UsageLog(
                         prompt_id=prompt_info.id,
                         session_id=inputs.get("prompt_context", {}).get("session_id"),
@@ -184,13 +184,13 @@ class PromptManagerMiddleware:
                         temperature=outputs.get("temperature"),
                     )
 
-                    # 异步记录使用日志
+                    # EN
                     if self.enable_monitoring:
                         asyncio.create_task(
                             self.prompt_manager.record_usage_log(usage_log)
                         )
 
-                    # 添加性能信息到输出
+                    # EN
                     outputs["prompt_performance"] = {
                         "prompt_id": str(prompt_info.id),
                         "prompt_name": prompt_info.name,
@@ -202,14 +202,14 @@ class PromptManagerMiddleware:
                 return outputs
 
             except Exception as e:
-                logger.error(f"输出处理失败: {e}")
+                logger.error(f"EN: {e}")
                 return outputs
 
-        # 构建处理链
+        # EN
         chain = (
             RunnableLambda(process_input)
             | RunnablePassthrough()
-            | RunnableLambda(lambda outputs: outputs)  # 实际的处理逻辑在这里插入
+            | RunnableLambda(lambda outputs: outputs)  # EN
             | RunnableLambda(process_output)
         )
 
@@ -221,39 +221,39 @@ class PromptManagerMiddleware:
         context_analyzer: Callable[[Dict[str, Any]], str],
     ) -> Runnable:
         """
-        创建自适应Prompt链，根据上下文自动选择类别
+        ENPromptEN,EN
 
         Args:
-            prompt_categories: 可选的Prompt类别列表
-            context_analyzer: 上下文分析器，返回选择的类别
+            prompt_categories: ENPromptEN
+            context_analyzer: EN,EN
 
         Returns:
-            Runnable: 自适应执行链
+            Runnable: EN
         """
 
         async def adaptive_prompt_selection(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """自适应Prompt选择"""
+            """ENPromptEN"""
             try:
-                # 分析上下文，选择最合适的类别
+                # EN,EN
                 selected_category = context_analyzer(inputs)
 
                 if selected_category not in prompt_categories:
-                    logger.warning(f"选择的类别不在支持列表中: {selected_category}")
-                    selected_category = prompt_categories[0]  # 降级到第一个类别
+                    logger.warning(f"EN: {selected_category}")
+                    selected_category = prompt_categories[0]  # EN
 
-                # 构建上下文
+                # EN
                 prompt_context = self._build_context(inputs)
 
-                # 获取该类别的最佳Prompt
+                # ENPrompt
                 prompt_info, rendered_content = await self.prompt_manager.get_prompt(
-                    name=inputs.get("task_name", "default"),  # 可以从输入中获取任务名称
+                    name=inputs.get("task_name", "default"),  # EN
                     category=selected_category,
                     context=prompt_context.metadata,
                     variables=prompt_context.variables,
                     enable_experiments=self.enable_experiments,
                 )
 
-                # 注入Prompt
+                # ENPrompt
                 enriched_inputs = inputs.copy()
                 enriched_inputs.update(
                     {
@@ -268,14 +268,14 @@ class PromptManagerMiddleware:
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"自适应Prompt选择失败: {e}")
+                logger.error(f"ENPromptEN: {e}")
                 return inputs
 
-        # 构建自适应链
+        # EN
         chain = (
             RunnableLambda(adaptive_prompt_selection)
             | RunnablePassthrough()
-            | RunnableLambda(lambda x: x)  # 实际处理逻辑
+            | RunnableLambda(lambda x: x)  # EN
         )
 
         return chain
@@ -284,38 +284,38 @@ class PromptManagerMiddleware:
         self, experiment_name: str, fallback_prompt_name: str, fallback_category: str
     ) -> Runnable:
         """
-        创建A/B测试实验链
+        ENA/BEN
 
         Args:
-            experiment_name: 实验名称
-            fallback_prompt_name: 降级Prompt名称
-            fallback_category: 降级Prompt类别
+            experiment_name: EN
+            fallback_prompt_name: ENPromptEN
+            fallback_category: ENPromptEN
 
         Returns:
-            Runnable: 实验执行链
+            Runnable: EN
         """
 
         async def experiment_prompt_selection(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """实验Prompt选择"""
+            """ENPromptEN"""
             try:
-                # 首先尝试获取实验Prompt
-                # 这里可以实现更复杂的实验逻辑
+                # ENPrompt
+                # EN
                 prompt_context = self._build_context(inputs)
 
-                # 尝试获取实验Prompt（如果存在）
+                # ENPrompt(EN)
                 try:
                     (
                         prompt_info,
                         rendered_content,
                     ) = await self.prompt_manager.get_prompt(
-                        name=f"{experiment_name}_control",  # 控制组
+                        name=f"{experiment_name}_control",  # EN
                         category="experiments",
                         context=prompt_context.metadata,
                         variables=prompt_context.variables,
                         enable_experiments=True,
                     )
                 except ValueError:
-                    # 降级到默认Prompt
+                    # ENPrompt
                     (
                         prompt_info,
                         rendered_content,
@@ -341,7 +341,7 @@ class PromptManagerMiddleware:
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"实验Prompt选择失败: {e}")
+                logger.error(f"ENPromptEN: {e}")
                 return inputs
 
         chain = (
@@ -357,11 +357,11 @@ class PromptManagerMiddleware:
         inputs: Dict[str, Any],
         context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> PromptContext:
-        """构建Prompt上下文"""
+        """ENPromptEN"""
         if context_builder:
             return context_builder(inputs)
 
-        # 默认上下文构建
+        # EN
         return PromptContext(
             user_request=inputs.get("input", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -374,12 +374,12 @@ class PromptManagerMiddleware:
     def _record_usage_start(
         self, prompt_id: uuid.UUID, prompt_context: PromptContext
     ) -> None:
-        """记录使用开始（异步）"""
-        # 这里可以实现更详细的记录逻辑
+        """EN(EN)"""
+        # EN
         pass
 
     def create_rag_prompt_chain(self) -> Runnable:
-        """创建RAG专用Prompt链"""
+        """ENRAGENPromptEN"""
         return self.create_prompt_chain(
             prompt_name="rag_response",
             category="RAG",
@@ -387,7 +387,7 @@ class PromptManagerMiddleware:
         )
 
     def create_code_execution_prompt_chain(self) -> Runnable:
-        """创建代码执行专用Prompt链"""
+        """ENPromptEN"""
         return self.create_prompt_chain(
             prompt_name="code_execution",
             category="Code-Execution",
@@ -395,7 +395,7 @@ class PromptManagerMiddleware:
         )
 
     def create_data_analysis_prompt_chain(self) -> Runnable:
-        """创建数据分析专用Prompt链"""
+        """ENPromptEN"""
         return self.create_prompt_chain(
             prompt_name="data_analysis",
             category="Data-Analysis",
@@ -403,7 +403,7 @@ class PromptManagerMiddleware:
         )
 
     def _rag_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """RAG上下文构建器"""
+        """RAGEN"""
         return PromptContext(
             user_request=inputs.get("query", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -423,7 +423,7 @@ class PromptManagerMiddleware:
         )
 
     def _code_execution_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """代码执行上下文构建器"""
+        """EN"""
         return PromptContext(
             user_request=inputs.get("request", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -442,7 +442,7 @@ class PromptManagerMiddleware:
         )
 
     def _data_analysis_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """数据分析上下文构建器"""
+        """EN"""
         return PromptContext(
             user_request=inputs.get("request", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -463,19 +463,19 @@ class PromptManagerMiddleware:
 
 
 class PromptManagerIntegration:
-    """Prompt管理器集成工具类"""
+    """PromptEN"""
 
     @staticmethod
     def integrate_with_langgraph(
         workflow, prompt_manager: PromptManager, node_configs: Dict[str, Dict[str, Any]]
     ) -> None:
         """
-        将Prompt管理器集成到LangGraph工作流中
+        ENPromptENLangGraphEN
 
         Args:
-            workflow: LangGraph工作流
-            prompt_manager: Prompt管理器
-            node_configs: 节点配置字典
+            workflow: LangGraphEN
+            prompt_manager: PromptEN
+            node_configs: EN
                 {
                     'node_name': {
                         'prompt_name': 'prompt_name',
@@ -487,14 +487,14 @@ class PromptManagerIntegration:
         middleware = PromptManagerMiddleware(prompt_manager)
 
         for node_name, config in node_configs.items():
-            # 为每个节点创建Prompt链
+            # ENPromptEN
             prompt_chain = middleware.create_prompt_chain(
                 prompt_name=config["prompt_name"],
                 category=config["category"],
                 context_builder=config.get("context_builder"),
             )
 
-            # 替换节点逻辑
+            # EN
             workflow.add_node(
                 node_name, lambda state, chain=prompt_chain: chain.invoke(state)
             )
@@ -504,21 +504,21 @@ class PromptManagerIntegration:
         llm, prompt_manager: PromptManager, system_prompt_category: str = "System"
     ):
         """
-        创建Prompt增强的Agent
+        ENPromptENAgent
 
         Args:
-            llm: 语言模型
-            prompt_manager: Prompt管理器
-            system_prompt_category: 系统Prompt类别
+            llm: EN
+            prompt_manager: PromptEN
+            system_prompt_category: ENPromptEN
 
         Returns:
-            Prompt增强的Agent
+            PromptENAgent
         """
         middleware = PromptManagerMiddleware(prompt_manager)
 
         async def prompt_enhanced_call(messages: List[BaseMessage]) -> BaseMessage:
-            """Prompt增强的调用逻辑"""
-            # 构建输入
+            """PromptEN"""
+            # EN
             last_message = messages[-1] if messages else HumanMessage(content="")
 
             inputs = {
@@ -527,7 +527,7 @@ class PromptManagerIntegration:
                 "session_id": str(uuid.uuid4()),
             }
 
-            # 获取系统Prompt
+            # ENPrompt
             try:
                 (
                     system_prompt_info,
@@ -539,21 +539,21 @@ class PromptManagerIntegration:
                     variables={"conversation_history": messages},
                 )
 
-                # 构建增强的消息列表
+                # EN
                 enhanced_messages = [
                     AIMessage(content=system_prompt_content)
                 ] + messages
 
-                # 调用LLM
+                # ENLLM
                 response = await llm.ainvoke(enhanced_messages)
 
-                # 记录使用
+                # EN
                 usage_log = UsageLog(
                     prompt_id=system_prompt_info.id,
                     session_id=inputs["session_id"],
                     context={"message_count": len(messages)},
                     variables_used={},
-                    execution_time_ms=0,  # 这里应该实际计算
+                    execution_time_ms=0,  # EN
                     success=True,
                     tokens_used=response.usage_metadata.get("total_tokens", 0)
                     if hasattr(response, "usage_metadata")
@@ -565,8 +565,8 @@ class PromptManagerIntegration:
                 return response
 
             except Exception as e:
-                logger.error(f"Prompt增强调用失败: {e}")
-                # 降级到直接调用
+                logger.error(f"PromptEN: {e}")
+                # EN
                 return await llm.ainvoke(messages)
 
         return prompt_enhanced_call
