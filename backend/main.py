@@ -334,6 +334,19 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
     except Exception as exc:
         logger.warning("Unable to inspect code execution health: %s", exc)
 
+    embedding_health: Dict[str, Any] = {
+        "ready": False,
+        "backend": "unknown",
+        "fallback_active": True,
+        "reason": "unavailable",
+    }
+    try:
+        from backend.services.core.embedder import embedding_backend_status
+
+        embedding_health = embedding_backend_status()
+    except Exception as exc:
+        logger.warning("Unable to inspect embedding backend health: %s", exc)
+
     providers = execution_health.get("providers", {})
     docker_state = providers.get("docker", {}) if isinstance(providers, dict) else {}
 
@@ -343,6 +356,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
         "docker_available": bool(docker_state.get("healthy", False)),
         "code_execution_available": bool(execution_health.get("healthy", False)),
         "code_execution": execution_health,
+        "embedding": embedding_health,
         "version": "1.0.0",
         "tenant": tenant.tenant_id if tenant else None,
     }

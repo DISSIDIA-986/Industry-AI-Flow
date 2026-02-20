@@ -378,15 +378,61 @@ export interface WorkflowQueryResponse {
   confidence: number
 }
 
+type WorkflowIntentPayload =
+  | string
+  | {
+      type?: string
+      confidence?: number
+      description?: string
+    }
+
+function normalizeWorkflowIntent(
+  intent: WorkflowIntentPayload | undefined,
+  metadata: Record<string, unknown> | undefined,
+): WorkflowQueryResponse['intent'] {
+  if (!intent) {
+    return undefined
+  }
+
+  if (typeof intent === 'string') {
+    return {
+      type: intent,
+      confidence: Number(metadata?.intent_confidence ?? 0),
+      description: intent,
+    }
+  }
+
+  const type = String(intent.type || '')
+  const confidence = Number(
+    intent.confidence ?? metadata?.intent_confidence ?? 0,
+  )
+  const description = String(intent.description || intent.type || '')
+
+  if (!type && !description) {
+    return undefined
+  }
+
+  return {
+    type: type || description,
+    confidence: Number.isFinite(confidence) ? confidence : 0,
+    description: description || type,
+  }
+}
+
 export const workflowApi = {
   async sendQuery(
     request: WorkflowQueryRequest,
     config: RuntimeAppConfig = {},
   ): Promise<WorkflowQueryResponse> {
     const payload = await requestBackend<{
+      id?: string
       trace_id?: string
-      intent?: string
+      query?: string
+      intent?: WorkflowIntentPayload
       response?: string
+      sources?: WorkflowQueryResponse['sources']
+      timestamp?: string
+      confidence?: number
       metadata?: Record<string, unknown>
     }>('/api/v1/workflow/query', {
       method: 'POST',
@@ -399,19 +445,15 @@ export const workflowApi = {
     })
 
     return {
-      id: payload.trace_id || `${Date.now()}`,
-      query: request.query,
+      id: payload.id || payload.trace_id || `${Date.now()}`,
+      query: payload.query || request.query,
       response: payload.response || '',
-      intent: payload.intent
-        ? {
-            type: payload.intent,
-            confidence: Number(payload.metadata?.intent_confidence ?? 0),
-            description: payload.intent,
-          }
-        : undefined,
-      sources: undefined,
-      timestamp: new Date().toISOString(),
-      confidence: Number(payload.metadata?.intent_confidence ?? 0),
+      intent: normalizeWorkflowIntent(payload.intent, payload.metadata),
+      sources: payload.sources,
+      timestamp: payload.timestamp || new Date().toISOString(),
+      confidence: Number(
+        payload.confidence ?? payload.metadata?.intent_confidence ?? 0,
+      ),
     }
   },
 

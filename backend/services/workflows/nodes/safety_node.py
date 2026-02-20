@@ -12,7 +12,7 @@ _BLOCK_PATTERNS = (
     "drop table",
     "shutdown -h",
     "os.system(",
-    "subprocess.Popen",
+    "subprocess.popen",
 )
 
 
