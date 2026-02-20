@@ -240,16 +240,10 @@ import json
 import warnings
 warnings.filterwarnings('ignore')
 
-# 设置中文字体支持
-try:
-    import matplotlib_chinese_support
-    matplotlib_chinese_support.setup_chinese_matplotlib()
-    print("✓ 已启用中文字体支持")
-except Exception:
-    # 备用方案：手动设置中文字体
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'Arial Unicode MS', 'DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
-    print("✓ 使用备用中文字体配置")
+# Configure matplotlib defaults for cross-platform rendering
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
+plt.rcParams['axes.unicode_minus'] = False
+print("✓ Matplotlib font settings initialized")
 
 # 读取数据
 {read_code}

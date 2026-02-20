@@ -384,25 +384,20 @@ def _build_enhanced_request(
 
 {requirements}
 
-代码要求：
-1. 使用 pandas, numpy, matplotlib, seaborn 等库
-2. 设置中文字体支持，确保中文标签和标题正确显示
-3. 代码要有详细的注释
-4. 生成高清可视化图表
-5. 输出结构化的分析结果
-6. 包含错误处理机制
-7. 保存所有图表文件到 /workspace/output/
+Code requirements:
+1. Use pandas, numpy, matplotlib, and seaborn.
+2. Configure matplotlib with cross-platform fonts.
+3. Include clear comments for key logic.
+4. Generate high-resolution visualizations.
+5. Return structured analysis results.
+6. Include basic error handling.
+7. Save all charts to /workspace/output/.
 
-中文字体支持代码（请在代码开头添加）：
+Recommended matplotlib bootstrap:
 ```python
-try:
-    import matplotlib_chinese_support
-    matplotlib_chinese_support.setup_chinese_matplotlib()
-    print("✓ 已启用中文字体支持")
-except Exception:
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'Arial Unicode MS', 'DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
-    print("✓ 使用备用中文字体配置")
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
+plt.rcParams['axes.unicode_minus'] = False
+print("✓ Matplotlib font settings initialized")
 ```
 """
 

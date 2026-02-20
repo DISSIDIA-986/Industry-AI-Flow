@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+DEPRECATED: Legacy Chinese-font helper kept for historical compatibility.
+This module is not used in the default AIFlow runtime path.
+
 终极 matplotlib 中文支持解决方案
 放置于 ~/Documents/py/matplotlib_chinese_support.py
 使用方法：在需要中文支持的脚本开头添加:
@@ -20,6 +23,9 @@ def setup_chinese_matplotlib():
     """
     设置 matplotlib 支持中文显示
     """
+    logger.warning(
+        "matplotlib_chinese_support is deprecated and excluded from default runtime."
+    )
     try:
         import matplotlib
         import matplotlib.font_manager as fm
