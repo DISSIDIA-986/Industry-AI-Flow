@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { Children, ReactNode, isValidElement } from 'react'
 
 interface TableProps {
   children: ReactNode
@@ -19,13 +19,44 @@ export function Table({ children, className = '' }: TableProps) {
 
 interface TableHeadProps {
   children: ReactNode
+  align?: 'left' | 'center' | 'right'
+  className?: string
 }
 
-export function TableHead({ children }: TableHeadProps) {
+function isHeaderGroup(children: ReactNode): boolean {
+  const nodes = Children.toArray(children)
+  return nodes.some((node) => isValidElement(node) && node.type === TableRow)
+}
+
+function resolveAlignClass(align: 'left' | 'center' | 'right'): string {
+  if (align === 'center') {
+    return 'text-center'
+  }
+  if (align === 'right') {
+    return 'text-right'
+  }
+  return 'text-left'
+}
+
+export function TableHead({
+  children,
+  align = 'left',
+  className = '',
+}: TableHeadProps) {
+  if (isHeaderGroup(children)) {
+    return <thead className={`bg-gray-50 ${className}`}>{children}</thead>
+  }
+
   return (
-    <thead className="bg-gray-50">
-      <tr>{children}</tr>
-    </thead>
+    <th
+      className={`
+        px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider
+        ${resolveAlignClass(align)}
+        ${className}
+      `}
+    >
+      {children}
+    </th>
   )
 }
 
@@ -40,17 +71,15 @@ export function TableHeader({
   align = 'left',
   className = '' 
 }: TableHeaderProps) {
-  const alignClasses = {
-    left: 'text-left',
-    center: 'text-center',
-    right: 'text-right'
+  if (isHeaderGroup(children)) {
+    return <thead className={`bg-gray-50 ${className}`}>{children}</thead>
   }
 
   return (
     <th
       className={`
         px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider
-        ${alignClasses[align]}
+        ${resolveAlignClass(align)}
         ${className}
       `}
     >

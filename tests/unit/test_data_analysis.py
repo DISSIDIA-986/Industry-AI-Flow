@@ -595,5 +595,13 @@ def main():
     return 0 if success else 1
 
 
+def test_data_analysis_tester_smoke():
+    tester = DataAnalysisTester()
+    tester.datasets = {"sample": pd.DataFrame({"x": [1, 2, 3], "y": [3, 4, 5]})}
+    tester.test_1_1_dataset_loading()
+    assert tester.stats["total_tests"] > 0
+    assert tester.stats["passed"] > 0
+
+
 if __name__ == "__main__":
     sys.exit(main())

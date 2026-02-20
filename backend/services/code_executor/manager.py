@@ -159,6 +159,48 @@ class CodeExecutionManager:
         except Exception:
             return {"healthy": False, "status": "health_error"}
 
+    def health_snapshot(self, mode: str = "docker") -> dict:
+        requested_mode = (mode or "docker").strip().lower()
+        docker_health = self._provider_health_sync(self.docker_provider) or {
+            "provider": "docker",
+            "healthy": True,
+            "status": "unknown",
+        }
+        ppio_health = None
+        if self.ppio_provider is not None:
+            ppio_health = self._provider_health_sync(self.ppio_provider) or {
+                "provider": "ppio",
+                "healthy": True,
+                "status": "unknown",
+            }
+
+        if requested_mode == "ppio":
+            selected_provider = "ppio"
+            selected_healthy = bool(ppio_health and ppio_health.get("healthy", False))
+        elif requested_mode == "auto":
+            if docker_health.get("healthy", False):
+                selected_provider = "docker"
+                selected_healthy = True
+            elif ppio_health is not None and ppio_health.get("healthy", False):
+                selected_provider = "ppio"
+                selected_healthy = True
+            else:
+                selected_provider = "docker"
+                selected_healthy = False
+        else:
+            selected_provider = "docker"
+            selected_healthy = bool(docker_health.get("healthy", False))
+
+        return {
+            "healthy": selected_healthy,
+            "mode": requested_mode,
+            "selected_provider": selected_provider,
+            "providers": {
+                "docker": docker_health,
+                "ppio": ppio_health,
+            },
+        }
+
     @staticmethod
     def _to_legacy_result(result: ExecutionResult) -> dict:
         visualizations = [

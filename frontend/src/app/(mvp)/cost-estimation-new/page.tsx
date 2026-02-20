@@ -5,9 +5,15 @@ import {
   Form, FormGroup, Input, Select, Button, 
   Card, CardHeader, CardTitle, CardContent,
   Table, TableHead, TableHeader, TableBody, TableRow, TableCell,
-  Loading, ErrorDisplay
+  ErrorDisplay
 } from '@/components'
-import { predictCost, predictCostBatch, type CostProjectFeatures } from '@/lib/api-client'
+import {
+  predictCost,
+  predictCostBatch,
+  type CostProjectFeatures,
+  type CostPrediction,
+  type RuntimeAppConfig,
+} from '@/lib/api-client'
 
 const projectTypes = [
   { value: 'commercial_office', label: '商业办公楼' },
@@ -47,11 +53,12 @@ const initialProject: CostProjectFeatures = {
 }
 
 export default function CostEstimationPage() {
+  const runtimeConfig: RuntimeAppConfig = {}
   const [project, setProject] = useState<CostProjectFeatures>(initialProject)
   const [confidence, setConfidence] = useState(0.9)
-  const [singleResult, setSingleResult] = useState<any>(null)
+  const [singleResult, setSingleResult] = useState<CostPrediction | null>(null)
   const [batchRows, setBatchRows] = useState<CostProjectFeatures[]>([])
-  const [batchResults, setBatchResults] = useState<any[]>([])
+  const [batchResults, setBatchResults] = useState<CostPrediction[]>([])
   const [loadingSingle, setLoadingSingle] = useState(false)
   const [loadingBatch, setLoadingBatch] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -64,7 +71,7 @@ export default function CostEstimationPage() {
     setLoadingSingle(true)
     setError(null)
     try {
-      const response = await predictCost({} as any, project, confidence)
+      const response = await predictCost(runtimeConfig, project, confidence)
       setSingleResult(response.prediction)
     } catch (err) {
       setError(err instanceof Error ? err.message : '预测失败')
@@ -79,7 +86,7 @@ export default function CostEstimationPage() {
     setLoadingBatch(true)
     setError(null)
     try {
-      const response = await predictCostBatch({} as any, batchRows, confidence)
+      const response = await predictCostBatch(runtimeConfig, batchRows, confidence)
       setBatchResults(response.predictions)
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量预测失败')

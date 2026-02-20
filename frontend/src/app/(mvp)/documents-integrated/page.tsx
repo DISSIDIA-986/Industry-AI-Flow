@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, StatCard } from '@/components
 import { Button } from '@/components/forms'
 import { Input } from '@/components/forms'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/tables'
-import { FileUpload, FileList } from '@/components/files'
-import { Loading, ErrorDisplay, EmptyState } from '@/components/feedback'
+import { FileUpload } from '@/components/files'
+import { Loading, EmptyState } from '@/components/feedback'
 
 interface Document {
   id: string
@@ -35,13 +35,13 @@ export default function DocumentsIntegratedPage() {
   useEffect(() => {
     loadDocuments()
     checkApiHealth()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkApiHealth = async () => {
     try {
       const health = await realApiService.checkHealth()
       setApiStatus(health.status === 'ok' ? 'connected' : 'disconnected')
-    } catch (error) {
+    } catch {
       setApiStatus('disconnected')
     }
   }

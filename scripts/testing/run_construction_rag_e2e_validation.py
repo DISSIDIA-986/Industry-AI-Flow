@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -13,6 +14,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Default to local smoke mode for this standalone validation script.
+# Explicit env overrides still take precedence.
+os.environ.setdefault("REQUIRE_API_KEY", "false")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -67,6 +71,33 @@ EXPECTED_INGESTED_DOCS = [
 ]
 
 
+_RESPONSE_TEMPLATE_MARKERS = (
+    "[模板已应用:",
+    "让我为您提供一些有用的建议和信息",
+    "agent fallback response",
+    "[provider=",
+)
+
+
+WORKFLOW_PROBE_CASES: list[QueryCase] = [
+    QueryCase(
+        query="Summarize concrete quality control requirements from the construction standards.",
+        expected_source_hint="03_30_00",
+        expected_keywords=["concrete", "quality", "requirements"],
+    ),
+    QueryCase(
+        query="What safety topics are covered by OSHA 29 CFR 1926?",
+        expected_source_hint="osha_29_cfr_1926",
+        expected_keywords=["safety", "construction", "1926"],
+    ),
+    QueryCase(
+        query="What does GSA P100 emphasize for federal facilities?",
+        expected_source_hint="gsa_p100",
+        expected_keywords=["gsa", "p100", "facility"],
+    ),
+]
+
+
 def _contains_all_keywords(text_blob: str, keywords: list[str]) -> float:
     if not keywords:
         return 0.0
@@ -80,6 +111,42 @@ def _extract_text_blob(results: list[dict]) -> str:
 
 def _extract_filenames(results: list[dict]) -> list[str]:
     return [str(row.get("filename") or "").lower() for row in results]
+
+
+def _looks_like_template_response(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker.lower() in lowered for marker in _RESPONSE_TEMPLATE_MARKERS)
+
+
+def _has_grounding_citation(text: str) -> bool:
+    if not text:
+        return False
+    return bool(re.search(r"\[(sources?|citations?)\s*:", text, flags=re.IGNORECASE))
+
+
+def _extract_grounding_citations(text: str) -> list[str]:
+    if not text:
+        return []
+    match = re.search(
+        r"\[(?:sources?|citations?)\s*:\s*([^\]]+)\]",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return []
+    cited_blob = match.group(1)
+    candidates = [token.strip().lower() for token in re.split(r"[,;|\n]", cited_blob)]
+    return [token for token in candidates if token]
+
+
+def _citation_matches_hint(text: str, expected_hint: str) -> bool:
+    hint = expected_hint.strip().lower()
+    if not hint:
+        return True
+    citations = _extract_grounding_citations(text)
+    if not citations:
+        return False
+    return any(hint in citation for citation in citations)
 
 
 def _run_retrieval_mode(
@@ -201,12 +268,13 @@ def _check_storage(vector_store: VectorStore) -> dict:
 
 
 def _post_json(url: str, payload: dict, timeout: int = 30) -> tuple[int, dict]:
+    headers = {"Content-Type": "application/json", **_auth_headers()}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url=url,
         method="POST",
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
     )
     with urllib.request.urlopen(req, timeout=timeout) as response:
         body = response.read().decode("utf-8")
@@ -214,19 +282,27 @@ def _post_json(url: str, payload: dict, timeout: int = 30) -> tuple[int, dict]:
 
 
 def _get_json(url: str, timeout: int = 10) -> tuple[int, dict]:
-    with urllib.request.urlopen(url, timeout=timeout) as response:
+    req = urllib.request.Request(url=url, method="GET", headers=_auth_headers())
+    with urllib.request.urlopen(req, timeout=timeout) as response:
         body = response.read().decode("utf-8")
         return response.getcode(), json.loads(body)
+
+
+def _auth_headers() -> dict[str, str]:
+    """Best-effort API-key propagation for environments with key enforcement."""
+    header_name = os.getenv("API_KEY_HEADER", "X-API-Key")
+    key = os.getenv("TEST_API_KEY", "").strip()
+    if not key:
+        keys_raw = os.getenv("API_KEYS", "")
+        key = next((token.strip() for token in keys_raw.split(",") if token.strip()), "")
+    if not key:
+        return {}
+    return {header_name: key}
 
 
 def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
     health_url = f"{base_url}/api/v1/workflow/health"
     query_url = f"{base_url}/api/v1/workflow/query"
-    probe_questions = [
-        "Summarize concrete quality control requirements from the construction standards.",
-        "What safety topics are covered by OSHA 29 CFR 1926?",
-        "What does GSA P100 emphasize for federal facilities?",
-    ]
 
     def _run_checks_with_http() -> dict:
         status_code, payload = _get_json(health_url)
@@ -234,7 +310,11 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
 
         query_results = []
         query_pass_count = 0
-        for idx, question in enumerate(probe_questions, 1):
+        grounded_pass_count = 0
+        non_template_pass_count = 0
+        citation_match_pass_count = 0
+        for idx, case in enumerate(WORKFLOW_PROBE_CASES, 1):
+            question = case.query
             payload = {
                 "query": question,
                 "session_id": f"construction-e2e-{idx}",
@@ -246,15 +326,37 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
             success = bool(code == 200 and result.get("success") is True)
             response_text = str(result.get("response") or "")
             non_empty = len(response_text.strip()) > 0
-            case_pass = success and non_empty
+            not_template = not _looks_like_template_response(response_text)
+            grounded = _has_grounding_citation(response_text)
+            citation_match = _citation_matches_hint(
+                response_text, case.expected_source_hint
+            )
+            case_pass = (
+                success
+                and non_empty
+                and not_template
+                and grounded
+                and citation_match
+            )
             if case_pass:
                 query_pass_count += 1
+            if grounded:
+                grounded_pass_count += 1
+            if not_template:
+                non_template_pass_count += 1
+            if citation_match:
+                citation_match_pass_count += 1
             query_results.append(
                 {
                     "question": question,
+                    "expected_source_hint": case.expected_source_hint,
                     "http_code": code,
                     "success": success,
                     "non_empty_response": non_empty,
+                    "not_template_response": not_template,
+                    "has_grounding_citation": grounded,
+                    "has_expected_citation": citation_match,
+                    "citations": _extract_grounding_citations(response_text),
                     "response_preview": response_text[:180],
                     "latency_ms": round(latency_ms, 2),
                     "pass": case_pass,
@@ -265,9 +367,17 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
             "transport": "http",
             "health_ok": health_ok,
             "query_pass_count": query_pass_count,
-            "query_total": len(probe_questions),
+            "query_total": len(WORKFLOW_PROBE_CASES),
+            "grounded_pass_count": grounded_pass_count,
+            "non_template_pass_count": non_template_pass_count,
+            "citation_match_pass_count": citation_match_pass_count,
+            "quality_pass": bool(
+                grounded_pass_count == len(WORKFLOW_PROBE_CASES)
+                and non_template_pass_count == len(WORKFLOW_PROBE_CASES)
+                and citation_match_pass_count == len(WORKFLOW_PROBE_CASES)
+            ),
             "results": query_results,
-            "pass": bool(health_ok and query_pass_count == len(probe_questions)),
+            "pass": bool(health_ok and query_pass_count == len(WORKFLOW_PROBE_CASES)),
         }
 
     def _run_checks_with_testclient() -> dict:
@@ -275,10 +385,14 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
 
         from backend.main import app
 
+        headers = _auth_headers()
         query_results = []
         query_pass_count = 0
+        grounded_pass_count = 0
+        non_template_pass_count = 0
+        citation_match_pass_count = 0
         with TestClient(app) as client:
-            health_resp = client.get("/api/v1/workflow/health")
+            health_resp = client.get("/api/v1/workflow/health", headers=headers)
             try:
                 payload = health_resp.json()
             except Exception:
@@ -288,14 +402,15 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
                 and str(payload.get("status")).lower() == "ok"
             )
 
-            for idx, question in enumerate(probe_questions, 1):
+            for idx, case in enumerate(WORKFLOW_PROBE_CASES, 1):
+                question = case.query
                 data = {
                     "query": question,
                     "session_id": f"construction-e2e-{idx}",
                     "route_mode": "local_only",
                 }
                 started = time.perf_counter()
-                resp = client.post("/api/v1/workflow/query", json=data)
+                resp = client.post("/api/v1/workflow/query", json=data, headers=headers)
                 latency_ms = (time.perf_counter() - started) * 1000
                 try:
                     result = resp.json()
@@ -304,15 +419,37 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
                 success = bool(resp.status_code == 200 and result.get("success") is True)
                 response_text = str(result.get("response") or "")
                 non_empty = len(response_text.strip()) > 0
-                case_pass = success and non_empty
+                not_template = not _looks_like_template_response(response_text)
+                grounded = _has_grounding_citation(response_text)
+                citation_match = _citation_matches_hint(
+                    response_text, case.expected_source_hint
+                )
+                case_pass = (
+                    success
+                    and non_empty
+                    and not_template
+                    and grounded
+                    and citation_match
+                )
                 if case_pass:
                     query_pass_count += 1
+                if grounded:
+                    grounded_pass_count += 1
+                if not_template:
+                    non_template_pass_count += 1
+                if citation_match:
+                    citation_match_pass_count += 1
                 query_results.append(
                     {
                         "question": question,
+                        "expected_source_hint": case.expected_source_hint,
                         "http_code": resp.status_code,
                         "success": success,
                         "non_empty_response": non_empty,
+                        "not_template_response": not_template,
+                        "has_grounding_citation": grounded,
+                        "has_expected_citation": citation_match,
+                        "citations": _extract_grounding_citations(response_text),
                         "response_preview": response_text[:180],
                         "latency_ms": round(latency_ms, 2),
                         "pass": case_pass,
@@ -323,9 +460,17 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
             "transport": "inprocess_testclient",
             "health_ok": health_ok,
             "query_pass_count": query_pass_count,
-            "query_total": len(probe_questions),
+            "query_total": len(WORKFLOW_PROBE_CASES),
+            "grounded_pass_count": grounded_pass_count,
+            "non_template_pass_count": non_template_pass_count,
+            "citation_match_pass_count": citation_match_pass_count,
+            "quality_pass": bool(
+                grounded_pass_count == len(WORKFLOW_PROBE_CASES)
+                and non_template_pass_count == len(WORKFLOW_PROBE_CASES)
+                and citation_match_pass_count == len(WORKFLOW_PROBE_CASES)
+            ),
             "results": query_results,
-            "pass": bool(health_ok and query_pass_count == len(probe_questions)),
+            "pass": bool(health_ok and query_pass_count == len(WORKFLOW_PROBE_CASES)),
         }
 
     try:
@@ -340,7 +485,11 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
                 "transport": "failed",
                 "health_ok": False,
                 "query_pass_count": 0,
-                "query_total": len(probe_questions),
+                "query_total": len(WORKFLOW_PROBE_CASES),
+                "grounded_pass_count": 0,
+                "non_template_pass_count": 0,
+                "citation_match_pass_count": 0,
+                "quality_pass": False,
                 "pass": False,
                 "error": f"http error: {http_exc}; testclient error: {fallback_exc}",
             }
@@ -368,7 +517,10 @@ def run_validation() -> dict:
     hybrid_pass = retrieval_hybrid["pass_rate"] >= 0.75
     keyword_pass = retrieval_keyword["pass_rate"] >= 0.75
     mode_pass = bool(semantic_pass and hybrid_pass and keyword_pass)
-    overall_pass = bool(storage["pass"] and workflow_api["pass"] and mode_pass)
+    workflow_quality_pass = bool(workflow_api.get("quality_pass", False))
+    overall_pass = bool(
+        storage["pass"] and workflow_api["pass"] and workflow_quality_pass and mode_pass
+    )
 
     elapsed_ms = (time.perf_counter() - started) * 1000
     return {
@@ -397,6 +549,7 @@ def run_validation() -> dict:
                 "keyword_pass": keyword_pass,
             },
             "workflow_api_pass": workflow_api["pass"],
+            "workflow_quality_pass": workflow_quality_pass,
             "overall_pass": overall_pass,
         },
         "elapsed_ms": round(elapsed_ms, 2),
@@ -416,6 +569,7 @@ def main() -> int:
     print(f"storage_pass={acceptance['storage_pass']}")
     print(f"retrieval_modes_pass={acceptance['retrieval_modes_pass']}")
     print(f"workflow_api_pass={acceptance['workflow_api_pass']}")
+    print(f"workflow_quality_pass={acceptance['workflow_quality_pass']}")
     print(f"overall_pass={acceptance['overall_pass']}")
     print(f"Report: {report_path}")
     return 0 if acceptance["overall_pass"] else 2
@@ -423,4 +577,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+    os.environ.setdefault("REQUIRE_API_KEY", "false")
     raise SystemExit(main())

@@ -99,6 +99,14 @@ async def get_workflow_runner() -> WorkflowRunner:
     async with _workflow_lock:
         if _workflow_service is not None:
             return _workflow_service
+        runner_mode = (settings.workflow_runner_mode or "auto").strip().lower()
+        if runner_mode == "fallback":
+            logger.info("Workflow runner forced to fallback mode")
+            _workflow_service = await _initialize_fallback_runner()
+            return _workflow_service
+        if runner_mode == "intent":
+            _workflow_service = await _initialize_workflow_service()
+            return _workflow_service
         try:
             _workflow_service = await _initialize_workflow_service()
         except Exception as exc:

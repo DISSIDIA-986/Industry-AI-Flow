@@ -1,5 +1,8 @@
 import logging
 import os
+import threading
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import psutil
@@ -12,6 +15,7 @@ from backend.api.document_management_routes import router as document_management
 from backend.api.enhanced_query_routes import router as enhanced_query_router
 
 # 导入新的API路由
+from backend.api.auth_routes import router as auth_router
 from backend.api.cost_estimation_routes import router as cost_estimation_router
 from backend.api.demo_mode_routes import router as demo_mode_router
 from backend.api.feedback_routes import router as feedback_router
@@ -54,6 +58,9 @@ TEMP_DATA_ROOT = settings.temp_data_dir if settings else "/tmp/luncheon_data"
 rag_engine = None
 unified_orchestrator = None
 code_executor = None
+_rag_lock = threading.Lock()
+_unified_lock = threading.Lock()
+_executor_lock = threading.Lock()
 
 
 def log_audit(
@@ -86,38 +93,59 @@ def enforce_memory_guard(label: str) -> float:
 def get_rag_engine():
     global rag_engine
     if rag_engine is None:
-        from backend.services.rag_engine import SimpleRAG
+        with _rag_lock:
+            if rag_engine is None:
+                from backend.services.rag_engine import SimpleRAG
 
-        rag_engine = SimpleRAG(
-            use_hybrid_search=True,
-            use_reranker=True,
-            enable_feedback=settings.enable_feedback_system,
-        )
+                rag_engine = SimpleRAG(
+                    use_hybrid_search=True,
+                    use_reranker=True,
+                    enable_feedback=settings.enable_feedback_system,
+                )
     return rag_engine
 
 
 def get_unified_orchestrator():
     global unified_orchestrator
     if unified_orchestrator is None:
-        from backend.agents.unified_agent import unified_orchestrator
+        with _unified_lock:
+            if unified_orchestrator is None:
+                from backend.agents.unified_agent import (
+                    get_unified_orchestrator as build_unified_orchestrator,
+                )
 
-        unified_orchestrator = unified_orchestrator()
+                unified_orchestrator = build_unified_orchestrator()
     return unified_orchestrator
 
 
 def get_code_executor():
     global code_executor
     if code_executor is None:
-        from backend.services.code_executor import code_executor
+        with _executor_lock:
+            if code_executor is None:
+                from backend.services.code_executor import get_code_executor
 
-        code_executor = code_executor()
+                code_executor = get_code_executor()
     return code_executor
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    try:
+        from backend.init_database import init_database
+
+        init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:  # pragma: no cover - defensive startup guard
+        logger.error(f"Failed to initialize database: {e}")
+    yield
 
 
 app = FastAPI(
     title="Luncheon AI Flow - Enhanced RAG & Code Analysis",
     description="融合知识问答、用户反馈、文档管理和数据分析能力的智能系统",
     version="2.0.0",
+    lifespan=lifespan,
     dependencies=[Depends(secure_endpoint)],
 )
 register_error_handlers(app)
@@ -130,6 +158,7 @@ app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
 )
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
+app.include_router(auth_router)
 app.include_router(cost_estimation_router)
 app.include_router(llm_dispatch_router)  # llm_dispatch_routes已包含prefix
 app.include_router(llm_cost_router)  # llm_cost_routes已包含prefix
@@ -139,21 +168,6 @@ app.include_router(prompt_router, tags=["prompts"])  # P0修复：注册Prompt�
 app.include_router(workflow_query_router)
 
 # RAG引擎将通过lazy loading初始化
-# rag_engine = SimpleRAG()  # 移除直接初始化，使用lazy loading
-
-
-@app.on_event("startup")
-async def startup_event():
-    """应用启动事件"""
-    try:
-        # 初始化数据库
-        from backend.init_database import init_database
-
-        init_database()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-        # 不阻止应用启动，但记录错误
 
 
 class QueryRequest(BaseModel):
@@ -203,7 +217,7 @@ class DataAnalysisRequest(BaseModel):
     @field_validator("data_file", mode="before")
     @classmethod
     def _sanitize_data_file(cls, value: str) -> str:
-        return sanitize_identifier(value, "data_file")
+        return sanitize_text(value, field_name="data_file", max_length=1024)
 
     @field_validator("target_column", mode="before")
     @classmethod
@@ -269,14 +283,66 @@ def get_memory_usage() -> float:
     return round(process.memory_info().rss / 1024 / 1024, 2)
 
 
+def _resolve_data_file_for_analysis(data_file: str) -> str:
+    """Resolve uploaded data file path while preventing unsafe filesystem access."""
+    candidate = Path(data_file).expanduser()
+    tmp_root = Path(os.getenv("TMPDIR", "/tmp")).resolve()
+    managed_root = Path(TEMP_DATA_ROOT).resolve()
+
+    if candidate.is_absolute():
+        resolved = candidate.resolve()
+        in_managed_root = resolved.is_relative_to(managed_root)
+        in_uploaded_tmp_dir = (
+            resolved.is_relative_to(tmp_root)
+            and resolved.parent.name.startswith("luncheon_data_")
+        )
+        if not (in_managed_root or in_uploaded_tmp_dir):
+            raise HTTPException(
+                status_code=400,
+                detail="data_file path is outside allowed upload locations.",
+            )
+        if not resolved.exists():
+            raise HTTPException(status_code=400, detail="data_file does not exist.")
+        return str(resolved)
+
+    file_name = sanitize_identifier(data_file, "data_file")
+    candidates = [managed_root / file_name, tmp_root / file_name]
+    for path in candidates:
+        if path.exists():
+            return str(path.resolve())
+    return file_name
+
+
 @app.get("/api/v1/health")
 @app.get("/health")
 async def health(tenant: TenantContext = Depends(get_current_tenant)):
     """健康检查"""
+    execution_health: Dict[str, Any] = {
+        "healthy": code_executor is not None,
+        "mode": getattr(settings, "code_execution_provider", "docker"),
+        "selected_provider": "docker",
+        "providers": {"docker": {"healthy": code_executor is not None}},
+    }
+    try:
+        from backend.services.code_executor import get_code_execution_manager
+
+        manager = get_code_execution_manager()
+        if manager is not None and hasattr(manager, "health_snapshot"):
+            execution_health = manager.health_snapshot(
+                mode=getattr(settings, "code_execution_provider", "docker")
+            )
+    except Exception as exc:
+        logger.warning("Unable to inspect code execution health: %s", exc)
+
+    providers = execution_health.get("providers", {})
+    docker_state = providers.get("docker", {}) if isinstance(providers, dict) else {}
+
     return {
         "status": "ok",
         "memory_usage_mb": get_memory_usage(),
-        "docker_available": code_executor is not None,
+        "docker_available": bool(docker_state.get("healthy", False)),
+        "code_execution_available": bool(execution_health.get("healthy", False)),
+        "code_execution": execution_health,
         "version": "1.0.0",
         "tenant": tenant.tenant_id if tenant else None,
     }
@@ -432,7 +498,12 @@ async def rag_query(
             cache_hit["cache"] = "hit"
             return cache_hit
         enforce_memory_guard("rag.query")
-        result = rag.query(request.question, request.top_k)
+        result = rag.query(
+            request.question,
+            request.top_k,
+            session_id=tenant.tenant_id if tenant else settings.default_tenant_id,
+            user_id=tenant.user_id if tenant else None,
+        )
         if isinstance(result, dict):
             cached_payload = dict(result)
             cached_payload.pop("cache", None)
@@ -475,11 +546,16 @@ async def unified_query(
         result = orchestrator.process_request(
             question=request.question, data_file=request.data_file
         )
+        is_success = not isinstance(result, dict) or bool(result.get("success", True))
         log_audit(
             action="unified.query",
             tenant=tenant,
-            status="success",
-            detail={"question_preview": request.question[:80]},
+            status="success" if is_success else "error",
+            detail={
+                "question_preview": request.question[:80],
+                "success": is_success,
+                "error": result.get("error") if isinstance(result, dict) else None,
+            },
         )
         return result
     except Exception as e:
@@ -573,24 +649,36 @@ async def analyze_data(
         from backend.tools.data_analysis import data_analysis_tool
 
         enforce_memory_guard("data.analyze")
+        resolved_data_file = _resolve_data_file_for_analysis(request.data_file)
         result = data_analysis_tool.invoke(
             {
-                "data_file": request.data_file,
+                "data_file": resolved_data_file,
                 "analysis_type": request.analysis_type,
                 "target_column": request.target_column,
                 "columns": request.columns,
             }
         )
+        is_success = not isinstance(result, dict) or bool(result.get("success", True))
         log_audit(
             action="data.analyze",
             tenant=tenant,
-            status="success",
+            status="success" if is_success else "error",
             detail={
-                "data_file": request.data_file,
+                "data_file": resolved_data_file,
                 "analysis_type": request.analysis_type,
+                "success": is_success,
+                "error": result.get("error") if isinstance(result, dict) else None,
             },
         )
         return result
+    except HTTPException as exc:
+        log_audit(
+            action="data.analyze",
+            tenant=tenant,
+            status="error",
+            detail={"error": str(exc.detail)},
+        )
+        raise
     except Exception as e:
         log_audit(
             action="data.analyze",

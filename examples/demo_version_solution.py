@@ -66,7 +66,7 @@ def demo_version_management_solution():
     # 3. 演示版本检查
     print(f"\n📋 步骤 3: 演示版本兼容性检查")
     success = run_command(
-        "python3 version_manager.py --check-deps paddleocr langchain", "检查关键依赖兼容性"
+        "python3 scripts/versioning/version_manager.py --check-deps paddleocr langchain", "检查关键依赖兼容性"
     )
 
     if not success:
@@ -106,15 +106,15 @@ def demo_version_management_solution():
     print("1. 环境准备阶段:")
     print("   python3 -m venv venv")
     print("   source venv/bin/activate")
-    print("   ./install_with_compatibility_check.sh")
+    print("   ./scripts/setup/install_with_compatibility_check.sh")
     print()
     print("2. 开发测试阶段:")
-    print("   python3 version_manager.py  # 检查兼容性")
+    print("   python3 scripts/versioning/version_manager.py  # 检查兼容性")
     print("   python3 -m pytest tests/   # 运行测试")
     print()
     print("3. 部署阶段:")
     print("   pip install -r requirements.locked.txt")
-    print("   python3 version_manager.py --save-report")
+    print("   python3 scripts/versioning/version_manager.py --save-report")
 
     # 7. 问题预防机制
     print(f"\n📋 步骤 7: 问题预防机制")

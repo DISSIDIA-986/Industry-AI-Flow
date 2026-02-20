@@ -16,7 +16,7 @@ def advanced_housing_analysis():
     print("=== 高级房价分析开始 ===")
 
     # 1. 数据预处理
-    data_path = "/Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/datasets/Housing.csv"
+    data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
     print(f"原始数据形状: {df.shape}")

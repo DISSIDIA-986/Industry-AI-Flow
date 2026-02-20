@@ -731,7 +731,9 @@ class CodeReviewRunner:
     
     def save_results(self):
         """保存结果"""
-        output_file = self.project_root / "CODE_REVIEW_RESULTS.json"
+        default_output = self.project_root / "temp/reports/code_review/CODE_REVIEW_RESULTS.json"
+        output_file = Path(os.getenv("CODE_REVIEW_OUTPUT_FILE", str(default_output)))
+        output_file.parent.mkdir(parents=True, exist_ok=True)
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
         print(f"\n💾 结果已保存到: {output_file}")

@@ -32,4 +32,4 @@ export { default as ProtectedRoute } from './ProtectedRoute'
 export { default as DashboardShell } from './dashboard-shell-simple'
 
 // 配置上下文
-export { default as AppConfigContext } from './app-config-context'
+export { AppConfigProvider, useAppConfig } from './app-config-context'
