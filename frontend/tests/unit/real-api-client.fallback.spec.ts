@@ -36,7 +36,7 @@ describe('real-api-client fallback contracts', () => {
     const { realApiService } = await import('@/lib/real-api-client')
 
     await expect(realApiService.getQueryHistory()).rejects.toMatchObject({
-      message: '查询历史接口不可用',
+      message: 'Query history interface is unavailable',
       status: 503,
     })
   })
@@ -65,7 +65,7 @@ describe('real-api-client fallback contracts', () => {
 
     const hybridApi = createHybridApiClient(mockApi)
     await expect(hybridApi.sendWorkflowQuery({ query: 'test' })).rejects.toMatchObject({
-      message: '后端服务不可用',
+      message: 'Backend service is unavailable',
       status: 503,
     })
     expect(mockApi.sendQuery).not.toHaveBeenCalled()

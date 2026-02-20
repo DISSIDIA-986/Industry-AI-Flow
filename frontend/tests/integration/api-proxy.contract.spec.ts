@@ -21,8 +21,8 @@ describe('api proxy source contracts', () => {
     const apiIntegrationPage = readFrontendFile('src/app/(mvp)/api-integration-test/page.tsx')
 
     expect(apiTestPage).toContain("import { api } from '@/lib/api-client'")
-    expect(apiTestPage).toContain('/api/backend/api/v1 (同源代理)')
-    expect(apiIntegrationPage).toContain('/api/backend/api/v1 (同源代理)')
+    expect(apiTestPage).toContain('/api/backend/api/v1 (Same origin proxy)')
+    expect(apiIntegrationPage).toContain('/api/backend/api/v1 (Same origin proxy)')
     expect(apiTestPage).not.toMatch(/localhost:8001|localhost:8002/)
     expect(apiIntegrationPage).not.toMatch(/localhost:8001|localhost:8002/)
   })
