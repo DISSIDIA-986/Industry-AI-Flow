@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Industry AI Flow - 自动化Code Review脚本
-按照CODE_REVIEW_STRATEGY.md执行完整评审
+按照docs/development/plans/CODE_REVIEW_STRATEGY.md执行完整评审
 """
 
 import sys
@@ -60,7 +60,7 @@ class CodeReviewRunner:
             "docs/ARCHITECTURE.md",
             "docs/ARCHITECTURE_DIAGRAM.html",
             "docs/reports/CAPSTONE_VALIDATION_TEST_PLAN.md",
-            "CODE_REVIEW_STRATEGY.md"
+            "docs/development/plans/CODE_REVIEW_STRATEGY.md"
         ]
         
         results = {

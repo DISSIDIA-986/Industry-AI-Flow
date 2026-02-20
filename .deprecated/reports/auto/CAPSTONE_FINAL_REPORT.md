@@ -321,7 +321,7 @@ python scripts/testing/run_capstone_validation.py
 ### 已生成的文档
 1. **CAPSTONE_VALIDATION_TEST_PLAN.md** - 完整测试计划
 2. **CAPSTONE_TEST_REPORT.md** - 静态测试报告
-3. **CAPSTONE_TEST_EXECUTION_STATUS.md** - 测试执行状态
+3. **docs/development/status/CAPSTONE_TEST_EXECUTION_STATUS.md** - 测试执行状态
 4. **CAPSTONE_FINAL_REPORT.md** - 本文档
 5. **scripts/testing/run_capstone_validation.py** - 自动化测试脚本
 6. **quick_validation.py** - 快速验证脚本

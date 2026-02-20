@@ -222,7 +222,7 @@ curl -X POST http://localhost:8000/api/v1/query -d '{"question": "<script>alert(
 ### 已生成的文档
 1. **CAPSTONE_VALIDATION_TEST_PLAN.md** - 完整测试计划
 2. **CAPSTONE_TEST_REPORT.md** - 静态测试报告
-3. **CAPSTONE_TEST_EXECUTION_STATUS.md** - 本文档
+3. **docs/development/status/CAPSTONE_TEST_EXECUTION_STATUS.md** - 本文档
 
 ---
 
