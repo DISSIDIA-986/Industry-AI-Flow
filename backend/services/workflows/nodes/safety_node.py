@@ -25,6 +25,16 @@ _BLOCK_RULES = (
         "subprocess.call",
         re.compile(r"\bsubprocess\s*\.\s*call\s*\(", re.IGNORECASE),
     ),
+    ("eval(", re.compile(r"\beval\s*\(", re.IGNORECASE)),
+    ("exec(", re.compile(r"\bexec\s*\(", re.IGNORECASE)),
+    ("__import__(", re.compile(r"__import__\s*\(", re.IGNORECASE)),
+    (
+        "importlib.import_module",
+        re.compile(r"\bimportlib\s*\.\s*import_module\s*\(", re.IGNORECASE),
+    ),
+    ("pickle.loads(", re.compile(r"\bpickle\s*\.\s*loads?\s*\(", re.IGNORECASE)),
+    ("ctypes", re.compile(r"\bctypes\b", re.IGNORECASE)),
+    ("open(/etc/", re.compile(r"\bopen\s*\(\s*['\"]\/etc\/", re.IGNORECASE)),
 )
 
 

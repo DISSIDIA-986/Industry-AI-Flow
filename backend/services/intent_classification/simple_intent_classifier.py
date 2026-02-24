@@ -239,7 +239,7 @@ class SimpleIntentClassifier:
                     r"(EN|EN).*EN",
                     r"EN.*EN",
                 ],
-                "priority": 2,  # EN,EN
+                "priority": 1,  # Equal priority — disambiguation via specific keywords
             },
             IntentType.COST_ESTIMATION: {
                 "keywords": [
@@ -311,7 +311,16 @@ class SimpleIntentClassifier:
             },
             IntentType.CODE_EXECUTION: {
                 "keywords": [
-                    # EN
+                    # EN — strong code-execution signals
+                    "run code",
+                    "execute code",
+                    "run script",
+                    "execute script",
+                    "run program",
+                    "execute program",
+                    "run python",
+                    "python script",
+                    # EN — general keywords
                     "run",
                     "execute",
                     "code",
@@ -341,6 +350,8 @@ class SimpleIntentClassifier:
                 ],
                 "patterns": [
                     r"(run|execute)\s+(code|script|program)",
+                    r"(run|execute)\s+.*python",
+                    r"python\s+script",
                     r"implement\s+",
                     r"EN.*EN",
                     r"EN.*EN",
@@ -398,9 +409,12 @@ class SimpleIntentClassifier:
                 best_intent = max(intent_scores.items(), key=lambda x: x[1]["score"])
                 intent_type, intent_data = best_intent
 
-                # EN(EN)
-                max_possible_score = 100.0  # EN
-                confidence = min(intent_data["score"] / max_possible_score, 1.0)
+                # Calibrate confidence so that even a single keyword match
+                # yields a meaningful score (≥0.5).  Previously dividing by
+                # 100 caused most queries to land at 0.1 confidence.
+                max_possible_score = 30.0
+                raw_confidence = min(intent_data["score"] / max_possible_score, 1.0)
+                confidence = max(raw_confidence, 0.5) if intent_data["score"] > 0 else 0.0
 
                 # EN
                 reasoning = f"EN{len(intent_data['keywords'])}EN: {', '.join(intent_data['keywords'][:3])}"
