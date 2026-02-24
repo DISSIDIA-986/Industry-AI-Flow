@@ -97,6 +97,18 @@ class VectorStore:
                 )
 
             conn.commit()
+            try:
+                from backend.services.retrieval.document_profile import (
+                    DocumentProfileService,
+                )
+
+                DocumentProfileService(self).refresh_profile_for_document(doc_id)
+            except Exception as exc:  # pragma: no cover - best effort enrichment
+                logging.getLogger(__name__).warning(
+                    "Failed to refresh document profile for %s: %s",
+                    doc_id,
+                    exc,
+                )
             return doc_id
 
         except Exception as e:

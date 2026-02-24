@@ -15,6 +15,7 @@ from backend.services.core.chunker import DocumentChunker
 from backend.services.core.embedder import embed_single_text
 from backend.services.core.vectorstore import VectorStore
 from backend.services.document_loader import DocumentLoader
+from backend.services.retrieval.document_profile import DocumentProfileService
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,20 @@ class DocumentManager:
         self.vectorstore = vectorstore
         self.document_loader = DocumentLoader()
         self.chunker = DocumentChunker()
+        self.document_profile_service = DocumentProfileService(vectorstore)
         self._init_database()
+
+    def _refresh_profile_best_effort(self, doc_id: str) -> None:
+        try:
+            self.document_profile_service.refresh_profile_for_document(doc_id)
+        except Exception as exc:  # pragma: no cover - runtime best effort
+            logger.warning("Failed to refresh document profile for %s: %s", doc_id, exc)
+
+    def _remove_profile_best_effort(self, doc_id: str) -> None:
+        try:
+            self.document_profile_service.remove_profile(doc_id)
+        except Exception as exc:  # pragma: no cover - runtime best effort
+            logger.warning("Failed to remove document profile for %s: %s", doc_id, exc)
 
     def _init_database(self):
         """EN"""
@@ -264,6 +278,7 @@ class DocumentManager:
             )
 
             conn.commit()
+            self._refresh_profile_best_effort(doc_id)
 
             # EN
             self._log_operation(
@@ -387,6 +402,7 @@ class DocumentManager:
                 cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
 
             conn.commit()
+            self._remove_profile_best_effort(doc_id)
 
             # EN
             delete_type = "soft_delete" if soft_delete else "hard_delete"
@@ -536,6 +552,7 @@ class DocumentManager:
             )
 
             conn.commit()
+            self._refresh_profile_best_effort(doc_id)
 
             # EN
             self._log_operation(

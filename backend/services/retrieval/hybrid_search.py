@@ -318,4 +318,15 @@ class HybridRetriever:
                     }
                 )
 
+        # Normalize fusion scores to [0, 1] via min-max scaling so that
+        # the best-matching chunk receives score=1.0 and others scale
+        # proportionally.  This prevents the raw reciprocal-rank sums
+        # (typically 0.05–0.7) from being displayed as misleading low
+        # relevance percentages in the UI.
+        if final_results:
+            max_score = max(r["score"] for r in final_results)
+            if max_score > 0:
+                for r in final_results:
+                    r["score"] = round(r["score"] / max_score, 4)
+
         return final_results
