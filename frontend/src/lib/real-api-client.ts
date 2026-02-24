@@ -11,6 +11,14 @@ class RealApiError extends Error {
   }
 }
 
+function isTransientDocumentListError(error: unknown): boolean {
+  if (!(error instanceof RealApiError)) {
+    return false
+  }
+  // Proxy/network outages should not break document screens.
+  return [404, 408, 500, 502, 503, 504].includes(error.status)
+}
+
 // realityAPIConfiguration (unify the front-end homologous proxy to avoid environment drift caused by direct connection to the back-end)
 const REAL_API_BASE_URL = '/api/backend/api/v1'
 const REAL_API_TIMEOUT = 60000 // 60seconds timeout (AIQuery may take longer)
@@ -170,6 +178,25 @@ export interface RealDocumentUploadResponse {
   metadata?: Record<string, any>
 }
 
+// Document list response is more permissive because backend can return either
+// uploaded metadata rows or indexed vectorstore fallback rows.
+export interface RealDocumentListResponse {
+  id: string
+  filename?: string
+  name?: string
+  size?: number
+  upload_time?: string
+  uploaded_at?: string
+  status?: 'pending' | 'processing' | 'completed' | 'failed' | 'processed' | 'missing' | 'deleted'
+  type?: string
+  source?: 'uploaded_index' | 'vector_index' | string
+  chunk_count?: number
+  mime_type?: string
+  title?: string
+  metadata?: Record<string, any>
+  [key: string]: unknown
+}
+
 // Cost estimate request
 export interface RealCostEstimationRequest {
   project_type: string
@@ -292,16 +319,22 @@ export const realApiService = {
   },
   
   // Get document list
-  async getDocuments(): Promise<RealDocumentUploadResponse[]> {
+  async getDocuments(): Promise<RealDocumentListResponse[]> {
     try {
-      return await realApi.get<RealDocumentUploadResponse[]>('/documents')
+      return await realApi.get<RealDocumentListResponse[]>('/documents')
     } catch (error) {
       if (shouldFallbackToSyntheticData()) {
         console.warn('Failed to get the list of documents, returning an empty list (explicitly enabledfallback）:', error)
         return []
       }
-      console.error('Failed to get document list, not enabledfallback:', error)
-      throw new RealApiError(503, 'Failed to get document list')
+      if (isTransientDocumentListError(error)) {
+        console.warn('Document list endpoint temporarily unavailable; returning empty list:', error)
+        return []
+      }
+      console.error('Failed to get document list:', error)
+      throw error instanceof RealApiError
+        ? error
+        : new RealApiError(503, 'Failed to get document list')
     }
   },
   
