@@ -81,7 +81,7 @@ class CodeValidator:
 
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
-        r"__.*__",  # Dunder methods (potential introspection)
+        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__)\b",  # Dangerous dunder attribute access
         r"globals\(",  # Global scope access
         r"locals\(",  # Local scope access
         r"vars\(",  # Variable introspection

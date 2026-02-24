@@ -7,6 +7,7 @@ from typing import Annotated, Any, Dict, List, Optional
 from langchain_core.tools import tool
 
 from backend.agents.code_execution_agent import iterative_code_agent
+from backend.services.code_executor import validate_code
 from backend.services.data_transfer import data_transfer
 
 logger = logging.getLogger(__name__)
@@ -216,6 +217,17 @@ def self_healing_code_execution_tool(
     """
 
     try:
+        # Validate code safety BEFORE any execution attempt.
+        validation = validate_code(code, strict_mode=True)
+        if not validation.is_valid:
+            return {
+                "success": False,
+                "error": f"Code safety validation failed: {validation.error}",
+                "final_code": code,
+                "attempts": 0,
+                "fixes_applied": [],
+            }
+
         # 准备数据文件
         transferred_files = []
         context = {"description": description, "auto_fix_imports": auto_fix_imports}

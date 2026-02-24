@@ -29,6 +29,8 @@ class DockerCodeExecutor:
 
     def __init__(self):
         """EN Docker EN"""
+        import threading as _threading
+
         try:
             self.client = docker.from_env()
             # EN Docker EN
@@ -37,6 +39,10 @@ class DockerCodeExecutor:
         except DockerException as e:
             logger.error(f"Docker EN: {e}")
             raise CodeExecutionError(f"Docker EN: {e}")
+
+        self._pending_cleanups: set[str] = set()
+        self._cleanup_lock = _threading.Lock()
+        self._cleanup_timer: Optional[_threading.Timer] = None
 
     def _prepare_workspace(self) -> str:
         """EN"""
@@ -54,6 +60,25 @@ class DockerCodeExecutor:
             logger.info(f"EN: {workspace_path}")
         except Exception as e:
             logger.warning(f"EN: {e}")
+
+    def _schedule_cleanup(self, workspace_path: str) -> None:
+        """Batch workspace cleanup using a single reusable timer."""
+        import threading as _threading
+
+        def _flush():
+            with self._cleanup_lock:
+                paths = list(self._pending_cleanups)
+                self._pending_cleanups.clear()
+                self._cleanup_timer = None
+            for p in paths:
+                self._cleanup_workspace(p)
+
+        with self._cleanup_lock:
+            self._pending_cleanups.add(workspace_path)
+            if self._cleanup_timer is None:
+                self._cleanup_timer = _threading.Timer(60.0, _flush)
+                self._cleanup_timer.daemon = True
+                self._cleanup_timer.start()
 
     def _validate_code(self, code: str) -> List[str]:
         """EN"""
@@ -265,16 +290,9 @@ class DockerCodeExecutor:
             }
 
         finally:
-            # EN(ENAPIEN)
-            import threading
-
-            def cleanup_later():
-                time.sleep(60)  # 60EN
-                self._cleanup_workspace(workspace_path)
-
-            cleanup_thread = threading.Thread(target=cleanup_later)
-            cleanup_thread.daemon = True
-            cleanup_thread.start()
+            # Schedule workspace cleanup without spawning a thread per call.
+            # Paths are batched and cleaned by a single reusable timer.
+            self._schedule_cleanup(workspace_path)
 
     def _find_visualization_files(self, workspace_path: str) -> List[Dict[str, str]]:
         """EN"""

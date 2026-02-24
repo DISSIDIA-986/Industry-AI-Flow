@@ -184,6 +184,17 @@ class DockerExecutor:
         """
         start_time = time.time()
 
+        # Validate code before execution
+        validation_errors = self._validate_code(code)
+        if validation_errors:
+            return ExecutionResult(
+                success=False,
+                stdout="",
+                stderr="",
+                error=f"Code validation failed: {'; '.join(validation_errors)}",
+                execution_time=time.time() - start_time,
+            )
+
         # Create temporary directory for file exchange
         with tempfile.TemporaryDirectory() as tmpdir:
             workspace = Path(tmpdir)
