@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
     postgres_db: str = os.getenv("POSTGRES_DB", "ai_workflow")
-    postgres_user: str = os.getenv("POSTGRES_USER", "")  # 本地PostgreSQL留空使用当前用户
+    postgres_user: str = os.getenv(
+        "POSTGRES_USER", ""
+    )  # 本地PostgreSQL留空使用当前用户
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # 本地PostgreSQL无密码
 
     # 数据库连接池配置（P0修复：支持Prompt API）
@@ -79,6 +81,19 @@ class Settings(BaseSettings):
 
     # RAG
     top_k: int = int(os.getenv("TOP_K", "5"))
+    enable_rag_query_rewrite: bool = (
+        os.getenv("ENABLE_RAG_QUERY_REWRITE", "true").lower() == "true"
+    )
+    rag_query_rewrite_count: int = int(os.getenv("RAG_QUERY_REWRITE_COUNT", "1"))
+    enable_document_profiles: bool = (
+        os.getenv("ENABLE_DOCUMENT_PROFILES", "true").lower() == "true"
+    )
+    document_profile_context_limit: int = int(
+        os.getenv("DOCUMENT_PROFILE_CONTEXT_LIMIT", "3")
+    )
+    workflow_suggested_questions_count: int = int(
+        os.getenv("WORKFLOW_SUGGESTED_QUESTIONS_COUNT", "3")
+    )
 
     # LLM Parameters
     default_temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
@@ -114,7 +129,9 @@ class Settings(BaseSettings):
     code_execution_memory_limit: str = os.getenv(
         "CODE_EXECUTION_MEMORY_LIMIT", "1G"
     )  # 内存限制
-    code_execution_cpu_limit: str = os.getenv("CODE_EXECUTION_CPU_LIMIT", "2")  # CPU限制
+    code_execution_cpu_limit: str = os.getenv(
+        "CODE_EXECUTION_CPU_LIMIT", "2"
+    )  # CPU限制
     enable_docker_sandbox: bool = (
         os.getenv("ENABLE_DOCKER_SANDBOX", "true").lower() == "true"
     )  # 是否启用Docker沙箱
@@ -136,7 +153,24 @@ class Settings(BaseSettings):
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
     )  # Docker镜像名
-    temp_data_dir: str = os.getenv("TEMP_DATA_DIR", "/tmp/luncheon_data")  # 临时数据目录
+    temp_data_dir: str = os.getenv(
+        "TEMP_DATA_DIR", "/tmp/luncheon_data"
+    )  # 临时数据目录
+    documents_storage_dir: str = os.getenv(
+        "DOCUMENTS_STORAGE_DIR", "workspace/uploads/documents"
+    )
+    documents_cleanup_enabled: bool = (
+        os.getenv("DOCUMENTS_CLEANUP_ENABLED", "true").lower() == "true"
+    )
+    documents_cleanup_interval_minutes: int = int(
+        os.getenv("DOCUMENTS_CLEANUP_INTERVAL_MINUTES", "60")
+    )
+    documents_orphan_file_retention_days: int = int(
+        os.getenv("DOCUMENTS_ORPHAN_FILE_RETENTION_DAYS", "30")
+    )
+    documents_missing_metadata_retention_days: int = int(
+        os.getenv("DOCUMENTS_MISSING_METADATA_RETENTION_DAYS", "30")
+    )
 
     # 可迭代执行配置 (LangChain 1.0 增强)
     enable_iterative_execution: bool = (
@@ -385,4 +419,5 @@ async def get_database_pool():
     修复prompt_routes依赖断裂问题
     """
     from backend.services.database.pool import get_database_pool as _get_pool
+
     return await _get_pool()
