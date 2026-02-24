@@ -24,6 +24,7 @@ from backend.services.intent_classification.intent_classifier import (
     QueryContext,
 )
 from backend.services.prompt_manager import PromptManager
+from backend.services.retrieval.document_profile import DocumentProfileService
 from backend.services.routing_decision import (
     AgentType,
     RoutingDecision,
@@ -81,6 +82,7 @@ class IntentClassificationWorkflow:
         self.prompt_manager = prompt_manager
         self.template_selector = TemplateSelector()
         self._rag_service = None
+        self._document_profile_service: Optional[DocumentProfileService] = None
         self._data_analysis_agent = None
         self._document_extractor = None
         self._code_execution_manager = None
@@ -746,6 +748,22 @@ class IntentClassificationWorkflow:
             )
         return self._rag_service
 
+    def _get_document_profile_service(
+        self, rag: Any
+    ) -> Optional[DocumentProfileService]:
+        if not settings.enable_document_profiles:
+            return None
+
+        if self._document_profile_service is not None:
+            return self._document_profile_service
+
+        vectorstore = getattr(rag, "vectorstore", None)
+        if vectorstore is None:
+            return None
+
+        self._document_profile_service = DocumentProfileService(vectorstore)
+        return self._document_profile_service
+
     def _get_data_analysis_agent(self):
         if self._data_analysis_agent is None:
             from backend.services.data_analysis.data_analysis_agent import (
@@ -821,19 +839,296 @@ class IntentClassificationWorkflow:
                 return str(path_obj)
         return None
 
-    async def _dispatch_rag_query(
+    @staticmethod
+    def _chunk_identity(chunk: Dict[str, Any]) -> str:
+        chunk_id = str(chunk.get("chunk_id") or chunk.get("id") or "").strip()
+        if chunk_id:
+            return chunk_id
+
+        doc_id = str(chunk.get("doc_id") or "").strip()
+        filename = str(chunk.get("filename") or "").strip()
+        content = str(chunk.get("content") or "").strip()
+        return f"{doc_id}|{filename}|{content[:120]}"
+
+    @staticmethod
+    def _chunk_doc_id(chunk: Dict[str, Any]) -> str:
+        metadata = chunk.get("metadata") or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+        doc_id = str(
+            chunk.get("doc_id")
+            or metadata.get("doc_id")
+            or chunk.get("filename")
+            or metadata.get("filename")
+            or metadata.get("source")
+            or ""
+        ).strip()
+        return doc_id
+
+    async def _boost_chunks_with_profiles(
+        self,
+        *,
+        rag: Any,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        top_k: int,
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        service = self._get_document_profile_service(rag)
+        if service is None or not chunks:
+            return chunks, []
+
+        candidate_doc_ids = [
+            doc_id
+            for doc_id in (self._chunk_doc_id(chunk) for chunk in chunks)
+            if doc_id
+        ]
+        if not candidate_doc_ids:
+            return chunks, []
+
+        profile_top_k = max(
+            1,
+            min(
+                max(int(settings.document_profile_context_limit), int(top_k)),
+                8,
+            ),
+        )
+        profiles = await asyncio.to_thread(
+            service.get_ranked_profiles,
+            query,
+            top_k=profile_top_k,
+            candidate_doc_ids=candidate_doc_ids,
+            auto_refresh_stale=True,
+        )
+        if not profiles:
+            return chunks, []
+
+        profile_map = {
+            str(item.get("doc_id") or "").strip(): float(item.get("profile_score") or 0.0)
+            for item in profiles
+        }
+
+        boosted_chunks: List[Dict[str, Any]] = []
+        for chunk in chunks:
+            payload = dict(chunk)
+            doc_id = self._chunk_doc_id(payload)
+            base_score = 0.0
+            try:
+                base_score = float(payload.get("score") or 0.0)
+            except Exception:
+                base_score = 0.0
+            if base_score <= 0.0 and payload.get("distance") is not None:
+                try:
+                    base_score = max(0.0, 1.0 - float(payload.get("distance")))
+                except Exception:
+                    base_score = 0.0
+
+            profile_score = float(profile_map.get(doc_id, 0.0))
+            payload["profile_score"] = round(profile_score, 6)
+            payload["score"] = round(base_score + (0.25 * profile_score), 6)
+            boosted_chunks.append(payload)
+
+        boosted_chunks.sort(
+            key=lambda item: float(item.get("score") or 0.0),
+            reverse=True,
+        )
+        return boosted_chunks[: max(top_k, 1)], profiles
+
+    def _build_suggested_questions(
         self,
         *,
         query: str,
-        parameters: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        top_k_raw = parameters.get("top_k")
-        try:
-            top_k = int(top_k_raw) if top_k_raw is not None else int(settings.top_k)
-        except Exception:
-            top_k = int(settings.top_k)
+        source_items: List[Dict[str, Any]],
+        profiles: List[Dict[str, Any]],
+    ) -> List[str]:
+        max_questions = max(
+            1,
+            min(int(settings.workflow_suggested_questions_count), 5),
+        )
+        query_norm = str(query or "").strip().lower()
 
-        rag = self._get_rag_service()
+        candidates: List[str] = []
+        top_profile = profiles[0] if profiles else {}
+        profile_name = str(
+            top_profile.get("filename")
+            or top_profile.get("doc_id")
+            or (source_items[0].get("document_name") if source_items else "this source")
+        ).strip()
+        outline = top_profile.get("outline")
+        if isinstance(outline, list):
+            for item in outline[:2]:
+                heading = str(item or "").strip()
+                if not heading:
+                    continue
+                candidates.append(
+                    f'In {profile_name}, what are the requirements for "{heading}"?'
+                )
+
+        keywords = top_profile.get("keywords")
+        if isinstance(keywords, list):
+            filtered_keywords = [str(item).strip() for item in keywords if str(item).strip()]
+            if len(filtered_keywords) >= 2:
+                candidates.append(
+                    f"Can you summarize compliance checks for {filtered_keywords[0]} and {filtered_keywords[1]} in {profile_name}?"
+                )
+
+        if source_items:
+            primary_source = str(
+                source_items[0].get("document_name")
+                or source_items[0].get("document_id")
+                or profile_name
+            ).strip()
+            candidates.append(
+                f"What evidence from {primary_source} directly supports this answer?"
+            )
+            candidates.append(
+                f"What are the key exceptions or risk points in {primary_source}?"
+            )
+
+        candidates.append("What details should I provide next for a more precise answer?")
+
+        suggestions: List[str] = []
+        seen: set[str] = set()
+        for question in candidates:
+            value = str(question or "").strip()
+            if not value:
+                continue
+            lowered = value.lower()
+            if lowered in seen or lowered == query_norm:
+                continue
+            seen.add(lowered)
+            suggestions.append(value)
+            if len(suggestions) >= max_questions:
+                break
+        return suggestions
+
+    @staticmethod
+    def _parse_json_object(text: str) -> Optional[Dict[str, Any]]:
+        raw = str(text or "").strip()
+        if not raw:
+            return None
+        try:
+            payload = json.loads(raw)
+            return payload if isinstance(payload, dict) else None
+        except Exception:
+            pass
+
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                payload = json.loads(raw[start : end + 1])
+                return payload if isinstance(payload, dict) else None
+            except Exception:
+                return None
+        return None
+
+    @staticmethod
+    def _normalize_rewrites(raw: Any) -> List[str]:
+        candidates: List[str] = []
+        if isinstance(raw, str):
+            value = raw.strip()
+            if value:
+                candidates.append(value)
+        elif isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, str):
+                    value = item.strip()
+                    if value:
+                        candidates.append(value)
+        elif isinstance(raw, dict):
+            for key in ("rewrites", "queries", "variants", "paraphrases"):
+                if key in raw:
+                    candidates.extend(IntentClassificationWorkflow._normalize_rewrites(raw.get(key)))
+        return candidates
+
+    async def _build_retrieval_queries(
+        self,
+        *,
+        query: str,
+        context: QueryContext,
+        parameters: Dict[str, Any],
+        rag: Any,
+    ) -> List[str]:
+        enable_rewrite = bool(
+            parameters.get("enable_query_rewrite", settings.enable_rag_query_rewrite)
+        )
+        rewrite_count_raw = parameters.get(
+            "query_rewrite_count", settings.rag_query_rewrite_count
+        )
+        try:
+            rewrite_count = int(rewrite_count_raw)
+        except Exception:
+            rewrite_count = int(settings.rag_query_rewrite_count)
+        rewrite_count = max(0, min(rewrite_count, 3))
+
+        retrieval_queries: List[str] = [query]
+        if not enable_rewrite or rewrite_count <= 0:
+            return retrieval_queries
+
+        history_lines: List[str] = []
+        for record in (context.interaction_history or [])[-2:]:
+            if not isinstance(record, dict):
+                continue
+            user_query = str(record.get("user_query") or "").strip()
+            if user_query:
+                history_lines.append(user_query[:180])
+
+        keyword_values = parameters.get("keywords")
+        keywords: List[str] = []
+        if isinstance(keyword_values, list):
+            for item in keyword_values:
+                if isinstance(item, str) and item.strip():
+                    keywords.append(item.strip())
+
+        prompt = (
+            "Rewrite the user query for document retrieval.\n"
+            "Do not change intent. Keep domain terms, standard names, and identifiers.\n"
+            "Return strict JSON only: {\"rewrites\": [\"...\"]}\n"
+            f"Generate at most {rewrite_count} rewrites.\n\n"
+            f"Original query:\n{query}\n\n"
+            f"Recent conversation hints:\n{chr(10).join(history_lines) if history_lines else '(none)'}\n"
+            f"Intent keywords: {', '.join(keywords) if keywords else '(none)'}\n"
+        )
+
+        raw_response = ""
+        try:
+            raw_response = await asyncio.to_thread(
+                rag.llm_client.generate,
+                prompt,
+                temperature=0.0,
+                max_tokens=220,
+            )
+        except Exception as exc:
+            logger.warning("Query rewrite generation failed, fallback to original query: %s", exc)
+
+        rewrite_candidates: List[str] = []
+        parsed = self._parse_json_object(raw_response)
+        if parsed is not None:
+            rewrite_candidates.extend(self._normalize_rewrites(parsed.get("rewrites", parsed)))
+
+        # Deterministic fallback: add keyword-enriched retrieval query
+        if not rewrite_candidates and keywords:
+            rewrite_candidates.append(f"{query} {' '.join(keywords[:4])}".strip())
+
+        for item in rewrite_candidates:
+            value = item.strip()
+            if not value:
+                continue
+            if value.lower() == query.lower():
+                continue
+            if value not in retrieval_queries:
+                retrieval_queries.append(value)
+            if len(retrieval_queries) >= 1 + rewrite_count:
+                break
+        return retrieval_queries
+
+    async def _retrieve_chunks_for_query(
+        self,
+        *,
+        rag: Any,
+        query: str,
+        top_k: int,
+    ) -> List[Dict[str, Any]]:
         if rag.use_hybrid_search and rag.hybrid_retriever:
             chunks = await asyncio.to_thread(
                 rag.hybrid_retriever.search,
@@ -849,9 +1144,81 @@ class IntentClassificationWorkflow:
             chunks = await asyncio.to_thread(
                 rag.vectorstore.similarity_search, query_embedding, max(top_k, 1)
             )
+        return chunks if isinstance(chunks, list) else []
 
-        if not isinstance(chunks, list):
-            chunks = []
+    def _fuse_retrieval_chunks(
+        self,
+        *,
+        retrieval_runs: List[Dict[str, Any]],
+        top_k: int,
+    ) -> List[Dict[str, Any]]:
+        fused_scores: Dict[str, float] = {}
+        chunk_payloads: Dict[str, Dict[str, Any]] = {}
+
+        for run_index, run in enumerate(retrieval_runs):
+            chunks = run.get("chunks")
+            if not isinstance(chunks, list):
+                continue
+            query_weight = 1.0 if run_index == 0 else 0.85
+            for rank, chunk in enumerate(chunks, 1):
+                if not isinstance(chunk, dict):
+                    continue
+                chunk_key = self._chunk_identity(chunk)
+                if not chunk_key:
+                    continue
+                fused_scores[chunk_key] = fused_scores.get(chunk_key, 0.0) + (
+                    query_weight / (60.0 + float(rank))
+                )
+                if chunk_key not in chunk_payloads:
+                    chunk_payloads[chunk_key] = dict(chunk)
+
+        sorted_keys = sorted(fused_scores.keys(), key=lambda key: fused_scores[key], reverse=True)
+        fused_chunks: List[Dict[str, Any]] = []
+        for key in sorted_keys[: max(top_k, 1)]:
+            payload = dict(chunk_payloads[key])
+            payload["score"] = round(float(fused_scores[key]), 6)
+            fused_chunks.append(payload)
+        return fused_chunks
+
+    async def _dispatch_rag_query(
+        self,
+        *,
+        query: str,
+        context: QueryContext,
+        parameters: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        top_k_raw = parameters.get("top_k")
+        try:
+            top_k = int(top_k_raw) if top_k_raw is not None else int(settings.top_k)
+        except Exception:
+            top_k = int(settings.top_k)
+
+        rag = self._get_rag_service()
+        retrieval_queries = await self._build_retrieval_queries(
+            query=query,
+            context=context,
+            parameters=parameters,
+            rag=rag,
+        )
+        retrieval_runs: List[Dict[str, Any]] = []
+        retrieval_depth = max(top_k * 2, top_k)
+        for retrieval_query in retrieval_queries:
+            chunks_for_query = await self._retrieve_chunks_for_query(
+                rag=rag,
+                query=retrieval_query,
+                top_k=retrieval_depth,
+            )
+            retrieval_runs.append(
+                {
+                    "query": retrieval_query,
+                    "chunks": chunks_for_query,
+                }
+            )
+
+        chunks = self._fuse_retrieval_chunks(
+            retrieval_runs=retrieval_runs,
+            top_k=max(top_k, 1),
+        )
         if rag.use_reranker and rag.reranker and chunks:
             chunks = await asyncio.to_thread(
                 rag.reranker.rerank,
@@ -859,33 +1226,178 @@ class IntentClassificationWorkflow:
                 documents=chunks,
                 top_k=max(top_k, 1),
             )
+        document_profiles: List[Dict[str, Any]] = []
+        if chunks:
+            chunks, document_profiles = await self._boost_chunks_with_profiles(
+                rag=rag,
+                query=query,
+                chunks=chunks,
+                top_k=max(top_k, 1),
+            )
 
-        sources = self._unique_sources(chunks)
         if not chunks:
             raise RuntimeError("RAG retrieval returned empty context")
-        if not sources:
+
+        normalized_chunks: List[Dict[str, Any]] = []
+        max_relevance_raw = 0.0
+        for chunk in chunks:
+            payload = dict(chunk) if isinstance(chunk, dict) else {}
+            raw_score = payload.get("score")
+            if raw_score is None and payload.get("distance") is not None:
+                try:
+                    raw_score = max(0.0, 1.0 - float(payload.get("distance")))
+                except Exception:
+                    raw_score = 0.0
+            try:
+                relevance_raw = max(0.0, float(raw_score or 0.0))
+            except Exception:
+                relevance_raw = 0.0
+            payload["relevance_raw"] = relevance_raw
+            max_relevance_raw = max(max_relevance_raw, relevance_raw)
+            normalized_chunks.append(payload)
+
+        source_items: List[Dict[str, Any]] = []
+        seen_sources: set[str] = set()
+        for chunk in normalized_chunks:
+            metadata = chunk.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            doc_id = str(
+                chunk.get("doc_id") or metadata.get("doc_id") or chunk.get("filename") or ""
+            ).strip()
+            doc_name = str(
+                chunk.get("filename")
+                or metadata.get("filename")
+                or metadata.get("source")
+                or doc_id
+            ).strip()
+            source_key = f"{doc_id}:{doc_name}"
+            if not doc_name and not doc_id:
+                continue
+            if source_key in seen_sources:
+                continue
+            seen_sources.add(source_key)
+
+            relevance_raw = float(chunk.get("relevance_raw") or 0.0)
+            if max_relevance_raw > 0.0:
+                relevance = relevance_raw / max_relevance_raw
+            else:
+                relevance = relevance_raw
+            relevance = max(0.0, min(1.0, relevance))
+
+            content = str(chunk.get("content") or "").strip()
+            source_items.append(
+                {
+                    "document_id": doc_id or doc_name,
+                    "document_name": doc_name or doc_id,
+                    "relevance": round(relevance, 6),
+                    "relevance_raw": round(relevance_raw, 6),
+                    "profile_score": float(chunk.get("profile_score") or 0.0),
+                    "content": content[:400],
+                }
+            )
+
+        if not source_items:
             raise RuntimeError("RAG returned no grounded sources")
 
-        highlights: List[str] = []
-        for idx, chunk in enumerate(chunks[:3], 1):
-            text = str(chunk.get("content") or "").strip().replace("\n", " ")
-            if not text:
+        context_blocks: List[str] = []
+        for idx, item in enumerate(source_items[: max(top_k, 3)], 1):
+            if not item["content"]:
                 continue
-            highlights.append(f"{idx}. {text[:260]}")
-        if not highlights:
+            context_blocks.append(
+                f"[{idx}] source={item['document_name']}\n{item['content']}"
+            )
+        if not context_blocks:
             raise RuntimeError("RAG contexts are empty after retrieval")
 
-        cited_answer = (
-            "Based on retrieved construction knowledge:\n"
-            + "\n".join(highlights)
-            + f"\n\n[sources: {', '.join(sources)}]"
+        profile_context_limit = max(1, int(settings.document_profile_context_limit))
+        profile_snippets = DocumentProfileService.to_prompt_snippets(
+            document_profiles,
+            max_items=profile_context_limit,
         )
+        document_profile_text = "\n\n".join(profile_snippets) if profile_snippets else "(none)"
+
+        history_lines: List[str] = []
+        for record in (context.interaction_history or [])[-3:]:
+            if not isinstance(record, dict):
+                continue
+            user_query = str(record.get("user_query") or "").strip()
+            agent_response = str(record.get("agent_response") or "").strip()
+            if user_query:
+                history_lines.append(f"User: {user_query[:220]}")
+            if agent_response:
+                history_lines.append(f"Assistant: {agent_response[:220]}")
+        history_text = "\n".join(history_lines) if history_lines else "(none)"
+        retrieved_chunks_text = "\n\n".join(context_blocks)
+        suggested_questions = self._build_suggested_questions(
+            query=query,
+            source_items=source_items,
+            profiles=document_profiles,
+        )
+
+        prompt = (
+            "You are a construction-domain RAG assistant.\n"
+            "Use only the retrieved context to answer the user.\n"
+            "Rules:\n"
+            "1. Answer directly and do not restate the question.\n"
+            "2. If context is insufficient, state what is missing.\n"
+            "3. Cite evidence with [1], [2], ... based on retrieved chunks.\n"
+            "4. Keep the answer concise and factual.\n\n"
+            f"Conversation history:\n{history_text}\n\n"
+            f"Document profiles:\n{document_profile_text}\n\n"
+            f"User question:\n{query}\n\n"
+            f"Retrieved chunks:\n{retrieved_chunks_text}\n\n"
+            "Final answer:"
+        )
+
+        temperature_raw = parameters.get("temperature")
+        max_tokens_raw = parameters.get("max_tokens")
+        try:
+            temperature = float(temperature_raw) if temperature_raw is not None else 0.2
+        except Exception:
+            temperature = 0.2
+        try:
+            max_tokens = int(max_tokens_raw) if max_tokens_raw is not None else 900
+        except Exception:
+            max_tokens = 900
+
+        llm_answer = ""
+        try:
+            llm_answer = await asyncio.to_thread(
+                rag.llm_client.generate,
+                prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except Exception as exc:
+            logger.warning("RAG generation failed, falling back to extractive answer: %s", exc)
+
+        cited_answer = str(llm_answer or "").strip()
+        if not cited_answer:
+            highlight_lines: List[str] = []
+            for idx, block in enumerate(context_blocks[:3], 1):
+                preview = block.split("\n", 1)[-1].replace("\n", " ").strip()
+                if preview:
+                    highlight_lines.append(f"{idx}. {preview[:260]}")
+            cited_answer = (
+                "Retrieved evidence was found, but generation degraded. "
+                "Key evidence:\n"
+                + "\n".join(highlight_lines)
+            ).strip()
+
         return {
             "response": cited_answer,
             "metadata": {
-                "source_count": len(sources),
-                "sources": sources,
+                "source_count": len(source_items),
+                "sources": source_items[:5],
                 "retrieved_count": len(chunks),
+                "generation_mode": "rag_grounded_llm",
+                "retrieval_queries": retrieval_queries,
+                "retrieval_query_count": len(retrieval_queries),
+                "query_rewrite_used": len(retrieval_queries) > 1,
+                "profile_boost_used": bool(document_profiles),
+                "document_profiles": document_profiles[:profile_context_limit],
+                "suggested_questions": suggested_questions,
             },
         }
 
@@ -1013,7 +1525,11 @@ class IntentClassificationWorkflow:
         normalized_params = parameters if isinstance(parameters, dict) else {}
 
         if agent_type in {AgentType.RAG_AGENT, AgentType.GENERAL_AGENT}:
-            return await self._dispatch_rag_query(query=query, parameters=normalized_params)
+            return await self._dispatch_rag_query(
+                query=query,
+                context=context,
+                parameters=normalized_params,
+            )
         if agent_type == AgentType.DATA_ANALYSIS_AGENT:
             return await self._dispatch_data_analysis_query(query=query, context=context)
         if agent_type == AgentType.DOCUMENT_PROCESSING_AGENT:
