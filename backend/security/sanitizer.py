@@ -64,4 +64,9 @@ def sanitize_identifier(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} contains invalid path characters.",
         )
+    if "\x00" in sanitized or "%00" in sanitized.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} contains invalid null byte.",
+        )
     return sanitized
