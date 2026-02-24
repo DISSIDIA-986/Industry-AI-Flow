@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { workflowApi, realApiService } from '@/lib/api-client'
 import { websocketService, type QueryResponseData } from '@/lib/websocket-service'
+import { buildQuickTipsFromDocuments, parsePinnedQuickTips } from '@/lib/workflow-quick-tips'
 
 interface Message {
   id: string
@@ -21,7 +22,66 @@ interface Message {
     relevance: number
     content: string
   }>
+  suggestedQuestions?: string[]
   metadata?: Record<string, unknown>
+}
+
+function createWorkflowSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `wf-${crypto.randomUUID()}`
+  }
+  return `wf-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+const defaultQuickPrompts = [
+  'Summarize the key compliance requirements from the uploaded construction documents and cite evidence.',
+  'Generate a site safety inspection checklist based on the current knowledge base.',
+  'Compare two core standards in the indexed documents and highlight conflicts or gaps.',
+  'List the highest-risk compliance issues that could delay construction approval.',
+  'Create a pre-construction quality-control checklist grounded in the indexed documents.',
+]
+
+const pinnedQuickPrompts = parsePinnedQuickTips(
+  process.env.NEXT_PUBLIC_DEMO_PINNED_QUICK_TIPS,
+  defaultQuickPrompts.length,
+)
+
+function extractSuggestedQuestions(metadata: unknown): string[] | undefined {
+  if (!metadata || typeof metadata !== 'object') {
+    return undefined
+  }
+  const payload = metadata as Record<string, unknown>
+  const agentExecution =
+    payload.agent_execution && typeof payload.agent_execution === 'object'
+      ? (payload.agent_execution as Record<string, unknown>)
+      : undefined
+  const raw = payload.suggested_questions ?? agentExecution?.suggested_questions
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const normalized = raw
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length > 0)
+  return normalized.length > 0 ? normalized.slice(0, 5) : undefined
+}
+
+function buildFallbackSuggestedQuestions(
+  query: string,
+  sourceName?: string,
+): string[] {
+  const normalizedQuery = query.trim().replace(/\s+/g, ' ')
+  const shortQuery = normalizedQuery.length > 72
+    ? `${normalizedQuery.slice(0, 72)}...`
+    : normalizedQuery
+  const sourceLabel = sourceName && sourceName.trim().length > 0
+    ? sourceName.trim()
+    : 'the referenced documents'
+
+  return [
+    `Which section in ${sourceLabel} most directly supports this answer?`,
+    `What assumptions should I validate next for "${shortQuery}"?`,
+    `Can you provide a step-by-step checklist to execute this recommendation?`,
+  ]
 }
 
 export default function WorkflowChatPage() {
@@ -38,6 +98,11 @@ export default function WorkflowChatPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
   const [useWebSocket, setUseWebSocket] = useState(false)
+  const [quickPrompts, setQuickPrompts] = useState<string[]>(
+    pinnedQuickPrompts ?? defaultQuickPrompts,
+  )
+  const [sessionId] = useState<string>(createWorkflowSessionId)
+  const pendingQueryRef = useRef<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
 
@@ -56,6 +121,34 @@ export default function WorkflowChatPage() {
     // Check every 30 secondsAPIstate
     const interval = setInterval(checkApiHealth, 30000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (pinnedQuickPrompts && pinnedQuickPrompts.length > 0) {
+      return
+    }
+
+    let cancelled = false
+
+    const loadDocumentAwareQuickTips = async () => {
+      try {
+        const docs = await realApiService.getDocuments()
+        if (cancelled) {
+          return
+        }
+
+        const generated = buildQuickTipsFromDocuments(docs, defaultQuickPrompts)
+        setQuickPrompts((prev) => (prev === defaultQuickPrompts ? generated : prev))
+      } catch (error) {
+        console.warn('Failed to build document-aware quick tips:', error)
+      }
+    }
+
+    loadDocumentAwareQuickTips()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // WebSocketConnection management
@@ -78,15 +171,20 @@ export default function WorkflowChatPage() {
     
     // Listen for query responses
     const unsubscribeResponse = websocketService.onMessage('query_response', (data: QueryResponseData) => {
+      const suggestedQuestions =
+        extractSuggestedQuestions(data.metadata) ??
+        buildFallbackSuggestedQuestions(pendingQueryRef.current)
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.response,
         sender: 'ai',
         timestamp: new Date(data.timestamp),
+        suggestedQuestions,
         metadata: data.metadata
       }
       
       setMessages(prev => [...prev, aiMessage])
+      setQuickPrompts(suggestedQuestions)
       setLoading(false)
     })
     
@@ -104,14 +202,6 @@ export default function WorkflowChatPage() {
     }
   }, [useWebSocket])
 
-  const quickPrompts = [
-    'Estimating the cost risk of a 20-story office building in Toronto',
-    'What are the possible causes of cost overruns on medical hospital projects?',
-    'Analyze material cost trends for residential projects',
-    'Generate a risk assessment report for a construction project',
-    'Compare the cost-effectiveness of different construction methods'
-  ]
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -122,10 +212,12 @@ export default function WorkflowChatPage() {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
+    const queryText = input.trim()
+    pendingQueryRef.current = queryText
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: queryText,
       sender: 'user',
       timestamp: new Date()
     }
@@ -137,25 +229,47 @@ export default function WorkflowChatPage() {
     try {
       if (useWebSocket && wsStatus === 'connected') {
         // useWebSocketSend inquiry
-        const sent = websocketService.sendChatMessage(input)
+        const sent = websocketService.sendChatMessage(queryText)
         if (!sent) {
           throw new Error('WebSocketSending failed')
         }
         // WebSocketResponses will be handled via event listeners
       } else {
         // useHTTP APISend inquiry
-        const response = await workflowApi.sendQuery({ query: input })
+        const response = await workflowApi.sendQuery(
+          {
+            query: queryText,
+            session_id: sessionId,
+            thread_id: sessionId,
+          },
+          {
+            userId: user?.id,
+          },
+        )
         
+        const suggestedQuestions =
+          (response.suggested_questions && response.suggested_questions.length > 0)
+            ? response.suggested_questions
+            : buildFallbackSuggestedQuestions(
+                queryText,
+                response.sources && response.sources.length > 0
+                  ? response.sources[0].document_name
+                  : undefined,
+              )
+
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: response.response,
           sender: 'ai',
           timestamp: new Date(),
           intent: response.intent,
-          sources: response.sources
+          sources: response.sources,
+          suggestedQuestions,
+          metadata: response.metadata
         }
 
         setMessages(prev => [...prev, aiMessage])
+        setQuickPrompts(suggestedQuestions)
         setLoading(false)
       }
     } catch (error) {
@@ -184,6 +298,34 @@ export default function WorkflowChatPage() {
     }
   }
 
+  const wsStatusDotClass =
+    wsStatus === 'connected'
+      ? 'bg-green-500'
+      : wsStatus === 'connecting'
+      ? 'bg-yellow-500'
+      : 'bg-gray-400'
+
+  const wsStatusLabel =
+    wsStatus === 'connected'
+      ? 'Connected'
+      : wsStatus === 'connecting'
+      ? 'Connecting...'
+      : 'Disconnected (HTTP fallback active)'
+
+  const wsBannerClass =
+    wsStatus === 'connected'
+      ? 'bg-green-50 text-green-800 border border-green-200'
+      : wsStatus === 'connecting'
+      ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+      : 'bg-blue-50 text-blue-800 border border-blue-200'
+
+  const wsBannerText =
+    wsStatus === 'connected'
+      ? 'WebSocket real-time channel is active.'
+      : wsStatus === 'connecting'
+      ? 'Connecting to WebSocket service...'
+      : 'WebSocket service is unavailable. Switched to HTTP API automatically; queries continue to work.'
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
       <div className="mb-6">
@@ -207,13 +349,9 @@ export default function WorkflowChatPage() {
               >
                 {useWebSocket ? 'WebSocket: open' : 'WebSocket: close'}
               </button>
-              <div className={`w-2 h-2 rounded-full ${
-                wsStatus === 'connected' ? 'bg-green-500' :
-                wsStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
-              }`}></div>
+              <div className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}></div>
               <span className="text-xs text-gray-600">
-                {wsStatus === 'connected' ? 'Connected' :
-                 wsStatus === 'connecting' ? 'Connecting...' : 'Not connected'}
+                {wsStatusLabel}
               </span>
             </div>
             
@@ -233,18 +371,8 @@ export default function WorkflowChatPage() {
         
         {/* WebSocketStatus prompt */}
         {useWebSocket && (
-          <div className={`mt-3 p-3 rounded-lg text-sm ${
-            wsStatus === 'connected' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : wsStatus === 'connecting'
-              ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {wsStatus === 'connected' 
-              ? '✅ WebSocketLive connection is enabled and messages will be pushed in real time' 
-              : wsStatus === 'connecting'
-              ? '🔄 ConnectingWebSocketServe...'
-              : '❌ WebSocketConnection failed, automatically switched toHTTP API'}
+          <div className={`mt-3 p-3 rounded-lg text-sm ${wsBannerClass}`}>
+            {wsBannerText}
           </div>
         )}
       </div>
@@ -301,6 +429,26 @@ export default function WorkflowChatPage() {
                         </div>
                       </div>
                     )}
+
+                    {message.sender === 'ai' &&
+                      message.suggestedQuestions &&
+                      message.suggestedQuestions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
+                          <div className="text-sm font-medium mb-2">Suggested follow-up questions:</div>
+                          <div className="flex flex-wrap gap-2">
+                            {message.suggestedQuestions.map((question, index) => (
+                              <button
+                                key={`${message.id}-suggestion-${index}`}
+                                type="button"
+                                onClick={() => handleQuickPrompt(question)}
+                                className="text-xs px-3 py-1.5 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 border border-gray-300 text-gray-700 transition"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     
                     <div
                       className={`text-xs mt-3 ${

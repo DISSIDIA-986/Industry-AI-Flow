@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { realApiService } from '@/lib/real-api-client'
-import type { RealDocumentUploadResponse } from '@/lib/real-api-client'
+import type { RealDocumentListResponse } from '@/lib/real-api-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,11 +21,37 @@ interface Document {
   size: string
   uploadedAt: Date
   status: 'processed' | 'processing' | 'error'
+  source: 'uploaded' | 'knowledge_base'
+  chunkCount?: number
+}
+
+const ALLOW_DOCUMENTS_MOCK_FALLBACK =
+  process.env.NEXT_PUBLIC_ALLOW_DOCUMENTS_MOCK_FALLBACK === 'true'
+
+function normalizeDocumentStatus(
+  rawStatus: RealDocumentListResponse['status'],
+): Document['status'] {
+  const status = String(rawStatus || '').toLowerCase()
+  if (status === 'processed' || status === 'completed') {
+    return 'processed'
+  }
+  if (status === 'processing' || status === 'pending') {
+    return 'processing'
+  }
+  return 'error'
+}
+
+function normalizeDocumentSource(
+  rawSource: RealDocumentListResponse['source'],
+): Document['source'] {
+  return String(rawSource || '').toLowerCase() === 'vector_index'
+    ? 'knowledge_base'
+    : 'uploaded'
 }
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([])
-  const [realDocuments, setRealDocuments] = useState<RealDocumentUploadResponse[]>([])
+  const [realDocuments, setRealDocuments] = useState<RealDocumentListResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [uploading, setUploading] = useState(false)
@@ -38,21 +64,20 @@ export default function DocumentsPage() {
   // Load document list
   useEffect(() => {
     loadDocuments()
-    checkApiHealth()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const checkApiHealth = async () => {
-    try {
-      const health = await realApiService.checkHealth()
-      setApiStatus(health.status === 'ok' ? 'connected' : 'disconnected')
-    } catch {
-      setApiStatus('disconnected')
-    }
-  }
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
+      const health = await realApiService.checkHealth()
+      const connected = health.status === 'ok'
+      setApiStatus(connected ? 'connected' : 'disconnected')
+      if (!connected) {
+        setRealDocuments([])
+        setDocuments(ALLOW_DOCUMENTS_MOCK_FALLBACK ? getMockDocuments() : [])
+        return
+      }
+
       // try from realityAPILoad document
       const realDocs = await realApiService.getDocuments()
       setRealDocuments(realDocs)
@@ -60,23 +85,30 @@ export default function DocumentsPage() {
       // Convert to front-end format
       const formattedDocs: Document[] = realDocs.map(doc => ({
         id: doc.id,
-        name: doc.filename,
-        type: getFileType(doc.filename),
-        size: formatFileSize(doc.size),
-        uploadedAt: new Date(doc.upload_time),
-        status: doc.status as 'processed' | 'processing' | 'error'
+        name: String(doc.filename || doc.name || 'document'),
+        type: String(doc.type || getFileType(String(doc.filename || doc.name || ''))),
+        size: formatFileSize(Number(doc.size || 0)),
+        uploadedAt: new Date(String(doc.upload_time || doc.uploaded_at || new Date().toISOString())),
+        status: normalizeDocumentStatus(doc.status),
+        source: normalizeDocumentSource(doc.source),
+        chunkCount: Number(doc.chunk_count || 0) || undefined,
       }))
       
       setDocuments(formattedDocs)
       
-      // If real documents are not available, use simulated data
-      if (formattedDocs.length === 0) {
+      // Optional local fallback for visual demos only.
+      if (formattedDocs.length === 0 && ALLOW_DOCUMENTS_MOCK_FALLBACK) {
         setDocuments(getMockDocuments())
       }
     } catch (error) {
       console.error('Failed to load document:', error)
-      // Use simulated data asfallback
-      setDocuments(getMockDocuments())
+      setApiStatus('disconnected')
+      if (ALLOW_DOCUMENTS_MOCK_FALLBACK) {
+        setDocuments(getMockDocuments())
+      } else {
+        setDocuments([])
+      }
+      setRealDocuments([])
     } finally {
       setLoading(false)
     }
@@ -89,7 +121,8 @@ export default function DocumentsPage() {
       type: 'PDF',
       size: '2.4 MB',
       uploadedAt: new Date('2026-02-13'),
-      status: 'processed'
+      status: 'processed',
+      source: 'uploaded',
     },
     {
       id: '2',
@@ -97,7 +130,8 @@ export default function DocumentsPage() {
       type: 'Word',
       size: '1.8 MB',
       uploadedAt: new Date('2026-02-12'),
-      status: 'processed'
+      status: 'processed',
+      source: 'uploaded',
     },
     {
       id: '3',
@@ -105,7 +139,8 @@ export default function DocumentsPage() {
       type: 'PDF',
       size: '3.2 MB',
       uploadedAt: new Date('2026-02-11'),
-      status: 'processing'
+      status: 'processing',
+      source: 'uploaded',
     },
     {
       id: '4',
@@ -113,7 +148,8 @@ export default function DocumentsPage() {
       type: 'Excel',
       size: '4.1 MB',
       uploadedAt: new Date('2026-02-10'),
-      status: 'error'
+      status: 'error',
+      source: 'uploaded',
     }
   ]
 
@@ -241,7 +277,7 @@ export default function DocumentsPage() {
       case 'processing':
         return <Badge variant="warning">Processing</Badge>
       case 'error':
-        return <Badge variant="destructive">mistake</Badge>
+        return <Badge variant="destructive">Error</Badge>
       default:
         return <Badge variant="secondary">unknown</Badge>
     }
@@ -266,7 +302,7 @@ export default function DocumentsPage() {
               }`}></div>
               <span className="text-sm text-gray-600">
                 {apiStatus === 'connected' ? 'APIConnected' :
-                 apiStatus === 'disconnected' ? 'APINot connected (using mock data)' : 'examineAPIstate...'}
+                 apiStatus === 'disconnected' ? 'APINot connected' : 'examineAPIstate...'}
               </span>
             </div>
           </div>
@@ -351,7 +387,7 @@ export default function DocumentsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Processed</span>
                     <span className="font-medium">
-                      {realDocuments.filter(d => d.status === 'completed').length} indivual
+                      {realDocuments.filter(d => d.status === 'completed' || d.status === 'processed').length} indivual
                     </span>
                   </div>
                 </div>
@@ -400,6 +436,7 @@ export default function DocumentsPage() {
                           <TableHead>type</TableHead>
                           <TableHead>size</TableHead>
                           <TableHead>Upload time</TableHead>
+                          <TableHead>source</TableHead>
                           <TableHead>state</TableHead>
                           <TableHead className="text-right">operate</TableHead>
                         </TableRow>
@@ -421,6 +458,24 @@ export default function DocumentsPage() {
                             <TableCell>{document.size}</TableCell>
                             <TableCell>
                               {document.uploadedAt.toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <Badge
+                                  variant={
+                                    document.source === 'knowledge_base'
+                                      ? 'secondary'
+                                      : 'outline'
+                                  }
+                                >
+                                  {document.source === 'knowledge_base' ? 'Knowledge Base' : 'Uploaded'}
+                                </Badge>
+                                {document.source === 'knowledge_base' && document.chunkCount ? (
+                                  <div className="text-[11px] text-gray-500">
+                                    {document.chunkCount} chunks
+                                  </div>
+                                ) : null}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(document.status)}

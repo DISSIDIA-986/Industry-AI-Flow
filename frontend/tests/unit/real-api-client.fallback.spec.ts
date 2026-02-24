@@ -41,6 +41,35 @@ describe('real-api-client fallback contracts', () => {
     })
   })
 
+  it('returns empty document list when backend proxy is temporarily unavailable', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: 'fetch failed' }), {
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    const { realApiService } = await import('@/lib/real-api-client')
+
+    const docs = await realApiService.getDocuments()
+
+    expect(docs).toEqual([])
+  })
+
+  it('keeps auth errors explicit for document list', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: 'Invalid or missing API key' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    const { realApiService } = await import('@/lib/real-api-client')
+
+    await expect(realApiService.getDocuments()).rejects.toMatchObject({
+      status: 401,
+      message: 'Invalid or missing API key',
+    })
+  })
+
   it('returns synthetic query history only when synthetic fallback flag is enabled', async () => {
     process.env.NEXT_PUBLIC_ALLOW_SYNTHETIC_REAL_API_FALLBACK = 'true'
     vi.resetModules()

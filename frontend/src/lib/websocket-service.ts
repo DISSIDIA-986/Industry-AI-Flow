@@ -447,13 +447,24 @@ export class MockWebSocketService extends WebSocketService {
   }
 }
 
+function shouldUseMockWebSocket(explicitUseMock?: boolean): boolean {
+  if (typeof explicitUseMock === 'boolean') {
+    return explicitUseMock
+  }
+
+  const raw = String(process.env.NEXT_PUBLIC_USE_MOCK_WS || '')
+    .trim()
+    .toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+}
+
 // createWebSocketService instance
-export const createWebSocketService = (useMock: boolean = true): WebSocketService => {
-  if (useMock || process.env.NODE_ENV === 'development') {
+export const createWebSocketService = (useMock?: boolean): WebSocketService => {
+  if (shouldUseMockWebSocket(useMock)) {
     console.log('Use simulationWebSocketServe')
     return new MockWebSocketService()
   }
-  
+
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8001/ws'
   console.log('use realWebSocketServe:', wsUrl)
   return new WebSocketService(wsUrl)

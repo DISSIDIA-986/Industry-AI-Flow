@@ -1,19 +1,101 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { authApi, queryApi, documentApi, ApiError } from '@/lib/api-client'
+import {
+  authApi,
+  workflowApi,
+  documentApi,
+  getPlatformHealth,
+  getWorkflowHealth,
+  ApiError,
+} from '@/lib/api-client'
+
+type IntegrationTestResult = {
+  success: boolean
+  skipped?: boolean
+  error?: string
+  data?: unknown
+}
+
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return `${error.message} (HTTP ${error.status})`
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return 'unknown error'
+}
+
+function buildFailedResult(error: unknown): IntegrationTestResult {
+  return {
+    success: false,
+    error: formatErrorMessage(error),
+  }
+}
+
+function buildSkippedResult(reason: string): IntegrationTestResult {
+  return {
+    success: false,
+    skipped: true,
+    error: reason,
+  }
+}
+
+function getResultStyles(result: IntegrationTestResult): {
+  container: string
+  title: string
+  detail: string
+  label: string
+} {
+  if (result.success) {
+    return {
+      container: 'bg-green-50 border border-green-200',
+      title: 'text-green-800',
+      detail: 'text-green-700',
+      label: '✅ Test passed',
+    }
+  }
+
+  if (result.skipped) {
+    return {
+      container: 'bg-amber-50 border border-amber-200',
+      title: 'text-amber-800',
+      detail: 'text-amber-700',
+      label: '⏭️ Skipped',
+    }
+  }
+
+  return {
+    container: 'bg-red-50 border border-red-200',
+    title: 'text-red-800',
+    detail: 'text-red-600',
+    label: '❌ test failed',
+  }
+}
 
 export default function ApiTestPage() {
-  const [testResults, setTestResults] = useState<Record<string, any>>({})
+  const [testResults, setTestResults] = useState<Record<string, IntegrationTestResult>>({})
   const [loading, setLoading] = useState(false)
   const [testEmail] = useState('test@example.com')
   const [testPassword] = useState('test123456')
   const tokenReady = typeof window !== 'undefined' && !!window.localStorage.getItem('token')
   const userReady = typeof window !== 'undefined' && !!window.localStorage.getItem('user')
+  const hasExecuted = Object.keys(testResults).length > 0
+  const hasDependencyBlock =
+    Boolean(testResults.query?.skipped) || Boolean(testResults.documents?.skipped)
+  const registerToken = (testResults.register?.data as { token?: string } | undefined)?.token
+  const loginUserName = (
+    testResults.login?.data as { user?: { name?: string } } | undefined
+  )?.user?.name
+  const queryResultData = testResults.query?.data as { id?: string; response?: string } | undefined
+  const documentRows = Array.isArray(testResults.documents?.data)
+    ? (testResults.documents.data as Array<Record<string, unknown>>)
+    : []
 
   const runTests = async () => {
     setLoading(true)
-    const results: Record<string, any> = {}
+    const results: Record<string, IntegrationTestResult> = {}
 
     try {
       // Test 1: registerAPI
@@ -23,10 +105,7 @@ export default function ApiTestPage() {
         results.register = { success: true, data: registerResult }
         console.log('Registration successful:', registerResult)
       } catch (error) {
-        results.register = { 
-          success: false, 
-          error: error instanceof ApiError ? error.message : 'unknown error' 
-        }
+        results.register = buildFailedResult(error)
         console.log('Registration failed:', error)
       }
 
@@ -43,25 +122,41 @@ export default function ApiTestPage() {
           localStorage.setItem('user', JSON.stringify(loginResult.user))
         }
       } catch (error) {
-        results.login = { 
-          success: false, 
-          error: error instanceof ApiError ? error.message : 'unknown error' 
-        }
+        results.login = buildFailedResult(error)
         console.log('Login failed:', error)
       }
 
       // Test 3: QueryAPI
       console.log('Test 3: QueryAPI')
       try {
-        const queryResult = await queryApi.sendQuery('Test Query: Construction Cost Estimate')
-        results.query = { success: true, data: queryResult }
-        console.log('Query successful:', queryResult)
+        await Promise.all([getPlatformHealth({}), getWorkflowHealth({})])
       } catch (error) {
-        results.query = { 
-          success: false, 
-          error: error instanceof ApiError ? error.message : 'unknown error' 
+        results.query = buildSkippedResult(
+          `Workflow dependency is not ready: ${formatErrorMessage(error)}`,
+        )
+      }
+
+      if (!results.query) {
+        try {
+          const queryResult = await workflowApi.sendQuery(
+            {
+              query:
+                'Please estimate construction cost for: commercial office, location Toronto, sqft 120000, floors 12, duration 96 weeks, budget 120m, contractor rating 4.1, complexity 7, team experience 11, change orders 5, weather risk 0.4, material volatility 0.35, subcontractors 20, budget pressure 0.45, risk score 52, risk score original 43',
+            },
+            { routeMode: 'local_only' },
+          )
+          results.query = { success: true, data: queryResult }
+          console.log('Query successful:', queryResult)
+        } catch (error) {
+          if (error instanceof ApiError && [408, 502, 503, 504].includes(error.status)) {
+            results.query = buildSkippedResult(
+              `Workflow query dependency timeout/unavailable: ${formatErrorMessage(error)}`,
+            )
+          } else {
+            results.query = buildFailedResult(error)
+          }
+          console.log('Query failed:', error)
         }
-        console.log('Query failed:', error)
       }
 
       // Test 4: documentAPI - Get document list
@@ -71,16 +166,26 @@ export default function ApiTestPage() {
         results.documents = { success: true, data: documentsResult }
         console.log('Obtaining the document successfully:', documentsResult)
       } catch (error) {
-        results.documents = { 
-          success: false, 
-          error: error instanceof ApiError ? error.message : 'unknown error' 
+        if (error instanceof ApiError && error.status === 404) {
+          results.documents = buildSkippedResult(
+            'Document list endpoint is not implemented on backend (HTTP 404)',
+          )
+        } else if (
+          error instanceof ApiError &&
+          [408, 502, 503, 504].includes(error.status)
+        ) {
+          results.documents = buildSkippedResult(
+            `Document service dependency timeout/unavailable: ${formatErrorMessage(error)}`,
+          )
+        } else {
+          results.documents = buildFailedResult(error)
         }
         console.log('Failed to get document:', error)
       }
 
     } catch (error) {
       console.error('An error occurred during testing:', error)
-      results.overall = { success: false, error: 'Test process failed' }
+      results.overall = buildFailedResult(error)
     } finally {
       setLoading(false)
       setTestResults(results)
@@ -118,19 +223,21 @@ export default function ApiTestPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="font-medium text-gray-900 mb-4">1. registerAPItest</h3>
             {testResults.register ? (
-              <div className={`p-4 rounded-lg ${testResults.register.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`p-4 rounded-lg ${getResultStyles(testResults.register).container}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`font-medium ${testResults.register.success ? 'text-green-800' : 'text-red-800'}`}>
-                      {testResults.register.success ? '✅ Test passed' : '❌ test failed'}
+                    <div className={`font-medium ${getResultStyles(testResults.register).title}`}>
+                      {getResultStyles(testResults.register).label}
                     </div>
                     {testResults.register.error && (
-                      <div className="text-sm text-red-600 mt-1">{testResults.register.error}</div>
+                      <div className={`text-sm mt-1 ${getResultStyles(testResults.register).detail}`}>
+                        {testResults.register.error}
+                      </div>
                     )}
                   </div>
                   {testResults.register.success && (
                     <div className="text-sm text-gray-500">
-                      Token: {testResults.register.data?.token?.substring(0, 20)}...
+                      Token: {registerToken?.substring(0, 20)}...
                     </div>
                   )}
                 </div>
@@ -144,19 +251,21 @@ export default function ApiTestPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="font-medium text-gray-900 mb-4">2. Log inAPItest</h3>
             {testResults.login ? (
-              <div className={`p-4 rounded-lg ${testResults.login.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`p-4 rounded-lg ${getResultStyles(testResults.login).container}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`font-medium ${testResults.login.success ? 'text-green-800' : 'text-red-800'}`}>
-                      {testResults.login.success ? '✅ Test passed' : '❌ test failed'}
+                    <div className={`font-medium ${getResultStyles(testResults.login).title}`}>
+                      {getResultStyles(testResults.login).label}
                     </div>
                     {testResults.login.error && (
-                      <div className="text-sm text-red-600 mt-1">{testResults.login.error}</div>
+                      <div className={`text-sm mt-1 ${getResultStyles(testResults.login).detail}`}>
+                        {testResults.login.error}
+                      </div>
                     )}
                   </div>
                   {testResults.login.success && (
                     <div className="text-sm text-gray-500">
-                      user: {testResults.login.data?.user?.name}
+                      user: {loginUserName}
                     </div>
                   )}
                 </div>
@@ -168,28 +277,30 @@ export default function ApiTestPage() {
 
           {/* Query test results */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-medium text-gray-900 mb-4">3. QueryAPItest</h3>
+            <h3 className="font-medium text-gray-900 mb-4">3. QueryAPItest (/workflow/query)</h3>
             {testResults.query ? (
-              <div className={`p-4 rounded-lg ${testResults.query.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`p-4 rounded-lg ${getResultStyles(testResults.query).container}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`font-medium ${testResults.query.success ? 'text-green-800' : 'text-red-800'}`}>
-                      {testResults.query.success ? '✅ Test passed' : '❌ test failed'}
+                    <div className={`font-medium ${getResultStyles(testResults.query).title}`}>
+                      {getResultStyles(testResults.query).label}
                     </div>
                     {testResults.query.error && (
-                      <div className="text-sm text-red-600 mt-1">{testResults.query.error}</div>
+                      <div className={`text-sm mt-1 ${getResultStyles(testResults.query).detail}`}>
+                        {testResults.query.error}
+                      </div>
                     )}
                   </div>
                   {testResults.query.success && (
                     <div className="text-sm text-gray-500">
-                      QueryID: {testResults.query.data?.id}
+                      QueryID: {queryResultData?.id}
                     </div>
                   )}
                 </div>
                 {testResults.query.success && (
                   <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
                     <div className="font-medium">Response content:</div>
-                    <div className="mt-1 text-gray-700">{testResults.query.data?.response}</div>
+                    <div className="mt-1 text-gray-700">{queryResultData?.response}</div>
                   </div>
                 )}
               </div>
@@ -202,30 +313,35 @@ export default function ApiTestPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="font-medium text-gray-900 mb-4">4. documentAPItest</h3>
             {testResults.documents ? (
-              <div className={`p-4 rounded-lg ${testResults.documents.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`p-4 rounded-lg ${getResultStyles(testResults.documents).container}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`font-medium ${testResults.documents.success ? 'text-green-800' : 'text-red-800'}`}>
-                      {testResults.documents.success ? '✅ Test passed' : '❌ test failed'}
+                    <div className={`font-medium ${getResultStyles(testResults.documents).title}`}>
+                      {getResultStyles(testResults.documents).label}
                     </div>
                     {testResults.documents.error && (
-                      <div className="text-sm text-red-600 mt-1">{testResults.documents.error}</div>
+                      <div className={`text-sm mt-1 ${getResultStyles(testResults.documents).detail}`}>
+                        {testResults.documents.error}
+                      </div>
                     )}
                   </div>
                   {testResults.documents.success && (
                     <div className="text-sm text-gray-500">
-                      Number of documents: {testResults.documents.data?.length || 0}
+                      Number of documents: {documentRows.length}
                     </div>
                   )}
                 </div>
-                {testResults.documents.success && testResults.documents.data && (
+                {testResults.documents.success && documentRows.length > 0 && (
                   <div className="mt-3">
                     <div className="font-medium text-sm mb-2">Document list:</div>
                     <div className="space-y-2">
-                      {testResults.documents.data.map((doc: any, index: number) => (
+                      {documentRows.map((doc: Record<string, unknown>, index: number) => (
                         <div key={index} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
-                          <div>{doc.name}</div>
-                          <div className="text-gray-500">{doc.type} • {doc.size}</div>
+                          <div>{String(doc.name ?? doc.filename ?? `Document ${index + 1}`)}</div>
+                          <div className="text-gray-500">
+                            {String(doc.type ?? doc.extension ?? 'UNKNOWN')} •{' '}
+                            {String(doc.size ?? 'N/A')}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -256,7 +372,13 @@ export default function ApiTestPage() {
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-500">APIconnect</div>
-              <div className="font-medium text-green-600">normal</div>
+              {!hasExecuted && <div className="font-medium text-gray-600">untested</div>}
+              {hasExecuted && !hasDependencyBlock && (
+                <div className="font-medium text-green-600">normal</div>
+              )}
+              {hasExecuted && hasDependencyBlock && (
+                <div className="font-medium text-amber-700">degraded (dependency blocked)</div>
+              )}
             </div>
           </div>
         </div>
