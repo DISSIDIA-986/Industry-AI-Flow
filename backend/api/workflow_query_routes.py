@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends
@@ -59,6 +59,7 @@ class WorkflowQueryResponse(BaseModel):
     route_mode: str = Field(default="local_only")
     provider_used: Optional[str] = None
     response: Optional[str] = None
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
     prompt_meta: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     error: Optional[str] = None
@@ -75,8 +76,13 @@ async def _initialize_workflow_service() -> WorkflowRunner:
     from backend.services.prompt_manager import PromptManager
     from backend.services.routing_decision import RoutingDecisionEngine
 
-    pool = await get_database_pool()
-    prompt_manager = PromptManager(pool)
+    prompt_manager = None
+    try:
+        pool = await get_database_pool()
+        prompt_manager = PromptManager(pool)
+    except Exception as exc:
+        logger.warning("Workflow runner without prompt manager: %s", exc)
+
     llm_client = get_llm_client()
     context_manager = ContextManager(storage_backend="memory")
     intent_classifier = IntentClassifier(
@@ -90,6 +96,89 @@ async def _initialize_workflow_service() -> WorkflowRunner:
         routing_engine=routing_engine,
         prompt_manager=prompt_manager,
     )
+
+
+def _resolve_session_id(request: WorkflowQueryRequest, trace_id: str) -> str:
+    for candidate in (request.session_id, request.thread_id):
+        value = (candidate or "").strip()
+        if value:
+            return value
+
+    user_value = (request.user_id or "").strip()
+    if user_value:
+        return f"user:{user_value}"[:128]
+
+    return trace_id
+
+
+def _normalize_source_item(raw: Any) -> Optional[Dict[str, Any]]:
+    if isinstance(raw, str):
+        value = raw.strip()
+        if not value:
+            return None
+        return {
+            "document_id": value,
+            "document_name": value,
+            "relevance": 0.0,
+            "content": "",
+        }
+
+    if not isinstance(raw, dict):
+        return None
+
+    document_id = str(
+        raw.get("document_id")
+        or raw.get("doc_id")
+        or raw.get("source")
+        or raw.get("filename")
+        or ""
+    ).strip()
+    document_name = str(
+        raw.get("document_name")
+        or raw.get("filename")
+        or raw.get("source")
+        or document_id
+    ).strip()
+
+    if not document_id and not document_name:
+        return None
+
+    try:
+        relevance = float(raw.get("relevance") or raw.get("score") or 0.0)
+    except Exception:
+        relevance = 0.0
+
+    content = str(raw.get("content") or raw.get("text") or "").strip()
+    return {
+        "document_id": document_id or document_name,
+        "document_name": document_name or document_id,
+        "relevance": relevance,
+        "content": content,
+    }
+
+
+def _extract_sources(metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+    candidates: Any = None
+    agent_execution = metadata.get("agent_execution")
+    if isinstance(agent_execution, dict):
+        candidates = agent_execution.get("sources")
+    if candidates is None:
+        candidates = metadata.get("sources")
+    if not isinstance(candidates, list):
+        return []
+
+    normalized: List[Dict[str, Any]] = []
+    for item in candidates:
+        parsed = _normalize_source_item(item)
+        if parsed is not None:
+            normalized.append(parsed)
+
+    # Note: relevance/score values from hybrid_search.py are already
+    # normalized to [0, 1] via min-max scaling.  Do NOT re-normalize here
+    # as that would make the top result always 1.0 regardless of actual
+    # match quality.
+
+    return normalized
 
 
 async def get_workflow_runner() -> WorkflowRunner:
@@ -195,7 +284,7 @@ async def workflow_query(
 
     started = asyncio.get_running_loop().time()
     trace_id = str(uuid4())
-    session_id = request.session_id or trace_id
+    session_id = _resolve_session_id(request, trace_id)
     demo_mode_service = get_demo_mode_service()
     demo_state = demo_mode_service.get_state()
     effective_route_mode = demo_mode_service.resolve_route_mode(request.route_mode)
@@ -219,6 +308,7 @@ async def workflow_query(
             route_mode="scripted_replay",
             provider_used="scripted_replay",
             response=str(replay.get("response") or ""),
+            sources=[],
             prompt_meta=None,
             metadata=metadata,
             error=None,
@@ -302,6 +392,11 @@ async def workflow_query(
         )
 
     metadata = result.get("metadata") or {}
+    agent_execution = metadata.get("agent_execution")
+    if "suggested_questions" not in metadata and isinstance(agent_execution, dict):
+        candidate_questions = agent_execution.get("suggested_questions")
+        if isinstance(candidate_questions, list):
+            metadata["suggested_questions"] = candidate_questions
     metadata["trace_id"] = trace_id
     metadata["session_id"] = session_id
     metadata["demo_mode"] = demo_state["mode"]
@@ -333,6 +428,7 @@ async def workflow_query(
     )
     provider_used = metadata.get("provider_used")
     prompt_meta = metadata.get("prompt_meta")
+    sources = _extract_sources(metadata)
 
     response = WorkflowQueryResponse(
         success=bool(result.get("success")),
@@ -342,6 +438,7 @@ async def workflow_query(
         route_mode=str(route_mode),
         provider_used=provider_used,
         response=result.get("agent_response"),
+        sources=sources,
         prompt_meta=prompt_meta if isinstance(prompt_meta, dict) else None,
         metadata=metadata,
         error=result.get("error"),

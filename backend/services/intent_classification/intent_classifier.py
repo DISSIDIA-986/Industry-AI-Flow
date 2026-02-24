@@ -222,36 +222,37 @@ class IntentClassifier:
 
             # 4. ENPrompt(EN)
             prompt_prefix = ""
-            try:
-                _, prompt_content = await self.prompt_manager.get_prompt(
-                    name="intent_classification",
-                    category="Intent",
-                    context={
-                        "query_length": len(processed_query),
-                        "has_uploaded_files": len(context.uploaded_files) > 0,
-                        "session_depth": context.query_count_in_session,
-                    },
-                    variables={
-                        "user_query": processed_query,
-                        "session_topic": context.session_topic,
-                        "recent_intents": ", ".join(context.recent_intents[-3:])
-                        if context.recent_intents
-                        else "",
-                        "uploaded_files": ", ".join(
-                            [f["name"] for f in context.uploaded_files]
-                        )
-                        if context.uploaded_files
-                        else "EN",
-                        "user_preferences": json.dumps(
-                            context.user_preferences, ensure_ascii=False
-                        ),
-                    },
-                )
-                prompt_prefix = prompt_content
-            except Exception as prompt_exc:
-                logger.warning(
-                    "ENPromptEN,EN: %s", prompt_exc
-                )
+            if self.prompt_manager is not None:
+                try:
+                    _, prompt_content = await self.prompt_manager.get_prompt(
+                        name="intent_classification",
+                        category="Intent",
+                        context={
+                            "query_length": len(processed_query),
+                            "has_uploaded_files": len(context.uploaded_files) > 0,
+                            "session_depth": context.query_count_in_session,
+                        },
+                        variables={
+                            "user_query": processed_query,
+                            "session_topic": context.session_topic,
+                            "recent_intents": ", ".join(context.recent_intents[-3:])
+                            if context.recent_intents
+                            else "",
+                            "uploaded_files": ", ".join(
+                                [f["name"] for f in context.uploaded_files]
+                            )
+                            if context.uploaded_files
+                            else "EN",
+                            "user_preferences": json.dumps(
+                                context.user_preferences, ensure_ascii=False
+                            ),
+                        },
+                    )
+                    prompt_prefix = prompt_content
+                except Exception as prompt_exc:
+                    logger.warning(
+                        "ENPromptEN,EN: %s", prompt_exc
+                    )
 
             # 5. ENLLMEN
             final_prompt = (
@@ -381,33 +382,42 @@ class IntentClassifier:
         Returns:
             str: EN
         """
-        request_parts = []
-
-        # EN
-        request_parts.append(f"[EN]")
-        request_parts.append(query)
-
-        # EN
-        if context.session_topic:
-            request_parts.append(f"[EN]")
-            request_parts.append(context.session_topic)
-
-        if context.recent_intents:
-            request_parts.append(f"[EN]")
-            request_parts.append(", ".join(context.recent_intents[-3:]))
-
-        if context.uploaded_files:
-            file_names = [f["name"] for f in context.uploaded_files]
-            request_parts.append(f"[EN]")
-            request_parts.append(", ".join(file_names))
-
-        if context.user_preferences:
-            request_parts.append(f"[EN]")
-            request_parts.append(
-                json.dumps(context.user_preferences, ensure_ascii=False)
+        recent_intents = (
+            ", ".join(context.recent_intents[-3:]) if context.recent_intents else "(none)"
+        )
+        uploaded_files = (
+            ", ".join(
+                str(item.get("name") or "")
+                for item in context.uploaded_files
+                if isinstance(item, dict)
             )
+            if context.uploaded_files
+            else "(none)"
+        )
+        user_preferences = (
+            json.dumps(context.user_preferences, ensure_ascii=False)
+            if context.user_preferences
+            else "{}"
+        )
 
-        return "\n\n".join(request_parts)
+        return (
+            "You are an intent classifier for an enterprise RAG workflow.\n"
+            "Classify the user request into one of the exact intents:\n"
+            "- knowledge_retrieval\n"
+            "- data_analysis\n"
+            "- cost_estimation\n"
+            "- document_processing\n"
+            "- code_execution\n"
+            "- unclear_intent\n\n"
+            "Return ONLY strict JSON with keys:\n"
+            "intent, confidence, reasoning, keywords, context_clues, suggested_action, uncertainty_factors.\n"
+            "confidence must be a number between 0 and 1.\n\n"
+            f"Query:\n{query}\n\n"
+            f"Session topic: {context.session_topic or '(none)'}\n"
+            f"Recent intents: {recent_intents}\n"
+            f"Uploaded files: {uploaded_files}\n"
+            f"User preferences: {user_preferences}\n"
+        )
 
     async def _call_llm_for_classification(self, prompt: str) -> str:
         """
@@ -420,12 +430,20 @@ class IntentClassifier:
             str: LLMEN
         """
         try:
-            # ENLLM
-            # EN
+            if self.llm_client is not None and hasattr(self.llm_client, "generate"):
+                response = await asyncio.to_thread(
+                    self.llm_client.generate,
+                    prompt,
+                    temperature=0.0,
+                    max_tokens=320,
+                )
+                if isinstance(response, str) and response.strip():
+                    return response
+                logger.warning("Intent LLM classification returned empty text, fallback to heuristic simulator")
             return await self._simulate_llm_response(prompt)
         except Exception as e:
-            logger.error(f"LLMEN: {e}")
-            raise
+            logger.warning("LLMEN,EN: %s", e)
+            return await self._simulate_llm_response(prompt)
 
     async def _simulate_llm_response(self, prompt: str) -> str:
         """
@@ -530,7 +548,7 @@ class IntentClassifier:
                     raise ValueError("ENJSONEN")
 
             # ENIntentResult
-            intent_value = data.get("intent", "unclear_intent")
+            intent_value = self._normalize_intent_value(data.get("intent", "unclear_intent"))
             intent = (
                 IntentType(intent_value)
                 if intent_value in [e.value for e in IntentType]
@@ -563,6 +581,38 @@ class IntentClassifier:
                 confidence=0.0,
                 reasoning=f"EN: {str(e)}",
             )
+
+    @staticmethod
+    def _normalize_intent_value(raw: Any) -> str:
+        value = str(raw or "").strip().lower()
+        if not value:
+            return "unclear_intent"
+
+        aliases = {
+            "knowledge": "knowledge_retrieval",
+            "knowledge retrieval": "knowledge_retrieval",
+            "knowledge-retrieval": "knowledge_retrieval",
+            "rag": "knowledge_retrieval",
+            "retrieval": "knowledge_retrieval",
+            "analysis": "data_analysis",
+            "data analysis": "data_analysis",
+            "data-analysis": "data_analysis",
+            "cost estimate": "cost_estimation",
+            "cost estimation": "cost_estimation",
+            "cost-estimation": "cost_estimation",
+            "document": "document_processing",
+            "doc_processing": "document_processing",
+            "document processing": "document_processing",
+            "document-processing": "document_processing",
+            "code": "code_execution",
+            "coding": "code_execution",
+            "execution": "code_execution",
+            "code execution": "code_execution",
+            "code-execution": "code_execution",
+            "unclear": "unclear_intent",
+            "unknown": "unclear_intent",
+        }
+        return aliases.get(value, value)
 
     async def _post_process_result(
         self, result: IntentResult, original_query: str, context: QueryContext

@@ -22,18 +22,8 @@ _COST_PATTERNS = (
 
 def _heuristic_intent(query: str) -> str:
     text = (query or "").strip().lower()
-    if any(
-        token in text
-        for token in (
-            "python",
-            "script",
-            "execute",
-            "run code",
-            "code execution",
-            "program",
-        )
-    ):
-        return "code_execution"
+    # Cost estimation checked FIRST — higher business priority and avoids
+    # mis-routing "predict cost using python" to code_execution.
     if any(
         token in text
         for token in (
@@ -52,6 +42,18 @@ def _heuristic_intent(query: str) -> str:
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"
+    if any(
+        token in text
+        for token in (
+            "python",
+            "script",
+            "execute",
+            "run code",
+            "code execution",
+            "program",
+        )
+    ):
+        return "code_execution"
     if any(
         token in text
         for token in (
@@ -117,6 +119,7 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
     if classifier is None:
         state["intent"] = _heuristic_intent(query)
         metadata["intent_source"] = "heuristic"
+        metadata["intent_confidence"] = 0.85
         return state
 
     result = await _call_classifier(classifier, query, metadata)
@@ -138,4 +141,5 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
 
     state["intent"] = _heuristic_intent(query)
     metadata["intent_source"] = "heuristic"
+    metadata["intent_confidence"] = 0.85
     return state

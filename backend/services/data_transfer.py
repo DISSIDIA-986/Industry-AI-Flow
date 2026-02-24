@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -309,7 +310,7 @@ class DataFileTransfer:
                 "port": settings.postgres_port,
                 "database": settings.postgres_db,
                 "user": settings.postgres_user or "current_user",
-                "password": settings.postgres_password or "",
+                "password_env": "POSTGRES_PASSWORD",
             },
             "table_info": {
                 "table_name": table_name,
@@ -317,27 +318,21 @@ class DataFileTransfer:
                 "file_size": file_info["size_mb"],
                 "transfer_timestamp": pd.Timestamp.now().isoformat(),
             },
-            "access_code_template": f"""
-# EN
-import pandas as pd
-from sqlalchemy import create_engine
-
-# EN
-connection_string = "postgresql://{user}:{password}@{host}:{port}/{database}"
-engine = create_engine(connection_string)
-
-# EN
-df = pd.read_sql("SELECT * FROM {table_name}", engine)
-print(f"EN: {{df.shape}}")
-print("EN5EN:")
-print(df.head())
-""".format(
-                user=settings.postgres_user or "current_user",
-                password=settings.postgres_password or "",
-                host=settings.postgres_host,
-                port=settings.postgres_port,
-                database=settings.postgres_db,
-                table_name=table_name,
+            "access_code_template": (
+                "# Database access template\n"
+                "import os\n"
+                "import pandas as pd\n"
+                "from sqlalchemy import create_engine\n"
+                "\n"
+                "# Read credentials from env\n"
+                f"connection_string = \"postgresql://{settings.postgres_user or 'current_user'}"
+                f":\" + os.environ.get('POSTGRES_PASSWORD', '') + \""
+                f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}\"\n"
+                "engine = create_engine(connection_string)\n"
+                "\n"
+                f"df = pd.read_sql(\"SELECT * FROM {table_name}\", engine)\n"
+                "print(f\"Loaded: {df.shape}\")\n"
+                "print(df.head())\n"
             ),
         }
 
@@ -486,11 +481,18 @@ except Exception as e:
                 # EN
                 if self.db_engine and text is not None:
                     table_name = transfer_result.get("transferred_path")
-                    if table_name:
+                    if table_name and re.match(r"^temp_data_[0-9a-f]{8}$", table_name):
                         with self.db_engine.connect() as conn:
-                            conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                            conn.execute(
+                                text("DROP TABLE IF EXISTS " + table_name)
+                            )
                             conn.commit()
                             logger.info(f"EN: {table_name}")
+                    elif table_name:
+                        logger.warning(
+                            "Refused to drop table with unexpected name: %s",
+                            table_name,
+                        )
 
                 # EN
                 config_file = transfer_result.get("config_file")
