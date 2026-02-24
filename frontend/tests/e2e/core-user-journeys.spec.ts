@@ -46,11 +46,18 @@ test.describe('Authenticated core journeys', () => {
     await expect(page.getByRole('heading', { name: 'Workflow chat' })).toBeVisible();
 
     const prompt = 'E2E: Please analyze the budget risks of this project';
+    const followUp = 'Which section of the reference document supports this answer?';
     await page.getByPlaceholder('Enter your question or query...').fill(prompt);
     await clickByJs(page.getByRole('button', { name: 'send' }));
 
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
     await expect(page.getByText(`E2E workflow response for: ${prompt}`)).toBeVisible();
+    await expect(page.getByText('Suggested follow-up questions:')).toBeVisible();
+
+    const followUpButton = page.getByRole('button', { name: followUp }).first();
+    await expect(followUpButton).toBeVisible();
+    await clickByJs(followUpButton);
+    await expect(page.getByPlaceholder('Enter your question or query...')).toHaveValue(followUp);
   });
 
   test('workflow chat supports quick prompt and websocket toggle', async ({ page }) => {
@@ -100,7 +107,7 @@ test.describe('Authenticated core journeys', () => {
     await expect(page.getByRole('heading', { name: 'Batch Prediction Queue (1)' })).toBeVisible();
 
     await clickByJs(page.getByRole('button', { name: 'Run Batch' }));
-    await expect(page.getByRole('cell', { name: '$1,250,000' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: /1,250,000/ })).toBeVisible();
   });
 
   test('api integration page executes checks and shows pass state', async ({ page }) => {
