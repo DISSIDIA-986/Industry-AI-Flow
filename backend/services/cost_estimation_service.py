@@ -640,6 +640,8 @@ class CostEstimationService:
             if row[col] not in levels[col]:
                 unknown_categories[col] = row[col]
 
+        confidence_degraded = bool(unknown_categories)
+
         return {
             "predicted_cost_overrun_pct": pred_overrun,
             "predicted_actual_cost_cad": pred_actual_cost,
@@ -653,6 +655,7 @@ class CostEstimationService:
                 "ape_quantile": ape_quantile,
             },
             "unknown_categories": unknown_categories,
+            "confidence_degraded": confidence_degraded,
         }
 
     def predict_batch(
