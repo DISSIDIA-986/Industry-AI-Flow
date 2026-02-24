@@ -29,6 +29,8 @@ def test_main_registers_versioned_alias_routes_for_core_endpoints() -> None:
     expected = {
         "/health",
         "/api/v1/health",
+        "/documents",
+        "/api/v1/documents",
         "/documents/upload",
         "/api/v1/documents/upload",
         "/data/upload",
