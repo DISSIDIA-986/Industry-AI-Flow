@@ -155,7 +155,15 @@ class DataAnalysisAgent:
         try:
             # EN
             if file_path.endswith(".csv"):
-                df = pd.read_csv(file_path)
+                df = None
+                for enc in ("utf-8", "utf-8-sig", "latin-1"):
+                    try:
+                        df = pd.read_csv(file_path, encoding=enc)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                if df is None:
+                    return {"error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."}
             elif file_path.endswith((".xlsx", ".xls")):
                 df = pd.read_excel(file_path)
             else:
@@ -307,9 +315,22 @@ ENPythonEN,EN.EN```python EN ```EN."""
         if matches:
             return matches[0].strip()
 
-        # EN,EN
-        if "import" in response and "print" in response:
-            return response.strip()
+        # Stricter fallback: only accept as raw code if it parses as valid
+        # Python and contains import statements (not just prose mentioning
+        # the words 'import' and 'print').
+        stripped = response.strip()
+        if stripped:
+            import ast
+            try:
+                tree = ast.parse(stripped)
+                has_import = any(
+                    isinstance(node, (ast.Import, ast.ImportFrom))
+                    for node in ast.walk(tree)
+                )
+                if has_import:
+                    return stripped
+            except SyntaxError:
+                pass
 
         return None
 
@@ -324,7 +345,7 @@ ENPythonEN,EN.EN```python EN ```EN."""
 
         # EN
         if any(keyword in question_lower for keyword in ["average", "EN", "mean"]):
-            return self._template_average(filename, dataset_metadata)
+            return self._template_average(filename, dataset_metadata, question)
 
         elif any(
             keyword in question_lower for keyword in ["max", "EN", "EN", "highest"]
@@ -364,14 +385,32 @@ print("\\nEN:")
 print(df.describe())
 """
 
-    def _template_average(self, filename: str, metadata: Dict) -> str:
+    @staticmethod
+    def _pick_relevant_column(numeric_cols: list[str], question: str) -> str:
+        """Pick the most relevant numeric column based on question keywords."""
+        question_lower = question.lower() if question else ""
+        for col in numeric_cols:
+            col_lower = col.lower()
+            # Check if any part of the column name appears in the question
+            col_parts = re.split(r"[_\-\s]+", col_lower)
+            if any(part in question_lower for part in col_parts if len(part) > 2):
+                return col
+        # Fallback: prefer columns with 'cost', 'price', 'amount', 'total'
+        priority_keywords = ["cost", "price", "amount", "total", "value", "salary", "revenue"]
+        for keyword in priority_keywords:
+            for col in numeric_cols:
+                if keyword in col.lower():
+                    return col
+        return numeric_cols[0]
+
+    def _template_average(self, filename: str, metadata: Dict, question: str = "") -> str:
         """EN"""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "mean" in col
         ]
 
         if numeric_cols:
-            target_col = numeric_cols[0]  # EN
+            target_col = self._pick_relevant_column(numeric_cols, question)
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
