@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     postgres_db: str = os.getenv("POSTGRES_DB", "ai_workflow")
     postgres_user: str = os.getenv(
         "POSTGRES_USER", ""
-    )  # 本地PostgreSQL留空使用当前用户
-    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # 本地PostgreSQL无密码
+    )  # Leave empty for local PostgreSQL (uses current user)
+    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # Leave empty for local PostgreSQL (no password)
 
     # 数据库连接池配置（P0修复：支持Prompt API）
     db_pool_min_size: int = int(os.getenv("DB_POOL_MIN_SIZE", "2"))
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     llama_context_size: int = int(os.getenv("LLAMA_CONTEXT_SIZE", "4096"))
     llama_threads: int = int(os.getenv("LLAMA_THREADS", str(os.cpu_count() or 8)))
     llama_batch_size: int = int(os.getenv("LLAMA_BATCH_SIZE", "512"))
-    llama_gpu_layers: int = int(os.getenv("LLAMA_GPU_LAYERS", "-1"))  # -1 = 全部使用GPU
+    llama_gpu_layers: int = int(os.getenv("LLAMA_GPU_LAYERS", "-1"))  # -1 = use all GPU layers
 
     # LLM后端选择
     llm_backend: str = os.getenv(
@@ -120,21 +120,21 @@ class Settings(BaseSettings):
     )
 
     # OCR (Phase 2: PaddleOCR配置)
-    ocr_lang: str = os.getenv("OCR_LANG", "en")  # 'en' 英文, 'ch' 中文, 'en+ch' 混合
+    ocr_lang: str = os.getenv("OCR_LANG", "en")  # 'en' English, 'ch' Chinese, 'en+ch' mixed
 
     # 代码执行配置
     code_execution_timeout: int = int(
         os.getenv("CODE_EXECUTION_TIMEOUT", "300")
-    )  # 执行超时（秒）
+    )  # Execution timeout (seconds)
     code_execution_memory_limit: str = os.getenv(
         "CODE_EXECUTION_MEMORY_LIMIT", "1G"
-    )  # 内存限制
+    )  # Memory limit
     code_execution_cpu_limit: str = os.getenv(
         "CODE_EXECUTION_CPU_LIMIT", "2"
-    )  # CPU限制
+    )  # CPU limit
     enable_docker_sandbox: bool = (
         os.getenv("ENABLE_DOCKER_SANDBOX", "true").lower() == "true"
-    )  # 是否启用Docker沙箱
+    )  # Whether to enable Docker sandbox
     code_execution_provider: str = os.getenv(
         "CODE_EXECUTION_PROVIDER", "docker"
     )  # docker | auto | ppio
@@ -152,10 +152,10 @@ class Settings(BaseSettings):
     ppio_verify_tls: bool = os.getenv("PPIO_VERIFY_TLS", "true").lower() == "true"
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
-    )  # Docker镜像名
+    )  # Docker image name
     temp_data_dir: str = os.getenv(
         "TEMP_DATA_DIR", "/tmp/luncheon_data"
-    )  # 临时数据目录
+    )  # Temporary data directory
     documents_storage_dir: str = os.getenv(
         "DOCUMENTS_STORAGE_DIR", "workspace/uploads/documents"
     )
@@ -181,7 +181,7 @@ class Settings(BaseSettings):
     ).lower()  # auto | fallback | intent
     max_code_fix_attempts: int = int(
         os.getenv("MAX_CODE_FIX_ATTEMPTS", "5")
-    )  # 最大修复尝试次数
+    )  # Maximum repair attempts
     auto_code_fix_enabled: bool = (
         os.getenv("AUTO_CODE_FIX_ENABLED", "true").lower() == "true"
     )
@@ -190,10 +190,10 @@ class Settings(BaseSettings):
     )  # auto, file_mapping, database
     db_connection_timeout: int = int(
         os.getenv("DB_CONNECTION_TIMEOUT", "30")
-    )  # 数据库连接超时
+    )  # Database connection timeout
     enable_error_learning: bool = (
         os.getenv("ENABLE_ERROR_LEARNING", "true").lower() == "true"
-    )  # 错误模式学习
+    )  # Error pattern learning
     prompt_experiments_enabled: bool = (
         os.getenv("PROMPT_EXPERIMENTS_ENABLED", "false").lower() == "true"
     )
