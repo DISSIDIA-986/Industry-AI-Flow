@@ -1,5 +1,5 @@
-// WebSocket服务 - 用于实时通信
-// 支持聊天消息、通知、实时数据更新
+// WebSocketServe - for real-time communication
+// Supports chat messages, notifications, and real-time data updates
 
 export type WebSocketMessageType = 
   | 'chat_message'
@@ -78,14 +78,14 @@ export class WebSocketService {
     this.url = url
   }
 
-  // 连接WebSocket
+  // connectWebSocket
   connect(): Promise<boolean> {
     return new Promise((resolve) => {
       try {
         this.ws = new WebSocket(this.url)
         
         this.ws.onopen = () => {
-          console.log('WebSocket连接成功')
+          console.log('WebSocketConnection successful')
           this.isConnected = true
           this.reconnectAttempts = 0
           this.startHeartbeat()
@@ -98,12 +98,12 @@ export class WebSocketService {
             const message: WebSocketMessage = JSON.parse(event.data)
             this.handleMessage(message)
           } catch (error) {
-            console.error('WebSocket消息解析失败:', error)
+            console.error('WebSocketMessage parsing failed:', error)
           }
         }
         
         this.ws.onclose = (event) => {
-          console.log('WebSocket连接关闭:', event.code, event.reason)
+          console.log('WebSocketConnection closed:', event.code, event.reason)
           this.isConnected = false
           this.stopHeartbeat()
           this.notifyConnectionChange(false)
@@ -112,31 +112,31 @@ export class WebSocketService {
         }
         
         this.ws.onerror = (error) => {
-          console.error('WebSocket错误:', error)
+          console.error('WebSocketmistake:', error)
           this.isConnected = false
           this.notifyConnectionChange(false)
           resolve(false)
         }
         
-        // 设置连接超时
+        // Set connection timeout
         setTimeout(() => {
           if (!this.isConnected) {
-            console.warn('WebSocket连接超时')
+            console.warn('WebSocketConnection timeout')
             resolve(false)
           }
         }, 5000)
         
       } catch (error) {
-        console.error('WebSocket连接失败:', error)
+        console.error('WebSocketConnection failed:', error)
         resolve(false)
       }
     })
   }
 
-  // 断开连接
+  // Disconnect
   disconnect(): void {
     if (this.ws) {
-      this.ws.close(1000, '正常关闭')
+      this.ws.close(1000, 'Normal shutdown')
       this.ws = null
     }
     this.stopHeartbeat()
@@ -144,10 +144,10 @@ export class WebSocketService {
     this.notifyConnectionChange(false)
   }
 
-  // 发送消息
+  // Send message
   send(type: WebSocketMessageType, data: any): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket未连接，无法发送消息')
+      console.warn('WebSocketNot connected, unable to send message')
       return false
     }
     
@@ -162,12 +162,12 @@ export class WebSocketService {
       this.ws.send(JSON.stringify(message))
       return true
     } catch (error) {
-      console.error('发送WebSocket消息失败:', error)
+      console.error('sendWebSocketMessage failed:', error)
       return false
     }
   }
 
-  // 发送聊天消息
+  // Send chat message
   sendChatMessage(message: string, conversationId?: string, metadata?: any): boolean {
     const data: ChatMessageData = {
       message,
@@ -178,19 +178,19 @@ export class WebSocketService {
     return this.send('chat_message', data)
   }
 
-  // 发送查询请求
+  // Send query request
   sendQuery(query: string, conversationId?: string): boolean {
     return this.sendChatMessage(query, conversationId, { is_query: true })
   }
 
-  // 注册消息处理器
+  // Register message handler
   onMessage(type: WebSocketMessageType, handler: (data: any) => void): () => void {
     if (!this.messageHandlers.has(type)) {
       this.messageHandlers.set(type, [])
     }
     this.messageHandlers.get(type)!.push(handler)
     
-    // 返回取消注册的函数
+    // Returns the unregistered function
     return () => {
       const handlers = this.messageHandlers.get(type)
       if (handlers) {
@@ -202,14 +202,14 @@ export class WebSocketService {
     }
   }
 
-  // 注册连接状态变化处理器
+  // Register connection state change handler
   onConnectionChange(handler: (connected: boolean) => void): () => void {
     this.connectionHandlers.push(handler)
     
-    // 立即通知当前状态
+    // Immediately notify the current status
     handler(this.isConnected)
     
-    // 返回取消注册的函数
+    // Returns the unregistered function
     return () => {
       const index = this.connectionHandlers.indexOf(handler)
       if (index > -1) {
@@ -218,33 +218,33 @@ export class WebSocketService {
     }
   }
 
-  // 获取连接状态
+  // Get connection status
   getConnectionStatus(): boolean {
     return this.isConnected
   }
 
-  // 私有方法
+  // private method
   protected handleMessage(message: WebSocketMessage): void {
-    console.log('收到WebSocket消息:', message)
+    console.log('receiveWebSocketinformation:', message)
     
-    // 处理心跳消息
+    // Handle heartbeat messages
     if (message.type === 'ping') {
       this.send('pong', { timestamp: message.timestamp })
       return
     }
     
     if (message.type === 'pong') {
-      // 心跳响应，无需处理
+      // Heartbeat response, no processing required
       return
     }
     
-    // 调用注册的处理器
+    // Call registered handler
     const handlers = this.messageHandlers.get(message.type)
     if (handlers) {
       handlers.forEach(handler => handler(message.data))
     }
     
-    // 所有消息都触发通用处理器
+    // All messages trigger a general handler
     const allHandlers = this.messageHandlers.get('*' as WebSocketMessageType)
     if (allHandlers) {
       allHandlers.forEach(handler => handler(message))
@@ -261,7 +261,7 @@ export class WebSocketService {
       if (this.isConnected) {
         this.send('ping', { timestamp: Date.now() })
       }
-    }, 30000) // 每30秒发送一次心跳
+    }, 30000) // Send a heartbeat every 30 seconds
   }
 
   private stopHeartbeat(): void {
@@ -273,14 +273,14 @@ export class WebSocketService {
 
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('达到最大重连次数，停止重连')
+      console.log('Reached the maximum number of reconnections and stopped reconnecting.')
       return
     }
     
     this.reconnectAttempts++
     const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1)
     
-    console.log(`将在 ${delay}ms 后尝试重连 (第 ${this.reconnectAttempts} 次)`)
+    console.log(`will be in ${delay}ms Then try to reconnect (No. ${this.reconnectAttempts} Second-rate)`)
     
     setTimeout(() => {
       if (!this.isConnected) {
@@ -290,7 +290,7 @@ export class WebSocketService {
   }
 }
 
-// 模拟WebSocket服务 - 用于开发环境
+// simulationWebSocketServe - for development environment
 export class MockWebSocketService extends WebSocketService {
   private mockResponses: Map<WebSocketMessageType, any[]> = new Map()
   private responseDelay = 500
@@ -301,13 +301,13 @@ export class MockWebSocketService extends WebSocketService {
   }
 
   private setupMockResponses(): void {
-    // 模拟聊天响应
+    // Simulate chat response
     this.mockResponses.set('chat_message', [
       {
         type: 'query_response',
         data: {
-          query: '测试查询',
-          response: '这是模拟的AI响应。在实际环境中，这会连接到真实的后端AI服务。',
+          query: 'Test query',
+          response: 'This is simulatedAIresponse. In a real environment this would connect to a real backendAIServe.',
           conversation_id: 'mock-conv-123',
           timestamp: new Date().toISOString(),
           metadata: {
@@ -319,13 +319,13 @@ export class MockWebSocketService extends WebSocketService {
       }
     ])
     
-    // 模拟通知
+    // Simulate notification
     this.mockResponses.set('notification', [
       {
         type: 'notification',
         data: {
-          title: '系统通知',
-          message: '欢迎使用Industry AI Flow!',
+          title: 'System notification',
+          message: 'WelcomeIndustry AI Flow!',
           level: 'info',
           duration: 5000
         }
@@ -334,20 +334,20 @@ export class MockWebSocketService extends WebSocketService {
   }
 
   async connect(): Promise<boolean> {
-    console.log('使用模拟WebSocket连接')
+    console.log('Use simulationWebSocketconnect')
     this.isConnected = true
     this.notifyConnectionChange(true)
     
-    // 模拟连接延迟
+    // Simulate connection latency
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    // 发送欢迎通知
+    // Send welcome notification
     setTimeout(() => {
       this.handleMessage({
         type: 'notification',
         data: {
-          title: '连接成功',
-          message: '已连接到模拟WebSocket服务',
+          title: 'Connection successful',
+          message: 'Connected to simulationWebSocketServe',
           level: 'success',
           duration: 3000
         },
@@ -359,22 +359,22 @@ export class MockWebSocketService extends WebSocketService {
   }
 
   disconnect(): void {
-    console.log('断开模拟WebSocket连接')
+    console.log('Disconnect simulationWebSocketconnect')
     this.isConnected = false
     this.notifyConnectionChange(false)
   }
 
   send(type: WebSocketMessageType, data: any): boolean {
-    console.log('模拟发送WebSocket消息:', { type, data })
+    console.log('Analog sendingWebSocketinformation:', { type, data })
     
     if (!this.isConnected) {
-      console.warn('模拟WebSocket未连接')
+      console.warn('simulationWebSocketNot connected')
       return false
     }
     
-    // 模拟网络延迟
+    // Simulate network latency
     setTimeout(() => {
-      // 如果是聊天消息，返回模拟响应
+      // If it is a chat message, return a simulated response
       if (type === 'chat_message') {
         const responses = this.mockResponses.get('query_response') || []
         responses.forEach(response => {
@@ -387,7 +387,7 @@ export class MockWebSocketService extends WebSocketService {
         })
       }
       
-      // 如果是查询，返回特定响应
+      // If it is a query, return a specific response
       if (type === 'chat_message' && data.message) {
         const mockResponse = this.generateMockResponse(data.message)
         setTimeout(() => {
@@ -407,7 +407,7 @@ export class MockWebSocketService extends WebSocketService {
     const responses = [
       {
         query,
-        response: `基于我的分析，${query} 需要考虑多个因素。在建筑行业中，这通常涉及材料成本、人工费用、时间安排和风险管理。`,
+        response: `Based on my analysis,${query} There are several factors to consider. In the construction industry, this typically involves material costs, labor charges, timing, and risk management.`,
         conversation_id: 'mock-conv-' + Date.now(),
         timestamp: new Date().toISOString(),
         metadata: {
@@ -419,7 +419,7 @@ export class MockWebSocketService extends WebSocketService {
       },
       {
         query,
-        response: `这是一个很好的问题！${query} 在建筑项目管理中非常重要。建议进行详细的风险评估和成本分析。`,
+        response: `This is a great question!${query} Very important in construction project management. A detailed risk assessment and cost analysis is recommended.`,
         conversation_id: 'mock-conv-' + Date.now(),
         timestamp: new Date().toISOString(),
         metadata: {
@@ -431,7 +431,7 @@ export class MockWebSocketService extends WebSocketService {
       },
       {
         query,
-        response: `关于 ${query}，根据行业最佳实践，需要考虑以下关键点：1. 合规性要求 2. 成本效益分析 3. 时间线规划 4. 风险评估。`,
+        response: `about ${query}，Based on industry best practices, the following key points need to be considered: 1. Compliance requirements 2. cost benefit analysis 3. timeline planning 4. risk assessment.`,
         conversation_id: 'mock-conv-' + Date.now(),
         timestamp: new Date().toISOString(),
         metadata: {
@@ -447,19 +447,30 @@ export class MockWebSocketService extends WebSocketService {
   }
 }
 
-// 创建WebSocket服务实例
-export const createWebSocketService = (useMock: boolean = true): WebSocketService => {
-  if (useMock || process.env.NODE_ENV === 'development') {
-    console.log('使用模拟WebSocket服务')
+function shouldUseMockWebSocket(explicitUseMock?: boolean): boolean {
+  if (typeof explicitUseMock === 'boolean') {
+    return explicitUseMock
+  }
+
+  const raw = String(process.env.NEXT_PUBLIC_USE_MOCK_WS || '')
+    .trim()
+    .toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+}
+
+// createWebSocketService instance
+export const createWebSocketService = (useMock?: boolean): WebSocketService => {
+  if (shouldUseMockWebSocket(useMock)) {
+    console.log('Use simulationWebSocketServe')
     return new MockWebSocketService()
   }
-  
+
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8001/ws'
-  console.log('使用真实WebSocket服务:', wsUrl)
+  console.log('use realWebSocketServe:', wsUrl)
   return new WebSocketService(wsUrl)
 }
 
-// 默认导出
+// Default export
 export const websocketService = createWebSocketService()
 
 export default websocketService

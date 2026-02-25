@@ -33,6 +33,17 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
     });
   });
 
+  await page.route('**/api/v1/workflow/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        component: 'workflow',
+      }),
+    });
+  });
+
   await page.route('**/api/v1/auth/login', async (route) => {
     await route.fulfill({
       status: 200,
@@ -68,11 +79,10 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        id: 'query-e2e',
-        query: 'E2E query',
-        response: 'E2E query response',
-        timestamp: new Date().toISOString(),
-        confidence: 0.99,
+        query_id: 'query-e2e',
+        question: 'E2E query',
+        answer: 'E2E query response',
+        latency_ms: 42,
       }),
     });
   });
@@ -80,6 +90,11 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
   await page.route('**/api/v1/workflow/query', async (route) => {
     const payload = route.request().postDataJSON() as { query?: string } | null;
     const query = payload?.query ?? 'E2E query';
+    const suggestedQuestions = [
+      'Which section of the reference document supports this answer?',
+      'Can you provide a concise checklist for the next decision?',
+      'What risk factors should I validate first?',
+    ];
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -90,7 +105,7 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
         intent: {
           type: 'cost_estimation',
           confidence: 0.92,
-          description: '成本估算查询',
+          description: 'Cost estimate inquiry',
         },
         sources: [
           {
@@ -100,6 +115,9 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
             content: 'E2E source snippet',
           },
         ],
+        metadata: {
+          suggested_questions: suggestedQuestions,
+        },
         timestamp: new Date().toISOString(),
         confidence: 0.96,
       }),
@@ -124,6 +142,7 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
+        success: true,
         prediction: {
           predicted_actual_cost_cad: 1250000,
           predicted_cost_overrun_pct: 8.75,
@@ -136,11 +155,13 @@ export async function mockCoreApiEndpoints(page: Page): Promise<void> {
     });
   });
 
-  await page.route('**/api/v1/cost-estimation/predict-batch', async (route) => {
+  await page.route('**/api/v1/cost-estimation/predict/batch', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
+        success: true,
+        count: 1,
         predictions: [
           {
             predicted_actual_cost_cad: 1250000,

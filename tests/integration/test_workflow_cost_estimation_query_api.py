@@ -125,7 +125,7 @@ def test_workflow_query_cost_estimation_from_natural_language(client: TestClient
         "/api/v1/workflow/query",
         json={
             "query": (
-                "请做建筑成本估算: commercial office, location Toronto, sqft 120000, "
+                "Please estimate construction cost for: commercial office, location Toronto, sqft 120000, "
                 "floors 12, duration 96 weeks, budget 120m, contractor rating 4.1, "
                 "complexity 7, team experience 11, change orders 5, weather risk 0.4, "
                 "material volatility 0.35, subcontractors 20, budget pressure 0.45, "
@@ -148,7 +148,7 @@ def test_workflow_query_cost_estimation_requires_budget_feature(client: TestClie
     resp = client.post(
         "/api/v1/workflow/query",
         json={
-            "query": "帮我估算这个工程成本，commercial office, location Toronto, sqft 80000, floors 10"
+            "query": "Estimate budget for commercial office, location Toronto, sqft 80000, floors 10"
         },
     )
     assert resp.status_code == 200

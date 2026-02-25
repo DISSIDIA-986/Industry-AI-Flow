@@ -10,6 +10,6 @@ interface LoadingProps {
 }
 
 export function Loading({ message, text, size, fullScreen }: LoadingProps) {
-  return <BaseLoading text={message ?? text ?? '加载中...'} size={size} fullScreen={fullScreen} />
+  return <BaseLoading text={message ?? text ?? 'loading...'} size={size} fullScreen={fullScreen} />
 }
 

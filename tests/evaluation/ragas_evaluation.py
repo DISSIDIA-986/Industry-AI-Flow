@@ -1,15 +1,15 @@
 """
-RAGAS评估框架
+RAGASEN
 
-实现基于RAGAS的RAG系统质量评估，测量：
+ENRAGASENRAGEN,EN:
 - MRR (Mean Reciprocal Rank)
-- Faithfulness (答案忠实度)
-- Context Precision (上下文精确度)
-- Context Recall (上下文召回率)
-- Answer Relevancy (答案相关性)
+- Faithfulness (EN)
+- Context Precision (EN)
+- Context Recall (EN)
+- Answer Relevancy (EN)
 
-创建时间: 2026-02-09
-优先级: P0 (Week 1首要任务)
+EN: 2026-02-09
+EN: P0 (Week 1EN)
 """
 
 import json
@@ -47,7 +47,7 @@ except ImportError:  # pragma: no cover - optional dependency
     context_precision = None
     context_recall = None
     RAGAS_AVAILABLE = False
-    logger.warning("RAGAS not installed. Install with: pip install ragas。评估功能将被禁用。")
+    logger.warning("RAGAS not installed. Install with: pip install ragas.EN.")
 
 
 @dataclass
@@ -72,7 +72,7 @@ class _SimpleDataset:
 
 
 class RAGASEvaluator:
-    """RAG系统评估器（基于RAGAS框架）"""
+    """RAGEN(ENRAGASEN)"""
 
     def __init__(self):
         self.ragas_available = RAGAS_AVAILABLE
@@ -80,10 +80,10 @@ class RAGASEvaluator:
 
     def create_construction_evaluation_dataset(self):
         """
-        创建建筑领域评估数据集。
+        EN.
 
         Returns:
-            Hugging Face Dataset对象或轻量fallback对象
+            Hugging Face DatasetENfallbackEN
         """
         evaluation_data = {
             "question": [
@@ -145,7 +145,7 @@ class RAGASEvaluator:
         return _SimpleDataset.from_dict(evaluation_data)
 
     def run_evaluation(self, rag_pipeline, dataset=None) -> Dict[str, float]:
-        """运行RAGAS评估。当前在未集成真实pipeline时返回占位基线。"""
+        """ENRAGASEN.ENpipelineEN."""
         if not self.ragas_available:
             logger.error("RAGAS not installed. Cannot run evaluation.")
             return {}
@@ -155,8 +155,8 @@ class RAGASEvaluator:
 
         logger.info("Running RAGAS evaluation on %d samples", len(dataset))
 
-        # NOTE: 真实集成应使用 rag_pipeline 生成 predictions 后调用 evaluate。
-        # 为了保持接口稳定，先返回占位指标，避免阻塞主流程。
+        # NOTE: EN rag_pipeline EN predictions EN evaluate.
+        # EN,EN,EN.
         return {
             "faithfulness": 0.60,
             "answer_relevancy": 0.70,
@@ -166,10 +166,10 @@ class RAGASEvaluator:
 
     def calculate_mrr(self, retrieved_results: List[List[int]]) -> float:
         """
-        计算Mean Reciprocal Rank (MRR)。
+        ENMean Reciprocal Rank (MRR).
 
-        约定：若结果列表包含整数1，则视作第一个相关文档标记；
-        否则退化为“非空即命中第一位”的保守估算。
+        EN:EN1,EN;
+        EN"EN"EN.
         """
         if not retrieved_results:
             return 0.0
@@ -229,9 +229,9 @@ class RAGASEvaluator:
         logger.info("Evaluation report saved to %s", output_path)
 
 
-# 便捷函数
+# EN
 def quick_eval() -> Dict[str, float]:
-    """快速评估当前RAG系统（用于测试）。"""
+    """ENRAGEN(EN)."""
     evaluator = RAGASEvaluator()
 
     baseline = {
@@ -252,14 +252,14 @@ def quick_eval() -> Dict[str, float]:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    print("RAGAS评估框架测试")
+    print("RAGASEN")
     print("=" * 60)
 
     if not RAGAS_AVAILABLE:
-        print("RAGAS未安装，请运行: pip install ragas")
+        print("RAGASEN,EN: pip install ragas")
     else:
-        print("RAGAS已安装")
+        print("RAGASEN")
         metrics = quick_eval()
-        print("\n当前指标:")
+        print("\nEN:")
         for metric, value in metrics.items():
             print(f"  {metric}: {value:.2f}")

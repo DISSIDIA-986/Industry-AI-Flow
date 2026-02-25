@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-向量检索测试
-测试RAG系统的向量检索能力，包括：
-1. 召回率（Recall）评估
-2. 精确率（Precision）评估
-3. 不同数据集的检索性能
-4. 查询多样性测试
-5. 相似度阈值优化
+EN
+ENRAGEN,EN:
+1. EN(Recall)EN
+2. EN(Precision)EN
+3. EN
+4. EN
+5. EN
 """
 import json
 import math
@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Set, Tuple
 
 @dataclass
 class Document:
-    """文档数据结构"""
+    """EN"""
 
     doc_id: str
     title: str
@@ -33,18 +33,18 @@ class Document:
 
 @dataclass
 class Query:
-    """查询数据结构"""
+    """EN"""
 
     query_id: str
     question: str
-    expected_doc_ids: List[str]  # 期望检索到的文档ID
+    expected_doc_ids: List[str]  # ENID
     query_type: str  # factual, conceptual, procedural
     difficulty: str  # easy, medium, hard
 
 
 @dataclass
 class RetrievalResult:
-    """检索结果数据结构"""
+    """EN"""
 
     query_id: str
     retrieved_doc_ids: List[str]
@@ -53,7 +53,7 @@ class RetrievalResult:
 
 
 class VectorRetrievalTester:
-    """向量检索测试器"""
+    """EN"""
 
     def __init__(self):
         self.documents = self._generate_test_documents()
@@ -61,161 +61,161 @@ class VectorRetrievalTester:
         self.test_results = []
 
     def _generate_test_documents(self) -> List[Document]:
-        """生成测试文档集"""
+        """EN"""
         documents = [
-            # 人工智能基础
+            # EN
             Document(
                 doc_id="doc_001",
-                title="人工智能基础概念",
-                content="人工智能是计算机科学的一个分支，致力于创建能够模拟人类智能的系统。AI包括机器学习、深度学习、自然语言处理等多个子领域。",
+                title="EN",
+                content="EN,EN.AIEN,EN,EN.",
                 category="ai_basics",
-                keywords=["人工智能", "AI", "机器学习", "深度学习", "NLP"],
+                keywords=["EN", "AI", "EN", "EN", "NLP"],
             ),
             Document(
                 doc_id="doc_002",
-                title="机器学习算法概述",
-                content="机器学习是AI的核心技术，主要分为监督学习、无监督学习和强化学习。常用算法包括线性回归、决策树、神经网络等。",
+                title="EN",
+                content="ENAIEN,EN,EN.EN,EN,EN.",
                 category="machine_learning",
-                keywords=["机器学习", "监督学习", "无监督学习", "强化学习", "算法"],
+                keywords=["EN", "EN", "EN", "EN", "EN"],
             ),
             Document(
                 doc_id="doc_003",
-                title="深度学习与神经网络",
-                content="深度学习使用多层神经网络来学习数据的复杂模式。CNN适合图像处理，RNN适合序列数据，Transformer是目前最先进的架构。",
+                title="EN",
+                content="EN.CNNEN,RNNEN,TransformerEN.",
                 category="deep_learning",
-                keywords=["深度学习", "神经网络", "CNN", "RNN", "Transformer"],
+                keywords=["EN", "EN", "CNN", "RNN", "Transformer"],
             ),
-            # 编程技术
+            # EN
             Document(
                 doc_id="doc_004",
-                title="Python编程语言特性",
-                content="Python是一种高级编程语言，具有简洁的语法和强大的库支持。广泛应用于数据科学、Web开发、自动化脚本等领域。",
+                title="PythonEN",
+                content="PythonEN,EN.EN,WebEN,EN.",
                 category="programming",
-                keywords=["Python", "编程语言", "数据科学", "Web开发", "自动化"],
+                keywords=["Python", "EN", "EN", "WebEN", "EN"],
             ),
             Document(
                 doc_id="doc_005",
-                title="数据结构与算法",
-                content="常见的数据结构包括数组、链表、树、图等。算法复杂度分析包括时间复杂度和空间复杂度，是优化程序性能的基础。",
+                title="EN",
+                content="EN,EN,EN,EN.EN,EN.",
                 category="algorithms",
-                keywords=["数据结构", "算法", "复杂度", "性能优化", "数组", "链表"],
+                keywords=["EN", "EN", "EN", "EN", "EN", "EN"],
             ),
-            # 系统架构
+            # EN
             Document(
                 doc_id="doc_006",
-                title="分布式系统设计原则",
-                content="分布式系统需要考虑一致性、可用性、分区容错性。CAP定理指出在分布式系统中只能同时满足其中两个特性。",
+                title="EN",
+                content="EN,EN,EN.CAPEN.",
                 category="system_design",
-                keywords=["分布式系统", "CAP定理", "一致性", "可用性", "分区容错"],
+                keywords=["EN", "CAPEN", "EN", "EN", "EN"],
             ),
             Document(
                 doc_id="doc_007",
-                title="微服务架构模式",
-                content="微服务架构将应用拆分为多个小型服务，每个服务独立部署和扩展。优点包括技术栈灵活性、独立部署、故障隔离等。",
+                title="EN",
+                content="EN,EN.EN,EN,EN.",
                 category="architecture",
-                keywords=["微服务", "架构", "分布式", "容器化", "API网关"],
+                keywords=["EN", "EN", "EN", "EN", "APIEN"],
             ),
-            # 数据科学
+            # EN
             Document(
                 doc_id="doc_008",
-                title="数据预处理技术",
-                content="数据预处理包括数据清洗、缺失值处理、异常值检测、特征工程等步骤。高质量的数据是机器学习模型成功的关键。",
+                title="EN",
+                content="EN,EN,EN,EN.EN.",
                 category="data_science",
-                keywords=["数据预处理", "数据清洗", "缺失值", "特征工程", "数据质量"],
+                keywords=["EN", "EN", "EN", "EN", "EN"],
             ),
             Document(
                 doc_id="doc_009",
-                title="统计分析方法",
-                content="统计分析包括描述性统计和推断性统计。常用方法有回归分析、假设检验、方差分析等，帮助从数据中发现规律。",
+                title="EN",
+                content="EN.EN,EN,EN,EN.",
                 category="statistics",
-                keywords=["统计分析", "回归分析", "假设检验", "方差分析", "数据挖掘"],
+                keywords=["EN", "EN", "EN", "EN", "EN"],
             ),
-            # 软件工程
+            # EN
             Document(
                 doc_id="doc_010",
-                title="敏捷开发方法论",
-                content="敏捷开发强调迭代开发、客户协作、响应变化。Scrum和Kanban是流行的敏捷框架，提高团队效率和产品质量。",
+                title="EN",
+                content="EN,EN,EN.ScrumENKanbanEN,EN.",
                 category="software_engineering",
-                keywords=["敏捷开发", "Scrum", "Kanban", "迭代开发", "团队协作"],
+                keywords=["EN", "Scrum", "Kanban", "EN", "EN"],
             ),
         ]
 
         return documents
 
     def _generate_test_queries(self) -> List[Query]:
-        """生成测试查询集"""
+        """EN"""
         queries = [
-            # 简单事实查询
+            # EN
             Query(
                 query_id="query_001",
-                question="什么是人工智能？",
+                question="EN?",
                 expected_doc_ids=["doc_001"],
                 query_type="factual",
                 difficulty="easy",
             ),
             Query(
                 query_id="query_002",
-                question="机器学习有哪些主要类型？",
+                question="EN?",
                 expected_doc_ids=["doc_002"],
                 query_type="factual",
                 difficulty="easy",
             ),
-            # 概念性查询
+            # EN
             Query(
                 query_id="query_003",
-                question="深度学习和机器学习有什么区别？",
+                question="EN?",
                 expected_doc_ids=["doc_001", "doc_002", "doc_003"],
                 query_type="conceptual",
                 difficulty="medium",
             ),
             Query(
                 query_id="query_004",
-                question="分布式系统设计中需要考虑哪些因素？",
+                question="EN?",
                 expected_doc_ids=["doc_006", "doc_007"],
                 query_type="conceptual",
                 difficulty="hard",
             ),
-            # 程序性查询
+            # EN
             Query(
                 query_id="query_005",
-                question="如何进行数据预处理？",
+                question="EN?",
                 expected_doc_ids=["doc_008"],
                 query_type="procedural",
                 difficulty="medium",
             ),
             Query(
                 query_id="query_006",
-                question="Python在数据科学中的应用有哪些？",
+                question="PythonEN?",
                 expected_doc_ids=["doc_004", "doc_008"],
                 query_type="procedural",
                 difficulty="medium",
             ),
-            # 复杂查询
+            # EN
             Query(
                 query_id="query_007",
-                question="在构建机器学习系统时，如何选择合适的算法和架构？",
+                question="EN,EN?",
                 expected_doc_ids=["doc_002", "doc_003", "doc_005", "doc_006"],
                 query_type="complex",
                 difficulty="hard",
             ),
             Query(
                 query_id="query_008",
-                question="如何评估和改进软件系统的性能？",
+                question="EN?",
                 expected_doc_ids=["doc_005", "doc_006", "doc_007", "doc_010"],
                 query_type="complex",
                 difficulty="hard",
             ),
-            # 跨领域查询
+            # EN
             Query(
                 query_id="query_009",
-                question="人工智能在软件开发中的应用",
+                question="EN",
                 expected_doc_ids=["doc_001", "doc_004", "doc_010"],
                 query_type="cross_domain",
                 difficulty="medium",
             ),
             Query(
                 query_id="query_010",
-                question="数据科学项目的工作流程",
+                question="EN",
                 expected_doc_ids=["doc_008", "doc_009", "doc_002"],
                 query_type="cross_domain",
                 difficulty="medium",
@@ -225,23 +225,23 @@ class VectorRetrievalTester:
         return queries
 
     def _mock_vector_embedding(self, text: str) -> List[float]:
-        """模拟向量嵌入（实际应用中使用真实的嵌入模型）"""
-        # 简单的基于词汇的模拟嵌入
+        """EN(EN)"""
+        # EN
         words = text.lower().split()
-        embedding = [0.0] * 128  # 128维向量
+        embedding = [0.0] * 128  # 128EN
 
-        # 为每个词分配不同的维度
+        # EN
         word_to_dim = {
-            "人工智能": 0,
+            "EN": 0,
             "ai": 1,
-            "机器学习": 2,
-            "深度学习": 3,
+            "EN": 2,
+            "EN": 3,
             "python": 4,
-            "算法": 5,
-            "数据": 6,
-            "系统": 7,
-            "架构": 8,
-            "开发": 9,
+            "EN": 5,
+            "EN": 6,
+            "EN": 7,
+            "EN": 8,
+            "EN": 9,
         }
 
         for word in words:
@@ -249,12 +249,12 @@ class VectorRetrievalTester:
                 if key in word:
                     embedding[dim] += 0.1
 
-        # 添加一些随机性
+        # EN
         for i in range(128):
             if embedding[i] == 0:
                 embedding[i] = random.uniform(-0.05, 0.05)
 
-        # 归一化
+        # EN
         norm = math.sqrt(sum(x * x for x in embedding))
         if norm > 0:
             embedding = [x / norm for x in embedding]
@@ -264,7 +264,7 @@ class VectorRetrievalTester:
     def _calculate_cosine_similarity(
         self, vec1: List[float], vec2: List[float]
     ) -> float:
-        """计算余弦相似度"""
+        """EN"""
         if len(vec1) != len(vec2):
             return 0.0
 
@@ -278,13 +278,13 @@ class VectorRetrievalTester:
         return dot_product / (norm1 * norm2)
 
     def _mock_retrieval(self, query: str, top_k: int = 5) -> RetrievalResult:
-        """模拟向量检索过程"""
+        """EN"""
         start_time = time.time()
 
-        # 生成查询向量
+        # EN
         query_embedding = self._mock_vector_embedding(query)
 
-        # 计算与所有文档的相似度
+        # EN
         similarities = []
         for doc in self.documents:
             doc_embedding = self._mock_vector_embedding(doc.title + " " + doc.content)
@@ -293,10 +293,10 @@ class VectorRetrievalTester:
             )
             similarities.append((doc.doc_id, similarity))
 
-        # 按相似度排序
+        # EN
         similarities.sort(key=lambda x: x[1], reverse=True)
 
-        # 取top_k结果
+        # ENtop_kEN
         retrieved_docs = similarities[:top_k]
         doc_ids = [doc_id for doc_id, _ in retrieved_docs]
         scores = [score for _, score in retrieved_docs]
@@ -313,7 +313,7 @@ class VectorRetrievalTester:
     def calculate_metrics(
         self, results: List[RetrievalResult], queries: List[Query]
     ) -> Dict[str, float]:
-        """计算检索指标"""
+        """EN"""
         total_precision = 0.0
         total_recall = 0.0
         total_f1 = 0.0
@@ -322,7 +322,7 @@ class VectorRetrievalTester:
         for i, (result, query) in enumerate(zip(results, queries)):
             result.query_id = query.query_id
 
-            # 计算Precision@K
+            # ENPrecision@K
             retrieved_set = set(result.retrieved_doc_ids)
             expected_set = set(query.expected_doc_ids)
 
@@ -333,19 +333,19 @@ class VectorRetrievalTester:
             else:
                 precision = 0.0
 
-            # 计算Recall
+            # ENRecall
             if len(expected_set) > 0:
                 recall = len(retrieved_set & expected_set) / len(expected_set)
             else:
                 recall = 1.0 if len(retrieved_set) == 0 else 0.0
 
-            # 计算F1 Score
+            # ENF1 Score
             if precision + recall > 0:
                 f1 = 2 * precision * recall / (precision + recall)
             else:
                 f1 = 0.0
 
-            # 计算Average Precision
+            # ENAverage Precision
             ap = self._calculate_average_precision(
                 result.retrieved_doc_ids, query.expected_doc_ids
             )
@@ -366,7 +366,7 @@ class VectorRetrievalTester:
     def _calculate_average_precision(
         self, retrieved_docs: List[str], expected_docs: List[str]
     ) -> float:
-        """计算平均精度"""
+        """EN"""
         expected_set = set(expected_docs)
         if not expected_set:
             return 1.0
@@ -383,8 +383,8 @@ class VectorRetrievalTester:
         return sum(precisions) / len(expected_set) if precisions else 0.0
 
     def test_retrieval_performance(self) -> Dict[str, Any]:
-        """测试检索性能"""
-        print("🔍 测试向量检索性能...")
+        """EN"""
+        print("🔍 EN...")
 
         results = []
         retrieval_times = []
@@ -393,12 +393,12 @@ class VectorRetrievalTester:
             result = self._mock_retrieval(query.question, top_k=5)
             results.append(result)
             retrieval_times.append(result.retrieval_time)
-            print(f"✅ {query.query_id}: 检索时间 {result.retrieval_time:.4f}s")
+            print(f"✅ {query.query_id}: EN {result.retrieval_time:.4f}s")
 
-        # 计算指标
+        # EN
         metrics = self.calculate_metrics(results, self.queries)
 
-        # 计算性能统计
+        # EN
         avg_retrieval_time = sum(retrieval_times) / len(retrieval_times)
         max_retrieval_time = max(retrieval_times)
         min_retrieval_time = min(retrieval_times)
@@ -415,10 +415,10 @@ class VectorRetrievalTester:
         }
 
     def test_different_datasets(self) -> Dict[str, Any]:
-        """测试不同数据集的检索性能"""
-        print("\n🔍 测试不同数据集的检索性能...")
+        """EN"""
+        print("\n🔍 EN...")
 
-        # 按类别分组文档
+        # EN
         category_docs = defaultdict(list)
         for doc in self.documents:
             category_docs[doc.category].append(doc)
@@ -426,9 +426,9 @@ class VectorRetrievalTester:
         category_results = {}
 
         for category, docs in category_docs.items():
-            print(f"  📁 测试类别: {category}")
+            print(f"  📁 EN: {category}")
 
-            # 创建该类别的专用查询
+            # EN
             category_queries = [
                 q
                 for q in self.queries
@@ -438,13 +438,13 @@ class VectorRetrievalTester:
             if not category_queries:
                 continue
 
-            # 模拟检索
+            # EN
             results = []
             for query in category_queries:
                 result = self._mock_retrieval(query.question, top_k=3)
                 results.append(result)
 
-            # 计算指标
+            # EN
             metrics = self.calculate_metrics(results, category_queries)
 
             category_results[category] = {
@@ -454,16 +454,16 @@ class VectorRetrievalTester:
             }
 
             print(
-                f"    ✅ 精确率: {metrics['precision']:.3f}, 召回率: {metrics['recall']:.3f}"
+                f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}"
             )
 
         return category_results
 
     def test_query_diversity(self) -> Dict[str, Any]:
-        """测试查询多样性"""
-        print("\n🔍 测试查询多样性...")
+        """EN"""
+        print("\n🔍 EN...")
 
-        # 按查询类型分组
+        # EN
         type_queries = defaultdict(list)
         for query in self.queries:
             type_queries[query.query_type].append(query)
@@ -471,7 +471,7 @@ class VectorRetrievalTester:
         type_results = {}
 
         for query_type, queries in type_queries.items():
-            print(f"  📝 测试查询类型: {query_type}")
+            print(f"  📝 EN: {query_type}")
 
             results = []
             for query in queries:
@@ -489,20 +489,20 @@ class VectorRetrievalTester:
         return type_results
 
     def test_similarity_thresholds(self) -> Dict[str, Any]:
-        """测试相似度阈值优化"""
-        print("\n🔍 测试相似度阈值优化...")
+        """EN"""
+        print("\n🔍 EN...")
 
         thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
         threshold_results = {}
 
         for threshold in thresholds:
-            print(f"  🎯 测试阈值: {threshold}")
+            print(f"  🎯 EN: {threshold}")
 
             results = []
             for query in self.queries:
                 result = self._mock_retrieval(query.question, top_k=10)
 
-                # 应用阈值过滤
+                # EN
                 filtered_docs = [
                     doc_id
                     for doc_id, score in zip(
@@ -511,7 +511,7 @@ class VectorRetrievalTester:
                     if score >= threshold
                 ]
 
-                # 创建过滤后的结果
+                # EN
                 filtered_result = RetrievalResult(
                     query_id=query.query_id,
                     retrieved_doc_ids=filtered_docs,
@@ -525,10 +525,10 @@ class VectorRetrievalTester:
             threshold_results[threshold] = metrics
 
             print(
-                f"    ✅ 精确率: {metrics['precision']:.3f}, 召回率: {metrics['recall']:.3f}"
+                f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}"
             )
 
-        # 找到最佳阈值（基于F1 Score）
+        # EN(ENF1 Score)
         best_threshold = max(
             threshold_results.keys(), key=lambda t: threshold_results[t]["f1_score"]
         )
@@ -540,22 +540,22 @@ class VectorRetrievalTester:
         }
 
     def test_retrieval_robustness(self) -> Dict[str, Any]:
-        """测试检索鲁棒性"""
-        print("\n🔍 测试检索鲁棒性...")
+        """EN"""
+        print("\n🔍 EN...")
 
-        # 测试噪声查询
+        # EN
         noise_queries = [
-            "什么是人工智能？？？",  # 多余标点
-            "机器学习算法",  # 过短查询
-            "如何在构建大规模分布式系统时考虑性能和可扩展性的平衡以及数据一致性问题",  # 过长查询
-            "asdfghjkl",  # 无意义查询
-            "",  # 空查询
+            "EN???",  # EN
+            "EN",  # EN
+            "EN",  # EN
+            "asdfghjkl",  # EN
+            "",  # EN
         ]
 
         robustness_results = []
 
         for i, noise_query in enumerate(noise_queries):
-            if noise_query.strip():  # 跳过空查询
+            if noise_query.strip():  # EN
                 result = self._mock_retrieval(noise_query, top_k=5)
                 robustness_results.append(
                     {
@@ -564,7 +564,7 @@ class VectorRetrievalTester:
                         "retrieval_time": result.retrieval_time,
                     }
                 )
-                print(f"  ✅ 噪声查询 {i+1}: 检索到 {len(result.retrieved_doc_ids)} 个结果")
+                print(f"  ✅ EN {i+1}: EN {len(result.retrieved_doc_ids)} EN")
 
         return {
             "noise_test_results": robustness_results,
@@ -575,31 +575,31 @@ class VectorRetrievalTester:
         }
 
     def run_all_tests(self) -> Dict[str, Any]:
-        """运行所有检索测试"""
-        print("🚀 开始向量检索全面测试\n")
+        """EN"""
+        print("🚀 EN\n")
         print("=" * 60)
 
         start_time = time.time()
 
-        # 1. 基础检索性能测试
+        # 1. EN
         basic_performance = self.test_retrieval_performance()
 
-        # 2. 不同数据集测试
+        # 2. EN
         dataset_performance = self.test_different_datasets()
 
-        # 3. 查询多样性测试
+        # 3. EN
         query_diversity = self.test_query_diversity()
 
-        # 4. 相似度阈值优化测试
+        # 4. EN
         threshold_optimization = self.test_similarity_thresholds()
 
-        # 5. 鲁棒性测试
+        # 5. EN
         robustness_test = self.test_retrieval_robustness()
 
         end_time = time.time()
         total_time = end_time - start_time
 
-        # 汇总结果
+        # EN
         summary = {
             "test_execution_time": total_time,
             "basic_performance": basic_performance,
@@ -617,21 +617,21 @@ class VectorRetrievalTester:
     def _calculate_overall_score(
         self, basic_perf: Dict, dataset_perf: Dict, query_div: Dict
     ) -> float:
-        """计算总体评分"""
-        # 基础性能权重 40%
+        """EN"""
+        # EN 40%
         basic_score = (
             basic_perf["metrics"]["precision"]
             + basic_perf["metrics"]["recall"]
             + basic_perf["metrics"]["f1_score"]
         ) / 3
 
-        # 数据集性能权重 30%
+        # EN 30%
         dataset_scores = [d["metrics"]["f1_score"] for d in dataset_perf.values()]
         dataset_score = (
             sum(dataset_scores) / len(dataset_scores) if dataset_scores else 0
         )
 
-        # 查询多样性权重 30%
+        # EN 30%
         query_scores = [q["metrics"]["f1_score"] for q in query_div.values()]
         query_score = sum(query_scores) / len(query_scores) if query_scores else 0
 
@@ -639,104 +639,104 @@ class VectorRetrievalTester:
         return overall_score
 
     def generate_test_report(self, results: Dict[str, Any]) -> str:
-        """生成测试报告"""
+        """EN"""
         report = f"""
-# 向量检索测试报告
+# EN
 
-## 测试概要
-- **执行时间**: {results['test_execution_time']:.2f} 秒
-- **总体评分**: {results['overall_score']:.3f}/1.000
+## EN
+- **EN**: {results['test_execution_time']:.2f} EN
+- **EN**: {results['overall_score']:.3f}/1.000
 
-## 基础检索性能
-- **精确率**: {results['basic_performance']['metrics']['precision']:.3f}
-- **召回率**: {results['basic_performance']['metrics']['recall']:.3f}
+## EN
+- **EN**: {results['basic_performance']['metrics']['precision']:.3f}
+- **EN**: {results['basic_performance']['metrics']['recall']:.3f}
 - **F1 Score**: {results['basic_performance']['metrics']['f1_score']:.3f}
 - **MAP**: {results['basic_performance']['metrics']['map']:.3f}
-- **平均检索时间**: {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s
+- **EN**: {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s
 
-## 数据集性能分析
+## EN
 """
 
         for category, perf in results["dataset_performance"].items():
-            report += f"- **{category}**: F1={perf['metrics']['f1_score']:.3f}, 文档数={perf['doc_count']}\n"
+            report += f"- **{category}**: F1={perf['metrics']['f1_score']:.3f}, EN={perf['doc_count']}\n"
 
-        report += "\n## 查询类型性能分析\n"
+        report += "\n## EN\n"
 
         for query_type, perf in results["query_diversity"].items():
             report += f"- **{query_type}**: F1={perf['metrics']['f1_score']:.3f}, MAP={perf['metrics']['map']:.3f}\n"
 
         report += f"""
-## 相似度阈值优化
-- **最佳阈值**: {results['threshold_optimization']['best_threshold']}
-- **最佳F1 Score**: {results['threshold_optimization']['best_metrics']['f1_score']:.3f}
+## EN
+- **EN**: {results['threshold_optimization']['best_threshold']}
+- **ENF1 Score**: {results['threshold_optimization']['best_metrics']['f1_score']:.3f}
 
-## 鲁棒性测试
-- **噪声查询平均结果数**: {results['robustness_test']['avg_results_per_query']:.1f}
+## EN
+- **EN**: {results['robustness_test']['avg_results_per_query']:.1f}
 
-## 测试结论
+## EN
 """
 
         if results["overall_score"] >= 0.8:
-            report += "✅ **优秀**: 向量检索系统表现良好，各项指标均达到预期\n"
+            report += "✅ **EN**: EN,EN\n"
         elif results["overall_score"] >= 0.6:
-            report += "⚠️ **良好**: 检索系统基本功能正常，但仍有优化空间\n"
+            report += "⚠️ **EN**: EN,EN\n"
         else:
-            report += "❌ **需要改进**: 检索系统在多个方面存在不足\n"
+            report += "❌ **EN**: EN\n"
 
         report += f"""
-## 优化建议
-1. **阈值调整**: 推荐使用相似度阈值 {results['threshold_optimization']['best_threshold']}
-2. **数据集优化**: 针对表现较差的类别进行专门的向量优化
-3. **查询处理**: 改进复杂查询的向量化策略
-4. **性能优化**: 当前平均检索时间 {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s，可进一步优化
+## EN
+1. **EN**: EN {results['threshold_optimization']['best_threshold']}
+2. **EN**: EN
+3. **EN**: EN
+4. **EN**: EN {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s,EN
 
-## 下一步行动
-- 实施最佳相似度阈值
-- 优化低性能类别的向量化策略
-- 增强复杂查询处理能力
-- 扩大测试数据集规模
+## EN
+- EN
+- EN
+- EN
+- EN
 """
 
         return report
 
 
 def main():
-    """主函数"""
+    """EN"""
     tester = VectorRetrievalTester()
 
-    # 运行所有测试
+    # EN
     results = tester.run_all_tests()
 
-    # 生成报告
+    # EN
     report = tester.generate_test_report(results)
 
-    # 保存结果
+    # EN
     timestamp = time.strftime("%Y%m%d_%H%M%S")
 
-    # 保存JSON结果
+    # ENJSONEN
     with open(
         f"test_results/vector_retrieval_results_{timestamp}.json", "w", encoding="utf-8"
     ) as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
-    # 保存报告
+    # EN
     with open(
         f"test_results/vector_retrieval_report_{timestamp}.md", "w", encoding="utf-8"
     ) as f:
         f.write(report)
 
-    # 输出摘要
+    # EN
     print("\n" + "=" * 60)
-    print("🎯 向量检索测试完成！")
+    print("🎯 EN!")
     print("=" * 60)
-    print(f"📊 总体评分: {results['overall_score']:.3f}/1.000")
-    print(f"🎯 基础F1 Score: {results['basic_performance']['metrics']['f1_score']:.3f}")
+    print(f"📊 EN: {results['overall_score']:.3f}/1.000")
+    print(f"🎯 ENF1 Score: {results['basic_performance']['metrics']['f1_score']:.3f}")
     print(f"📈 MAP: {results['basic_performance']['metrics']['map']:.3f}")
     print(
-        f"⏱️  平均检索时间: {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s"
+        f"⏱️  EN: {results['basic_performance']['performance']['avg_retrieval_time']:.4f}s"
     )
-    print(f"🎚️  最佳阈值: {results['threshold_optimization']['best_threshold']}")
-    print(f"\n📄 详细报告已保存到: test_results/vector_retrieval_report_{timestamp}.md")
+    print(f"🎚️  EN: {results['threshold_optimization']['best_threshold']}")
+    print(f"\n📄 EN: test_results/vector_retrieval_report_{timestamp}.md")
 
     return results["overall_score"] >= 0.6
 

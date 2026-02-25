@@ -1,13 +1,13 @@
 """
-Week 1修复验证测试
+Week 1EN
 
-验证所有P0优先级修复：
-1. Jieba → NLTK英文分词修复
-2. 语义分块优化
-3. RAGAS评估框架
-4. 安全防护层
+ENP0EN:
+1. Jieba → NLTKEN
+2. EN
+3. RAGASEN
+4. EN
 
-创建时间: 2026-02-09
+EN: 2026-02-09
 """
 
 import logging
@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class TestWeek1Fixes:
-    """Week 1修复集成测试"""
+    """Week 1EN"""
 
     class _DummyVectorStore:
-        """用于不依赖数据库的轻量测试桩。"""
+        """EN."""
 
         def get_connection(
             self,
@@ -31,34 +31,34 @@ class TestWeek1Fixes:
             )
 
     def test_nltk_english_tokenization(self):
-        """测试NLTK英文分词（替代jieba）"""
+        """ENNLTKEN(ENjieba)"""
         from backend.services.retrieval.hybrid_search import HybridRetriever
 
-        # 使用Dummy存储避免数据库依赖，此测试只验证分词行为
+        # ENDummyEN,EN
         retriever = HybridRetriever(self._DummyVectorStore())
 
-        # 测试建筑英文术语分词
+        # EN
         test_text = "reinforced-concrete load-bearing CSA-A23.1-19 HVAC OSHA-compliant"
 
         tokens = retriever._tokenize_english(test_text)
 
-        # 验证：
-        # 1. 保留复合词的独立部分
-        # 2. 保留完整专业术语
-        # 3. 正确处理连字符
-        assert any("reinforc" in t for t in tokens), "应保留reinforced词干"
-        assert any("concret" in t for t in tokens), "应保留concrete词干"
-        assert any("load" in t for t in tokens), "应保留load词干"
-        assert any("bear" in t for t in tokens), "应保留bearing词干"
-        assert len(tokens) > 0, "应生成tokens"
+        # EN:
+        # 1. EN
+        # 2. EN
+        # 3. EN
+        assert any("reinforc" in t for t in tokens), "ENreinforcedEN"
+        assert any("concret" in t for t in tokens), "ENconcreteEN"
+        assert any("load" in t for t in tokens), "ENloadEN"
+        assert any("bear" in t for t in tokens), "ENbearingEN"
+        assert len(tokens) > 0, "ENtokens"
 
-        logger.info(f"NLTK分词测试通过: {test_text} -> {tokens}")
+        logger.info(f"NLTKEN: {test_text} -> {tokens}")
 
     def test_semantic_chunking(self):
-        """测试语义分块优化"""
+        """EN"""
         from backend.services.core.chunker import chunk_text
 
-        # 测试建筑规范文本
+        # EN
         test_text = """
         ## Section 4.3.2.1 - Minimum Concrete Protection
 
@@ -77,58 +77,58 @@ class TestWeek1Fixes:
             chunk_overlap=128,
         )
 
-        # 验证：
-        # 1. 不应切断Section引用
-        # 2. 不应切断CSA标准引用
-        # 3. 分块大小接近512字符
-        assert len(chunks) > 0, "应生成至少1个分块"
+        # EN:
+        # 1. ENSectionEN
+        # 2. ENCSAEN
+        # 3. EN512EN
+        assert len(chunks) > 0, "EN1EN"
         assert all(
             chunk["metadata"]["chunking_method"] == "semantic_construction"
             for chunk in chunks
-        ), "应使用语义分块方法"
+        ), "EN"
 
-        # 检查是否保留了规范引用完整性
+        # EN
         for chunk in chunks:
             content = chunk["content"]
-            # 如果包含Section引用，应该是完整的
+            # ENSectionEN,EN
             if "Section" in content:
-                # 简单检查：不应在Section中间切断
-                # （更复杂的检查需要解析引用格式）
-                assert "Section" in content, "Section引用应完整"
+                # EN:ENSectionEN
+                # (EN)
+                assert "Section" in content, "SectionEN"
 
-        logger.info(f"语义分块测试通过: 生成{len(chunks)}个分块")
+        logger.info(f"EN: EN{len(chunks)}EN")
 
     def test_ragas_evaluation_framework(self):
-        """测试RAGAS评估框架"""
+        """ENRAGASEN"""
         try:
             from tests.evaluation.ragas_evaluation import RAGASEvaluator
 
             evaluator = RAGASEvaluator()
 
-            # 验证数据集创建
+            # EN
             dataset = evaluator.create_construction_evaluation_dataset()
-            assert len(dataset) > 0, "应创建评估数据集"
-            assert "question" in dataset.column_names, "数据集应包含question列"
-            assert "answer" in dataset.column_names, "数据集应包含answer列"
-            assert "contexts" in dataset.column_names, "数据集应包含contexts列"
+            assert len(dataset) > 0, "EN"
+            assert "question" in dataset.column_names, "ENquestionEN"
+            assert "answer" in dataset.column_names, "ENanswerEN"
+            assert "contexts" in dataset.column_names, "ENcontextsEN"
 
-            # 验证MRR计算
+            # ENMRREN
             test_results = [[1, 2, 3], [2, 1, 3], [1, 3, 2]]
             mrr = evaluator.calculate_mrr(test_results)
-            assert 0 <= mrr <= 1, "MRR应在0-1范围内"
+            assert 0 <= mrr <= 1, "MRREN0-1EN"
 
-            logger.info(f"RAGAS评估框架测试通过: MRR={mrr:.2f}")
+            logger.info(f"RAGASEN: MRR={mrr:.2f}")
 
         except ImportError as e:
-            pytest.skip(f"RAGAS未安装: {e}")
+            pytest.skip(f"RAGASEN: {e}")
 
     def test_safety_guard(self):
-        """测试安全防护层"""
+        """EN"""
         from backend.services.safety import SafetyGuard, SafetyLevel
 
         safety_guard = SafetyGuard(confidence_threshold=0.80)
 
-        # 测试案例1：安全关键问题
+        # EN1:EN
         answer1 = (
             "Scaffolding above 3 meters requires guardrails per Alberta OHS Part 23."
         )
@@ -136,41 +136,41 @@ class TestWeek1Fixes:
 
         result1 = safety_guard.process_response(answer1, context1)
 
-        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, "应识别为安全关键问题"
+        assert result1["safety_level"] == SafetyLevel.SAFETY_CRITICAL, "EN"
         assert result1["refused"] or (
-            "免责声明" in result1["enhanced_answer"]
+            "EN" in result1["enhanced_answer"]
             or "disclaimer" in result1["enhanced_answer"].lower()
-        ), "安全关键回答应被拒绝或附加免责声明"
+        ), "EN"
 
-        # 测试案例2：低置信度拒绝
+        # EN2:EN
         answer2 = "Use about 30-40 MPa concrete."
         context2 = []
 
         result2 = safety_guard.process_response(answer2, context2)
 
-        assert result2["confidence"] < 0.80, "低置信度应被检测"
-        assert result2["refused"] is True, "低置信度应触发拒绝回答"
+        assert result2["confidence"] < 0.80, "EN"
+        assert result2["refused"] is True, "EN"
 
-        logger.info("安全防护层测试通过")
+        logger.info("EN")
 
     def test_end_to_end_retrieval_with_nltk(self):
-        """端到端测试：使用NLTK分词的检索"""
+        """EN:ENNLTKEN"""
         from backend.services.core.vectorstore import VectorStore
         from backend.services.retrieval.hybrid_search import HybridRetriever
 
-        # 跳过如果数据库中没有数据
-        pytest.skip("需要数据库中的测试数据")
+        # EN
+        pytest.skip("EN")
 
         vectorstore = VectorStore()
         retriever = HybridRetriever(vectorstore)
 
-        # 测试建筑查询
+        # EN
         query = "What are the requirements for scaffolding above 3 meters?"
 
-        # 构建BM25索引（使用NLTK分词）
+        # ENBM25EN(ENNLTKEN)
         retriever.build_bm25_index()
 
-        # 执行检索
+        # EN
         results = retriever.search(
             query=query,
             top_k=5,
@@ -178,56 +178,56 @@ class TestWeek1Fixes:
             bm25_weight=0.3,
         )
 
-        # 验证结果
-        assert isinstance(results, list), "应返回结果列表"
-        assert len(results) <= 5, "返回结果不应超过top_k"
+        # EN
+        assert isinstance(results, list), "EN"
+        assert len(results) <= 5, "ENtop_k"
 
         for result in results:
-            assert "doc_id" in result, "结果应包含doc_id"
-            assert "content" in result, "结果应包含content"
-            assert "score" in result, "结果应包含score"
+            assert "doc_id" in result, "ENdoc_id"
+            assert "content" in result, "ENcontent"
+            assert "score" in result, "ENscore"
 
-        logger.info(f"端到端检索测试通过: 返回{len(results)}个结果")
+        logger.info(f"EN: EN{len(results)}EN")
 
 
 if __name__ == "__main__":
-    # 运行所有测试
+    # EN
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    print("🧪 Week 1修复验证测试")
+    print("🧪 Week 1EN")
     print("=" * 60)
 
     test_suite = TestWeek1Fixes()
 
     tests = [
-        ("NLTK英文分词修复", test_suite.test_nltk_english_tokenization),
-        ("语义分块优化", test_suite.test_semantic_chunking),
-        ("RAGAS评估框架", test_suite.test_ragas_evaluation_framework),
-        ("安全防护层", test_suite.test_safety_guard),
+        ("NLTKEN", test_suite.test_nltk_english_tokenization),
+        ("EN", test_suite.test_semantic_chunking),
+        ("RAGASEN", test_suite.test_ragas_evaluation_framework),
+        ("EN", test_suite.test_safety_guard),
     ]
 
     passed = 0
     failed = 0
 
     for test_name, test_func in tests:
-        print(f"\n🔍 测试: {test_name}")
+        print(f"\n🔍 EN: {test_name}")
         try:
             test_func()
-            print(f"✅ {test_name} 通过")
+            print(f"✅ {test_name} EN")
             passed += 1
         except Exception as e:
-            print(f"❌ {test_name} 失败: {e}")
+            print(f"❌ {test_name} EN: {e}")
             failed += 1
         except pytest.skip.Exception as e:
-            print(f"⚠️ {test_name} 跳过: {e}")
+            print(f"⚠️ {test_name} EN: {e}")
 
     print("\n" + "=" * 60)
-    print(f"测试结果: {passed} 通过, {failed} 失败")
+    print(f"EN: {passed} EN, {failed} EN")
 
     if failed == 0:
-        print("🎉 所有测试通过！Week 1修复验证成功。")
+        print("🎉 EN!Week 1EN.")
     else:
-        print("⚠️ 部分测试失败，请检查错误信息。")
+        print("⚠️ EN,EN.")

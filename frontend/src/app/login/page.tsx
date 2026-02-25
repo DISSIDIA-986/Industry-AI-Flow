@@ -22,13 +22,13 @@ export default function LoginPage() {
       await login(email, password)
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登录失败')
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
-  // 显示认证上下文中的错误
+  // Show errors in authentication context
   const displayError = error || authError
 
   return (
@@ -38,13 +38,13 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Industry AI Flow
           </h1>
-          <p className="text-gray-600">企业级AI工作流平台</p>
+          <p className="text-gray-600">Enterprise levelAIWorkflow platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              邮箱地址
+              Email address
             </label>
             <input
               type="email"
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              密码
+              password
             </label>
             <input
               type="password"
@@ -81,15 +81,15 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '登录中...' : '登录'}
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            还没有账户？{' '}
+            Don’t have an account yet?{' '}
             <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium">
-              立即注册
+              Register now
             </Link>
           </p>
         </div>
@@ -97,7 +97,7 @@ export default function LoginPage() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              演示账户: demo@example.com / demo123
+              Demo account: demo@example.com / demo123
             </p>
           </div>
         </div>

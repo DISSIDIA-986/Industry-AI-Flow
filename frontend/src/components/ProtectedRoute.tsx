@@ -22,7 +22,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loading message="验证用户身份..." />
+        <Loading message="Verify user identity..." />
       </div>
     )
   }
@@ -30,7 +30,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loading message="正在重定向到登录页面..." />
+        <Loading message="Redirecting to login page..." />
       </div>
     )
   }

@@ -1,6 +1,6 @@
 """
-路由决策服务
-基于意图分类结果和置信度，智能路由到对应的Agent
+EN
+EN,ENAgent
 """
 
 import asyncio
@@ -17,16 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 class RoutingPath(str, Enum):
-    """路由路径枚举"""
+    """EN"""
 
-    DIRECT_ROUTING = "direct"  # 直接路由
-    CLARIFICATION = "clarification"  # 澄清流程
-    FALLBACK = "fallback"  # 回退方案
-    ESCALATION = "escalation"  # 升级处理
+    DIRECT_ROUTING = "direct"  # EN
+    CLARIFICATION = "clarification"  # EN
+    FALLBACK = "fallback"  # EN
+    ESCALATION = "escalation"  # EN
 
 
 class AgentType(str, Enum):
-    """Agent类型枚举"""
+    """AgentEN"""
 
     RAG_AGENT = "rag_agent"
     DATA_ANALYSIS_AGENT = "data_analysis_agent"
@@ -38,7 +38,7 @@ class AgentType(str, Enum):
 
 @dataclass
 class RoutingDecision:
-    """路由决策结果"""
+    """EN"""
 
     selected_agent: AgentType
     routing_path: RoutingPath
@@ -51,7 +51,7 @@ class RoutingDecision:
     clarification_context: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """EN"""
         return {
             "selected_agent": self.selected_agent.value,
             "routing_path": self.routing_path.value,
@@ -67,7 +67,7 @@ class RoutingDecision:
 
 @dataclass
 class SystemStatus:
-    """系统状态信息"""
+    """EN"""
 
     agent_availability: Dict[AgentType, bool] = field(default_factory=dict)
     system_load: float = 0.0
@@ -76,7 +76,7 @@ class SystemStatus:
     average_response_times: Dict[AgentType, float] = field(default_factory=dict)
 
     def get_available_agents(self) -> List[AgentType]:
-        """获取可用的Agent列表"""
+        """ENAgentEN"""
         return [
             agent for agent, available in self.agent_availability.items() if available
         ]
@@ -84,7 +84,7 @@ class SystemStatus:
     def get_least_loaded_agent(
         self, candidates: List[AgentType]
     ) -> Optional[AgentType]:
-        """从候选Agent中选择负载最低的"""
+        """ENAgentEN"""
         if not candidates:
             return None
 
@@ -94,7 +94,7 @@ class SystemStatus:
         if not available_candidates:
             return None
 
-        # 基于队列长度和平均响应时间选择最优Agent
+        # ENAgent
         best_agent = None
         best_score = float("inf")
 
@@ -111,28 +111,28 @@ class SystemStatus:
 
 
 class RoutingDecisionEngine:
-    """路由决策引擎"""
+    """EN"""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
-        初始化路由决策引擎
+        EN
 
         Args:
-            config: 配置参数
+            config: EN
         """
         self.config = config or {}
 
-        # 置信度阈值
+        # EN
         self.confidence_thresholds = self.config.get(
             "confidence_thresholds",
             {
-                "high": 0.8,  # 高置信度，直接路由
-                "medium": 0.6,  # 中等置信度，需要验证
-                "low": 0.4,  # 低置信度，需要澄清
+                "high": 0.8,  # EN,EN
+                "medium": 0.6,  # EN,EN
+                "low": 0.4,  # EN,EN
             },
         )
 
-        # Agent配置
+        # AgentEN
         self.agent_config = self.config.get(
             "agent_config",
             {
@@ -173,7 +173,7 @@ class RoutingDecisionEngine:
             },
         )
 
-        # 路由规则
+        # EN
         self.routing_rules = self.config.get(
             "routing_rules",
             {
@@ -185,11 +185,11 @@ class RoutingDecisionEngine:
             },
         )
 
-        # 系统状态模拟
+        # EN
         self.system_status = SystemStatus()
         self._initialize_system_status()
 
-        # 路由统计
+        # EN
         self.routing_stats = {
             "total_routes": 0,
             "direct_routes": 0,
@@ -198,19 +198,19 @@ class RoutingDecisionEngine:
             "agent_usage": {agent: 0 for agent in AgentType},
         }
 
-        logger.info("路由决策引擎初始化完成")
+        logger.info("EN")
 
     def _initialize_system_status(self):
-        """初始化系统状态"""
-        # 所有Agent默认可用
+        """EN"""
+        # ENAgentEN
         for agent in AgentType:
             self.system_status.agent_availability[agent] = True
 
-        # 初始化队列长度（模拟）
+        # EN(EN)
         for agent in AgentType:
             self.system_status.queue_lengths[agent] = 0
 
-        # 初始化平均响应时间
+        # EN
         for agent in AgentType:
             config = self.agent_config.get(agent, {})
             self.system_status.average_response_times[agent] = (
@@ -224,32 +224,32 @@ class RoutingDecisionEngine:
         user_preferences: Optional[Dict[str, Any]] = None,
     ) -> RoutingDecision:
         """
-        做出路由决策
+        EN
 
         Args:
-            intent_result: 意图分类结果
-            context: 上下文信息
-            user_preferences: 用户偏好
+            intent_result: EN
+            context: EN
+            user_preferences: EN
 
         Returns:
-            RoutingDecision: 路由决策结果
+            RoutingDecision: EN
         """
         try:
-            # 提取关键信息
+            # EN
             intent = intent_result.get("intent", "knowledge_retrieval")
             confidence = float(intent_result.get("confidence", 0.0))
             reasoning = intent_result.get("reasoning", "")
 
-            # 基于意图选择主要Agent
+            # ENAgent
             primary_agent = self._map_intent_to_agent(intent)
 
-            # 获取可用的备选Agent
+            # ENAgent
             fallback_agents = self._get_fallback_agents(primary_agent, intent)
 
-            # 置信度评估
+            # EN
             routing_path = self._determine_routing_path(confidence, intent_result)
 
-            # 负载均衡考虑
+            # EN
             if self.routing_rules.get("enable_load_balancing", True):
                 candidates = [primary_agent] + fallback_agents
                 selected_agent = (
@@ -259,15 +259,15 @@ class RoutingDecisionEngine:
             else:
                 selected_agent = primary_agent
 
-            # 设置路由参数
+            # EN
             parameters = self._build_routing_parameters(
                 selected_agent, intent_result, context, user_preferences
             )
 
-            # 估算处理时间
+            # EN
             estimated_time = self._estimate_processing_time(selected_agent, context)
 
-            # 是否需要澄清
+            # EN
             requires_clarification = routing_path == RoutingPath.CLARIFICATION
             clarification_context = None
             if requires_clarification:
@@ -279,12 +279,12 @@ class RoutingDecisionEngine:
                     "user_context": context,
                 }
 
-            # 创建路由决策
+            # EN
             decision = RoutingDecision(
                 selected_agent=selected_agent,
                 routing_path=routing_path,
                 confidence=confidence,
-                reasoning=f"基于意图'{intent}'和置信度{confidence:.2f}选择{selected_agent.value}。{reasoning}",
+                reasoning=f"EN'{intent}'EN{confidence:.2f}EN{selected_agent.value}.{reasoning}",
                 parameters=parameters,
                 fallback_options=fallback_agents,
                 estimated_processing_time=estimated_time,
@@ -292,21 +292,21 @@ class RoutingDecisionEngine:
                 clarification_context=clarification_context,
             )
 
-            # 更新统计
+            # EN
             self._update_routing_stats(decision)
 
             logger.info(
-                f"路由决策完成: {selected_agent.value} (置信度: {confidence:.2f}, 路径: {routing_path.value})"
+                f"EN: {selected_agent.value} (EN: {confidence:.2f}, EN: {routing_path.value})"
             )
             return decision
 
         except Exception as e:
-            logger.error(f"路由决策失败: {str(e)}")
-            # 回退到通用Agent
+            logger.error(f"EN: {str(e)}")
+            # ENAgent
             return self._create_fallback_decision(intent_result, str(e))
 
     def _map_intent_to_agent(self, intent: str) -> AgentType:
-        """将意图映射到Agent"""
+        """ENAgent"""
         intent_mapping = {
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
@@ -319,7 +319,7 @@ class RoutingDecisionEngine:
     def _get_fallback_agents(
         self, primary_agent: AgentType, intent: str
     ) -> List[AgentType]:
-        """获取备选Agent列表"""
+        """ENAgentEN"""
         fallback_mapping = {
             AgentType.RAG_AGENT: [AgentType.GENERAL_AGENT],
             AgentType.DATA_ANALYSIS_AGENT: [
@@ -341,7 +341,7 @@ class RoutingDecisionEngine:
     def _determine_routing_path(
         self, confidence: float, intent_result: Dict[str, Any]
     ) -> RoutingPath:
-        """确定路由路径"""
+        """EN"""
         high_threshold = self.confidence_thresholds.get("high", 0.8)
         low_threshold = self.confidence_thresholds.get("low", 0.4)
 
@@ -350,7 +350,7 @@ class RoutingDecisionEngine:
         elif confidence <= low_threshold:
             return RoutingPath.CLARIFICATION
         else:
-            # 中等置信度，考虑其他因素
+            # EN,EN
             uncertainty_factors = intent_result.get("uncertainty_factors", [])
             if len(uncertainty_factors) > 2:
                 return RoutingPath.CLARIFICATION
@@ -364,7 +364,7 @@ class RoutingDecisionEngine:
         context: Dict[str, Any],
         user_preferences: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """构建路由参数"""
+        """EN"""
         base_params = {
             "timeout": self.agent_config[agent]["max_response_time"],
             "retry_count": self.agent_config[agent]["retry_count"],
@@ -375,7 +375,7 @@ class RoutingDecisionEngine:
             "context_clues": intent_result.get("context_clues", []),
         }
 
-        # 添加上下文信息
+        # EN
         if context:
             base_params["session_context"] = {
                 "session_id": context.get("session_id"),
@@ -384,7 +384,7 @@ class RoutingDecisionEngine:
                 "has_uploaded_files": context.get("has_uploaded_files", False),
             }
 
-        # 添加用户偏好
+        # EN
         if user_preferences:
             base_params["user_preferences"] = user_preferences
 
@@ -393,53 +393,53 @@ class RoutingDecisionEngine:
     def _estimate_processing_time(
         self, agent: AgentType, context: Dict[str, Any]
     ) -> int:
-        """估算处理时间"""
+        """EN"""
         base_time = self.agent_config[agent]["max_response_time"]
 
-        # 根据上下文调整时间估算
+        # EN
         modifiers = 1.0
 
-        # 如果有上传文件，可能需要更多时间
+        # EN,EN
         if context.get("has_uploaded_files", False):
             if agent == AgentType.DATA_ANALYSIS_AGENT:
-                modifiers *= 1.5  # 数据分析可能需要更长时间
+                modifiers *= 1.5  # EN
             elif agent == AgentType.DOCUMENT_PROCESSING_AGENT:
-                modifiers *= 1.3  # 文档处理时间适中
+                modifiers *= 1.3  # EN
 
-        # 会话复杂度
+        # EN
         query_count = context.get("query_count", 1)
-        if query_count > 5:  # 复杂会话
+        if query_count > 5:  # EN
             modifiers *= 1.2
 
         return int(base_time * modifiers)
 
     def _get_possible_intents(self, intent_result: Dict[str, Any]) -> List[str]:
-        """获取可能的意图列表"""
+        """EN"""
         primary_intent = intent_result.get("intent")
         confidence = intent_result.get("confidence", 0.0)
 
         if confidence >= 0.8:
             return [primary_intent]
 
-        # 根据关键词获取其他可能的意图
+        # EN
         keywords = intent_result.get("keywords", [])
         possible_intents = [primary_intent]
 
-        # 简单的关键词到意图映射
+        # EN
         keyword_intent_mapping = {
-            "数据": "data_analysis",
-            "分析": "data_analysis",
-            "图表": "data_analysis",
-            "成本": "cost_estimation",
-            "预算": "cost_estimation",
-            "估算": "cost_estimation",
-            "超支": "cost_estimation",
-            "文档": "document_processing",
+            "EN": "data_analysis",
+            "EN": "data_analysis",
+            "EN": "data_analysis",
+            "EN": "cost_estimation",
+            "EN": "cost_estimation",
+            "EN": "cost_estimation",
+            "EN": "cost_estimation",
+            "EN": "document_processing",
             "PDF": "document_processing",
-            "图片": "document_processing",
-            "代码": "code_execution",
-            "运行": "code_execution",
-            "计算": "code_execution",
+            "EN": "document_processing",
+            "EN": "code_execution",
+            "EN": "code_execution",
+            "EN": "code_execution",
         }
 
         for keyword in keywords:
@@ -447,53 +447,53 @@ class RoutingDecisionEngine:
             if mapped_intent and mapped_intent not in possible_intents:
                 possible_intents.append(mapped_intent)
 
-        return possible_intents[:3]  # 最多返回3个可能意图
+        return possible_intents[:3]  # EN3EN
 
     def _generate_clarification_questions(
         self, intent_result: Dict[str, Any]
     ) -> List[str]:
-        """生成澄清问题"""
+        """EN"""
         intent = intent_result.get("intent")
         keywords = intent_result.get("keywords", [])
 
-        # 基于意图的澄清问题
+        # EN
         clarification_templates = {
             "knowledge_retrieval": [
-                "您是想了解具体的概念解释，还是需要查找特定的信息？",
-                "您希望我帮您检索哪个领域的知识？",
-                "您的问题更偏向于事实查询还是概念说明？",
+                "EN,EN?",
+                "EN?",
+                "EN?",
             ],
             "data_analysis": [
-                "您希望进行哪种类型的数据分析？是统计分析、可视化还是机器学习？",
-                "您是否已经上传了需要分析的数据集？",
-                "您的分析重点是什么？是探索性分析还是验证特定假设？",
+                "EN?EN,EN?",
+                "EN?",
+                "EN?EN?",
             ],
             "document_processing": [
-                "您需要处理什么类型的文档？是PDF文件、图片还是其他格式？",
-                "您希望从文档中提取什么类型的内容？是文字、表格还是特定信息？",
-                "您的文档是否包含需要OCR识别的扫描内容？",
+                "EN?ENPDFEN,EN?",
+                "EN?EN,EN?",
+                "ENOCREN?",
             ],
             "code_execution": [
-                "您希望运行什么类型的代码？是数据处理、算法实现还是特定计算？",
-                "您是否有具体的编程语言偏好？",
-                "您的代码执行是否需要特定的环境或依赖？",
+                "EN?EN,EN?",
+                "EN?",
+                "EN?",
             ],
         }
 
         questions = clarification_templates.get(
-            intent, ["请您更详细地描述一下您的需求？", "您希望我帮您完成什么具体任务？"]
+            intent, ["EN?", "EN?"]
         )
 
-        # 根据关键词调整问题
-        if "图表" in keywords and intent == "data_analysis":
-            questions.insert(0, "您是否需要创建数据可视化图表？")
+        # EN
+        if "EN" in keywords and intent == "data_analysis":
+            questions.insert(0, "EN?")
         elif "PDF" in keywords and intent == "document_processing":
-            questions.insert(0, "您需要处理PDF文档的什么内容？")
+            questions.insert(0, "ENPDFEN?")
 
-        return questions[:2]  # 最多返回2个问题
+        return questions[:2]  # EN2EN
 
     def _update_routing_stats(self, decision: RoutingDecision):
-        """更新路由统计"""
+        """EN"""
         self.routing_stats["total_routes"] += 1
         self.routing_stats["agent_usage"][decision.selected_agent] += 1
 
@@ -507,12 +507,12 @@ class RoutingDecisionEngine:
     def _create_fallback_decision(
         self, intent_result: Dict[str, Any], error: str
     ) -> RoutingDecision:
-        """创建回退决策"""
+        """EN"""
         return RoutingDecision(
             selected_agent=AgentType.GENERAL_AGENT,
             routing_path=RoutingPath.FALLBACK,
             confidence=0.5,
-            reasoning=f"路由决策失败，回退到通用Agent。错误信息: {error}",
+            reasoning=f"EN,ENAgent.EN: {error}",
             parameters={
                 "timeout": self.agent_config[AgentType.GENERAL_AGENT][
                     "max_response_time"
@@ -525,18 +525,18 @@ class RoutingDecisionEngine:
         )
 
     def get_routing_statistics(self) -> Dict[str, Any]:
-        """获取路由统计信息"""
+        """EN"""
         total = self.routing_stats["total_routes"]
         if total == 0:
             return self.routing_stats
 
-        # 计算比例
+        # EN
         stats = self.routing_stats.copy()
         stats["direct_routing_rate"] = self.routing_stats["direct_routes"] / total
         stats["clarification_rate"] = self.routing_stats["clarification_routes"] / total
         stats["fallback_rate"] = self.routing_stats["fallback_routes"] / total
 
-        # Agent使用率
+        # AgentEN
         stats["agent_usage_rates"] = {
             agent.value: count / total
             for agent, count in self.routing_stats["agent_usage"].items()
@@ -545,7 +545,7 @@ class RoutingDecisionEngine:
         return stats
 
     def update_system_status(self, status_updates: Dict[str, Any]):
-        """更新系统状态"""
+        """EN"""
         if "agent_availability" in status_updates:
             self.system_status.agent_availability.update(
                 status_updates["agent_availability"]
@@ -566,7 +566,7 @@ class RoutingDecisionEngine:
             )
 
     async def health_check(self) -> Dict[str, Any]:
-        """健康检查"""
+        """EN"""
         return {
             "status": "healthy",
             "total_routes": self.routing_stats["total_routes"],

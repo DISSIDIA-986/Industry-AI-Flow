@@ -1,4 +1,4 @@
-"""Hybrid Retrieval Tool - 结合BM25和向量搜索"""
+"""Hybrid Retrieval Tool - Combining BM25 and vector search"""
 
 from typing import Annotated
 
@@ -10,7 +10,7 @@ from backend.services.retrieval.hybrid_search import HybridRetriever
 
 @tool
 def hybrid_retrieval_tool(
-    query: Annotated[str, "用户查询文本"], top_k: Annotated[int, "返回的文档数量"] = 10
+    query: Annotated[str, "User query text"], top_k: Annotated[int, "Number of documents to return"] = 10
 ) -> list[dict]:
     """
     混合检索工具 - 结合BM25和向量搜索检索相关文档
@@ -21,8 +21,8 @@ def hybrid_retrieval_tool(
     3. 结果融合：按权重合并两种搜索结果
 
     Args:
-        query: 用户查询文本
-        top_k: 返回的文档数量（默认10，用于后续重排序）
+        query: User query text
+        top_k: Number of documents to return（默认10，用于后续重排序）
 
     Returns:
         检索到的文档列表，每个文档包含：

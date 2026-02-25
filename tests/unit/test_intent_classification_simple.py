@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-意图分类系统简化测试脚本
-测试核心分类逻辑和路由决策（不依赖LangChain）
+EN
+EN(ENLangChain)
 """
 
 import asyncio
@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List
 
-# 配置日志
+# EN
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -20,46 +20,46 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleIntentClassifier:
-    """简化的意图分类器"""
+    """EN"""
 
     def __init__(self):
         self.intent_patterns = {
             "knowledge_retrieval": [
-                "什么是",
-                "如何",
-                "解释",
-                "定义",
-                "概念",
-                "原理",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
                 "what is",
                 "how to",
             ],
             "data_analysis": [
-                "分析",
-                "数据",
-                "统计",
-                "图表",
-                "可视化",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
                 "analyze",
                 "statistics",
                 "visualization",
             ],
             "document_processing": [
-                "文档",
+                "EN",
                 "PDF",
-                "提取",
+                "EN",
                 "OCR",
-                "扫描",
+                "EN",
                 "document",
                 "extract",
                 "scan",
             ],
             "code_execution": [
-                "运行",
-                "代码",
-                "计算",
-                "执行",
-                "编程",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
                 "run",
                 "code",
                 "execute",
@@ -68,10 +68,10 @@ class SimpleIntentClassifier:
         }
 
     async def classify_intent(self, query: str) -> Dict[str, Any]:
-        """分类意图"""
+        """EN"""
         query_lower = query.lower()
 
-        # 计算每个意图的匹配分数
+        # EN
         intent_scores = {}
         for intent, keywords in self.intent_patterns.items():
             score = 0
@@ -80,40 +80,40 @@ class SimpleIntentClassifier:
                     score += 1
             intent_scores[intent] = score
 
-        # 选择得分最高的意图
+        # EN
         if max(intent_scores.values()) == 0:
-            # 没有匹配的关键词，返回默认意图
+            # EN,EN
             return {
                 "intent": "knowledge_retrieval",
                 "confidence": 0.4,
-                "reasoning": "没有明确的关键词匹配，默认为知识检索",
+                "reasoning": "EN,EN",
                 "keywords": [],
-                "context_clues": ["一般性查询"],
-                "suggested_action": "执行通用检索",
-                "uncertainty_factors": ["意图模糊"],
+                "context_clues": ["EN"],
+                "suggested_action": "EN",
+                "uncertainty_factors": ["EN"],
             }
 
         best_intent = max(intent_scores.items(), key=lambda x: x[1])
         max_score = best_intent[1]
 
-        # 基于匹配关键词数量计算置信度
+        # EN
         confidence = min(0.9, 0.4 + (max_score * 0.15))
 
         return {
             "intent": best_intent[0],
             "confidence": confidence,
-            "reasoning": f"基于关键词匹配选择意图 {best_intent[0]}",
+            "reasoning": f"EN {best_intent[0]}",
             "keywords": [
                 kw for kw in self.intent_patterns[best_intent[0]] if kw in query_lower
             ],
             "context_clues": [best_intent[0]],
-            "suggested_action": f"路由到{best_intent[0]}处理器",
-            "uncertainty_factors": [] if confidence > 0.7 else ["关键词较少"],
+            "suggested_action": f"EN{best_intent[0]}EN",
+            "uncertainty_factors": [] if confidence > 0.7 else ["EN"],
         }
 
 
 class SimpleRoutingEngine:
-    """简化的路由决策引擎"""
+    """EN"""
 
     def __init__(self):
         self.agent_mapping = {
@@ -126,13 +126,13 @@ class SimpleRoutingEngine:
     async def make_routing_decision(
         self, intent_result: Dict[str, Any], context: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-        """做出路由决策"""
+        """EN"""
         intent = intent_result.get("intent")
         confidence = intent_result.get("confidence", 0.0)
 
         selected_agent = self.agent_mapping.get(intent, "general_agent")
 
-        # 置信度评估
+        # EN
         if confidence >= 0.8:
             routing_path = "direct"
             requires_clarification = False
@@ -147,7 +147,7 @@ class SimpleRoutingEngine:
             "selected_agent": selected_agent,
             "routing_path": routing_path,
             "confidence": confidence,
-            "reasoning": f"基于意图'{intent}'和置信度{confidence:.2f}路由到{selected_agent}",
+            "reasoning": f"EN'{intent}'EN{confidence:.2f}EN{selected_agent}",
             "requires_clarification": requires_clarification,
             "estimated_processing_time": self._estimate_processing_time(selected_agent),
             "clarification_questions": self._generate_clarification_questions(intent)
@@ -156,7 +156,7 @@ class SimpleRoutingEngine:
         }
 
     def _estimate_processing_time(self, agent: str) -> int:
-        """估算处理时间"""
+        """EN"""
         time_mapping = {
             "rag_agent": 30,
             "data_analysis_agent": 120,
@@ -167,36 +167,36 @@ class SimpleRoutingEngine:
         return time_mapping.get(agent, 60)
 
     def _generate_clarification_questions(self, intent: str) -> List[str]:
-        """生成澄清问题"""
+        """EN"""
         question_mapping = {
-            "knowledge_retrieval": ["您是想了解具体的概念解释，还是查找特定信息？", "您希望我帮您检索哪个领域的知识？"],
-            "data_analysis": ["您希望进行哪种类型的数据分析？是统计分析还是可视化？", "您是否已经上传了需要分析的数据？"],
-            "document_processing": ["您需要处理什么类型的文档？是PDF还是图片？", "您希望从文档中提取什么内容？"],
-            "code_execution": ["您希望运行什么类型的代码？", "您的具体计算需求是什么？"],
+            "knowledge_retrieval": ["EN,EN?", "EN?"],
+            "data_analysis": ["EN?EN?", "EN?"],
+            "document_processing": ["EN?ENPDFEN?", "EN?"],
+            "code_execution": ["EN?", "EN?"],
         }
-        return question_mapping.get(intent, ["请提供更多详细信息"])
+        return question_mapping.get(intent, ["EN"])
 
 
 class SimpleWorkflowTester:
-    """简化的工作流测试器"""
+    """EN"""
 
     def __init__(self):
         self.intent_classifier = SimpleIntentClassifier()
         self.routing_engine = SimpleRoutingEngine()
 
     async def process_query(self, query: str) -> Dict[str, Any]:
-        """处理单个查询"""
+        """EN"""
         start_time = time.time()
 
-        # 意图分类
+        # EN
         intent_result = await self.intent_classifier.classify_intent(query)
 
-        # 路由决策
+        # EN
         routing_decision = await self.routing_engine.make_routing_decision(
             intent_result
         )
 
-        # 模拟Agent响应
+        # ENAgentEN
         agent_response = self._generate_agent_response(
             routing_decision["selected_agent"], query
         )
@@ -213,61 +213,61 @@ class SimpleWorkflowTester:
         }
 
     def _generate_agent_response(self, agent: str, query: str) -> str:
-        """生成模拟Agent响应"""
+        """ENAgentEN"""
         response_mapping = {
-            "rag_agent": f"根据您的查询'{query}'，我为您检索到相关的知识信息...",
-            "data_analysis_agent": f"针对您的数据分析需求，我建议采用以下方法进行分析...",
-            "document_processing_agent": f"关于文档处理，我可以帮您提取文本内容、识别表格等...",
-            "code_execution_agent": f"我将帮您执行相关代码任务来解决您的问题...",
-            "general_agent": f"我理解您的需求是'{query}'，让我为您提供有用的建议...",
+            "rag_agent": f"EN'{query}',EN...",
+            "data_analysis_agent": f"EN,EN...",
+            "document_processing_agent": f"EN,EN,EN...",
+            "code_execution_agent": f"EN...",
+            "general_agent": f"EN'{query}',EN...",
         }
-        return response_mapping.get(agent, "我正在处理您的请求...")
+        return response_mapping.get(agent, "EN...")
 
     def _evaluate_result(
         self, test_case: Dict[str, Any], result: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """评估测试结果"""
+        """EN"""
         evaluation = {"passed": True, "issues": []}
 
-        # 检查预期的意图
+        # EN
         if "expected_intent" in test_case:
             actual_intent = result["intent_result"]["intent"]
             if actual_intent != test_case["expected_intent"]:
                 evaluation["passed"] = False
                 evaluation["issues"].append(
-                    f"意图不匹配: 期望 {test_case['expected_intent']}, 实际 {actual_intent}"
+                    f"EN: EN {test_case['expected_intent']}, EN {actual_intent}"
                 )
 
-        # 检查置信度阈值
+        # EN
         min_confidence = test_case.get("min_confidence", 0.5)
         actual_confidence = result["intent_result"]["confidence"]
         if actual_confidence < min_confidence:
             evaluation["passed"] = False
             evaluation["issues"].append(
-                f"置信度过低: 期望 >= {min_confidence}, 实际 {actual_confidence:.2f}"
+                f"EN: EN >= {min_confidence}, EN {actual_confidence:.2f}"
             )
 
-        # 检查澄清需求
+        # EN
         if "expect_clarification" in test_case:
             actual_clarification = result["routing_decision"]["requires_clarification"]
             if actual_clarification != test_case["expect_clarification"]:
                 if not test_case["expect_clarification"]:
-                    evaluation["issues"].append(f"意外需要澄清: {test_case['query']}")
+                    evaluation["issues"].append(f"EN: {test_case['query']}")
                 else:
-                    evaluation["issues"].append(f"期望需要澄清但未触发: {test_case['query']}")
+                    evaluation["issues"].append(f"EN: {test_case['query']}")
 
         return evaluation
 
     async def run_test_suite(self, test_cases: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """运行测试套件"""
-        logger.info(f"开始运行 {len(test_cases)} 个测试用例")
+        """EN"""
+        logger.info(f"EN {len(test_cases)} EN")
 
         start_time = time.time()
         test_results = []
         passed_tests = 0
 
         for test_case in test_cases:
-            logger.info(f"执行测试: {test_case['name']}")
+            logger.info(f"EN: {test_case['name']}")
 
             try:
                 result = await self.process_query(test_case["query"])
@@ -284,14 +284,14 @@ class SimpleWorkflowTester:
 
                 if evaluation["passed"]:
                     passed_tests += 1
-                    logger.info(f"✅ 测试通过: {test_case['name']}")
+                    logger.info(f"✅ EN: {test_case['name']}")
                 else:
-                    logger.warning(f"❌ 测试失败: {test_case['name']}")
+                    logger.warning(f"❌ EN: {test_case['name']}")
                     for issue in evaluation["issues"]:
                         logger.warning(f"   - {issue}")
 
             except Exception as e:
-                logger.error(f"测试异常: {test_case['name']}, 错误: {str(e)}")
+                logger.error(f"EN: {test_case['name']}, EN: {str(e)}")
                 test_results.append(
                     {
                         "test_case": test_case,
@@ -317,60 +317,60 @@ class SimpleWorkflowTester:
 
 
 def create_test_cases() -> List[Dict[str, Any]]:
-    """创建测试用例"""
+    """EN"""
     return [
         {
-            "name": "知识检索 - 概念查询",
-            "query": "什么是机器学习？请详细解释基本概念。",
+            "name": "EN - EN",
+            "query": "EN?EN.",
             "expected_intent": "knowledge_retrieval",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "数据分析 - 统计需求",
-            "query": "帮我分析这份数据，生成统计报告和可视化图表。",
+            "name": "EN - EN",
+            "query": "EN,EN.",
             "expected_intent": "data_analysis",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "文档处理 - PDF提取",
-            "query": "我有一个PDF文件，需要提取其中的文字内容。",
+            "name": "EN - PDFEN",
+            "query": "ENPDFEN,EN.",
             "expected_intent": "document_processing",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "代码执行 - 计算任务",
-            "query": "帮我运行这个Python代码来计算数据结果。",
+            "name": "EN - EN",
+            "query": "ENPythonEN.",
             "expected_intent": "code_execution",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "模糊查询 - 低置信度",
-            "query": "你好，能帮我吗？",
-            "expected_intent": "knowledge_retrieval",  # 默认意图
-            "min_confidence": 0.3,  # 允许较低置信度
-            "expect_clarification": True,  # 期望需要澄清
+            "name": "EN - EN",
+            "query": "EN,EN?",
+            "expected_intent": "knowledge_retrieval",  # EN
+            "min_confidence": 0.3,  # EN
+            "expect_clarification": True,  # EN
         },
         {
-            "name": "复合查询 - 数据分析",
-            "query": "请分析上传的数据集并创建可视化展示趋势变化。",
+            "name": "EN - EN",
+            "query": "EN.",
             "expected_intent": "data_analysis",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "英文查询 - 知识检索",
+            "name": "EN - EN",
             "query": "What is artificial intelligence?",
             "expected_intent": "knowledge_retrieval",
             "min_confidence": 0.6,
             "expect_clarification": False,
         },
         {
-            "name": "模糊技术查询",
-            "query": "我想处理一些东西",
+            "name": "EN",
+            "query": "EN",
             "expected_intent": "knowledge_retrieval",
             "min_confidence": 0.3,
             "expect_clarification": True,
@@ -379,27 +379,27 @@ def create_test_cases() -> List[Dict[str, Any]]:
 
 
 def print_test_report(report: Dict[str, Any]):
-    """打印测试报告"""
+    """EN"""
     summary = report["summary"]
 
     print("\n" + "=" * 60)
-    print("🧠 意图分类系统测试报告")
+    print("🧠 EN")
     print("=" * 60)
 
-    print(f"📊 测试统计:")
-    print(f"   总测试数: {summary['total_tests']}")
-    print(f"   通过测试: {summary['passed_tests']}")
-    print(f"   失败测试: {summary['failed_tests']}")
-    print(f"   成功率: {summary['success_rate']:.1%}")
-    print(f"   总耗时: {summary['total_time_seconds']:.2f} 秒")
+    print(f"📊 EN:")
+    print(f"   EN: {summary['total_tests']}")
+    print(f"   EN: {summary['passed_tests']}")
+    print(f"   EN: {summary['failed_tests']}")
+    print(f"   EN: {summary['success_rate']:.1%}")
+    print(f"   EN: {summary['total_time_seconds']:.2f} EN")
 
-    print(f"\n📋 详细测试结果:")
+    print(f"\n📋 EN:")
     for i, test_result in enumerate(report["test_results"], 1):
         test_case = test_result["test_case"]
         evaluation = test_result["evaluation"]
         result = test_result.get("result", {})
 
-        status = "✅ 通过" if evaluation["passed"] else "❌ 失败"
+        status = "✅ EN" if evaluation["passed"] else "❌ EN"
 
         if result.get("success"):
             intent = result.get("intent_result", {}).get("intent", "N/A")
@@ -408,13 +408,13 @@ def print_test_report(report: Dict[str, Any]):
             processing_time = result.get("processing_time_ms", 0)
 
             print(f"   {i}. {test_case['name']} - {status}")
-            print(f"      查询: {test_case['query'][:50]}...")
-            print(f"      意图: {intent} (置信度: {confidence:.2f})")
-            print(f"      路由: {agent}")
-            print(f"      耗时: {processing_time:.0f}ms")
+            print(f"      EN: {test_case['query'][:50]}...")
+            print(f"      EN: {intent} (EN: {confidence:.2f})")
+            print(f"      EN: {agent}")
+            print(f"      EN: {processing_time:.0f}ms")
         else:
             print(f"   {i}. {test_case['name']} - {status}")
-            print(f"      错误: {result.get('error', '未知错误')}")
+            print(f"      EN: {result.get('error', 'EN')}")
 
         if evaluation.get("issues"):
             for issue in evaluation["issues"]:
@@ -424,40 +424,40 @@ def print_test_report(report: Dict[str, Any]):
 
 
 async def main():
-    """主测试函数"""
-    print("🚀 开始意图分类系统测试...")
+    """EN"""
+    print("🚀 EN...")
 
     try:
-        # 创建测试器
+        # EN
         tester = SimpleWorkflowTester()
 
-        # 创建测试用例
+        # EN
         test_cases = create_test_cases()
 
-        print(f"📋 准备执行 {len(test_cases)} 个测试用例")
+        print(f"📋 EN {len(test_cases)} EN")
 
-        # 运行测试套件
+        # EN
         test_report = await tester.run_test_suite(test_cases)
 
-        # 打印测试报告
+        # EN
         print_test_report(test_report)
 
-        # 保存测试报告
+        # EN
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"intent_classification_test_report_{timestamp}.json"
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(test_report, f, ensure_ascii=False, indent=2)
 
-        print(f"\n💾 测试报告已保存到: {filename}")
+        print(f"\n💾 EN: {filename}")
 
-        # 返回退出码
+        # EN
         success_rate = test_report["summary"]["success_rate"]
         return 0 if success_rate >= 0.75 else 1
 
     except Exception as e:
-        logger.error(f"测试执行失败: {str(e)}")
-        print(f"❌ 测试执行失败: {str(e)}")
+        logger.error(f"EN: {str(e)}")
+        print(f"❌ EN: {str(e)}")
         return 1
 
 

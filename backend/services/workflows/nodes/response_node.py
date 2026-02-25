@@ -11,26 +11,22 @@ def _build_default_response(state: WorkflowState) -> str:
     if state.get("error"):
         return "Request could not be processed due to safety or execution constraints."
 
-    provider = state.get("provider_used") or "local"
+    # Return a safe generic acknowledgment without leaking internal debug
+    # information (provider name, intent type, raw query, context snippets).
     intent = state.get("intent") or "unknown"
-    prompt_name = ((state.get("prompt_meta") or {}).get("name")) or "default"
-    query = state.get("query") or ""
-    contexts = state.get("retrieved_context") or []
-    context_hint = ""
-    if isinstance(contexts, list) and contexts:
-        first = contexts[0]
-        if isinstance(first, dict):
-            context_hint = str(first.get("content") or first.get("text") or "")[:120]
-    code_exec = ((state.get("metadata") or {}).get("code_exec_result") or {}).get("stdout", "")
+    code_exec_result = ((state.get("metadata") or {}).get("code_exec_result") or {}).get("stdout", "")
 
-    parts = [f"[provider={provider}]", f"[intent={intent}]", f"[prompt={prompt_name}]"]
-    if query:
-        parts.append(f"Query: {query}")
-    if context_hint:
-        parts.append(f"Context: {context_hint}")
-    if code_exec:
-        parts.append(f"Code output: {code_exec}")
-    return "\n".join(parts)
+    if code_exec_result:
+        return f"Analysis complete:\n{code_exec_result}"
+
+    intent_labels = {
+        "knowledge_retrieval": "I found relevant information for your question.",
+        "cost_estimation": "Cost estimation analysis is ready.",
+        "data_analysis": "Data analysis has been completed.",
+        "code_execution": "Code execution has finished.",
+        "document_processing": "Document processing is complete.",
+    }
+    return intent_labels.get(intent, "Your request has been processed.")
 
 
 async def response_node(state: WorkflowState, services: Any) -> WorkflowState:

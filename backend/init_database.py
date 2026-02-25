@@ -34,7 +34,7 @@ def init_database():
         except Exception as e:
             logger.warning(f"Failed to enable pgvector extension: {e}")
             logger.info("Continuing without pgvector (vectors will be stored as TEXT)")
-            conn.rollback()  # 回滚失败的事务
+            conn.rollback()  # Rollback failed transaction
             pgvector_available = False
 
         # 创建文档表
@@ -49,6 +49,24 @@ def init_database():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """
+        )
+
+        # 上传文档索引（用于前端文档列表，支持重启后持久化）
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS uploaded_documents_index (
+                id VARCHAR(64) PRIMARY KEY,
+                tenant_id VARCHAR(128) NOT NULL,
+                original_filename VARCHAR(255) NOT NULL,
+                sanitized_filename VARCHAR(255) NOT NULL,
+                file_path TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                mime_type VARCHAR(255),
+                status VARCHAR(32) NOT NULL DEFAULT 'processed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
 
         # 创建文档块表
@@ -84,6 +102,29 @@ def init_database():
             """
             )
 
+        # 文档画像表（轻量级文档摘要/大纲/关键词，用于检索路由增强）
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS document_profiles (
+                doc_id VARCHAR(255) PRIMARY KEY,
+                filename VARCHAR(255) NOT NULL,
+                summary TEXT NOT NULL,
+                outline JSONB DEFAULT '[]'::jsonb,
+                keywords JSONB DEFAULT '[]'::jsonb,
+                chunk_count INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_document_profiles_updated
+            ON document_profiles(updated_at DESC)
+            """
+        )
+
         # 文本搜索索引（无论是否有pgvector均可创建）
         try:
             cur.execute(
@@ -95,6 +136,18 @@ def init_database():
         except Exception as e:
             logger.warning(
                 f"Failed to create GIN index on document_chunks.content: {e}"
+            )
+
+        try:
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_document_profiles_summary_fts
+                ON document_profiles USING gin (to_tsvector('simple', summary))
+                """
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to create GIN index on document_profiles.summary: {e}"
             )
 
         # 创建反馈表
@@ -165,7 +218,7 @@ def init_database():
         """
         )
 
-        # 创建文档操作日志表
+        # 创建文档Operation Log表
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS document_operations_log (
@@ -446,7 +499,10 @@ def init_database():
             VALUES (%s, %s)
             ON CONFLICT (version) DO NOTHING
             """,
-            ("2026_02_10_prompt_schema_unify_v1", "Unify prompt schema to init_database.py with core tables and indexes"),
+            (
+                "2026_02_10_prompt_schema_unify_v1",
+                "Unify prompt schema to init_database.py with core tables and indexes",
+            ),
         )
 
         # 长期记忆表（给对话记忆系统使用）
@@ -486,6 +542,7 @@ def init_database():
         indexes = [
             "CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents(filename)",
             "CREATE INDEX IF NOT EXISTS idx_documents_created ON documents(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_uploaded_documents_tenant_created ON uploaded_documents_index(tenant_id, created_at DESC)",
             "CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON document_chunks(doc_id)",
             "CREATE INDEX IF NOT EXISTS idx_doc_quality_docid_score ON document_quality_scores(doc_id, quality_score)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from fastapi import Header, HTTPException, Request, status
@@ -16,6 +17,8 @@ _rate_limiter = SlidingWindowRateLimiter(
     interval_seconds=60,
     burst=settings.api_rate_limit_burst,
 )
+logger = logging.getLogger(__name__)
+_missing_api_key_config_logged = False
 
 _PUBLIC_PATH_PREFIXES = (
     "/health",
@@ -53,13 +56,24 @@ async def secure_endpoint(
     is_public = _is_public_path(path)
 
     # 1. API key validation
-    if settings.require_api_key and not is_public:
+    configured_api_keys = bool(settings.api_key_set or settings.api_key_hashes)
+    enforce_api_key = settings.require_api_key and configured_api_keys
+    global _missing_api_key_config_logged
+    if settings.require_api_key and not configured_api_keys and not is_public:
+        if not _missing_api_key_config_logged:
+            logger.warning(
+                "REQUIRE_API_KEY is enabled but no API keys are configured; "
+                "temporarily allowing requests without API key."
+            )
+            _missing_api_key_config_logged = True
+
+    if enforce_api_key and not is_public:
         if not api_key or not settings.is_api_key_allowed(api_key):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or missing API key",
             )
-    elif api_key and not settings.is_api_key_allowed(api_key):
+    elif api_key and configured_api_keys and not settings.is_api_key_allowed(api_key):
         # If API keys are provided but not required, still block unknown keys
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -69,11 +83,14 @@ async def secure_endpoint(
     # 2. User authentication (Bearer token)
     if (authorization or settings.require_user_auth) and not is_public:
         if not settings.auth_jwt_secret:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User authentication required but AUTH_JWT_SECRET not configured.",
-            )
-        user_identity = authenticate_user(authorization)
+            # Optional bearer auth should not break non-auth-required deployments.
+            if settings.require_user_auth:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="User authentication required but AUTH_JWT_SECRET not configured.",
+                )
+        else:
+            user_identity = authenticate_user(authorization)
 
     # 3. Tenant resolution
     tenant_id = (

@@ -1,19 +1,19 @@
 """
-测试代码执行系统
+EN
 
-测试内容:
-1. Docker环境检测
-2. 代码验证器测试
-3. 基础代码执行
-4. 数据分析代码
-5. 可视化代码
-6. LangChain工具集成
+EN:
+1. DockerEN
+2. EN
+3. EN
+4. EN
+5. EN
+6. LangChainEN
 """
 
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
+# EN
 project_root = Path(__file__).parent
 
 from backend.services.code_executor import (
@@ -29,37 +29,37 @@ from backend.tools.code_execution import (
 
 
 def test_environment():
-    """测试执行环境"""
+    """EN"""
     print("=" * 60)
-    print("测试 1: 执行环境检测")
+    print("EN 1: EN")
     print("=" * 60)
 
     try:
         info = get_execution_environment_info.invoke({})
-        print(f"✅ Docker可用: {info['docker_available']}")
-        print(f"📊 资源限制:")
+        print(f"✅ DockerEN: {info['docker_available']}")
+        print(f"📊 EN:")
         for key, value in info["resource_limits"].items():
             print(f"   - {key}: {value}")
-        print(f"📦 可用库: {', '.join(info['available_libraries'][:5])}...")
-        print(f"🛡️  安全特性: {len(info['security_features'])} 项")
+        print(f"📦 EN: {', '.join(info['available_libraries'][:5])}...")
+        print(f"🛡️  EN: {len(info['security_features'])} EN")
         return True
     except Exception as e:
-        print(f"❌ 环境检测失败: {e}")
+        print(f"❌ EN: {e}")
         return False
 
 
 def test_code_validator():
-    """测试代码验证器"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("测试 2: 代码验证器")
+    print("EN 2: EN")
     print("=" * 60)
 
-    # 测试用例
+    # EN
     test_cases = [
-        ("import pandas as pd\nprint('Hello')", True, "合法代码"),
-        ("import os\nos.system('ls')", False, "危险操作"),
-        ("import subprocess\nsubprocess.run(['ls'])", False, "子进程调用"),
-        ("print(x", False, "语法错误"),
+        ("import pandas as pd\nprint('Hello')", True, "EN"),
+        ("import os\nos.system('ls')", False, "EN"),
+        ("import subprocess\nsubprocess.run(['ls'])", False, "EN"),
+        ("print(x", False, "EN"),
     ]
 
     passed = 0
@@ -68,34 +68,34 @@ def test_code_validator():
         is_valid = result.is_valid
 
         if is_valid == should_pass:
-            print(f"✅ {description}: {'通过' if is_valid else '拒绝'}")
+            print(f"✅ {description}: {'EN' if is_valid else 'EN'}")
             passed += 1
         else:
             print(
-                f"❌ {description}: 预期{'通过' if should_pass else '拒绝'}, 实际{'通过' if is_valid else '拒绝'}"
+                f"❌ {description}: EN{'EN' if should_pass else 'EN'}, EN{'EN' if is_valid else 'EN'}"
             )
             if not is_valid:
-                print(f"   错误: {result.error}")
+                print(f"   EN: {result.error}")
 
-    print(f"\n验证器测试: {passed}/{len(test_cases)} 通过")
+    print(f"\nEN: {passed}/{len(test_cases)} EN")
     return passed == len(test_cases)
 
 
 def test_basic_execution():
-    """测试基础代码执行"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("测试 3: 基础代码执行")
+    print("EN 3: EN")
     print("=" * 60)
 
     if code_executor is None:
-        print("❌ 代码执行器不可用，跳过测试")
+        print("❌ EN,EN")
         return False
 
     code = """
 import pandas as pd
 import numpy as np
 
-# 创建示例数据
+# EN
 data = pd.DataFrame({
     'A': np.random.randn(10),
     'B': np.random.randn(10)
@@ -111,38 +111,38 @@ print(data.describe())
     try:
         result = code_executor.execute_code(code)
         if result["success"]:
-            print(f"✅ 代码执行成功 ({result['execution_time']:.2f}秒)")
-            print(f"📤 输出:")
+            print(f"✅ EN ({result['execution_time']:.2f}EN)")
+            print(f"📤 EN:")
             print(result["stdout"])
             return True
         else:
-            print(f"❌ 执行失败: {result.get('error', 'Unknown error')}")
+            print(f"❌ EN: {result.get('error', 'Unknown error')}")
             return False
     except Exception as e:
-        print(f"❌ 执行异常: {e}")
+        print(f"❌ EN: {e}")
         return False
 
 
 def test_visualization():
-    """测试可视化代码"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("测试 4: 数据可视化")
+    print("EN 4: EN")
     print("=" * 60)
 
     if code_executor is None:
-        print("❌ 代码执行器不可用，跳过测试")
+        print("❌ EN,EN")
         return False
 
     code = """
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 生成数据
+# EN
 x = np.linspace(0, 10, 100)
 y1 = np.sin(x)
 y2 = np.cos(x)
 
-# 创建图表
+# EN
 plt.figure(figsize=(10, 6))
 plt.plot(x, y1, label='sin(x)', linewidth=2)
 plt.plot(x, y2, label='cos(x)', linewidth=2)
@@ -152,7 +152,7 @@ plt.title('Trigonometric Functions')
 plt.legend()
 plt.grid(True, alpha=0.3)
 
-# 保存图表
+# EN
 plt.savefig('test_plot.png', dpi=150, bbox_inches='tight')
 print("Plot saved successfully to test_plot.png")
 """
@@ -160,38 +160,38 @@ print("Plot saved successfully to test_plot.png")
     try:
         result = code_executor.execute_code(code)
         if result["success"]:
-            print(f"✅ 可视化执行成功 ({result['execution_time']:.2f}秒)")
-            print(f"📊 生成文件: {len(result['visualizations'])} 个")
+            print(f"✅ EN ({result['execution_time']:.2f}EN)")
+            print(f"📊 EN: {len(result['visualizations'])} EN")
             for viz in result["visualizations"]:
                 print(f"   - {viz}")
             return True
         else:
-            print(f"❌ 执行失败: {result.get('error', 'Unknown error')}")
+            print(f"❌ EN: {result.get('error', 'Unknown error')}")
             return False
     except Exception as e:
-        print(f"❌ 执行异常: {e}")
+        print(f"❌ EN: {e}")
         return False
 
 
 def test_langchain_tools():
-    """测试LangChain工具集成"""
+    """ENLangChainEN"""
     print("\n" + "=" * 60)
-    print("测试 5: LangChain工具集成")
+    print("EN 5: LangChainEN")
     print("=" * 60)
 
     if code_executor is None:
-        print("❌ 代码执行器不可用，跳过测试")
+        print("❌ EN,EN")
         return False
 
-    # 测试代码验证工具
-    print("\n5.1 代码验证工具:")
+    # EN
+    print("\n5.1 EN:")
     validation_result = code_validation_tool.invoke(
         {"code": "import pandas as pd\nprint('Hello')"}
     )
-    print(f"   验证结果: {'✅ 有效' if validation_result['valid'] else '❌ 无效'}")
+    print(f"   EN: {'✅ EN' if validation_result['valid'] else '❌ EN'}")
 
-    # 测试代码执行工具
-    print("\n5.2 代码执行工具:")
+    # EN
+    print("\n5.2 EN:")
     exec_result = code_execution_tool.invoke(
         {
             "code": "import numpy as np\nprint('NumPy version:', np.__version__)",
@@ -199,22 +199,22 @@ def test_langchain_tools():
         }
     )
     if exec_result["success"]:
-        print(f"   ✅ 执行成功")
-        print(f"   输出: {exec_result['stdout'].strip()}")
+        print(f"   ✅ EN")
+        print(f"   EN: {exec_result['stdout'].strip()}")
         return True
     else:
-        print(f"   ❌ 执行失败: {exec_result.get('error', 'Unknown')}")
+        print(f"   ❌ EN: {exec_result.get('error', 'Unknown')}")
         return False
 
 
 def test_ml_example():
-    """测试机器学习示例"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("测试 6: 机器学习代码")
+    print("EN 6: EN")
     print("=" * 60)
 
     if code_executor is None:
-        print("❌ 代码执行器不可用，跳过测试")
+        print("❌ EN,EN")
         return False
 
     code = """
@@ -223,19 +223,19 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
-# 生成数据
+# EN
 np.random.seed(42)
 X = np.random.randn(100, 3)
 y = X @ np.array([2.5, -1.5, 0.8]) + np.random.randn(100) * 0.1
 
-# 分割数据
+# EN
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 训练模型
+# EN
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# 评估
+# EN
 y_pred = model.predict(X_test)
 r2 = r2_score(y_test, y_pred)
 
@@ -247,36 +247,36 @@ print("✅ Model training completed successfully!")
     try:
         result = code_executor.execute_code(code, timeout=60)
         if result["success"]:
-            print(f"✅ ML代码执行成功 ({result['execution_time']:.2f}秒)")
-            print(f"📤 输出:")
+            print(f"✅ MLEN ({result['execution_time']:.2f}EN)")
+            print(f"📤 EN:")
             print(result["stdout"])
             return True
         else:
-            print(f"❌ 执行失败: {result.get('error', 'Unknown error')}")
+            print(f"❌ EN: {result.get('error', 'Unknown error')}")
             return False
     except Exception as e:
-        print(f"❌ 执行异常: {e}")
+        print(f"❌ EN: {e}")
         return False
 
 
 def main():
-    """运行所有测试"""
+    """EN"""
     print("\n" + "=" * 60)
-    print("代码执行系统测试套件")
+    print("EN")
     print("=" * 60)
 
     results = {
-        "环境检测": test_environment(),
-        "代码验证": test_code_validator(),
-        "基础执行": test_basic_execution(),
-        "数据可视化": test_visualization(),
-        "LangChain工具": test_langchain_tools(),
-        "机器学习": test_ml_example(),
+        "EN": test_environment(),
+        "EN": test_code_validator(),
+        "EN": test_basic_execution(),
+        "EN": test_visualization(),
+        "LangChainEN": test_langchain_tools(),
+        "EN": test_ml_example(),
     }
 
-    # 输出总结
+    # EN
     print("\n" + "=" * 60)
-    print("测试总结")
+    print("EN")
     print("=" * 60)
 
     passed = sum(results.values())
@@ -286,13 +286,13 @@ def main():
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"{status}  {name}")
 
-    print(f"\n总计: {passed}/{total} 通过 ({passed/total*100:.1f}%)")
+    print(f"\nEN: {passed}/{total} EN ({passed/total*100:.1f}%)")
 
     if passed == total:
-        print("\n🎉 所有测试通过!")
+        print("\n🎉 EN!")
         return 0
     else:
-        print(f"\n⚠️  {total - passed} 个测试失败")
+        print(f"\n⚠️  {total - passed} EN")
         return 1
 
 

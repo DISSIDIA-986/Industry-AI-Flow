@@ -1,5 +1,5 @@
 """
-文档管理API路由
+Document management API routes
 """
 
 import logging
@@ -20,7 +20,7 @@ from backend.services.security import persist_temp_file, validate_and_buffer_upl
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
-# 全局文档管理器实例
+# EN
 document_manager = None
 ALLOWED_DOC_EXTENSIONS = tuple(settings.upload_extension_whitelist)
 MAX_UPLOAD_BYTES = settings.max_upload_size_bytes
@@ -44,7 +44,7 @@ def _log_document_event(
 
 
 def get_document_manager():
-    """获取文档管理器实例"""
+    """Document API schema."""
     global document_manager
     if document_manager is None:
         vectorstore = VectorStore()
@@ -53,14 +53,14 @@ def get_document_manager():
 
 
 class DocumentUpdateRequest(BaseModel):
-    """文档更新请求模型"""
+    """Document API schema."""
 
     doc_id: str
     reason: Optional[str] = None
 
 
 class DocumentDeleteRequest(BaseModel):
-    """文档删除请求模型"""
+    """Document API schema."""
 
     doc_id: str
     reason: Optional[str] = None
@@ -68,14 +68,14 @@ class DocumentDeleteRequest(BaseModel):
 
 
 class DocumentReplaceRequest(BaseModel):
-    """文档替换请求模型"""
+    """Document API schema."""
 
     doc_id: str
     reason: Optional[str] = None
 
 
 class DocumentVersionResponse(BaseModel):
-    """文档版本响应模型"""
+    """Document API schema."""
 
     doc_id: str
     version: int
@@ -95,15 +95,15 @@ async def update_document(
     tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
-    更新文档内容
+    EN
 
     Args:
-        file: 新文档文件
-        doc_id: 文档ID
-        reason: 更新原因
+        file: EN
+        doc_id: ENID
+        reason: EN
 
     Returns:
-        更新结果
+        EN
     """
     try:
         if not settings.enable_document_update:
@@ -185,15 +185,15 @@ async def delete_document(
     tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
-    删除文档
+    EN
 
     Args:
-        doc_id: 文档ID
-        reason: 删除原因
-        soft_delete: 是否软删除
+        doc_id: ENID
+        reason: EN
+        soft_delete: EN
 
     Returns:
-        删除结果
+        EN
     """
     try:
         if not settings.enable_document_deletion:
@@ -260,15 +260,15 @@ async def replace_document(
     tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
-    替换文档内容
+    EN
 
     Args:
-        file: 新文档文件
-        doc_id: 原文档ID
-        reason: 替换原因
+        file: EN
+        doc_id: ENID
+        reason: EN
 
     Returns:
-        替换结果
+        EN
     """
     try:
         content, safe_name = await validate_and_buffer_upload(
@@ -344,13 +344,13 @@ async def replace_document(
 )
 async def get_document_versions(doc_id: str):
     """
-    获取文档的所有版本
+    EN
 
     Args:
-        doc_id: 文档ID
+        doc_id: ENID
 
     Returns:
-        文档版本列表
+        EN
     """
     try:
         doc_manager = get_document_manager()
@@ -378,14 +378,14 @@ async def get_document_versions(doc_id: str):
 @router.get("/documents/operations/log")
 async def get_operation_log(doc_id: str = None, limit: int = 50):
     """
-    获取文档操作日志
+    EN
 
     Args:
-        doc_id: 文档ID（可选）
-        limit: 返回数量限制
+        doc_id: ENID(EN)
+        limit: EN
 
     Returns:
-        操作日志列表
+        EN
     """
     try:
         doc_manager = get_document_manager()
@@ -401,10 +401,10 @@ async def get_operation_log(doc_id: str = None, limit: int = 50):
 @router.get("/documents/statistics")
 async def get_document_statistics():
     """
-    获取文档统计信息
+    EN
 
     Returns:
-        文档统计信息
+        EN
     """
     try:
         doc_manager = get_document_manager()
@@ -420,15 +420,15 @@ async def get_document_statistics():
 @router.post("/documents/{doc_id}/restore/{version}")
 async def restore_document_version(doc_id: str, version: int, reason: str = None):
     """
-    恢复文档到指定版本
+    EN
 
     Args:
-        doc_id: 文档ID
-        version: 版本号
-        reason: 恢复原因
+        doc_id: ENID
+        version: EN
+        reason: EN
 
     Returns:
-        恢复结果
+        EN
     """
     try:
         doc_manager = get_document_manager()

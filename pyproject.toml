@@ -26,24 +26,23 @@ classifiers = [
 keywords = ["paddleocr", "architecture", "construction", "ocr", "image-recognition", "building-drawings"]
 
 dependencies = [
-    # PaddleOCR核心依赖 - Python 3.13专用
-    "paddlepaddle==2.6.1",
-    "paddleocr==2.7.0",
+    # OCR stack (Python 3.13 compatible baseline)
+    # NOTE: paddlepaddle runtime is installed separately when GPU/accelerator is required.
+    "paddleocr==3.3.0",
 
     # 图像处理 - 建筑图纸识别必需
-    "pillow==10.0.1",
-    "opencv-python==4.8.0.76",
+    "pillow>=11.3.0,<12.0.0",
 
     # 数值计算
-    "numpy==1.24.3",
+    "numpy>=2.1.0,<2.2.0",
 
     # 数据处理
-    "pandas==1.5.3",
-    "matplotlib==3.7.2",
+    "pandas>=3.0.0,<3.1.0",
+    "matplotlib>=3.9.0,<3.11.0",
 
     # 网络和配置
     "requests==2.31.0",
-    "pyyaml==6.0.1",
+    "pyyaml==6.0.2",
     "python-dotenv==1.0.0",
 
     # 工具库
@@ -57,7 +56,7 @@ dev = [
     "pytest>=7.4.0,<7.5.0",
     "pytest-asyncio>=0.21.0,<0.22.0",
     "pytest-cov>=4.1.0,<4.2.0",
-    "black>=23.7.0,<23.8.0",
+    "black>=24.10.0,<25.0.0",
     "flake8>=6.0.0,<6.1.0",
     "mypy>=1.5.1,<1.6.0",
 ]
@@ -72,7 +71,7 @@ jupyter = [
 
 # 可视化
 visualization = [
-    "matplotlib>=3.7.2,<3.8.0",
+    "matplotlib>=3.9.0,<3.11.0",
     "seaborn>=0.12.2,<0.13.0",
     "plotly>=5.15.0,<5.16.0",
 ]

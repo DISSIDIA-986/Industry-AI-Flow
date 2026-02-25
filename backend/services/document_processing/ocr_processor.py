@@ -1,18 +1,18 @@
 """
-OCR处理器 - 支持PaddleOCR 3.3.1最新特性
+OCREN - ENPaddleOCR 3.3.1EN
 
 Features:
-- PP-OCRv5: 单模型支持5种文字类型 (简体/繁体/英文/日文/拼音)
-- PP-StructureV3: PDF文档结构化解析，导出Markdown/JSON
-- MPS加速: Apple Silicon M系列芯片GPU加速 (2-5x性能提升)
-- 百度OCR API作为备选方案
-- 自动降级策略
-- 批量处理支持
+- PP-OCRv5: EN5EN (EN/EN/EN/EN/EN)
+- PP-StructureV3: PDFEN,ENMarkdown/JSON
+- MPSEN: Apple Silicon MENGPUEN (2-5xEN)
+- ENOCR APIEN
+- EN
+- EN
 
-版本要求:
+EN:
 - PaddlePaddle >= 2.6.0
 - PaddleOCR >= 3.3.0
-- NumPy < 2.0 (兼容性)
+- NumPy < 2.0 (EN)
 """
 
 import logging
@@ -29,20 +29,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OCRResult:
-    """OCR识别结果"""
+    """OCREN"""
 
-    text: str  # 提取的文本
-    confidence: float  # 平均置信度
-    boxes: list[list[list[int]]]  # 文本框坐标
-    method: str  # 使用的方法 (local/api)
-    language: str = "ch"  # 语言
+    text: str  # EN
+    confidence: float  # EN
+    boxes: list[list[list[int]]]  # EN
+    method: str  # EN (local/api)
+    language: str = "ch"  # EN
 
 
 class OCRProcessor:
     """
-    OCR处理器
+    OCREN
 
-    优先使用本地PaddleOCR（支持MPS加速），失败时降级到百度API
+    ENPaddleOCR(ENMPSEN),ENAPI
     """
 
     def __init__(
@@ -54,109 +54,109 @@ class OCRProcessor:
         ocr_version: str = "PP-OCRv5",
     ):
         """
-        初始化OCR处理器
+        ENOCREN
 
         Args:
-            use_local: 是否使用本地PaddleOCR
-            use_api_fallback: 是否在本地失败时使用API
-            lang: 语言 ('ch', 'en', 'chinese_cht', 'japan', 'korean')
-            use_gpu: 是否使用GPU加速 (Apple MPS/NVIDIA CUDA)
-            ocr_version: OCR版本 ('PP-OCRv5', 'PP-OCRv4', 'PP-OCRv3')
+            use_local: ENPaddleOCR
+            use_api_fallback: ENAPI
+            lang: EN ('ch', 'en', 'chinese_cht', 'japan', 'korean')
+            use_gpu: ENGPUEN (Apple MPS/NVIDIA CUDA)
+            ocr_version: OCREN ('PP-OCRv5', 'PP-OCRv4', 'PP-OCRv3')
         """
         self.use_local = use_local
         self.use_api_fallback = use_api_fallback
         self.lang = lang
         self.ocr_version = ocr_version
 
-        # 初始化本地OCR
+        # ENOCR
         self.local_ocr = None
         if use_local:
             self.local_ocr = self._init_local_ocr(use_gpu)
 
-        # 初始化API客户端
+        # ENAPIEN
         self.api_client = None
         if use_api_fallback:
             self.api_client = self._init_api_client()
 
     def _init_local_ocr(self, use_gpu: bool):
-        """初始化本地PaddleOCR 3.3.1"""
+        """ENPaddleOCR 3.3.1"""
         try:
             import paddle
             from paddleocr import PaddleOCR
 
-            # 检测MPS设备 (PaddleCustomDevice)
+            # ENMPSEN (PaddleCustomDevice)
             device = "cpu"
             use_gpu_flag = False
 
             if use_gpu:
                 try:
-                    # 检查MPS自定义设备
+                    # ENMPSEN
                     custom_devices = paddle.device.get_all_custom_device_type()
                     if "mps" in custom_devices:
                         device = "mps"
                         use_gpu_flag = True
-                        logger.info("✅ 检测到Apple MPS设备，启用GPU加速 (预期2-5x性能提升)")
+                        logger.info("✅ ENApple MPSEN,ENGPUEN (EN2-5xEN)")
                     elif paddle.device.is_compiled_with_cuda():
                         device = "gpu"
                         use_gpu_flag = True
-                        logger.info("✅ 检测到NVIDIA CUDA设备，启用GPU加速")
+                        logger.info("✅ ENNVIDIA CUDAEN,ENGPUEN")
                     else:
-                        logger.info("⚠️  未检测到GPU设备，使用CPU")
+                        logger.info("⚠️  ENGPUEN,ENCPU")
                 except Exception as e:
-                    logger.warning(f"GPU检测失败: {e}，使用CPU")
+                    logger.warning(f"GPUEN: {e},ENCPU")
 
-            # 初始化PaddleOCR 3.3.1
-            # PP-OCRv5支持: ch (简繁英日拼音混合), en, chinese_cht, japan, korean
+            # ENPaddleOCR 3.3.1
+            # PP-OCRv5EN: ch (EN), en, chinese_cht, japan, korean
             ocr = PaddleOCR(
-                use_angle_cls=True,  # 文字方向检测
-                lang=self.lang,  # PP-OCRv5单模型支持多语言
-                use_gpu=use_gpu_flag,  # GPU加速
+                use_angle_cls=True,  # EN
+                lang=self.lang,  # PP-OCRv5EN
+                use_gpu=use_gpu_flag,  # GPUEN
                 show_log=False,
-                # PP-OCRv5性能优化
-                use_mp=True,  # 多进程
-                total_process_num=2,  # 进程数
-                # 精度设置
-                det_db_thresh=0.3,  # 检测阈值
-                det_db_box_thresh=0.6,  # 框阈值
-                rec_batch_num=6,  # 识别批次大小
+                # PP-OCRv5EN
+                use_mp=True,  # EN
+                total_process_num=2,  # EN
+                # EN
+                det_db_thresh=0.3,  # EN
+                det_db_box_thresh=0.6,  # EN
+                rec_batch_num=6,  # EN
             )
 
-            logger.info(f"✅ PaddleOCR 3.3.1初始化成功")
-            logger.info(f"   - 版本: {self.ocr_version}")
-            logger.info(f"   - 设备: {device}")
-            logger.info(f"   - 语言: {self.lang}")
-            logger.info(f"   - 特性: PP-OCRv5多语言识别 (简/繁/英/日/拼音)")
+            logger.info(f"✅ PaddleOCR 3.3.1EN")
+            logger.info(f"   - EN: {self.ocr_version}")
+            logger.info(f"   - EN: {device}")
+            logger.info(f"   - EN: {self.lang}")
+            logger.info(f"   - EN: PP-OCRv5EN (EN/EN/EN/EN/EN)")
 
             return ocr
 
         except Exception as e:
-            logger.warning(f"本地PaddleOCR初始化失败: {e}")
-            logger.info("提示: 确保已安装 PaddlePaddle>=2.6.0, PaddleOCR>=3.3.0, NumPy<2.0")
+            logger.warning(f"ENPaddleOCREN: {e}")
+            logger.info("EN: EN PaddlePaddle>=2.6.0, PaddleOCR>=3.3.0, NumPy<2.0")
             return None
 
     def _init_api_client(self):
-        """初始化百度OCR API客户端"""
+        """ENOCR APIEN"""
         try:
             from aip import AipOcr
 
-            # 从环境变量读取API密钥
+            # ENAPIEN
             app_id = os.getenv("BAIDU_OCR_APP_ID")
             api_key = os.getenv("BAIDU_OCR_API_KEY")
             secret_key = os.getenv("BAIDU_OCR_SECRET_KEY")
 
             if not all([app_id, api_key, secret_key]):
-                logger.warning("百度OCR API密钥未配置，API功能不可用")
+                logger.warning("ENOCR APIEN,APIEN")
                 return None
 
             client = AipOcr(app_id, api_key, secret_key)
-            logger.info("百度OCR API客户端初始化成功")
+            logger.info("ENOCR APIEN")
             return client
 
         except ImportError:
-            logger.warning("百度AI SDK (baidu-aip)未安装，API功能不可用")
+            logger.warning("ENAI SDK (baidu-aip)EN,APIEN")
             return None
         except Exception as e:
-            logger.warning(f"百度OCR API初始化失败: {e}")
+            logger.warning(f"ENOCR APIEN: {e}")
             return None
 
     def process(
@@ -164,47 +164,47 @@ class OCRProcessor:
         image_path: Union[str, Path],
     ) -> OCRResult:
         """
-        处理图像并提取文本
+        EN
 
         Args:
-            image_path: 图像文件路径
+            image_path: EN
 
         Returns:
-            OCRResult对象
+            OCRResultEN
 
         Raises:
-            ValueError: 无可用的OCR方法
+            ValueError: ENOCREN
         """
         image_path = Path(image_path)
 
         if not image_path.exists():
-            raise FileNotFoundError(f"图像文件不存在: {image_path}")
+            raise FileNotFoundError(f"EN: {image_path}")
 
-        # 尝试本地OCR
+        # ENOCR
         if self.local_ocr:
             try:
                 return self._process_local(image_path)
             except Exception as e:
-                logger.warning(f"本地OCR处理失败: {e}")
+                logger.warning(f"ENOCREN: {e}")
                 if not self.use_api_fallback:
                     raise
 
-        # 降级到API
+        # ENAPI
         if self.api_client:
             try:
                 return self._process_api(image_path)
             except Exception as e:
-                logger.error(f"API OCR处理失败: {e}")
+                logger.error(f"API OCREN: {e}")
                 raise
 
-        raise ValueError("没有可用的OCR方法")
+        raise ValueError("ENOCREN")
 
     def _process_local(self, image_path: Path) -> OCRResult:
-        """使用本地PaddleOCR处理"""
-        # 执行OCR
+        """ENPaddleOCREN"""
+        # ENOCR
         result = self.local_ocr.ocr(str(image_path), cls=True)
 
-        # 解析结果
+        # EN
         if not result or not result[0]:
             return OCRResult(
                 text="",
@@ -214,7 +214,7 @@ class OCRProcessor:
                 language=self.lang,
             )
 
-        # 提取文本和置信度
+        # EN
         texts = []
         confidences = []
         boxes = []
@@ -225,7 +225,7 @@ class OCRProcessor:
             confidences.append(confidence)
             boxes.append(box)
 
-        # 合并文本
+        # EN
         full_text = "\n".join(texts)
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
@@ -238,22 +238,22 @@ class OCRProcessor:
         )
 
     def _process_api(self, image_path: Path) -> OCRResult:
-        """使用百度OCR API处理"""
-        # 读取图像
+        """ENOCR APIEN"""
+        # EN
         with open(image_path, "rb") as f:
             image_data = f.read()
 
-        # 调用API
+        # ENAPI
         if self.lang == "en":
             result = self.api_client.basicGeneral(image_data)
         else:
             result = self.api_client.general(image_data)
 
-        # 检查错误
+        # EN
         if "error_code" in result:
-            raise RuntimeError(f"百度API错误: {result.get('error_msg', 'Unknown')}")
+            raise RuntimeError(f"ENAPIEN: {result.get('error_msg', 'Unknown')}")
 
-        # 解析结果
+        # EN
         words_result = result.get("words_result", [])
 
         if not words_result:
@@ -265,15 +265,15 @@ class OCRProcessor:
                 language=self.lang,
             )
 
-        # 提取文本
+        # EN
         texts = [item["words"] for item in words_result]
         full_text = "\n".join(texts)
 
-        # API不提供置信度，使用默认值
+        # APIEN,EN
         return OCRResult(
             text=full_text,
-            confidence=0.95,  # API通常比较准确
-            boxes=[],  # API不提供坐标
+            confidence=0.95,  # APIEN
+            boxes=[],  # APIEN
             method="api",
             language=self.lang,
         )
@@ -283,13 +283,13 @@ class OCRProcessor:
         image_paths: list[Union[str, Path]],
     ) -> list[OCRResult]:
         """
-        批量处理图像
+        EN
 
         Args:
-            image_paths: 图像文件路径列表
+            image_paths: EN
 
         Returns:
-            OCRResult列表
+            OCRResultEN
         """
         results = []
         for path in image_paths:
@@ -297,8 +297,8 @@ class OCRProcessor:
                 result = self.process(path)
                 results.append(result)
             except Exception as e:
-                logger.error(f"处理 {path} 失败: {e}")
-                # 添加空结果
+                logger.error(f"EN {path} EN: {e}")
+                # EN
                 results.append(
                     OCRResult(
                         text="",
@@ -312,22 +312,22 @@ class OCRProcessor:
         return results
 
 
-# 便捷函数
+# EN
 def process_image_with_ocr(
     image_path: Union[str, Path],
     lang: str = "ch",
     use_gpu: bool = True,
 ) -> OCRResult:
     """
-    处理图像并提取文本（便捷函数）
+    EN(EN)
 
     Args:
-        image_path: 图像文件路径
-        lang: 语言代码
-        use_gpu: 是否使用GPU
+        image_path: EN
+        lang: EN
+        use_gpu: ENGPU
 
     Returns:
-        OCRResult对象
+        OCRResultEN
     """
     processor = OCRProcessor(lang=lang, use_gpu=use_gpu)
     return processor.process(image_path)

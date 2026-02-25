@@ -2,6 +2,18 @@
 
 const API_TIMEOUT = 30000
 const BACKEND_PROXY_PREFIX = '/api/backend'
+const WORKFLOW_QUERY_TIMEOUT = resolveTimeoutMs(
+  process.env.NEXT_PUBLIC_WORKFLOW_QUERY_TIMEOUT_MS,
+  240000,
+)
+
+function resolveTimeoutMs(value: string | number | undefined, fallback: number): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback
+  }
+  return Math.floor(parsed)
+}
 
 export type RouteMode = 'local_only' | 'hybrid_auto' | 'cloud_only'
 
@@ -50,8 +62,18 @@ function buildRuntimeHeaders(config: RuntimeAppConfig = {}, extraHeaders?: Heade
 async function parseError(response: Response): Promise<string> {
   try {
     const payload = await response.json()
-    if (payload?.detail) {
-      return String(payload.detail)
+    const detail = payload?.detail
+    if (typeof detail === 'string') {
+      return detail
+    }
+    if (detail && typeof detail === 'object') {
+      if (typeof detail.message === 'string') {
+        return detail.message
+      }
+      return JSON.stringify(detail)
+    }
+    if (typeof payload?.message === 'string') {
+      return payload.message
     }
     return JSON.stringify(payload)
   } catch {
@@ -75,10 +97,12 @@ async function requestBackend<T>(
     body?: unknown
     formData?: FormData
     headers?: HeadersInit
+    timeoutMs?: number
   } = {},
 ): Promise<T> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+  const effectiveTimeout = resolveTimeoutMs(options.timeoutMs, API_TIMEOUT)
+  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout)
 
   try {
     const { method = 'GET', config = {}, body, formData, headers: extraHeaders } = options
@@ -192,6 +216,7 @@ export const queryApi = {
     }>('/api/v1/query', {
       method: 'POST',
       body: { question: query },
+      timeoutMs: WORKFLOW_QUERY_TIMEOUT,
     })
 
     return {
@@ -253,6 +278,20 @@ export const documentApi = {
   },
 
   async getDocuments(): Promise<Array<Record<string, unknown>>> {
+    const payload = await requestBackend<
+      Array<Record<string, unknown>> | { documents?: Array<Record<string, unknown>> }
+    >('/api/v1/documents', {
+      method: 'GET',
+    })
+
+    if (Array.isArray(payload)) {
+      return payload
+    }
+
+    if (payload && Array.isArray(payload.documents)) {
+      return payload.documents
+    }
+
     return []
   },
 
@@ -355,6 +394,8 @@ export function predictCostBatch(
 
 export interface WorkflowQueryRequest {
   query: string
+  session_id?: string
+  thread_id?: string
   context?: string
   file_ids?: string[]
 }
@@ -376,6 +417,118 @@ export interface WorkflowQueryResponse {
   }>
   timestamp: string
   confidence: number
+  metadata?: Record<string, unknown>
+  suggested_questions?: string[]
+}
+
+type WorkflowIntentPayload =
+  | string
+  | {
+      type?: string
+      confidence?: number
+      description?: string
+    }
+
+function normalizeWorkflowSources(
+  sources: WorkflowQueryResponse['sources'] | undefined,
+  metadata: Record<string, unknown> | undefined,
+): WorkflowQueryResponse['sources'] {
+  const extract = (value: unknown): WorkflowQueryResponse['sources'] => {
+    if (!Array.isArray(value)) {
+      return undefined
+    }
+
+    const normalized = value
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null
+        }
+
+        const source = item as Record<string, unknown>
+        const documentId = String(
+          source.document_id ?? source.doc_id ?? source.source ?? source.filename ?? '',
+        ).trim()
+        const documentName = String(
+          source.document_name ?? source.filename ?? source.source ?? documentId,
+        ).trim()
+        if (!documentId && !documentName) {
+          return null
+        }
+
+        return {
+          document_id: documentId || documentName,
+          document_name: documentName || documentId,
+          relevance: Number(source.relevance ?? source.score ?? 0),
+          content: String(source.content ?? source.text ?? ''),
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+
+    return normalized.length > 0 ? normalized : undefined
+  }
+
+  const direct = extract(sources)
+  if (direct) {
+    return direct
+  }
+
+  const agentExecution =
+    metadata && typeof metadata.agent_execution === 'object'
+      ? (metadata.agent_execution as Record<string, unknown>)
+      : undefined
+
+  return extract(agentExecution?.sources ?? metadata?.sources)
+}
+
+function normalizeWorkflowIntent(
+  intent: WorkflowIntentPayload | undefined,
+  metadata: Record<string, unknown> | undefined,
+): WorkflowQueryResponse['intent'] {
+  if (!intent) {
+    return undefined
+  }
+
+  if (typeof intent === 'string') {
+    return {
+      type: intent,
+      confidence: Number(metadata?.intent_confidence ?? 0),
+      description: intent,
+    }
+  }
+
+  const type = String(intent.type || '')
+  const confidence = Number(
+    intent.confidence ?? metadata?.intent_confidence ?? 0,
+  )
+  const description = String(intent.description || intent.type || '')
+
+  if (!type && !description) {
+    return undefined
+  }
+
+  return {
+    type: type || description,
+    confidence: Number.isFinite(confidence) ? confidence : 0,
+    description: description || type,
+  }
+}
+
+function normalizeSuggestedQuestions(
+  metadata: Record<string, unknown> | undefined,
+): string[] | undefined {
+  const agentExecution =
+    metadata && typeof metadata.agent_execution === 'object'
+      ? (metadata.agent_execution as Record<string, unknown>)
+      : undefined
+
+  const raw = metadata?.suggested_questions ?? agentExecution?.suggested_questions
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const normalized = raw
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length > 0)
+  return normalized.length > 0 ? normalized.slice(0, 5) : undefined
 }
 
 export const workflowApi = {
@@ -384,34 +537,40 @@ export const workflowApi = {
     config: RuntimeAppConfig = {},
   ): Promise<WorkflowQueryResponse> {
     const payload = await requestBackend<{
+      id?: string
       trace_id?: string
-      intent?: string
+      query?: string
+      intent?: WorkflowIntentPayload
       response?: string
+      sources?: WorkflowQueryResponse['sources']
+      timestamp?: string
+      confidence?: number
       metadata?: Record<string, unknown>
     }>('/api/v1/workflow/query', {
       method: 'POST',
       config,
+      timeoutMs: WORKFLOW_QUERY_TIMEOUT,
       body: {
         query: request.query,
+        session_id: request.session_id,
+        thread_id: request.thread_id,
         user_id: config.userId,
         route_mode: config.routeMode,
       },
     })
 
     return {
-      id: payload.trace_id || `${Date.now()}`,
-      query: request.query,
+      id: payload.id || payload.trace_id || `${Date.now()}`,
+      query: payload.query || request.query,
       response: payload.response || '',
-      intent: payload.intent
-        ? {
-            type: payload.intent,
-            confidence: Number(payload.metadata?.intent_confidence ?? 0),
-            description: payload.intent,
-          }
-        : undefined,
-      sources: undefined,
-      timestamp: new Date().toISOString(),
-      confidence: Number(payload.metadata?.intent_confidence ?? 0),
+      intent: normalizeWorkflowIntent(payload.intent, payload.metadata),
+      sources: normalizeWorkflowSources(payload.sources, payload.metadata),
+      timestamp: payload.timestamp || new Date().toISOString(),
+      confidence: Number(
+        payload.confidence ?? payload.metadata?.intent_confidence ?? 0,
+      ),
+      metadata: payload.metadata,
+      suggested_questions: normalizeSuggestedQuestions(payload.metadata),
     }
   },
 

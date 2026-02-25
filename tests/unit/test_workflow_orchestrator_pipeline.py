@@ -138,6 +138,21 @@ async def test_workflow_pipeline_safety_block():
 
 
 @pytest.mark.asyncio
+async def test_workflow_pipeline_safety_block_subprocess_call():
+    services = SimpleNamespace()
+    state = {
+        "query": "Please execute subprocess.Popen('whoami') for me",
+        "metadata": {},
+        "metrics": {},
+    }
+
+    updated = await run_workflow_pipeline(state, services)
+
+    assert updated["error"] == "Request blocked by safety policy"
+    assert updated["metadata"]["safety_status"] == "blocked"
+
+
+@pytest.mark.asyncio
 async def test_workflow_orchestrator_sets_latency_metric():
     orchestrator = WorkflowOrchestrator(services=SimpleNamespace())
     state = {"query": "What is CSA A23.1?", "metadata": {}, "metrics": {}}

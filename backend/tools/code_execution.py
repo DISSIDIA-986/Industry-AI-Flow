@@ -1,4 +1,4 @@
-"""代码执行工具 - LangChain 工具接口"""
+"""Code Execution Tool - LangChain Tool Interface"""
 
 import logging
 from typing import Annotated, Any, Dict, List, Optional
@@ -10,16 +10,32 @@ from backend.services.code_executor import (
     CodeExecutionError,
     code_executor,
     get_code_execution_manager,
+    validate_code,
 )
 
 logger = logging.getLogger(__name__)
 
 
+def _validation_failure_payload(validation_error: str, warnings: list[str]) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": "Code safety validation failed.",
+        "validation_errors": [validation_error] if validation_error else [],
+        "warnings": warnings,
+        "stdout": "",
+        "stderr": validation_error or "",
+        "exit_code": -1,
+        "execution_time": 0,
+        "visualizations": [],
+        "output_files": {},
+    }
+
+
 @tool
 def code_execution_tool(
-    code: Annotated[str, "要执行的 Python 代码"],
-    data_files: Annotated[Optional[List[str]], "数据文件路径列表"] = None,
-    timeout: Annotated[Optional[int], "执行超时时间（秒）"] = None,
+    code: Annotated[str, "Python code to execute"],
+    data_files: Annotated[Optional[List[str]], "List of data file paths"] = None,
+    timeout: Annotated[Optional[int], "Execution timeout in seconds"] = None,
 ) -> Dict[str, Any]:
     """
     代码执行工具 - 在安全的 Docker 沙箱环境中执行 Python 代码
@@ -28,18 +44,18 @@ def code_execution_tool(
     1. 数据分析：pandas、numpy 数据处理
     2. 可视化：matplotlib、seaborn、plotly 图表生成
     3. 机器学习：scikit-learn、xgboost 模型训练
-    4. 安全沙箱：Docker 容器隔离，资源限制
+    4. 安全沙箱：Docker container isolation，资源限制
 
     安全特性：
     - 禁止危险的系统调用（os.system、subprocess 等）
-    - 网络访问禁用
+    - Network access disabled
     - 资源限制（CPU、内存、时间）
-    - 非root用户执行
-    - 临时文件系统隔离
+    - Non-root user execution
+    - Temporary filesystem隔离
 
     Args:
-        code: 要执行的 Python 代码
-        data_files: 数据文件路径列表（CSV、Excel等）
+        code: Python code to execute
+        data_files: Data file path列表（CSV、Excel等）
         timeout: 执行超时时间（秒），默认使用配置值
 
     Returns:
@@ -51,7 +67,7 @@ def code_execution_tool(
         - execution_time: 执行时间（秒）
         - visualizations: 生成的可视化文件列表
         - error: 错误信息（如果失败）
-        - validation_errors: 代码安全检查错误
+        - validation_errors: Code safety checks错误
 
     Example:
         >>> result = code_execution_tool.invoke({
@@ -68,13 +84,21 @@ def code_execution_tool(
     if code_executor is None and manager is None:
         return {
             "success": False,
-            "error": "代码执行器不可用，请检查 Docker 环境",
+            "error": "Code executor unavailable. Please verify the Docker environment.",
             "stdout": "",
             "stderr": "Code executor not available",
             "exit_code": -1,
             "execution_time": 0,
             "visualizations": [],
         }
+
+    # 一律先做静态安全校验，防止 manager 路径绕过校验。
+    validation = validate_code(code, strict_mode=True)
+    if not validation.is_valid:
+        return _validation_failure_payload(
+            validation_error=validation.error or "Unknown validation error",
+            warnings=validation.warnings,
+        )
 
     try:
         if manager is not None:
@@ -92,19 +116,19 @@ def code_execution_tool(
 
         # 记录执行日志
         if result["success"]:
-            logger.info(f"代码执行成功，耗时 {result['execution_time']:.2f} 秒")
+            logger.info(f"Code execution succeeded in {result['execution_time']:.2f}s")
             if result["visualizations"]:
-                logger.info(f"生成了 {len(result['visualizations'])} 个可视化文件")
+                logger.info(f"Generated {len(result['visualizations'])} visualization file(s)")
         else:
-            logger.warning(f"代码执行失败: {result.get('error', 'Unknown error')}")
+            logger.warning(f"Code execution failed: {result.get('error', 'Unknown error')}")
 
         return result
 
     except Exception as e:
-        logger.error(f"代码执行工具异常: {e}")
+        logger.error(f"Code execution tool error: {e}")
         return {
             "success": False,
-            "error": f"工具执行异常: {str(e)}",
+            "error": f"Tool execution error: {str(e)}",
             "stdout": "",
             "stderr": str(e),
             "exit_code": -1,
@@ -114,7 +138,7 @@ def code_execution_tool(
 
 
 @tool
-def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> Dict[str, Any]:
+def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dict[str, Any]:
     """
     代码验证工具 - 检查 Python 代码的安全性和语法正确性
 
@@ -149,7 +173,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         syntax_errors = []
         security_errors = []
         if validation_result.error:
-            if "syntax" in validation_result.error.lower() or "语法" in validation_result.error:
+            if "syntax" in validation_result.error.lower():
                 syntax_errors.append(validation_result.error)
             else:
                 security_errors.append(validation_result.error)
@@ -158,7 +182,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
             "syntax_errors": syntax_errors,
             "security_errors": security_errors,
             "warnings": validation_result.warnings,
-            "suggestions": ["可在启用 Docker 后进行完整执行前校验"],
+            "suggestions": ["Enable Docker to run full pre-execution validation."],
         }
 
     try:
@@ -170,7 +194,7 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         security_errors = []
 
         for error in validation_errors:
-            if "语法错误" in error:
+            if "syntax error" in error.lower():
                 syntax_errors.append(error)
             else:
                 security_errors.append(error)
@@ -178,9 +202,9 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         # 生成建议
         suggestions = []
         if security_errors:
-            suggestions.append("移除危险操作，如 os.system、subprocess 等")
+            suggestions.append("Remove dangerous operations such as os.system or subprocess.")
         if syntax_errors:
-            suggestions.append("修复语法错误")
+            suggestions.append("Fix syntax errors.")
 
         return {
             "valid": len(validation_errors) == 0,
@@ -191,10 +215,10 @@ def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> 
         }
 
     except Exception as e:
-        logger.error(f"代码验证工具异常: {e}")
+        logger.error(f"Code validation tool error: {e}")
         return {
             "valid": False,
-            "syntax_errors": [f"验证异常: {str(e)}"],
+            "syntax_errors": [f"Validation error: {str(e)}"],
             "security_errors": [],
             "warnings": [],
             "suggestions": [],
@@ -238,13 +262,13 @@ def get_execution_environment_info() -> Dict[str, Any]:
 
     # 安全特性
     security_features = [
-        "Docker 容器隔离",
-        "非root用户执行",
-        "网络访问禁用",
-        "资源限制（CPU/内存/时间）",
-        "临时文件系统",
-        "代码安全检查",
-        "危险操作黑名单",
+        "Docker container isolation",
+        "Non-root user execution",
+        "Network access disabled",
+        "Resource limits (CPU/memory/time)",
+        "Temporary filesystem",
+        "Code safety checks",
+        "Dangerous operation blocklist",
     ]
 
     # 可用库列表（基于Docker镜像）
@@ -291,7 +315,7 @@ def get_execution_environment_info() -> Dict[str, Any]:
         "security_features": security_features,
         "configuration": {
             "enable_docker_sandbox": settings.enable_docker_sandbox,
-            "max_iterations": 3,  # Agent 最大迭代次数
+            "max_iterations": 3,  # Agent max iterations
             "supported_file_types": [".csv", ".xlsx", ".xls", ".json", ".txt"],
             "visualization_formats": [".png", ".jpg", ".svg", ".html", ".pdf"],
         },

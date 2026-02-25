@@ -1,3 +1,4 @@
+# DEPRECATED: legacy Chinese-font test image, excluded from default delivery pipeline.
 # 简化的中文支持测试 Docker 镜像
 FROM python:3.11-slim
 

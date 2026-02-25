@@ -100,7 +100,7 @@ export function Select({ error, options, className = '', ...props }: SelectProps
       `}
       {...props}
     >
-      <option value="">请选择...</option>
+      <option value="">Please select...</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -222,7 +222,7 @@ export function Button({
       {loading ? (
         <div className="flex items-center justify-center space-x-2">
           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span>处理中...</span>
+          <span>Processing...</span>
         </div>
       ) : (
         children

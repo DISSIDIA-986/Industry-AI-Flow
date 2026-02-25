@@ -1,6 +1,6 @@
 """
-智能意图分类器 - RAG系统的核心路由组件
-基于LLM的智能问题分类和路由决策系统
+EN - RAGEN
+ENLLMEN
 """
 
 import asyncio
@@ -22,47 +22,47 @@ logger = logging.getLogger(__name__)
 
 
 class IntentType(Enum):
-    """意图类型枚举"""
+    """EN"""
 
-    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # 知识检索类
-    DATA_ANALYSIS = "data_analysis"  # 数据分析类
-    COST_ESTIMATION = "cost_estimation"  # 成本估算类
-    DOCUMENT_PROCESSING = "document_processing"  # 文档处理类
-    CODE_EXECUTION = "code_execution"  # 代码执行类
-    UNCLEAR_INTENT = "unclear_intent"  # 意图不明确
+    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # EN
+    DATA_ANALYSIS = "data_analysis"  # EN
+    COST_ESTIMATION = "cost_estimation"  # EN
+    DOCUMENT_PROCESSING = "document_processing"  # EN
+    CODE_EXECUTION = "code_execution"  # EN
+    UNCLEAR_INTENT = "unclear_intent"  # EN
 
 
 class SubIntentType(Enum):
-    """子意图类型枚举"""
+    """EN"""
 
-    # 知识检索子类
-    FACT_QUERY = "fact_query"  # 事实查询
-    CONCEPT_EXPLANATION = "concept_explanation"  # 概念解释
-    COMPARISON_ANALYSIS = "comparison_analysis"  # 比较分析
-    HOW_TO_GUIDE = "how_to_guide"  # 操作指南
+    # EN
+    FACT_QUERY = "fact_query"  # EN
+    CONCEPT_EXPLANATION = "concept_explanation"  # EN
+    COMPARISON_ANALYSIS = "comparison_analysis"  # EN
+    HOW_TO_GUIDE = "how_to_guide"  # EN
 
-    # 数据分析子类
-    EXPLORATORY_ANALYSIS = "exploratory_analysis"  # 探索性分析
-    STATISTICAL_ANALYSIS = "statistical_analysis"  # 统计分析
-    MACHINE_LEARNING = "machine_learning"  # 机器学习
-    VISUALIZATION = "visualization"  # 数据可视化
+    # EN
+    EXPLORATORY_ANALYSIS = "exploratory_analysis"  # EN
+    STATISTICAL_ANALYSIS = "statistical_analysis"  # EN
+    MACHINE_LEARNING = "machine_learning"  # EN
+    VISUALIZATION = "visualization"  # EN
 
-    # 文档处理子类
-    OCR_PROCESSING = "ocr_processing"  # OCR处理
-    TABLE_EXTRACTION = "table_extraction"  # 表格提取
-    IMAGE_ANALYSIS = "image_analysis"  # 图像分析
-    TEXT_EXTRACTION = "text_extraction"  # 文本提取
+    # EN
+    OCR_PROCESSING = "ocr_processing"  # OCREN
+    TABLE_EXTRACTION = "table_extraction"  # EN
+    IMAGE_ANALYSIS = "image_analysis"  # EN
+    TEXT_EXTRACTION = "text_extraction"  # EN
 
-    # 代码执行子类
-    SCRIPT_EXECUTION = "script_execution"  # 脚本执行
-    COMPUTATION_TASK = "computation_task"  # 计算任务
-    ALGORITHM_IMPLEMENTATION = "algorithm_implementation"  # 算法实现
-    DEBUGGING = "debugging"  # 调试任务
+    # EN
+    SCRIPT_EXECUTION = "script_execution"  # EN
+    COMPUTATION_TASK = "computation_task"  # EN
+    ALGORITHM_IMPLEMENTATION = "algorithm_implementation"  # EN
+    DEBUGGING = "debugging"  # EN
 
 
 @dataclass
 class IntentResult:
-    """意图分类结果"""
+    """EN"""
 
     intent: IntentType
     sub_intent: Optional[SubIntentType] = None
@@ -84,7 +84,7 @@ class IntentResult:
             self.uncertainty_factors = []
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """EN"""
         return {
             **asdict(self),
             "intent": self.intent.value
@@ -95,23 +95,23 @@ class IntentResult:
 
     @property
     def is_high_confidence(self) -> bool:
-        """判断是否为高置信度"""
+        """EN"""
         return self.confidence >= 0.7
 
     @property
     def is_very_high_confidence(self) -> bool:
-        """判断是否为极高置信度"""
+        """EN"""
         return self.confidence >= 0.9
 
     @property
     def is_uncertain(self) -> bool:
-        """判断是否意图不明确"""
+        """EN"""
         return self.confidence < 0.5
 
 
 @dataclass
 class QueryContext:
-    """查询上下文信息"""
+    """EN"""
 
     session_id: str
     user_id: Optional[str] = None
@@ -134,22 +134,22 @@ class QueryContext:
             self.interaction_history = []
 
     def add_intent(self, intent: str):
-        """添加意图到历史记录"""
+        """EN"""
         self.recent_intents.append(intent)
-        # 只保留最近5个意图
+        # EN5EN
         if len(self.recent_intents) > 5:
             self.recent_intents = self.recent_intents[-5:]
 
     def add_uploaded_file(self, file_info: Dict[str, Any]):
-        """添加上传文件记录"""
+        """EN"""
         self.uploaded_files.append(file_info)
-        # 只保留最近3个文件
+        # EN3EN
         if len(self.uploaded_files) > 3:
             self.uploaded_files = self.uploaded_files[-3:]
 
 
 class IntentClassifier:
-    """智能意图分类器"""
+    """EN"""
 
     def __init__(
         self,
@@ -160,14 +160,14 @@ class IntentClassifier:
         cache_ttl: int = 300,
     ):
         """
-        初始化意图分类器
+        EN
 
         Args:
-            prompt_manager: Prompt管理器
-            llm_client: LLM客户端
-            confidence_threshold: 置信度阈值
-            enable_cache: 是否启用缓存
-            cache_ttl: 缓存过期时间（秒）
+            prompt_manager: PromptEN
+            llm_client: LLMEN
+            confidence_threshold: EN
+            enable_cache: EN
+            cache_ttl: EN(EN)
         """
         self.prompt_manager = prompt_manager
         self.llm_client = llm_client
@@ -175,10 +175,10 @@ class IntentClassifier:
         self.enable_cache = enable_cache
         self.cache_ttl = cache_ttl
 
-        # 分类缓存
+        # EN
         self._classification_cache: Dict[str, Tuple[IntentResult, datetime]] = {}
 
-        # 统计信息
+        # EN
         self.stats = {
             "total_classifications": 0,
             "high_confidence_count": 0,
@@ -187,73 +187,74 @@ class IntentClassifier:
             "avg_confidence": 0.0,
         }
 
-        logger.info("意图分类器初始化完成")
+        logger.info("EN")
 
     async def classify_intent(self, query: str, context: QueryContext) -> IntentResult:
         """
-        分类用户意图
+        EN
 
         Args:
-            query: 用户查询
-            context: 查询上下文
+            query: EN
+            context: EN
 
         Returns:
-            IntentResult: 分类结果
+            IntentResult: EN
         """
         start_time = datetime.now()
 
         try:
-            # 1. 输入预处理
+            # 1. EN
             processed_query = await self._preprocess_input(query)
 
-            # 2. 检查缓存
+            # 2. EN
             cache_key = self._generate_cache_key(processed_query, context)
             if self.enable_cache:
                 cached_result = self._get_from_cache(cache_key)
                 if cached_result:
                     self.stats["cache_hits"] += 1
-                    logger.debug(f"从缓存获取分类结果: {cached_result.intent}")
+                    logger.debug(f"EN: {cached_result.intent}")
                     return cached_result
 
-            # 3. 构建分类请求
+            # 3. EN
             classification_request = await self._build_classification_request(
                 processed_query, context
             )
 
-            # 4. 获取分类Prompt（若缺失则降级为内置分类提示）
+            # 4. ENPrompt(EN)
             prompt_prefix = ""
-            try:
-                _, prompt_content = await self.prompt_manager.get_prompt(
-                    name="intent_classification",
-                    category="Intent",
-                    context={
-                        "query_length": len(processed_query),
-                        "has_uploaded_files": len(context.uploaded_files) > 0,
-                        "session_depth": context.query_count_in_session,
-                    },
-                    variables={
-                        "user_query": processed_query,
-                        "session_topic": context.session_topic,
-                        "recent_intents": ", ".join(context.recent_intents[-3:])
-                        if context.recent_intents
-                        else "",
-                        "uploaded_files": ", ".join(
-                            [f["name"] for f in context.uploaded_files]
-                        )
-                        if context.uploaded_files
-                        else "无",
-                        "user_preferences": json.dumps(
-                            context.user_preferences, ensure_ascii=False
-                        ),
-                    },
-                )
-                prompt_prefix = prompt_content
-            except Exception as prompt_exc:
-                logger.warning(
-                    "意图分类Prompt缺失，使用内置降级分类逻辑: %s", prompt_exc
-                )
+            if self.prompt_manager is not None:
+                try:
+                    _, prompt_content = await self.prompt_manager.get_prompt(
+                        name="intent_classification",
+                        category="Intent",
+                        context={
+                            "query_length": len(processed_query),
+                            "has_uploaded_files": len(context.uploaded_files) > 0,
+                            "session_depth": context.query_count_in_session,
+                        },
+                        variables={
+                            "user_query": processed_query,
+                            "session_topic": context.session_topic,
+                            "recent_intents": ", ".join(context.recent_intents[-3:])
+                            if context.recent_intents
+                            else "",
+                            "uploaded_files": ", ".join(
+                                [f["name"] for f in context.uploaded_files]
+                            )
+                            if context.uploaded_files
+                            else "EN",
+                            "user_preferences": json.dumps(
+                                context.user_preferences, ensure_ascii=False
+                            ),
+                        },
+                    )
+                    prompt_prefix = prompt_content
+                except Exception as prompt_exc:
+                    logger.warning(
+                        "ENPromptEN,EN: %s", prompt_exc
+                    )
 
-            # 5. 调用LLM进行分类
+            # 5. ENLLMEN
             final_prompt = (
                 f"{prompt_prefix}\n\n{classification_request}"
                 if prompt_prefix
@@ -261,39 +262,39 @@ class IntentClassifier:
             )
             llm_response = await self._call_llm_for_classification(final_prompt)
 
-            # 6. 解析分类结果
+            # 6. EN
             intent_result = await self._parse_classification_result(llm_response)
 
-            # 7. 后处理和验证
+            # 7. EN
             intent_result = await self._post_process_result(
                 intent_result, query, context
             )
 
-            # 8. 更新缓存
+            # 8. EN
             if self.enable_cache:
                 self._save_to_cache(cache_key, intent_result)
 
-            # 9. 更新统计
+            # 9. EN
             self._update_stats(intent_result)
 
-            # 10. 记录处理时间
+            # 10. EN
             intent_result.processing_time_ms = int(
                 (datetime.now() - start_time).total_seconds() * 1000
             )
             intent_result.llm_response = llm_response
 
             logger.info(
-                f"意图分类完成: {intent_result.intent} (置信度: {intent_result.confidence:.2f})"
+                f"EN: {intent_result.intent} (EN: {intent_result.confidence:.2f})"
             )
             return intent_result
 
         except Exception as e:
-            logger.error(f"意图分类失败: {e}")
-            # 返回默认的模糊分类结果
+            logger.error(f"EN: {e}")
+            # EN
             return IntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
-                reasoning=f"分类过程中出现错误: {str(e)}",
+                reasoning=f"EN: {str(e)}",
                 processing_time_ms=int(
                     (datetime.now() - start_time).total_seconds() * 1000
                 ),
@@ -301,33 +302,33 @@ class IntentClassifier:
 
     async def _preprocess_input(self, query: str) -> str:
         """
-        输入预处理
+        EN
 
         Args:
-            query: 原始查询
+            query: EN
 
         Returns:
-            str: 处理后的查询
+            str: EN
         """
         if not query:
             return ""
 
-        # 移除多余空白字符
+        # EN
         processed = re.sub(r"\s+", " ", query.strip())
 
-        # 处理特殊字符
+        # EN
         processed = re.sub(r'[^\w\s\u4e00-\u9fff.,!?;:()[]{}"\'-]', "", processed)
 
-        # 统一标点符号
+        # EN
         processed = re.sub(
-            r"[，。！？；：]",
-            lambda m: {"，": ",", "。": ".", "！": "!", "？": "?", "；": ";", "：": ":"}[
+            r"[,.!?;:]",
+            lambda m: {",": ",", ".": ".", "!": "!", "?": "?", ";": ";", ":": ":"}[
                 m.group()
             ],
             processed,
         )
 
-        # 处理英文大小写
+        # EN
         processed = (
             processed.lower() if self._is_english_heavy(processed) else processed
         )
@@ -335,7 +336,7 @@ class IntentClassifier:
         return processed.strip()
 
     def _is_english_heavy(self, text: str) -> bool:
-        """判断是否以英文为主"""
+        """EN"""
         if not text:
             return False
 
@@ -347,19 +348,19 @@ class IntentClassifier:
 
     async def _extract_context(self, session_id: str) -> QueryContext:
         """
-        提取查询上下文
+        EN
 
         Args:
-            session_id: 会话ID
+            session_id: ENID
 
         Returns:
-            QueryContext: 上下文信息
+            QueryContext: EN
         """
-        # 这里应该从数据库或缓存中获取实际的上下文信息
-        # 暂时返回模拟上下文
+        # EN
+        # EN
         return QueryContext(
             session_id=session_id,
-            session_topic="通用对话",
+            session_topic="EN",
             recent_intents=[],
             uploaded_files=[],
             user_preferences={},
@@ -372,79 +373,96 @@ class IntentClassifier:
         self, query: str, context: QueryContext
     ) -> str:
         """
-        构建分类请求
+        EN
 
         Args:
-            query: 处理后的查询
-            context: 查询上下文
+            query: EN
+            context: EN
 
         Returns:
-            str: 分类请求文本
+            str: EN
         """
-        request_parts = []
-
-        # 基本查询信息
-        request_parts.append(f"【用户问题】")
-        request_parts.append(query)
-
-        # 上下文信息
-        if context.session_topic:
-            request_parts.append(f"【会话主题】")
-            request_parts.append(context.session_topic)
-
-        if context.recent_intents:
-            request_parts.append(f"【最近意图】")
-            request_parts.append(", ".join(context.recent_intents[-3:]))
-
-        if context.uploaded_files:
-            file_names = [f["name"] for f in context.uploaded_files]
-            request_parts.append(f"【上传文件】")
-            request_parts.append(", ".join(file_names))
-
-        if context.user_preferences:
-            request_parts.append(f"【用户偏好】")
-            request_parts.append(
-                json.dumps(context.user_preferences, ensure_ascii=False)
+        recent_intents = (
+            ", ".join(context.recent_intents[-3:]) if context.recent_intents else "(none)"
+        )
+        uploaded_files = (
+            ", ".join(
+                str(item.get("name") or "")
+                for item in context.uploaded_files
+                if isinstance(item, dict)
             )
+            if context.uploaded_files
+            else "(none)"
+        )
+        user_preferences = (
+            json.dumps(context.user_preferences, ensure_ascii=False)
+            if context.user_preferences
+            else "{}"
+        )
 
-        return "\n\n".join(request_parts)
+        return (
+            "You are an intent classifier for an enterprise RAG workflow.\n"
+            "Classify the user request into one of the exact intents:\n"
+            "- knowledge_retrieval\n"
+            "- data_analysis\n"
+            "- cost_estimation\n"
+            "- document_processing\n"
+            "- code_execution\n"
+            "- unclear_intent\n\n"
+            "Return ONLY strict JSON with keys:\n"
+            "intent, confidence, reasoning, keywords, context_clues, suggested_action, uncertainty_factors.\n"
+            "confidence must be a number between 0 and 1.\n\n"
+            f"Query:\n{query}\n\n"
+            f"Session topic: {context.session_topic or '(none)'}\n"
+            f"Recent intents: {recent_intents}\n"
+            f"Uploaded files: {uploaded_files}\n"
+            f"User preferences: {user_preferences}\n"
+        )
 
     async def _call_llm_for_classification(self, prompt: str) -> str:
         """
-        调用LLM进行分类
+        ENLLMEN
 
         Args:
-            prompt: 分类Prompt
+            prompt: ENPrompt
 
         Returns:
-            str: LLM响应
+            str: LLMEN
         """
         try:
-            # 这里应该调用实际的LLM
-            # 暂时返回模拟响应
+            if self.llm_client is not None and hasattr(self.llm_client, "generate"):
+                response = await asyncio.to_thread(
+                    self.llm_client.generate,
+                    prompt,
+                    temperature=0.0,
+                    max_tokens=320,
+                )
+                if isinstance(response, str) and response.strip():
+                    return response
+                logger.warning("Intent LLM classification returned empty text, fallback to heuristic simulator")
             return await self._simulate_llm_response(prompt)
         except Exception as e:
-            logger.error(f"LLM调用失败: {e}")
-            raise
+            logger.warning("LLMEN,EN: %s", e)
+            return await self._simulate_llm_response(prompt)
 
     async def _simulate_llm_response(self, prompt: str) -> str:
         """
-        模拟LLM响应（用于演示）
+        ENLLMEN(EN)
 
         Args:
-            prompt: 分类Prompt
+            prompt: ENPrompt
 
         Returns:
-            str: 模拟的LLM响应
+            str: ENLLMEN
         """
-        # 简单的关键词匹配逻辑来模拟分类
+        # EN
         query_lower = prompt.lower()
 
-        # 检查各种分类的关键词
-        if any(keyword in query_lower for keyword in ["什么是", "如何", "告诉我", "解释", "定义"]):
+        # EN
+        if any(keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "EN"]):
             intent = "knowledge_retrieval"
             confidence = 0.85
-            reasoning = "问题包含知识查询相关的关键词"
+            reasoning = "EN"
         elif any(
             keyword in query_lower
             for keyword in [
@@ -453,46 +471,46 @@ class IntentClassifier:
                 "budget",
                 "overrun",
                 "construction cost",
-                "成本",
-                "预算",
-                "估算",
-                "超支",
+                "EN",
+                "EN",
+                "EN",
+                "EN",
             ]
         ):
             intent = "cost_estimation"
             confidence = 0.91
-            reasoning = "问题涉及工程成本估算相关操作"
+            reasoning = "EN"
         elif any(
-            keyword in query_lower for keyword in ["分析", "统计", "图表", "数据", "dataset"]
+            keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "dataset"]
         ):
             intent = "data_analysis"
             confidence = 0.90
-            reasoning = "问题涉及数据分析相关操作"
+            reasoning = "EN"
         elif any(
-            keyword in query_lower for keyword in ["pdf", "图片", "ocr", "提取", "文档"]
+            keyword in query_lower for keyword in ["pdf", "EN", "ocr", "EN", "EN"]
         ):
             intent = "document_processing"
             confidence = 0.88
-            reasoning = "问题提到文档处理或OCR相关"
-        elif any(keyword in query_lower for keyword in ["运行", "执行", "代码", "计算", "程序"]):
+            reasoning = "ENOCREN"
+        elif any(keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "EN"]):
             intent = "code_execution"
             confidence = 0.87
-            reasoning = "问题涉及代码执行或计算任务"
+            reasoning = "EN"
         else:
             intent = "unclear_intent"
             confidence = 0.45
-            reasoning = "无法明确识别用户意图"
+            reasoning = "EN"
 
-        # 提取关键词
+        # EN
         keywords = []
-        if "数据" in query_lower:
-            keywords.append("数据")
-        if "分析" in query_lower:
-            keywords.append("分析")
+        if "EN" in query_lower:
+            keywords.append("EN")
+        if "EN" in query_lower:
+            keywords.append("EN")
         if "pdf" in query_lower:
             keywords.append("PDF")
-        if "代码" in query_lower:
-            keywords.append("代码")
+        if "EN" in query_lower:
+            keywords.append("EN")
 
         return json.dumps(
             {
@@ -501,36 +519,36 @@ class IntentClassifier:
                 "reasoning": reasoning,
                 "keywords": keywords,
                 "context_clues": [],
-                "suggested_action": f"路由到{intent}处理模块",
-                "uncertainty_factors": [] if confidence > 0.7 else ["查询信息不够充分"],
+                "suggested_action": f"EN{intent}EN",
+                "uncertainty_factors": [] if confidence > 0.7 else ["EN"],
             },
             ensure_ascii=False,
         )
 
     async def _parse_classification_result(self, llm_response: str) -> IntentResult:
         """
-        解析LLM分类结果
+        ENLLMEN
 
         Args:
-            llm_response: LLM响应
+            llm_response: LLMEN
 
         Returns:
-            IntentResult: 解析后的分类结果
+            IntentResult: EN
         """
         try:
-            # 尝试解析JSON响应
+            # ENJSONEN
             if llm_response.strip().startswith("{"):
                 data = json.loads(llm_response)
             else:
-                # 如果不是JSON格式，尝试提取JSON部分
+                # ENJSONEN,ENJSONEN
                 json_match = re.search(r"\{.*\}", llm_response, re.DOTALL)
                 if json_match:
                     data = json.loads(json_match.group())
                 else:
-                    raise ValueError("无法从响应中提取JSON数据")
+                    raise ValueError("ENJSONEN")
 
-            # 创建IntentResult
-            intent_value = data.get("intent", "unclear_intent")
+            # ENIntentResult
+            intent_value = self._normalize_intent_value(data.get("intent", "unclear_intent"))
             intent = (
                 IntentType(intent_value)
                 if intent_value in [e.value for e in IntentType]
@@ -556,76 +574,108 @@ class IntentClassifier:
             )
 
         except Exception as e:
-            logger.error(f"解析分类结果失败: {e}")
-            # 返回默认结果
+            logger.error(f"EN: {e}")
+            # EN
             return IntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
-                reasoning=f"解析失败: {str(e)}",
+                reasoning=f"EN: {str(e)}",
             )
+
+    @staticmethod
+    def _normalize_intent_value(raw: Any) -> str:
+        value = str(raw or "").strip().lower()
+        if not value:
+            return "unclear_intent"
+
+        aliases = {
+            "knowledge": "knowledge_retrieval",
+            "knowledge retrieval": "knowledge_retrieval",
+            "knowledge-retrieval": "knowledge_retrieval",
+            "rag": "knowledge_retrieval",
+            "retrieval": "knowledge_retrieval",
+            "analysis": "data_analysis",
+            "data analysis": "data_analysis",
+            "data-analysis": "data_analysis",
+            "cost estimate": "cost_estimation",
+            "cost estimation": "cost_estimation",
+            "cost-estimation": "cost_estimation",
+            "document": "document_processing",
+            "doc_processing": "document_processing",
+            "document processing": "document_processing",
+            "document-processing": "document_processing",
+            "code": "code_execution",
+            "coding": "code_execution",
+            "execution": "code_execution",
+            "code execution": "code_execution",
+            "code-execution": "code_execution",
+            "unclear": "unclear_intent",
+            "unknown": "unclear_intent",
+        }
+        return aliases.get(value, value)
 
     async def _post_process_result(
         self, result: IntentResult, original_query: str, context: QueryContext
     ) -> IntentResult:
         """
-        后处理和验证分类结果
+        EN
 
         Args:
-            result: 原始分类结果
-            original_query: 原始查询
-            context: 查询上下文
+            result: EN
+            original_query: EN
+            context: EN
 
         Returns:
-            IntentResult: 后处理的分类结果
+            IntentResult: EN
         """
-        # 验证置信度范围
+        # EN
         result.confidence = max(0.0, min(1.0, result.confidence))
 
-        # 基于上下文调整置信度
+        # EN
         if (
             context.recent_intents
             and result.intent.value in context.recent_intents[-2:]
         ):
-            # 如果与最近的意图一致，增加置信度
+            # EN,EN
             result.confidence = min(1.0, result.confidence + 0.1)
-            result.reasoning += f" (与最近意图 '{result.intent.value}' 一致，置信度提升)"
+            result.reasoning += f" (EN '{result.intent.value}' EN,EN)"
 
-        # 基于上传文件调整
+        # EN
         if context.uploaded_files:
             file_types = [f.get("type", "") for f in context.uploaded_files]
             if "data" in file_types and result.intent == IntentType.DATA_ANALYSIS:
                 result.confidence = min(1.0, result.confidence + 0.15)
-                result.reasoning += " (用户上传了数据文件，加强数据分析意图判断)"
+                result.reasoning += " (EN,EN)"
             elif (
                 any("pdf" in ft.lower() or "image" in ft.lower() for ft in file_types)
                 and result.intent == IntentType.DOCUMENT_PROCESSING
             ):
                 result.confidence = min(1.0, result.confidence + 0.15)
-                result.reasoning += " (用户上传了文档/图片，加强文档处理意图判断)"
+                result.reasoning += " (EN/EN,EN)"
 
-        # 添加关键词到推理
+        # EN
         if result.keywords:
-            result.reasoning += f" (识别关键词: {', '.join(result.keywords)})"
+            result.reasoning += f" (EN: {', '.join(result.keywords)})"
 
-        # 确定建议动作
+        # EN
         result.suggested_action = self._get_suggested_action(result.intent)
 
         return result
 
     def _get_suggested_action(self, intent: IntentType) -> str:
-        """获取建议的处理动作"""
+        """EN"""
         actions = {
-            IntentType.KNOWLEDGE_RETRIEVAL: "调用RAG检索系统进行知识查询",
-            IntentType.DATA_ANALYSIS: "启动数据分析Agent处理数据任务",
-            IntentType.COST_ESTIMATION: "启动成本估算模型进行预算与超支预测",
-            IntentType.DOCUMENT_PROCESSING: "启动OCR Agent处理文档提取任务",
-            IntentType.CODE_EXECUTION: "启动代码执行Agent运行计算任务",
-            IntentType.UNCLEAR_INTENT: "启动澄清对话确认用户意图",
+            IntentType.KNOWLEDGE_RETRIEVAL: "ENRAGEN",
+            IntentType.DATA_ANALYSIS: "ENAgentEN",
+            IntentType.COST_ESTIMATION: "EN",
+            IntentType.DOCUMENT_PROCESSING: "ENOCR AgentEN",
+            IntentType.CODE_EXECUTION: "ENAgentEN",
+            IntentType.UNCLEAR_INTENT: "EN",
         }
-        return actions.get(intent, "启动通用处理流程")
+        return actions.get(intent, "EN")
 
     def _generate_cache_key(self, query: str, context: QueryContext) -> str:
-        """生成缓存键"""
+        """EN"""
         key_data = {
             "query": query,
             "recent_intents": context.recent_intents[-2:]
@@ -637,7 +687,7 @@ class IntentClassifier:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def _get_from_cache(self, cache_key: str) -> Optional[IntentResult]:
-        """从缓存获取结果"""
+        """EN"""
         if cache_key in self._classification_cache:
             result, cached_at = self._classification_cache[cache_key]
             if datetime.now() - cached_at < timedelta(seconds=self.cache_ttl):
@@ -647,12 +697,12 @@ class IntentClassifier:
         return None
 
     def _save_to_cache(self, cache_key: str, result: IntentResult):
-        """保存到缓存"""
+        """EN"""
         self._classification_cache[cache_key] = (result, datetime.now())
 
-        # 限制缓存大小
+        # EN
         if len(self._classification_cache) > 1000:
-            # 删除最旧的缓存项
+            # EN
             oldest_key = min(
                 self._classification_cache.keys(),
                 key=lambda k: self._classification_cache[k][1],
@@ -660,14 +710,14 @@ class IntentClassifier:
             del self._classification_cache[oldest_key]
 
     def _update_stats(self, result: IntentResult):
-        """更新统计信息"""
+        """EN"""
         self.stats["total_classifications"] += 1
         if result.is_high_confidence:
             self.stats["high_confidence_count"] += 1
         if result.is_uncertain:
             self.stats["clarification_count"] += 1
 
-        # 更新平均置信度
+        # EN
         total = self.stats["total_classifications"]
         current_avg = self.stats["avg_confidence"]
         self.stats["avg_confidence"] = (
@@ -676,14 +726,14 @@ class IntentClassifier:
 
     async def get_clarification_prompt(self, query: str, result: IntentResult) -> str:
         """
-        获取澄清对话Prompt
+        ENPrompt
 
         Args:
-            query: 用户查询
-            result: 分类结果
+            query: EN
+            result: EN
 
         Returns:
-            str: 澄清问句
+            str: EN
         """
         try:
             prompt_info, prompt_content = await self.prompt_manager.get_prompt(
@@ -694,49 +744,49 @@ class IntentClassifier:
                     "user_query": query,
                     "possible_intents": json.dumps(
                         [
-                            {"type": "knowledge_retrieval", "desc": "知识查询和回答"},
-                            {"type": "data_analysis", "desc": "数据分析和可视化"},
-                            {"type": "cost_estimation", "desc": "工程成本估算与超支预测"},
-                            {"type": "document_processing", "desc": "文档处理和OCR"},
-                            {"type": "code_execution", "desc": "代码执行和计算"},
+                            {"type": "knowledge_retrieval", "desc": "EN"},
+                            {"type": "data_analysis", "desc": "EN"},
+                            {"type": "cost_estimation", "desc": "EN"},
+                            {"type": "document_processing", "desc": "ENOCR"},
+                            {"type": "code_execution", "desc": "EN"},
                         ],
                         ensure_ascii=False,
                     ),
                 },
             )
 
-            # 模拟LLM调用
+            # ENLLMEN
             return await self._simulate_clarification_response(query, result)
 
         except Exception as e:
-            logger.error(f"获取澄清Prompt失败: {e}")
-            return f"抱歉，我没有完全理解您的问题。您是想：1. 查询知识信息 2. 分析数据 3. 处理文档 4. 执行代码 请选择一个选项。"
+            logger.error(f"ENPromptEN: {e}")
+            return f"EN,EN.EN:1. EN 2. EN 3. EN 4. EN EN."
 
     async def _simulate_clarification_response(
         self, query: str, result: IntentResult
     ) -> str:
-        """模拟澄清响应"""
-        return f"""抱歉，我没有完全理解您的问题"{query}"。根据我的分析，您可能想要：
+        """EN"""
+        return f"""EN,EN"{query}".EN,EN:
 
-1. **知识查询** - 获取特定信息或答案
-2. **数据分析** - 对数据进行分析或可视化
-3. **文档处理** - 从PDF或图片中提取信息
-4. **代码执行** - 运行特定的计算或程序
+1. **EN** - EN
+2. **EN** - EN
+3. **EN** - ENPDFEN
+4. **EN** - EN
 
-请告诉我您想要哪种类型的帮助，这样我可以为您提供更准确的服务。"""
+EN,EN."""
 
     async def route_to_agent(
         self, result: IntentResult, context: QueryContext
     ) -> Dict[str, Any]:
         """
-        路由到对应的Agent
+        ENAgent
 
         Args:
-            result: 分类结果
-            context: 查询上下文
+            result: EN
+            context: EN
 
         Returns:
-            Dict[str, Any]: 路由信息
+            Dict[str, Any]: EN
         """
         routing_info = {
             "success": True,
@@ -749,7 +799,7 @@ class IntentClassifier:
             "suggested_action": result.suggested_action,
         }
 
-        # 添加特定的路由参数
+        # EN
         if result.intent == IntentType.DATA_ANALYSIS:
             routing_info.update(
                 {
@@ -786,7 +836,7 @@ class IntentClassifier:
         return routing_info
 
     def _get_agent_type(self, intent: IntentType) -> str:
-        """获取对应的Agent类型"""
+        """ENAgentEN"""
         agent_mapping = {
             IntentType.KNOWLEDGE_RETRIEVAL: "RAGAgent",
             IntentType.DATA_ANALYSIS: "DataAnalysisAgent",
@@ -798,7 +848,7 @@ class IntentClassifier:
         return agent_mapping.get(intent, "GeneralAgent")
 
     def get_stats(self) -> Dict[str, Any]:
-        """获取分类器统计信息"""
+        """EN"""
         total = self.stats["total_classifications"]
         return {
             **self.stats,
@@ -811,14 +861,14 @@ class IntentClassifier:
         }
 
     def clear_cache(self):
-        """清空缓存"""
+        """EN"""
         self._classification_cache.clear()
-        logger.info("分类缓存已清空")
+        logger.info("EN")
 
     async def health_check(self) -> Dict[str, Any]:
-        """健康检查"""
+        """EN"""
         try:
-            # 测试Prompt管理器连接
+            # ENPromptEN
             test_prompt, _ = await self.prompt_manager.get_prompt(
                 name="intent_classification", category="Intent"
             )

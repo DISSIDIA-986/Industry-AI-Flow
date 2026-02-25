@@ -1,5 +1,5 @@
 """
-增强的查询API路由 - 支持参数配置和反馈集成
+Enhanced query API routes
 """
 
 import logging
@@ -11,16 +11,17 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.security.context import TenantContext
 from backend.security.dependencies import get_current_tenant, secure_endpoint
+from backend.services.language_policy import ensure_rag_english_query
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
-# 全局RAG实例
+# RAG singleton
 rag_instance = None
 
 
 def get_rag_instance():
-    """获取RAG实例"""
+    """RAG singleton"""
     global rag_instance
     if rag_instance is None:
         from backend.services.rag_engine import SimpleRAG
@@ -34,7 +35,7 @@ def get_rag_instance():
 
 
 class QueryRequest(BaseModel):
-    """查询请求模型"""
+    """Query schema."""
 
     question: str
     top_k: Optional[int] = None
@@ -44,7 +45,7 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """查询响应模型"""
+    """Query schema."""
 
     query_id: str
     question: str
@@ -61,7 +62,7 @@ class QueryResponse(BaseModel):
 
 
 class LLMConfigUpdateRequest(BaseModel):
-    """LLM配置更新请求模型"""
+    """LLM"""
 
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
@@ -73,18 +74,20 @@ async def enhanced_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
     """
-    增强的RAG查询接口，支持参数配置
+    RAG singleton,EN
 
     Args:
-        request: 查询请求
+        request: EN
 
     Returns:
-        查询结果
+        EN
     """
     try:
+        ensure_rag_english_query(request.question, field="question")
+
         rag = get_rag_instance()
 
-        # 参数验证
+        # EN
         if request.temperature is not None and not (0.0 <= request.temperature <= 1.0):
             raise HTTPException(
                 status_code=400, detail="Temperature must be between 0.0 and 1.0"
@@ -98,7 +101,7 @@ async def enhanced_query(
                 status_code=400, detail="Top_p must be between 0.0 and 1.0"
             )
 
-        # 保留 legacy /query 的 RAG 检索 + 生成语义，避免无声退化
+        # EN legacy /query EN RAG EN + EN,EN
         try:
             result = rag.query(
                 question=request.question,
@@ -130,10 +133,10 @@ async def enhanced_query(
 @router.get("/query/config")
 async def get_current_llm_config():
     """
-    获取当前LLM配置
+    ENLLM
 
     Returns:
-        当前LLM配置信息
+        ENLLM
     """
     try:
         rag = get_rag_instance()
@@ -157,16 +160,16 @@ async def get_current_llm_config():
 @router.post("/query/config")
 async def update_llm_config(request: LLMConfigUpdateRequest):
     """
-    更新LLM配置
+    ENLLM
 
     Args:
-        request: 配置更新请求
+        request: EN
 
     Returns:
-        更新结果
+        EN
     """
     try:
-        # 参数验证
+        # EN
         if request.temperature is not None and not (0.0 <= request.temperature <= 1.0):
             raise HTTPException(
                 status_code=400, detail="Temperature must be between 0.0 and 1.0"
@@ -182,7 +185,7 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
 
         rag = get_rag_instance()
 
-        # 构建更新参数
+        # EN
         update_params = {}
         if request.temperature is not None:
             update_params["default_temperature"] = request.temperature
@@ -191,10 +194,10 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
         if request.top_p is not None:
             update_params["default_top_p"] = request.top_p
 
-        # 更新配置
+        # EN
         rag.llm_client.update_config(**update_params)
 
-        # 获取更新后的配置
+        # EN
         new_config = rag.llm_client.get_current_config()
 
         logger.info(f"LLM config updated: {update_params}")
@@ -215,10 +218,10 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
 @router.get("/query/models")
 async def list_available_models():
     """
-    列出可用的LLM模型
+    ENLLM
 
     Returns:
-        可用模型列表
+        EN
     """
     try:
         rag = get_rag_instance()
@@ -238,18 +241,18 @@ async def list_available_models():
 @router.post("/query/switch-model")
 async def switch_model(model_name: str = Body(..., embed=True)):
     """
-    切换LLM模型
+    ENLLM
 
     Args:
-        model_name: 模型名称
+        model_name: EN
 
     Returns:
-        切换结果
+        EN
     """
     try:
         rag = get_rag_instance()
 
-        # 获取可用模型列表
+        # EN
         available_models = rag.llm_client.list_models()
         model_names = [model.get("name", "") for model in available_models]
 
@@ -259,7 +262,7 @@ async def switch_model(model_name: str = Body(..., embed=True)):
                 detail=f"Model '{model_name}' not available. Available models: {model_names}",
             )
 
-        # 切换模型
+        # EN
         old_model = rag.llm_client.model
         rag.llm_client.model = model_name
 
@@ -282,15 +285,15 @@ async def switch_model(model_name: str = Body(..., embed=True)):
 @router.get("/query/search-weights")
 async def get_adaptive_search_weights():
     """
-    获取自适应搜索权重
+    EN
 
     Returns:
-        当前搜索权重配置
+        EN
     """
     try:
         rag = get_rag_instance()
 
-        # 获取自适应权重
+        # EN
         vector_weight, bm25_weight = rag._get_adaptive_search_weights()
 
         return {
@@ -300,7 +303,7 @@ async def get_adaptive_search_weights():
             },
             "default_weights": {"vector_weight": 0.7, "bm25_weight": 0.3},
             "feedback_enabled": rag.enable_feedback,
-            "adaptive_adjustment": rag.enable_feedback and True,  # 如果启用反馈系统则支持自适应调整
+            "adaptive_adjustment": rag.enable_feedback and True,  # EN
         }
 
     except Exception as e:
@@ -316,21 +319,21 @@ async def chat_completion(
     top_p: Optional[float] = Body(None),
 ):
     """
-    对话模式完成接口
+    EN
 
     Args:
-        messages: 消息列表 [{"role": "user", "content": "..."}]
-        temperature: 温度参数
-        max_tokens: 最大token数
-        top_p: 核采样参数
+        messages: EN [{"role": "user", "content": "..."}]
+        temperature: EN
+        max_tokens: ENtokenEN
+        top_p: EN
 
     Returns:
-        对话回复
+        EN
     """
     try:
         rag = get_rag_instance()
 
-        # 参数验证
+        # EN
         if temperature is not None and not (0.0 <= temperature <= 1.0):
             raise HTTPException(
                 status_code=400, detail="Temperature must be between 0.0 and 1.0"
@@ -344,7 +347,7 @@ async def chat_completion(
                 status_code=400, detail="Top_p must be between 0.0 and 1.0"
             )
 
-        # 验证消息格式
+        # EN
         for message in messages:
             if (
                 not isinstance(message, dict)
@@ -362,7 +365,7 @@ async def chat_completion(
                     detail="Message role must be 'user', 'assistant', or 'system'",
                 )
 
-        # 执行对话
+        # EN
         response = rag.llm_client.chat(
             messages=messages,
             temperature=temperature,
@@ -389,15 +392,15 @@ async def chat_completion(
 @router.get("/query/health")
 async def query_health_check():
     """
-    查询系统健康检查
+    EN
 
     Returns:
-        系统健康状态
+        EN
     """
     try:
         rag = get_rag_instance()
 
-        # 检查各个组件状态
+        # EN
         health_status = {
             "rag_system": "healthy",
             "vectorstore": "healthy",
@@ -407,7 +410,7 @@ async def query_health_check():
             "reranker": "enabled" if rag.use_reranker else "disabled",
         }
 
-        # 测试LLM连接
+        # ENLLM
         try:
             models = rag.llm_client.list_models()
             health_status["llm_connection"] = "healthy"
@@ -415,7 +418,7 @@ async def query_health_check():
         except Exception as e:
             health_status["llm_connection"] = f"unhealthy: {str(e)}"
 
-        # 测试向量数据库连接
+        # EN
         try:
             doc_count = rag.vectorstore.get_document_count()
             health_status["vectorstore_connection"] = "healthy"

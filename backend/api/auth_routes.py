@@ -21,7 +21,7 @@ _users_lock = Lock()
 _users: Dict[str, Dict[str, str | List[str]]] = {
     "demo@example.com": {
         "id": "user-demo",
-        "name": "演示用户",
+        "name": "Demo User",
         "email": "demo@example.com",
         "password": "demo123",
         "roles": ["user"],

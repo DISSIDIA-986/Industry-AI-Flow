@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+DEPRECATED: Legacy Chinese-font helper kept for historical compatibility.
+This module is not used in the default AIFlow runtime path.
+
 终极 matplotlib 中文支持解决方案
 放置于 ~/Documents/py/matplotlib_chinese_support.py
 使用方法：在需要中文支持的脚本开头添加:
@@ -18,8 +21,11 @@ logger = logging.getLogger(__name__)
 
 def setup_chinese_matplotlib():
     """
-    设置 matplotlib 支持中文显示
+    Set up matplotlib font support
     """
+    logger.warning(
+        "matplotlib_chinese_support is deprecated and excluded from default runtime."
+    )
     try:
         import matplotlib
         import matplotlib.font_manager as fm
@@ -39,7 +45,7 @@ def setup_chinese_matplotlib():
                 try:
                     font_prop = fm.FontProperties(fname=font_path)
                     matplotlib.rcParams["font.family"] = font_prop.get_name()
-                    logger.info("已设置中文字体: %s", font_prop.get_name())
+                    logger.info("Font set: %s", font_prop.get_name())
                     break
                 except Exception as e:
                     continue
@@ -58,7 +64,7 @@ def setup_chinese_matplotlib():
             ]
             matplotlib.rcParams["font.sans-serif"] = chinese_fonts
             matplotlib.rcParams["font.family"] = "sans-serif"
-            logger.info("已设置中文字体（备选方案）")
+            logger.info("Font set (fallback method)")
 
         # 关键设置：解决负号显示问题
         matplotlib.rcParams["axes.unicode_minus"] = False
@@ -66,15 +72,15 @@ def setup_chinese_matplotlib():
         return True
 
     except ImportError:
-        logger.warning("matplotlib 未安装")
+        logger.warning("matplotlib is not installed")
         return False
     except Exception as e:
-        logger.error("设置中文支持时出错: %s", e)
+        logger.error("Error setting up font support: %s", e)
         return False
 
 
 def test_chinese_display():
-    """测试中文显示功能"""
+    """Test font display functionality"""
     try:
         import matplotlib.pyplot as plt
         import numpy as np
@@ -86,10 +92,10 @@ def test_chinese_display():
         x = np.linspace(0, 2 * np.pi, 100)
         y = np.sin(x)
 
-        ax.plot(x, y, label="正弦函数", linewidth=2)
-        ax.set_title("matplotlib 中文显示测试 - 正弦波", fontsize=16)
-        ax.set_xlabel("X轴 - 弧度值", fontsize=12)
-        ax.set_ylabel("Y轴 - 函数值", fontsize=12)
+        ax.plot(x, y, label="Sine function", linewidth=2)
+        ax.set_title("Matplotlib font display test - Sine wave", fontsize=16)
+        ax.set_xlabel("X-axis - Radian values", fontsize=12)
+        ax.set_ylabel("Y-axis - Function values", fontsize=12)
         ax.legend()
         ax.grid(True, alpha=0.3)
 
@@ -97,7 +103,7 @@ def test_chinese_display():
         ax.text(
             np.pi,
             0.5,
-            "中文注释测试",
+            "Font rendering test",
             fontsize=14,
             ha="center",
             va="center",
@@ -110,27 +116,27 @@ def test_chinese_display():
             dpi=150,
             bbox_inches="tight",
         )
-        logger.info("中文显示测试完成，图像已保存到 ~/Documents/py/chinese_test.png")
-        plt.close()  # 避免在Jupyter中重复显示
+        logger.info("Font display test complete, image saved to ~/Documents/py/chinese_test.png")
+        plt.close()  # Avoid duplicate display in Jupyter
 
         return True
     except Exception as e:
-        logger.error("测试中文显示时出错: %s", e)
+        logger.error("Error testing font display: %s", e)
         return False
 
 
 # 如果直接运行此脚本，则执行完整设置和测试
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    logger.info("正在设置 matplotlib 中文支持...")
+    logger.info("Setting up matplotlib font support...")
     success = setup_chinese_matplotlib()
 
     if success:
-        logger.info("正在测试中文显示...")
+        logger.info("Testing font rendering...")
         test_chinese_display()
-        logger.info("matplotlib 中文支持已设置完成！")
-        logger.info("对于现有脚本，只需在开头添加以下代码：")
+        logger.info("matplotlib Font support configured!")
+        logger.info("For existing scripts, add the following at the top:")
         logger.info("  from matplotlib_chinese_support import setup_chinese_matplotlib")
         logger.info("  setup_chinese_matplotlib()")
     else:
-        logger.error("设置失败")
+        logger.error("Setup failed")

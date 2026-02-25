@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { realApiService } from '@/lib/real-api-client'
-import type { RealDocumentUploadResponse } from '@/lib/real-api-client'
+import type { RealDocumentListResponse } from '@/lib/real-api-client'
 import { Card, CardContent, CardHeader, CardTitle, StatCard } from '@/components/cards'
 import { Button } from '@/components/forms'
 import { Input } from '@/components/forms'
@@ -18,11 +18,37 @@ interface Document {
   size: string
   uploadedAt: Date
   status: 'processed' | 'processing' | 'error'
+  source: 'uploaded' | 'knowledge_base'
+  chunkCount?: number
+}
+
+const ALLOW_DOCUMENTS_MOCK_FALLBACK =
+  process.env.NEXT_PUBLIC_ALLOW_DOCUMENTS_MOCK_FALLBACK === 'true'
+
+function normalizeDocumentStatus(
+  rawStatus: RealDocumentListResponse['status'],
+): Document['status'] {
+  const status = String(rawStatus || '').toLowerCase()
+  if (status === 'processed' || status === 'completed') {
+    return 'processed'
+  }
+  if (status === 'processing' || status === 'pending') {
+    return 'processing'
+  }
+  return 'error'
+}
+
+function normalizeDocumentSource(
+  rawSource: RealDocumentListResponse['source'],
+): Document['source'] {
+  return String(rawSource || '').toLowerCase() === 'vector_index'
+    ? 'knowledge_base'
+    : 'uploaded'
 }
 
 export default function DocumentsIntegratedPage() {
   const [documents, setDocuments] = useState<Document[]>([])
-  const [realDocuments, setRealDocuments] = useState<RealDocumentUploadResponse[]>([])
+  const [realDocuments, setRealDocuments] = useState<RealDocumentListResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [uploading, setUploading] = useState(false)
@@ -31,48 +57,54 @@ export default function DocumentsIntegratedPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const { user } = useAuth()
 
-  // 加载文档列表
+  // Load document list
   useEffect(() => {
     loadDocuments()
-    checkApiHealth()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const checkApiHealth = async () => {
-    try {
-      const health = await realApiService.checkHealth()
-      setApiStatus(health.status === 'ok' ? 'connected' : 'disconnected')
-    } catch {
-      setApiStatus('disconnected')
-    }
-  }
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
-      // 尝试从真实API加载文档
+      const health = await realApiService.checkHealth()
+      const connected = health.status === 'ok'
+      setApiStatus(connected ? 'connected' : 'disconnected')
+      if (!connected) {
+        setRealDocuments([])
+        setDocuments(ALLOW_DOCUMENTS_MOCK_FALLBACK ? getMockDocuments() : [])
+        return
+      }
+
+      // try from realityAPILoad document
       const realDocs = await realApiService.getDocuments()
       setRealDocuments(realDocs)
       
-      // 转换为前端格式
+      // Convert to front-end format
       const formattedDocs: Document[] = realDocs.map(doc => ({
         id: doc.id,
-        name: doc.filename,
-        type: getFileType(doc.filename),
-        size: formatFileSize(doc.size),
-        uploadedAt: new Date(doc.upload_time),
-        status: doc.status as 'processed' | 'processing' | 'error'
+        name: String(doc.filename || doc.name || 'document'),
+        type: String(doc.type || getFileType(String(doc.filename || doc.name || ''))),
+        size: formatFileSize(Number(doc.size || 0)),
+        uploadedAt: new Date(String(doc.upload_time || doc.uploaded_at || new Date().toISOString())),
+        status: normalizeDocumentStatus(doc.status),
+        source: normalizeDocumentSource(doc.source),
+        chunkCount: Number(doc.chunk_count || 0) || undefined,
       }))
       
       setDocuments(formattedDocs)
       
-      // 如果没有真实文档，使用模拟数据
-      if (formattedDocs.length === 0) {
+      // Optional local fallback for visual demos only.
+      if (formattedDocs.length === 0 && ALLOW_DOCUMENTS_MOCK_FALLBACK) {
         setDocuments(getMockDocuments())
       }
     } catch (error) {
-      console.error('加载文档失败:', error)
-      // 使用模拟数据作为fallback
-      setDocuments(getMockDocuments())
+      console.error('Failed to load document:', error)
+      setApiStatus('disconnected')
+      if (ALLOW_DOCUMENTS_MOCK_FALLBACK) {
+        setDocuments(getMockDocuments())
+      } else {
+        setDocuments([])
+      }
+      setRealDocuments([])
     } finally {
       setLoading(false)
     }
@@ -81,35 +113,39 @@ export default function DocumentsIntegratedPage() {
   const getMockDocuments = (): Document[] => [
     {
       id: '1',
-      name: '建筑成本估算指南.pdf',
+      name: 'Construction Cost Estimating Guide.pdf',
       type: 'PDF',
       size: '2.4 MB',
       uploadedAt: new Date('2026-02-13'),
-      status: 'processed'
+      status: 'processed',
+      source: 'uploaded',
     },
     {
       id: '2',
-      name: '项目风险评估报告.docx',
+      name: 'Project Risk Assessment Report.docx',
       type: 'Word',
       size: '1.8 MB',
       uploadedAt: new Date('2026-02-12'),
-      status: 'processed'
+      status: 'processed',
+      source: 'uploaded',
     },
     {
       id: '3',
-      name: '施工安全规范.pdf',
+      name: 'Construction safety regulations.pdf',
       type: 'PDF',
       size: '3.2 MB',
       uploadedAt: new Date('2026-02-11'),
-      status: 'processing'
+      status: 'processing',
+      source: 'uploaded',
     },
     {
       id: '4',
-      name: '材料成本数据.xlsx',
+      name: 'Material cost data.xlsx',
       type: 'Excel',
       size: '4.1 MB',
       uploadedAt: new Date('2026-02-10'),
-      status: 'error'
+      status: 'error',
+      source: 'uploaded',
     }
   ]
 
@@ -151,7 +187,7 @@ export default function DocumentsIntegratedPage() {
     setUploadProgress(0)
 
     try {
-      // 模拟上传进度
+      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -162,29 +198,29 @@ export default function DocumentsIntegratedPage() {
         })
       }, 200)
 
-      // 上传每个文件
+      // Upload each file
       for (const file of selectedFiles) {
         try {
           if (apiStatus === 'connected') {
-            // 使用真实API上传
+            // use realAPIupload
             await realApiService.uploadDocument(file, {
               title: file.name,
               description: `Uploaded by ${user?.name || 'user'}`,
               tags: ['uploaded', getFileType(file.name).toLowerCase()]
             })
           } else {
-            // 模拟上传
+            // Simulate upload
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
         } catch (error) {
-          console.error(`上传文件 ${file.name} 失败:`, error)
+          console.error(`Upload files ${file.name} fail:`, error)
         }
       }
 
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      // 上传完成，重新加载文档列表
+      // Upload completed, reload the document list
       setTimeout(() => {
         setUploading(false)
         setUploadProgress(0)
@@ -193,31 +229,31 @@ export default function DocumentsIntegratedPage() {
       }, 500)
 
     } catch (error) {
-      console.error('上传失败:', error)
+      console.error('Upload failed:', error)
       setUploading(false)
       setUploadProgress(0)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个文档吗？')) return
+    if (!confirm('Are you sure you want to delete this document?')) return
 
     try {
-      // 这里应该调用删除API
+      // Delete should be called hereAPI
       // await realApiService.deleteDocument(id)
       
-      // 暂时从前端状态中移除
+      // Temporarily removed from frontend status
       setDocuments(prev => prev.filter(doc => doc.id !== id))
       setRealDocuments(prev => prev.filter(doc => doc.id !== id))
     } catch (error) {
-      console.error('删除文档失败:', error)
+      console.error('Failed to delete document:', error)
     }
   }
 
   const handleDownload = (id: string, filename: string) => {
-    // 这里应该调用下载API
-    // 暂时使用模拟下载
-    alert(`开始下载: ${filename}`)
+    // Download should be called hereAPI
+    // Temporarily use simulated downloads
+    alert(`Start downloading: ${filename}`)
   }
 
   const filteredDocuments = documents.filter(doc =>
@@ -241,13 +277,13 @@ export default function DocumentsIntegratedPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* 页面标题和状态 */}
+        {/* Page title and status */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">文档管理</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
               <p className="text-gray-600 mt-2">
-                上传、管理和处理建筑项目文档
+                Upload, manage and process construction project documents
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -256,21 +292,21 @@ export default function DocumentsIntegratedPage() {
                 apiStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
               }`}></div>
               <span className="text-sm text-gray-600">
-                {apiStatus === 'connected' ? 'API已连接' :
-                 apiStatus === 'disconnected' ? 'API未连接（使用模拟数据）' : '检查API状态...'}
+                {apiStatus === 'connected' ? 'APIConnected' :
+                 apiStatus === 'disconnected' ? 'APINot connected' : 'examineAPIstate...'}
               </span>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 左侧：上传区域 */}
+          {/* Left: Upload area */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>上传文档</CardTitle>
+                <CardTitle>Upload documents</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  支持PDF、Word、Excel、图像等格式
+                  Supports PDF, Word, Excel, Image, and other formats.
                 </p>
               </CardHeader>
               <CardContent>
@@ -284,7 +320,7 @@ export default function DocumentsIntegratedPage() {
                   
                   {selectedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-sm font-medium">已选择 {selectedFiles.length} 个文件:</div>
+                      <div className="text-sm font-medium">Selected {selectedFiles.length} files:</div>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {selectedFiles.map((file, index) => (
                           <div key={index} className="text-xs text-gray-600 truncate">
@@ -298,7 +334,7 @@ export default function DocumentsIntegratedPage() {
                   {uploading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>上传进度</span>
+                        <span>Upload progress</span>
                         <span>{uploadProgress}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -315,41 +351,41 @@ export default function DocumentsIntegratedPage() {
                     disabled={selectedFiles.length === 0 || uploading}
                     className="w-full"
                   >
-                    {uploading ? '上传中...' : '开始上传'}
+                    {uploading ? 'Uploading...' : 'Start uploading'}
                   </Button>
 
                   <div className="text-xs text-gray-500">
-                    <p>• 最大文件大小: 50MB</p>
-                    <p>• 支持格式: PDF, Word, Excel, Text, Images</p>
-                    <p>• 上传后文档将自动处理和分析</p>
+                    <p>• Maximum file size: 50MB</p>
+                    <p>• Supported formats: PDF, Word, Excel, Text, Images</p>
+                    <p>• Documents will be automatically processed and analyzed after uploading</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* API状态卡片 */}
+            {/* APIstatus card */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>API状态</CardTitle>
+                <CardTitle>APIstate</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">后端连接</span>
+                    <span className="text-sm">backend connection</span>
                     <span className={`px-2 py-1 rounded text-xs ${
                       apiStatus === 'connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {apiStatus === 'connected' ? '正常' : '断开'}
+                      {apiStatus === 'connected' ? 'normal' : 'disconnect'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">文档总数</span>
-                    <span className="font-medium">{realDocuments.length} 个</span>
+                    <span className="text-sm">Total number of documents</span>
+                    <span className="font-medium">{realDocuments.length} indivual</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">已处理</span>
+                    <span className="text-sm">Processed</span>
                     <span className="font-medium">
-                      {realDocuments.filter(d => d.status === 'completed').length} 个
+                      {realDocuments.filter(d => d.status === 'completed' || d.status === 'processed').length} indivual
                     </span>
                   </div>
                 </div>
@@ -357,20 +393,20 @@ export default function DocumentsIntegratedPage() {
             </Card>
           </div>
 
-          {/* 右侧：文档列表 */}
+          {/* Right: Document list */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>文档列表</CardTitle>
+                    <CardTitle>Document list</CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      所有已上传的文档，支持搜索和筛选
+                      All uploaded documents support search and filtering
                     </p>
                   </div>
                   <div className="w-64">
                     <Input
-                      placeholder="搜索文档名称或类型..."
+                      placeholder="Search document name or type..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -380,26 +416,27 @@ export default function DocumentsIntegratedPage() {
               <CardContent>
                 {loading ? (
                   <div className="py-12">
-                    <Loading message="加载文档中..." />
+                    <Loading message="Loading document..." />
                   </div>
                 ) : filteredDocuments.length === 0 ? (
                   <EmptyState
-                    title="没有找到文档"
-                    description={searchQuery ? '尝试其他搜索词' : '上传您的第一个文档开始使用'}
-                    actionLabel="上传文档"
-                    onAction={() => {/* 触发文件选择 */}}
+                    title="No document found"
+                    description={searchQuery ? 'Try other search terms' : 'Upload your first document to get started'}
+                    actionLabel="Upload documents"
+                    onAction={() => {/* Trigger file selection */}}
                   />
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>文档名称</TableHead>
-                          <TableHead>类型</TableHead>
-                          <TableHead>大小</TableHead>
-                          <TableHead>上传时间</TableHead>
-                          <TableHead>状态</TableHead>
-                          <TableHead className="text-right">操作</TableHead>
+                          <TableHead>file name</TableHead>
+                          <TableHead>type</TableHead>
+                          <TableHead>size</TableHead>
+                          <TableHead>Upload time</TableHead>
+                          <TableHead>source</TableHead>
+                          <TableHead>state</TableHead>
+                          <TableHead className="text-right">operate</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -421,9 +458,27 @@ export default function DocumentsIntegratedPage() {
                               {document.uploadedAt.toLocaleDateString()}
                             </TableCell>
                             <TableCell>
+                              <div className="space-y-1">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    document.source === 'knowledge_base'
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : 'bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  {document.source === 'knowledge_base' ? 'Knowledge Base' : 'Uploaded'}
+                                </span>
+                                {document.source === 'knowledge_base' && document.chunkCount ? (
+                                  <div className="text-[11px] text-gray-500">
+                                    {document.chunkCount} chunks
+                                  </div>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                            <TableCell>
                               <span className={`px-2 py-1 rounded text-xs ${getStatusColor(document.status)}`}>
-                                {document.status === 'processed' ? '已处理' :
-                                 document.status === 'processing' ? '处理中' : '错误'}
+                                {document.status === 'processed' ? 'Processed' :
+                                 document.status === 'processing' ? 'Processing' : 'Error'}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
@@ -433,7 +488,7 @@ export default function DocumentsIntegratedPage() {
                                   size="sm"
                                   onClick={() => handleDownload(document.id, document.name)}
                                 >
-                                  下载
+                                  download
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -441,7 +496,7 @@ export default function DocumentsIntegratedPage() {
                                   onClick={() => handleDelete(document.id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
-                                  删除
+                                  delete
                                 </Button>
                               </div>
                             </TableCell>
@@ -454,22 +509,22 @@ export default function DocumentsIntegratedPage() {
               </CardContent>
             </Card>
 
-            {/* 文档统计 */}
+            {/* Document statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <StatCard
-                title="总文档数"
+                title="Total number of documents"
                 value={documents.length.toString()}
-                description="所有上传的文档"
+                description="Uploaded and knowledge base documents"
                 trend="up"
               />
               <StatCard
-                title="已处理"
+                title="Processed"
                 value={documents.filter(d => d.status === 'processed').length.toString()}
-                description="已完成处理的文档"
+                description="Completed documents"
                 trend="up"
               />
               <StatCard
-                title="总存储空间"
+                title="total storage space"
                 value={formatFileSize(
                   documents.reduce((total, doc) => {
                     const size = parseFloat(doc.size)
@@ -481,7 +536,7 @@ export default function DocumentsIntegratedPage() {
                     return total + bytes
                   }, 0)
                 )}
-                description="所有文档占用的空间"
+                description="Space occupied by all documents"
                 trend="up"
               />
             </div>
