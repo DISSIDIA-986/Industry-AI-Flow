@@ -459,10 +459,14 @@ class IntentClassifier:
         query_lower = prompt.lower()
 
         # EN
-        if any(keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "EN"]):
+        if any(keyword in query_lower for keyword in [
+            "what is", "how to", "tell me", "explain", "define", "describe",
+            "properties of", "requirements for", "difference between",
+            "what are", "how does", "why is", "when should",
+        ]):
             intent = "knowledge_retrieval"
             confidence = 0.85
-            reasoning = "EN"
+            reasoning = "Query contains knowledge retrieval keywords"
         elif any(
             keyword in query_lower
             for keyword in [
@@ -471,46 +475,56 @@ class IntentClassifier:
                 "budget",
                 "overrun",
                 "construction cost",
-                "EN",
-                "EN",
-                "EN",
-                "EN",
+                "price",
+                "pricing",
+                "how much",
+                "estimate cost",
+                "project cost",
             ]
         ):
             intent = "cost_estimation"
             confidence = 0.91
-            reasoning = "EN"
+            reasoning = "Query contains cost estimation keywords"
         elif any(
-            keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "dataset"]
+            keyword in query_lower for keyword in [
+                "analyze", "analysis", "statistics", "chart", "data", "dataset",
+                "compare", "trend", "visualization", "graph",
+            ]
         ):
             intent = "data_analysis"
             confidence = 0.90
-            reasoning = "EN"
+            reasoning = "Query contains data analysis keywords"
         elif any(
-            keyword in query_lower for keyword in ["pdf", "EN", "ocr", "EN", "EN"]
+            keyword in query_lower for keyword in [
+                "pdf", "image", "ocr", "extract", "scan", "upload", "document",
+                "read file", "parse",
+            ]
         ):
             intent = "document_processing"
             confidence = 0.88
-            reasoning = "ENOCREN"
-        elif any(keyword in query_lower for keyword in ["EN", "EN", "EN", "EN", "EN"]):
+            reasoning = "Query contains document/OCR processing keywords"
+        elif any(keyword in query_lower for keyword in [
+            "run", "execute", "code", "calculate", "script", "compute",
+            "program", "function",
+        ]):
             intent = "code_execution"
             confidence = 0.87
-            reasoning = "EN"
+            reasoning = "Query contains code execution keywords"
         else:
             intent = "unclear_intent"
             confidence = 0.45
-            reasoning = "EN"
+            reasoning = "Unable to determine clear intent from query"
 
-        # EN
+        # Extract detected keywords
         keywords = []
-        if "EN" in query_lower:
-            keywords.append("EN")
-        if "EN" in query_lower:
-            keywords.append("EN")
+        if "cost" in query_lower:
+            keywords.append("cost")
+        if "data" in query_lower:
+            keywords.append("data")
         if "pdf" in query_lower:
             keywords.append("PDF")
-        if "EN" in query_lower:
-            keywords.append("EN")
+        if "code" in query_lower:
+            keywords.append("code")
 
         return json.dumps(
             {
@@ -519,8 +533,8 @@ class IntentClassifier:
                 "reasoning": reasoning,
                 "keywords": keywords,
                 "context_clues": [],
-                "suggested_action": f"EN{intent}EN",
-                "uncertainty_factors": [] if confidence > 0.7 else ["EN"],
+                "suggested_action": f"Route to {intent} handler",
+                "uncertainty_factors": [] if confidence > 0.7 else ["Low confidence classification"],
             },
             ensure_ascii=False,
         )
@@ -663,16 +677,16 @@ class IntentClassifier:
         return result
 
     def _get_suggested_action(self, intent: IntentType) -> str:
-        """EN"""
+        """Get suggested action for the classified intent."""
         actions = {
-            IntentType.KNOWLEDGE_RETRIEVAL: "ENRAGEN",
-            IntentType.DATA_ANALYSIS: "ENAgentEN",
-            IntentType.COST_ESTIMATION: "EN",
-            IntentType.DOCUMENT_PROCESSING: "ENOCR AgentEN",
-            IntentType.CODE_EXECUTION: "ENAgentEN",
-            IntentType.UNCLEAR_INTENT: "EN",
+            IntentType.KNOWLEDGE_RETRIEVAL: "Use RAG engine for knowledge retrieval",
+            IntentType.DATA_ANALYSIS: "Route to Data Analysis Agent for processing",
+            IntentType.COST_ESTIMATION: "Route to cost estimation module",
+            IntentType.DOCUMENT_PROCESSING: "Route to OCR Agent for document processing",
+            IntentType.CODE_EXECUTION: "Route to Code Execution Agent for processing",
+            IntentType.UNCLEAR_INTENT: "Request clarification from user",
         }
-        return actions.get(intent, "EN")
+        return actions.get(intent, "Route to general handler")
 
     def _generate_cache_key(self, query: str, context: QueryContext) -> str:
         """EN"""
