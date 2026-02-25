@@ -57,36 +57,36 @@ class SimpleRAG:
         enable_feedback: bool = True,
     ):
         """
-        EN RAG EN
+        Initialize the RAG engine with configurable retrieval components.
 
         Args:
-            use_hybrid_search: EN(BM25 + EN)
-            use_reranker: EN
-            enable_feedback: EN
+            use_hybrid_search: Enable hybrid search (BM25 + vector similarity)
+            use_reranker: Enable cross-encoder reranking
+            enable_feedback: Enable user feedback collection
         """
         self.vectorstore = VectorStore()
-        self.llm_client = get_llm_client()  # EN
+        self.llm_client = get_llm_client()  # Initialize LLM client
         self.use_hybrid_search = use_hybrid_search
         self.use_reranker = use_reranker
         self.enable_feedback = enable_feedback
 
-        # EN
+        # Log LLM backend status
         backend_status = get_backend_status()
-        logger.info(f"✅ RAG EN - EN: {backend_status.get('backend', 'unknown')}")
+        logger.info(f"✅ RAG engine initialized - LLM backend: {backend_status.get('backend', 'unknown')}")
 
-        # Phase 2 Step 2: EN
+        # Phase 2 Step 2: Initialize hybrid retriever
         if use_hybrid_search:
             self.hybrid_retriever = HybridRetriever(self.vectorstore)
         else:
             self.hybrid_retriever = None
 
-        # Phase 2 Step 3: EN
+        # Phase 2 Step 3: Initialize cross-encoder reranker
         if use_reranker:
             self.reranker = Reranker()
         else:
             self.reranker = None
 
-        # EN
+        # Initialize feedback manager
         if enable_feedback:
             self.feedback_manager = FeedbackManager(self.vectorstore, self.reranker)
         else:
@@ -121,19 +121,19 @@ class SimpleRAG:
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> dict:
-        """RAGEN"""
+        """Execute a RAG query and return the generated answer with sources."""
         if top_k is None:
             top_k = settings.top_k
 
-        # ENIDEN
+        # Generate unique query ID for tracking
         query_id = str(uuid.uuid4())
 
-        # EN(EN)
+        # Get adaptive search weights (based on feedback)
         vector_weight, bm25_weight = self._get_adaptive_search_weights()
 
-        # Phase 2 Step 2: EN
+        # Phase 2 Step 2: Retrieve documents
         if self.use_hybrid_search and self.hybrid_retriever:
-            # EN(BM25 + EN),EN(top_k * 2)
+            # Hybrid search (BM25 + vector similarity), over-retrieve for reranking (top_k * 2)
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             similar_chunks = self.hybrid_retriever.search(
                 query=question,
@@ -142,21 +142,21 @@ class SimpleRAG:
                 bm25_weight=bm25_weight,
             )
         else:
-            # EN(Phase 1 EN)
+            # Vector-only search fallback (Phase 1 baseline)
             retrieve_k = top_k * 2 if self.use_reranker else top_k
             query_embedding = embed_query_text(question)
             similar_chunks = self.vectorstore.similarity_search(
                 query_embedding, top_k=retrieve_k
             )
 
-        # Phase 2 Step 3: EN
+        # Phase 2 Step 3: Rerank retrieved documents
         if self.use_reranker and self.reranker and similar_chunks:
             similar_chunks = self.reranker.rerank(
                 query=question, documents=similar_chunks, top_k=top_k
             )
 
-        # 3. EN
-        # EN,EN
+        # 3. Build context from retrieved chunks
+        # Format each chunk with document numbering
         context_parts = []
         for i, chunk in enumerate(similar_chunks, 1):
             context_parts.append(f"[Document {i}]\n{chunk['content']}")
@@ -201,7 +201,7 @@ class SimpleRAG:
         if memory_session is not None:
             self._record_memory_interaction(memory_session, question, answer)
 
-        # 5. EN
+        # 5. Build and return response
         return {
             "query_id": query_id,
             "question": question,
@@ -216,24 +216,24 @@ class SimpleRAG:
         }
 
     def _get_adaptive_search_weights(self) -> tuple:
-        """EN"""
+        """Get adaptive search weights based on recent feedback statistics."""
         if not self.feedback_manager:
-            return 0.7, 0.3  # EN
+            return 0.7, 0.3  # Default weights
 
         try:
-            # EN
+            # Adjust weights based on recent feedback performance
             stats = self.feedback_manager.get_feedback_statistics(days=1)
-            if stats.total_queries >= 5:  # EN5EN
+            if stats.total_queries >= 5:  # Need at least 5 queries for meaningful stats
                 if stats.success_rate < 0.5:
-                    # EN,EN
+                    # Low success rate, increase vector search weight
                     return 0.8, 0.2
                 elif stats.success_rate > 0.8:
-                    # EN,EN
+                    # High success rate, increase BM25 keyword weight
                     return 0.6, 0.4
         except Exception as e:
             logger.warning(f"Failed to get adaptive search weights: {e}")
 
-        return 0.7, 0.3  # EN
+        return 0.7, 0.3  # Default weights
 
     def _build_prompt(
         self,
@@ -241,7 +241,7 @@ class SimpleRAG:
         context: str,
         memory_payload: Optional[dict] = None,
     ) -> str:
-        """EN"""
+        """Build the LLM prompt with context, memory, and question."""
         memory_context = self._format_memory_payload(memory_payload or {})
         return f"""You are a professional construction industry knowledge assistant. Answer the user's question based ONLY on the reference documents provided below.
 
@@ -358,7 +358,7 @@ class SimpleRAG:
         retrieved_chunks: list = None,
         feedback_weight: float = 1.0,
     ) -> bool:
-        """EN"""
+        """Submit user feedback for a query result."""
         if not self.feedback_manager:
             logger.warning("Feedback system is not enabled")
             return False
@@ -383,7 +383,7 @@ class SimpleRAG:
             return False
 
     def get_feedback_statistics(self, days: int = 7) -> dict:
-        """EN"""
+        """Get aggregated feedback statistics for the specified time period."""
         if not self.feedback_manager:
             return {"message": "Feedback system is not enabled"}
 
@@ -404,7 +404,7 @@ class SimpleRAG:
     def get_high_quality_documents(
         self, min_score: float = 0.5, limit: int = 100
     ) -> list:
-        """EN"""
+        """Retrieve documents with high quality scores based on user feedback."""
         if not self.feedback_manager:
             return []
 
@@ -416,19 +416,19 @@ class SimpleRAG:
 
     def add_documents(self, documents: list) -> bool:
         """
-        ENRAGEN
+        Add documents to the RAG knowledge base.
 
         Args:
-            documents: EN,ENcontentENmetadata
+            documents: List of document dicts, each containing 'content' and 'metadata' keys
 
         Returns:
-            bool: EN
+            bool: Whether the documents were added successfully
         """
         try:
             from backend.services.core.chunker import chunk_text
             from backend.services.core.embedder import embed_texts
 
-            # EN
+            # Chunk all documents
             all_chunks = []
 
             for doc in documents:
@@ -452,7 +452,7 @@ class SimpleRAG:
                         }
                     )
 
-            # EN
+            # Generate embeddings for all chunks
             texts = [chunk["content"] for chunk in all_chunks]
             embeddings = embed_texts(texts)
 
@@ -501,16 +501,16 @@ class SimpleRAG:
 
     def delete_document(self, doc_id: str) -> bool:
         """
-        EN
+        Delete a document and all its chunks from the knowledge base.
 
         Args:
-            doc_id: ENID
+            doc_id: The document ID to delete
 
         Returns:
-            bool: EN
+            bool: Whether the document was deleted successfully
         """
         try:
-            # ENchunks
+            # Delete all chunks for the document
             self.vectorstore.delete_by_doc_id(doc_id)
             if self.hybrid_retriever and hasattr(
                 self.hybrid_retriever, "invalidate_bm25_index"

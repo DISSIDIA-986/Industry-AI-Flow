@@ -34,20 +34,20 @@ class OllamaClient:
         **kwargs,
     ) -> str:
         """
-        ENOllamaEN
+        Generate a response using the Ollama API.
 
         Args:
-            prompt: EN
-            temperature: EN,EN (0.0-1.0)
-            max_tokens: ENtokenEN
-            top_p: EN (0.0-1.0)
-            stream: EN
-            **kwargs: ENOllamaEN
+            prompt: The input prompt text
+            temperature: Sampling temperature, controls randomness (0.0-1.0)
+            max_tokens: Maximum number of tokens to generate
+            top_p: Nucleus sampling threshold (0.0-1.0)
+            stream: Whether to use streaming mode
+            **kwargs: Additional Ollama API parameters
 
         Returns:
-            EN
+            The generated response text
         """
-        # EN
+        # Build the request payload
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -63,13 +63,13 @@ class OllamaClient:
             },
         }
 
-        # EN
+        # Merge any additional options
         if kwargs:
             payload["options"].update(kwargs)
 
         try:
             response = requests.post(
-                f"{self.base_url}/api/generate", json=payload, timeout=60  # 60EN
+                f"{self.base_url}/api/generate", json=payload, timeout=60  # 60 second timeout
             )
             response.raise_for_status()
 
@@ -86,7 +86,7 @@ class OllamaClient:
             raise Exception(f"LLM generation error: {str(e)}")
 
     def _handle_stream_response(self, response) -> str:
-        """EN"""
+        """Handle a streaming response by accumulating chunks into a full response."""
         full_response = ""
         for line in response.iter_lines():
             if line:
@@ -109,16 +109,16 @@ class OllamaClient:
         top_p: Optional[float] = None,
     ) -> str:
         """
-        EN
+        Send a multi-turn chat request to the Ollama API.
 
         Args:
-            messages: EN,EN [{"role": "user", "content": "..."}]
-            temperature: EN
-            max_tokens: ENtokenEN
-            top_p: EN
+            messages: A list of message dicts, e.g. [{"role": "user", "content": "..."}]
+            temperature: Sampling temperature, controls randomness
+            max_tokens: Maximum number of tokens to generate
+            top_p: Nucleus sampling threshold
 
         Returns:
-            EN
+            The assistant's response content
         """
         payload = {
             "model": self.model,
@@ -147,7 +147,7 @@ class OllamaClient:
             raise Exception(f"LLM chat failed: {str(e)}")
 
     def get_model_info(self) -> Dict[str, Any]:
-        """EN"""
+        """Retrieve metadata and details for the currently configured model."""
         try:
             response = requests.post(
                 f"{self.base_url}/api/show", json={"name": self.model}, timeout=30
@@ -159,7 +159,7 @@ class OllamaClient:
             return {}
 
     def list_models(self) -> list:
-        """EN"""
+        """List all models available on the Ollama server."""
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=30)
             response.raise_for_status()
@@ -169,7 +169,7 @@ class OllamaClient:
             return []
 
     def update_config(self, **kwargs):
-        """EN"""
+        """Update client configuration parameters at runtime."""
         valid_params = ["default_temperature", "default_max_tokens", "default_top_p"]
         for param, value in kwargs.items():
             if param in valid_params:
@@ -179,7 +179,7 @@ class OllamaClient:
                 logger.warning(f"Invalid parameter: {param}")
 
     def get_current_config(self) -> Dict[str, Any]:
-        """EN"""
+        """Return the current client configuration as a dictionary."""
         return {
             "model": self.model,
             "base_url": self.base_url,
