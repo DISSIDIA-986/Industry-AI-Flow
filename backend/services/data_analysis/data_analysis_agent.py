@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -350,12 +351,12 @@ ENPythonEN,EN.EN```python EN ```EN."""
         elif any(
             keyword in question_lower for keyword in ["max", "EN", "EN", "highest"]
         ):
-            return self._template_max(filename, dataset_metadata)
+            return self._template_max(filename, dataset_metadata, question)
 
         elif any(
             keyword in question_lower for keyword in ["min", "EN", "EN", "lowest"]
         ):
-            return self._template_min(filename, dataset_metadata)
+            return self._template_min(filename, dataset_metadata, question)
 
         elif any(
             keyword in question_lower for keyword in ["count", "EN", "EN", "how many"]
@@ -576,12 +577,15 @@ for val, pct in percentages.items():
 
 # Lazy singleton — avoids import-time side effects (LLM client, Docker init).
 _data_analysis_agent: Optional[DataAnalysisAgent] = None
+_data_analysis_agent_lock = threading.Lock()
 
 
 def get_data_analysis_agent() -> DataAnalysisAgent:
     global _data_analysis_agent
     if _data_analysis_agent is None:
-        _data_analysis_agent = DataAnalysisAgent()
+        with _data_analysis_agent_lock:
+            if _data_analysis_agent is None:
+                _data_analysis_agent = DataAnalysisAgent()
     return _data_analysis_agent
 
 
