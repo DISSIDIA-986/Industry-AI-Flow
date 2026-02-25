@@ -420,14 +420,14 @@ print(f"'{target_col}'EN: {{avg_value:.2f}}")
         else:
             return self._template_describe(filename, metadata)
 
-    def _template_max(self, filename: str, metadata: Dict) -> str:
+    def _template_max(self, filename: str, metadata: Dict, question: str = "") -> str:
         """EN"""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "max" in col
         ]
 
         if numeric_cols:
-            target_col = numeric_cols[0]
+            target_col = self._pick_relevant_column(numeric_cols, question)
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
@@ -439,14 +439,14 @@ print(f"EN: {{max_row.to_dict()}}")
         else:
             return self._template_describe(filename, metadata)
 
-    def _template_min(self, filename: str, metadata: Dict) -> str:
+    def _template_min(self, filename: str, metadata: Dict, question: str = "") -> str:
         """EN"""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "min" in col
         ]
 
         if numeric_cols:
-            target_col = numeric_cols[0]
+            target_col = self._pick_relevant_column(numeric_cols, question)
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
@@ -574,5 +574,17 @@ for val, pct in percentages.items():
         return f"EN,EN.EN {dataset_metadata.get('rows', 'unknown')} EN {dataset_metadata.get('columns', 'unknown')} EN."
 
 
-# EN
-data_analysis_agent = DataAnalysisAgent()
+# Lazy singleton — avoids import-time side effects (LLM client, Docker init).
+_data_analysis_agent: Optional[DataAnalysisAgent] = None
+
+
+def get_data_analysis_agent() -> DataAnalysisAgent:
+    global _data_analysis_agent
+    if _data_analysis_agent is None:
+        _data_analysis_agent = DataAnalysisAgent()
+    return _data_analysis_agent
+
+
+# Keep backward-compatible attribute name but as None — callers should use
+# get_data_analysis_agent() instead.
+data_analysis_agent = None

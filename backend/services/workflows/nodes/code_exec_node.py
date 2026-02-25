@@ -27,6 +27,22 @@ async def code_exec_node(state: WorkflowState, services: Any) -> WorkflowState:
     mode = metadata.get("code_execution_mode", "auto")
     timeout = metadata.get("code_execution_timeout")
 
+    # Validate code before execution to prevent dangerous code bypass
+    # when using non-Docker execution managers.
+    from backend.services.code_executor.validator import validate_code
+
+    validation = validate_code(code, strict_mode=True)
+    if not validation.is_valid:
+        metadata["code_exec_status"] = "failed"
+        metadata["code_exec_error"] = f"validation_failed: {validation.error}"
+        metadata["code_exec_result"] = {
+            "success": False,
+            "stdout": "",
+            "stderr": "",
+            "error": f"Code validation failed: {validation.error}",
+        }
+        return state
+
     result = manager.execute_code(
         code=code,
         data_files=metadata.get("code_execution_files"),

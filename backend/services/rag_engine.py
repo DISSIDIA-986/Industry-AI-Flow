@@ -327,18 +327,14 @@ class SimpleRAG:
             await self.memory_manager.process_interaction(session, record)
 
         try:
-            asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
+            # No running event loop — safe to call synchronously.
             asyncio.run(_update_memory())
             return
 
-        def _run_in_thread():
-            try:
-                asyncio.run(_update_memory())
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("Async memory update failed: %s", exc)
-
-        threading.Thread(target=_run_in_thread, daemon=True).start()
+        # Schedule onto the existing event loop without spawning a thread.
+        asyncio.ensure_future(_update_memory())
 
     def submit_feedback(
         self,
