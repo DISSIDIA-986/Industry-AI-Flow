@@ -41,7 +41,7 @@ class _MemoryInteraction:
 class _MemorySession:
     session_id: str
     user_id: Optional[str] = None
-    language_preference: str = "zh"
+    language_preference: str = "en"
     interaction_history: list[_MemoryInteraction] = field(default_factory=list)
     summary_memory: str = ""
     last_summary_time: Optional[datetime] = None
@@ -159,7 +159,7 @@ class SimpleRAG:
         # EN,EN
         context_parts = []
         for i, chunk in enumerate(similar_chunks, 1):
-            context_parts.append(f"[EN{i}]\n{chunk['content']}")
+            context_parts.append(f"[Document {i}]\n{chunk['content']}")
         context = "\n\n".join(context_parts)
 
         memory_payload = {}
@@ -174,22 +174,29 @@ class SimpleRAG:
 
         prompt = self._build_prompt(question, context, memory_payload)
 
-        # 4. LLMEN
-        answer = self.llm_client.generate(
-            prompt, temperature=temperature, max_tokens=max_tokens
-        )
+        # 4. LLM generation
+        try:
+            answer = self.llm_client.generate(
+                prompt, temperature=temperature, max_tokens=max_tokens
+            )
+        except Exception as exc:
+            logger.error("LLM generation failed: %s", exc)
+            answer = "I'm sorry, the language model is temporarily unavailable. Please try again shortly."
 
         safety_result = None
         if self.safety_guard is not None:
-            context_texts = [chunk.get("content", "") for chunk in similar_chunks]
-            safety_result = self.safety_guard.process_response(
-                answer=answer,
-                context=context_texts,
-                llm_client=self.llm_client,
-            )
-            answer = safety_result.get("enhanced_answer", answer)
-            if hasattr(safety_result.get("safety_level"), "value"):
-                safety_result["safety_level"] = safety_result["safety_level"].value
+            try:
+                context_texts = [chunk.get("content", "") for chunk in similar_chunks]
+                safety_result = self.safety_guard.process_response(
+                    answer=answer,
+                    context=context_texts,
+                    llm_client=self.llm_client,
+                )
+                answer = safety_result.get("enhanced_answer", answer)
+                if hasattr(safety_result.get("safety_level"), "value"):
+                    safety_result["safety_level"] = safety_result["safety_level"].value
+            except Exception as exc:
+                logger.warning("Safety guard failed, using raw answer: %s", exc)
 
         if memory_session is not None:
             self._record_memory_interaction(memory_session, question, answer)
@@ -236,23 +243,24 @@ class SimpleRAG:
     ) -> str:
         """EN"""
         memory_context = self._format_memory_payload(memory_payload or {})
-        return f"""EN.EN.
+        return f"""You are a professional construction industry knowledge assistant. Answer the user's question based ONLY on the reference documents provided below.
 
-**EN**:
-1. EN
-2. EN
-3. EN,EN"EN"
-4. EN,EN,EN
+**Important instructions**:
+1. Read all reference documents carefully
+2. Use ONLY information from the documents to answer
+3. If the documents do not contain relevant information, clearly state "I don't have enough information to answer this question based on the available documents"
+4. Be accurate, concise, and professional
+5. When citing specific data or standards, reference which document it comes from
 
-**EN**:
+**Conversation context**:
 {memory_context}
 
-**EN**:
+**Reference documents**:
 {context}
 
-**EN**:{question}
+**User question**: {question}
 
-**EN**:"""
+**Your answer**:"""
 
     @staticmethod
     def _format_memory_payload(memory_payload: dict) -> str:
@@ -261,14 +269,14 @@ class SimpleRAG:
         long_term = memory_payload.get("long_term") or []
 
         if not short_term and not summary and not long_term:
-            return "EN."
+            return "No conversation history."
 
         lines: list[str] = []
         if summary:
-            lines.append(f"- EN: {summary}")
+            lines.append(f"- Session summary: {summary}")
 
         if short_term:
-            lines.append("- EN:")
+            lines.append("- Recent conversation:")
             for entry in short_term[-6:]:
                 role = entry.get("role", "unknown")
                 content = str(entry.get("content", "")).strip()
@@ -276,7 +284,7 @@ class SimpleRAG:
                     lines.append(f"  - {role}: {content[:240]}")
 
         if long_term:
-            lines.append("- EN:")
+            lines.append("- Related long-term memory:")
             for item in long_term[:3]:
                 content = item.get("content")
                 if isinstance(content, dict):
