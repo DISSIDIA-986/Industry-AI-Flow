@@ -9,7 +9,7 @@ from backend.services.workflows.state import WorkflowState
 
 def _build_default_response(state: WorkflowState) -> str:
     if state.get("error"):
-        return "Request could not be processed due to safety or execution constraints."
+        return str(state["error"])
 
     # Return a safe generic acknowledgment without leaking internal debug
     # information (provider name, intent type, raw query, context snippets).

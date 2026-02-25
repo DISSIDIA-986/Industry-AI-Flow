@@ -4,12 +4,29 @@ from __future__ import annotations
 
 import re
 from typing import Optional
+from urllib.parse import unquote
 
 import bleach
 from fastapi import HTTPException, status
 
 SCRIPT_PATTERN = re.compile(r"<\s*script.*?>", re.IGNORECASE | re.DOTALL)
-SQL_PATTERN = re.compile(r"(drop\s+table|union\s+select|--|;)", re.IGNORECASE)
+SQL_PATTERN = re.compile(
+    r"("
+    r"drop\s+table"
+    r"|union\s+(all\s+)?select"
+    r"|insert\s+into"
+    r"|update\s+\S+\s+set"
+    r"|delete\s+from"
+    r"|alter\s+table"
+    r"|create\s+table"
+    r"|truncate\s+table"
+    r"|\bexec(ute)?\b\s*\("
+    r"|\bxp_"
+    r"|--"
+    r"|;"
+    r")",
+    re.IGNORECASE,
+)
 CONTROL_CHAR_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 
@@ -29,12 +46,14 @@ def sanitize_text(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} exceeds max length of {max_length} characters.",
         )
-    if SCRIPT_PATTERN.search(stripped) or CONTROL_CHAR_PATTERN.search(stripped):
+    # URL-decode before pattern checks so %3Cscript%3E is detected as <script>
+    decoded = unquote(stripped)
+    if SCRIPT_PATTERN.search(decoded) or CONTROL_CHAR_PATTERN.search(decoded):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} contains disallowed characters.",
         )
-    if SQL_PATTERN.search(stripped):
+    if SQL_PATTERN.search(decoded):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} appears to contain a prohibited pattern.",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import asyncio
 import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -22,7 +23,7 @@ from backend.services.cost_estimation_service import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"])
 
-_service_lock = threading.Lock()
+_service_lock = asyncio.Lock()
 _service: Optional[CostEstimationService] = None
 
 
@@ -67,14 +68,16 @@ def _resolve_allowed_path(path_value: str, *, must_exist: bool) -> Path:
     return candidate
 
 
-def _get_service() -> CostEstimationService:
+async def _get_service() -> CostEstimationService:
     global _service
     if _service is not None:
         return _service
 
-    with _service_lock:
+    async with _service_lock:
         if _service is None:
-            _service = CostEstimationService(model_path=_default_model_path())
+            def _load():
+                return CostEstimationService(model_path=_default_model_path())
+            _service = await asyncio.to_thread(_load)
     return _service
 
 
@@ -135,7 +138,7 @@ class CostEstimationTrainRequest(BaseModel):
 
 @router.get("/health")
 async def cost_estimation_health() -> Dict[str, Any]:
-    service = _get_service()
+    service = await _get_service()
     return {
         "status": "ok",
         "component": "cost_estimation",
@@ -156,7 +159,8 @@ async def train_cost_estimation(request: CostEstimationTrainRequest) -> Dict[str
     )
 
     try:
-        result = train_cost_estimation_model(
+        result = await asyncio.to_thread(
+            train_cost_estimation_model,
             dataset_path=dataset_path,
             output_model_path=output_path,
             ridge_alpha=request.ridge_alpha,
@@ -169,16 +173,17 @@ async def train_cost_estimation(request: CostEstimationTrainRequest) -> Dict[str
         logger.exception("cost estimation training failed")
         raise HTTPException(status_code=500, detail=f"training failed: {exc}") from exc
 
-    service = _get_service()
-    service.load(output_path)
+    service = await _get_service()
+    await asyncio.to_thread(service.load, output_path)
     return result
 
 
 @router.post("/predict")
 async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict[str, Any]:
-    service = _get_service()
+    service = await _get_service()
     try:
-        prediction = service.predict_project(
+        prediction = await asyncio.to_thread(
+            service.predict_project,
             project=request.project.model_dump(),
             confidence_quantile=request.confidence_quantile,
         )
@@ -195,9 +200,10 @@ async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict
 async def batch_predict_cost_estimation(
     request: CostEstimationBatchPredictRequest,
 ) -> Dict[str, Any]:
-    service = _get_service()
+    service = await _get_service()
     try:
-        predictions = service.predict_batch(
+        predictions = await asyncio.to_thread(
+            service.predict_batch,
             projects=[item.model_dump() for item in request.projects],
             confidence_quantile=request.confidence_quantile,
         )

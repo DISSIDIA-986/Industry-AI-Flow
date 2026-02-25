@@ -49,11 +49,15 @@ class CodeValidator:
         "multiprocessing",
         "threading",
         "asyncio",
-        "__import__",
-        "eval",
-        "exec",
-        "compile",
-        "open",  # Use context-specific file operations only
+        "importlib",
+        "ctypes",
+        "code",
+        "pty",
+        "signal",
+        "pathlib",
+        "pickle",
+        "shelve",
+        "webbrowser",
     }
 
     # Allowed modules for data analysis

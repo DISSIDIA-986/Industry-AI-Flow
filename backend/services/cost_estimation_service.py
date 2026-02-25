@@ -111,7 +111,8 @@ _LOCATION_KEYWORDS: List[str] = [
 
 _NUMERIC_PATTERNS: Dict[str, List[str]] = {
     "sqft": [
-        r"(?:sqft|square\s*feet|square\s*ft|area)\s*[:=]?\s*([0-9][0-9,.\s]*)",
+        r"(?:sqft|square\s*feet|square\s*ft|area)\s*[:=]?\s*([0-9][0-9,.\s]*)\b",
+        r"([0-9][0-9,.\s]*)\s*(?:sqft|square\s*feet|square\s*ft)\b",
     ],
     "floors": [
         r"(?:floors?|storeys?|stories|levels?)\s*[:=]?\s*([0-9]+)",
@@ -658,12 +659,19 @@ class CostEstimationService:
             "confidence_degraded": confidence_degraded,
         }
 
+    MAX_BATCH_SIZE = 200
+
     def predict_batch(
         self,
         projects: List[Mapping[str, Any]],
         *,
         confidence_quantile: float = 0.90,
+        max_batch_size: int = MAX_BATCH_SIZE,
     ) -> List[Dict[str, Any]]:
+        if len(projects) > max_batch_size:
+            raise CostEstimationError(
+                f"batch size {len(projects)} exceeds maximum of {max_batch_size}"
+            )
         return [
             self.predict_project(project, confidence_quantile=confidence_quantile)
             for project in projects
