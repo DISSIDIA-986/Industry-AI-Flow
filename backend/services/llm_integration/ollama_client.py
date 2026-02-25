@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -90,11 +91,7 @@ class OllamaClient:
         for line in response.iter_lines():
             if line:
                 try:
-                    data = (
-                        response.json()
-                        if hasattr(response, "json")
-                        else eval(line.decode())
-                    )
+                    data = json.loads(line.decode())
                     if "response" in data:
                         full_response += data["response"]
                     if data.get("done", False):
