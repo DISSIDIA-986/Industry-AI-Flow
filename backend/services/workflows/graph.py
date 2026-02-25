@@ -60,8 +60,8 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
         ("prompt_node", prompt_node),
         ("groundedness_node", groundedness_node),
         ("route_node", route_node),
-        ("code_exec_node", code_exec_node),
         ("safety_node", safety_node),
+        ("code_exec_node", code_exec_node),
         ("response_node", response_node),
     ]
 
