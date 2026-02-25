@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     llama_model_path: str = os.getenv(
         "LLAMA_MODEL_PATH", "models/qwen2.5-7b-instruct.gguf"
     )
-    llama_context_size: int = int(os.getenv("LLAMA_CONTEXT_SIZE", "4096"))
+    llama_context_size: int = int(os.getenv("LLAMA_CONTEXT_SIZE", "16384"))
     llama_threads: int = int(os.getenv("LLAMA_THREADS", str(os.cpu_count() or 8)))
     llama_batch_size: int = int(os.getenv("LLAMA_BATCH_SIZE", "512"))
     llama_gpu_layers: int = int(os.getenv("LLAMA_GPU_LAYERS", "-1"))  # -1 = use all GPU layers
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
         "ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/anthropic"
     )
     zhipu_model: str = os.getenv("ZHIPU_MODEL", "glm-4-plus")
-    api_timeout_ms: int = int(os.getenv("API_TIMEOUT_MS", "3000000"))
+    api_timeout_ms: int = int(os.getenv("API_TIMEOUT_MS", "60000"))
 
     # LLM提供商选择（保持兼容）
     llm_provider: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | zhipu
@@ -76,11 +76,11 @@ class Settings(BaseSettings):
     embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "768"))
 
     # 文档处理
-    chunk_size: int = int(os.getenv("CHUNK_SIZE", "300"))
-    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "50"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE", "512"))
+    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "128"))
 
     # RAG
-    top_k: int = int(os.getenv("TOP_K", "5"))
+    top_k: int = int(os.getenv("TOP_K", "8"))
     enable_rag_query_rewrite: bool = (
         os.getenv("ENABLE_RAG_QUERY_REWRITE", "true").lower() == "true"
     )
