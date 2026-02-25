@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - System Architecture Poster</title>
+    <title>Industry AI Flow - Architecture Review Edition</title>
     <style>
         :root {
             --page-bg: #e9edf2;
             --board-bg: #d9dde2;
             --stroke: #4e5968;
             --text-main: #1e2a36;
-            --label-bg: #a8c7e9;
             --access-bg: #c6ddf2;
             --api-bg: #f4ca7a;
             --business-bg: #ebc0c4;
@@ -20,8 +19,12 @@
             --infra-bg: #8cb5df;
             --security-bg: #e58a8a;
             --observe-bg: #8bdf8b;
-            --cell-bg: #f4f6f8;
-            --focus-bg: #76b7e5;
+            --lane-bg: #d8eef8;
+            --cell-bg: #f6f8fa;
+            --shape-ink: #1f4ea6;
+            --impl: #38a169;
+            --partial: #d69e2e;
+            --planned: #718096;
             --violet: #6e63dc;
             --mint: #9ee3d3;
             --sand: #f0dfc6;
@@ -39,107 +42,280 @@
             font-family: "Segoe UI", "Arial", sans-serif;
             background: var(--page-bg);
             color: var(--text-main);
-            padding: 20px;
+            padding: 18px;
         }
 
         .poster {
-            width: min(1900px, 100%);
+            width: min(1950px, 100%);
             margin: 0 auto;
-            background: #ffffff;
+            background: #fff;
             border: 2px solid #717d8f;
-            padding: 20px;
+            padding: 16px;
         }
 
         .title {
             text-align: center;
-            margin-bottom: 8px;
             font-size: 34px;
+            margin-bottom: 6px;
             letter-spacing: 0.5px;
         }
 
         .subtitle {
             text-align: center;
-            font-size: 18px;
-            margin-bottom: 16px;
+            font-size: 17px;
+            margin-bottom: 12px;
             color: #394657;
+            font-weight: 600;
         }
 
-        .diagram {
+        .section-title {
+            text-align: center;
+            font-size: 23px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .board {
             background: var(--board-bg);
             border: 2px solid #7c8798;
-            padding: 12px;
+            padding: 10px;
+        }
+
+        .api-lanes {
+            margin-bottom: 10px;
+            border: 1.6px solid var(--stroke);
+            background: #d0e7f3;
+            padding: 8px;
+        }
+
+        .api-lanes h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .lane-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .lane {
+            border: 1.3px solid #5d6a79;
+            background: var(--lane-bg);
+            min-height: 56px;
+            padding: 6px;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+
+        .lane::before {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 14px;
+            margin: 0 6px 0 0;
+            vertical-align: -2px;
+            background: var(--shape-ink);
+            border-radius: 2px;
+        }
+
+        .lane:nth-child(1)::before {
+            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
+        }
+
+        .lane:nth-child(2)::before {
+            border-radius: 45% / 24%;
+        }
+
+        .lane:nth-child(3)::before {
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
+            border-radius: 0;
+        }
+
+        .lane:nth-child(4)::before {
+            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+        }
+
+        .lane code {
+            font-size: 11px;
+            background: #eff4f8;
+            border: 1px solid #b6c2cc;
+            padding: 1px 4px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 4px;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 1fr 138px;
-            gap: 10px;
+            grid-template-columns: 1fr 130px;
+            gap: 8px;
         }
 
         .stack {
             display: grid;
-            gap: 10px;
+            gap: 8px;
         }
 
         .row {
             display: grid;
-            grid-template-columns: 126px 1fr;
+            grid-template-columns: 118px 1fr;
             gap: 8px;
             align-items: stretch;
         }
 
         .label {
             border: 1.6px solid var(--stroke);
+            background: #b9d4ec;
+            clip-path: polygon(12% 0%, 100% 0%, 100% 100%, 12% 100%, 0% 50%);
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 8px;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            line-height: 1.2;
-            clip-path: polygon(12% 0%, 100% 0%, 100% 100%, 12% 100%, 0% 50%);
-            background: var(--label-bg);
+            padding: 6px;
         }
 
         .layer {
             border: 1.6px solid var(--stroke);
             border-radius: 4px;
-            padding: 10px 12px;
+            padding: 8px 10px;
             display: grid;
-            gap: 8px;
+            gap: 6px;
         }
 
         .layer-header {
-            font-size: 22px;
-            font-weight: 700;
+            font-size: 19px;
+            font-weight: 800;
             letter-spacing: 0.2px;
         }
 
         .cells {
             display: grid;
-            gap: 7px;
+            gap: 6px;
             grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
+        .cells-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .cells-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
         .cell {
-            border: 1.4px solid #646d7b;
+            border: 1.3px solid #646d7b;
             background: var(--cell-bg);
-            min-height: 56px;
-            padding: 8px 7px;
+            min-height: 54px;
+            padding: 5px 6px 6px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
+            align-items: center;
             text-align: center;
-            font-size: 16px;
-            line-height: 1.2;
-            font-weight: 600;
+            gap: 3px;
+            position: relative;
         }
 
-        .highlight {
-            background: var(--focus-bg);
+        .cell-name {
+            font-size: 13px;
             font-weight: 700;
+            line-height: 1.15;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
+
+        .cell-name::before {
+            content: "";
+            width: 16px;
+            height: 14px;
+            background: var(--shape-ink);
+            border-radius: 2px;
+            flex: 0 0 auto;
+        }
+
+        .layer-access .cell .cell-name::before {
+            width: 20px;
+            height: 15px;
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) center top / 20px 11px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) center bottom / 10px 3px no-repeat;
+        }
+
+        .layer-api .cell .cell-name::before {
+            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+        }
+
+        .layer-business .cell .cell-name::before {
+            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
+        }
+
+        .layer-runtime .cell .cell-name::before {
+            width: 20px;
+            height: 14px;
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
+        }
+
+        .layer-data .cell .cell-name::before {
+            clip-path: polygon(10% 20%, 90% 20%, 100% 50%, 90% 80%, 10% 80%, 0% 50%);
+        }
+
+        .layer-storage .cell .cell-name::before {
+            border-radius: 45% / 24%;
+        }
+
+        .layer-infra .cell .cell-name::before {
+            width: 18px;
+            height: 10px;
+            border-radius: 10px;
+            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
+        }
+
+        .cell.planned-node .cell-name::before {
+            width: 14px;
+            height: 14px;
+            border-radius: 0;
+            transform: rotate(45deg);
+        }
+
+        .cell.security-node .cell-name::before {
+            border-radius: 0;
+            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
+        }
+
+        .cell.analytics-node .cell-name::before {
+            width: 20px;
+            height: 14px;
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
+        }
+
+        .status {
+            border: 1px solid #4a5568;
+            border-radius: 20px;
+            padding: 1px 7px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            color: #fff;
+        }
+
+        .implemented { background: var(--impl); }
+        .partial { background: var(--partial); }
+        .planned { background: var(--planned); }
 
         .layer-access { background: var(--access-bg); }
         .layer-api { background: var(--api-bg); }
@@ -149,43 +325,34 @@
         .layer-storage { background: var(--storage-bg); }
         .layer-infra { background: var(--infra-bg); }
 
-        .cells-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .cells-3 {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
         .cylinders {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            gap: 10px;
         }
 
         .db-group {
-            border: 1.4px solid #666ea0;
+            border: 1.3px solid #666ea0;
             border-radius: 4px;
             background: rgba(144, 145, 231, 0.45);
             display: flex;
             justify-content: center;
-            gap: 18px;
-            padding: 10px 6px;
+            gap: 16px;
+            padding: 8px 6px;
         }
 
         .cylinder {
-            width: 82px;
-            height: 102px;
-            border: 1.4px solid #616161;
+            width: 70px;
+            height: 92px;
+            border: 1.3px solid #616161;
             border-radius: 45% / 12%;
             position: relative;
             background: #f4f4f4;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
-            color: #252525;
         }
 
         .cylinder::before {
@@ -194,24 +361,19 @@
             top: -1px;
             left: 0;
             right: 0;
-            height: 18px;
-            border: 1.4px solid #616161;
+            height: 16px;
+            border: 1.3px solid #616161;
             border-radius: 50%;
-            background: #eeeeee;
+            background: #eee;
         }
 
-        .cylinder span {
-            z-index: 1;
-        }
-
-        .cylinder.alt {
-            background: #d5d5d5;
-        }
+        .cylinder span { z-index: 1; }
+        .cylinder.alt { background: #d5d5d5; }
 
         .sidebars {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px;
         }
 
         .bar {
@@ -219,147 +381,383 @@
             border-radius: 4px;
             min-height: 100%;
             display: flex;
+            flex-direction: column;
+            gap: 8px;
             align-items: center;
             justify-content: center;
-            font-size: 31px;
-            font-weight: 700;
             writing-mode: vertical-rl;
             text-orientation: mixed;
-            letter-spacing: 4px;
-            padding: 10px 0;
             text-align: center;
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: 3px;
         }
 
-        .bar-observe {
-            background: var(--observe-bg);
+        .bar::before {
+            content: "";
+            width: 18px;
+            height: 14px;
+            background: var(--shape-ink);
+            border-radius: 2px;
         }
 
-        .bar-security {
-            background: var(--security-bg);
+        .bar-observe::before {
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 1px 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 7px 3px / 4px 11px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 13px 5px / 4px 9px no-repeat;
         }
 
-        .subflow-section {
-            margin-top: 16px;
-            background: var(--board-bg);
-            border: 2px solid #7c8798;
-            padding: 12px;
+        .bar-security::before {
+            border-radius: 0;
+            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
         }
 
-        .subflow-title {
-            font-size: 24px;
+        .bar-observe { background: var(--observe-bg); }
+        .bar-security { background: var(--security-bg); }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .legend .chip {
+            border: 1.2px solid #4e5968;
+            border-radius: 14px;
+            padding: 2px 9px;
+            font-size: 11px;
             font-weight: 700;
-            text-align: center;
+            background: #fff;
+        }
+
+        .chip .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .dot-impl { background: var(--impl); }
+        .dot-partial { background: var(--partial); }
+        .dot-planned { background: var(--planned); }
+
+        .shape-palette {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
             margin-bottom: 10px;
         }
 
-        .subflow-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .subflow {
-            border: 1.6px solid #4d5868;
-            background: #d4d9e0;
-            padding: 10px;
-            display: grid;
-            gap: 6px;
-            align-content: start;
-            min-height: 540px;
-        }
-
-        .subflow h3 {
-            font-size: 17px;
-            text-align: center;
-            margin-bottom: 2px;
-        }
-
-        .node {
-            border: 1.4px solid #4a5562;
-            border-radius: 3px;
-            background: #f6f8fa;
-            min-height: 44px;
-            padding: 6px 8px;
+        .shape-item {
+            border: 1.2px solid #4e5968;
+            border-radius: 6px;
+            background: #fff;
+            padding: 4px 8px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.15;
+            gap: 7px;
+            font-size: 11px;
+            font-weight: 700;
         }
 
-        .node-violet { background: var(--violet); color: #ffffff; }
-        .node-mint { background: var(--mint); }
-        .node-sand { background: var(--sand); }
-        .node-sky { background: var(--sky); }
-        .node-lime { background: var(--lime); }
-
-        .arrow {
-            text-align: center;
-            font-size: 24px;
-            line-height: 1;
-            font-weight: 800;
-            color: #1b2430;
+        .shape-icon {
+            width: 20px;
+            height: 14px;
+            background: var(--shape-ink);
+            display: inline-block;
+            border-radius: 2px;
         }
 
-        .row-3 {
+        .shape-icon.web {
+            width: 20px;
+            height: 15px;
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) center top / 20px 11px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) center bottom / 10px 3px no-repeat;
+        }
+
+        .shape-icon.api { clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%); }
+        .shape-icon.service {
+            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
+        }
+        .shape-icon.decision {
+            width: 14px;
+            height: 14px;
+            border-radius: 0;
+            transform: rotate(45deg);
+        }
+        .shape-icon.db {
+            border-radius: 45% / 22%;
+        }
+        .shape-icon.cloud {
+            width: 18px;
+            height: 10px;
+            border-radius: 10px;
+            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
+        }
+        .shape-icon.security {
+            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
+        }
+        .shape-icon.analytics {
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
+        }
+
+        .dual-panel {
+            margin-top: 12px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .panel {
+            border: 1.6px solid #4d5868;
+            background: #d4d9e0;
+            padding: 8px;
+        }
+
+        .panel h3 {
+            font-size: 17px;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .flow-step {
+            border: 1.2px solid #556170;
+            background: #f5f7f9;
+            min-height: 50px;
+            padding: 8px 10px;
+            font-size: 13px;
+            line-height: 1.15;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: left;
+            position: relative;
+        }
+
+        .flow-step::before {
+            content: "";
+            position: static;
+            display: inline-block;
+            width: 18px;
+            height: 14px;
+            background: var(--shape-ink);
+            border-radius: 2px;
+            flex: 0 0 auto;
+            margin-right: 8px;
+        }
+
+        .flow-step.s-io::before {
+            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+        }
+
+        .flow-step.s-decision::before {
+            width: 14px;
+            height: 14px;
+            border-radius: 0;
+            transform: rotate(45deg);
+        }
+
+        .flow-step.s-service::before {
+            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
+        }
+
+        .flow-step.s-data::before {
+            border-radius: 45% / 22%;
+        }
+
+        .flow-step.s-cloud::before {
+            width: 18px;
+            height: 10px;
+            border-radius: 8px;
+            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
+        }
+
+        .flow-step.s-security::before {
+            border-radius: 0;
+            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
+        }
+
+        .flow-step.s-analytics::before {
+            border-radius: 0;
+            background:
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 0 8px / 4px 6px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 6px 4px / 4px 10px no-repeat,
+                linear-gradient(var(--shape-ink), var(--shape-ink)) 12px 6px / 4px 8px no-repeat;
+        }
+
+        .flow-step.sky { background: var(--sky); }
+        .flow-step.violet { background: var(--violet); color: #fff; }
+        .flow-step.sand { background: var(--sand); }
+        .flow-step.mint { background: var(--mint); }
+        .flow-step.lime { background: var(--lime); }
+
+        .flow-grid {
+            display: grid;
             gap: 6px;
         }
 
-        .row-2 {
+        .flow-split-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 6px;
         }
 
-        .split {
+        .flow-split-3 {
             display: grid;
-            grid-template-columns: 70px 1fr 70px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 6px;
-            align-items: stretch;
         }
 
-        .side-tag {
-            border: 1.2px solid #4e5968;
-            border-radius: 3px;
-            background: #ffffff;
-            padding: 4px 3px;
-            font-size: 11px;
+        .arrow {
             text-align: center;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .subflow-section {
+            margin-top: 12px;
+            background: var(--board-bg);
+            border: 2px solid #7c8798;
+            padding: 12px;
+        }
+
+        .subflow-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .subflow {
+            border: 1.5px solid #4d5868;
+            background: #d4d9e0;
+            padding: 14px;
+            display: grid;
+            gap: 10px;
+            align-content: start;
+            min-height: auto;
+        }
+
+        .subflow h4 {
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .mindflow {
+            display: grid;
+            gap: 8px;
+        }
+
+        .mind-row {
+            display: grid;
+            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.5fr) minmax(0, 0.95fr);
+            gap: 10px;
+            align-items: center;
+        }
+
+        .mind-core .flow-step {
+            min-height: 52px;
+        }
+
+        .mind-branch {
+            min-height: 52px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            position: relative;
+        }
+
+        .mind-branch .flow-step {
+            min-height: 44px;
+            padding: 7px 8px;
+            font-size: 12px;
             line-height: 1.1;
         }
 
-        .loop {
-            border: 1.3px dashed #4b5565;
-            border-radius: 4px;
-            background: #edf1f4;
-            min-height: 36px;
-            padding: 5px 7px;
-            font-size: 12px;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .mind-branch.left::after,
+        .mind-branch.right::before {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            font-weight: 800;
+            color: #445163;
+            line-height: 1;
+        }
+
+        .mind-branch.left::after {
+            content: "→";
+            right: -6px;
+        }
+
+        .mind-branch.right::before {
+            content: "←";
+            left: -6px;
+        }
+
+        .mind-branch.empty {
+            min-height: 0;
+        }
+
+        .mind-branch.empty::before,
+        .mind-branch.empty::after {
+            content: none;
+        }
+
+        .mind-trunk-arrow {
             text-align: center;
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1;
+            color: #3e4a5a;
+        }
+
+        .evidence {
+            border: 1.2px dashed #5e6876;
+            background: #edf1f4;
+            padding: 4px 6px;
+            font-size: 11px;
+            line-height: 1.2;
             font-weight: 600;
         }
 
         .note {
-            margin-top: 12px;
-            font-size: 15px;
-            color: #384455;
+            margin-top: 10px;
             text-align: center;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
         }
 
-        @media (max-width: 1400px) {
+        @media (max-width: 1450px) {
+            .lane-grid,
+            .subflow-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mind-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .mind-branch.left::after,
+            .mind-branch.right::before {
+                content: none;
+            }
+
             .grid {
                 grid-template-columns: 1fr;
             }
@@ -371,16 +769,8 @@
             .bar {
                 writing-mode: horizontal-tb;
                 letter-spacing: 0;
-                font-size: 22px;
-                min-height: 60px;
-            }
-
-            .subflow-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .subflow {
-                min-height: auto;
+                min-height: 54px;
+                font-size: 20px;
             }
         }
 
@@ -391,7 +781,7 @@
             }
 
             body {
-                background: #ffffff;
+                background: #fff;
                 padding: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -403,7 +793,7 @@
                 padding: 0;
             }
 
-            .subflow {
+            .panel, .subflow {
                 break-inside: avoid-page;
                 page-break-inside: avoid;
             }
@@ -412,10 +802,52 @@
 </head>
 <body>
     <div class="poster">
-        <h1 class="title">Industry AI Flow - System Architecture</h1>
-        <p class="subtitle">Visio-Style Layered View for Capstone Poster Printing</p>
+        <h1 class="title">Industry AI Flow - Architecture (As-Is + Target)</h1>
+        <p class="subtitle">Capstone Poster Edition: Code-Aligned Views for RAG, Cost ML Prediction, and Dynamic Analytics</p>
 
-        <div class="diagram">
+        <div class="board">
+            <h2 class="section-title">A. Layered System View with Implementation Status</h2>
+            <div class="legend">
+                <span class="chip"><span class="dot dot-impl"></span>Implemented</span>
+                <span class="chip"><span class="dot dot-partial"></span>Partial / Conditional</span>
+                <span class="chip"><span class="dot dot-planned"></span>Planned / Target</span>
+            </div>
+            <div class="shape-palette">
+                <span class="shape-item"><span class="shape-icon web"></span>Web Client</span>
+                <span class="shape-item"><span class="shape-icon api"></span>API / I-O</span>
+                <span class="shape-item"><span class="shape-icon service"></span>Service</span>
+                <span class="shape-item"><span class="shape-icon decision"></span>Decision</span>
+                <span class="shape-item"><span class="shape-icon db"></span>Data Store</span>
+                <span class="shape-item"><span class="shape-icon cloud"></span>Cloud Runtime</span>
+                <span class="shape-item"><span class="shape-icon security"></span>Security</span>
+                <span class="shape-item"><span class="shape-icon analytics"></span>Analytics</span>
+            </div>
+
+            <section class="api-lanes">
+                <h3>API Entry Lanes (Current Runtime Access Paths)</h3>
+                <div class="lane-grid">
+                    <div class="lane">
+                        Workflow Orchestration Entry
+                        <br><code>/api/v1/workflow/query</code>
+                    </div>
+                    <div class="lane">
+                        Direct RAG Entry
+                        <br><code>/api/v1/rag/query</code>
+                    </div>
+                    <div class="lane">
+                        Unified Agent Entry
+                        <br><code>/api/v1/unified/query</code>
+                    </div>
+                    <div class="lane">
+                        Dedicated Prediction / Analytics APIs
+                        <br><code>/api/v1/cost-estimation/*</code> + <code>/api/v1/data/analyze</code>
+                    </div>
+                </div>
+                <div style="margin-top:6px;text-align:center;font-size:12px;font-weight:700;">
+                    Frontend and backend are fully decoupled. Frontend consumes backend APIs over HTTP.
+                </div>
+            </section>
+
             <div class="grid">
                 <div class="stack">
                     <section class="row">
@@ -423,10 +855,10 @@
                         <div class="layer layer-access">
                             <div class="layer-header">L1 Access Endpoints</div>
                             <div class="cells">
-                                <div class="cell">Streamlit Web UI</div>
-                                <div class="cell">Prompt Admin UI</div>
-                                <div class="cell">External API Client</div>
-                                <div class="cell highlight">Third-Party Integration</div>
+                                <div class="cell"><span class="cell-name">Web Frontend (Next.js)</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Prompt Admin Frontend</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">External API Client</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Third-Party Integration</span><span class="status partial">Partial</span></div>
                             </div>
                         </div>
                     </section>
@@ -436,10 +868,10 @@
                         <div class="layer layer-api">
                             <div class="layer-header">L2 API Gateway</div>
                             <div class="cells">
-                                <div class="cell">FastAPI Routers</div>
-                                <div class="cell">Authentication + RBAC</div>
-                                <div class="cell">Input Validation</div>
-                                <div class="cell">Request Cache (Redis)</div>
+                                <div class="cell"><span class="cell-name">FastAPI Routers</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell security-node"><span class="cell-name">Auth + RBAC</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Input Validation</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Query Cache (RAG)</span><span class="status implemented">Implemented</span></div>
                             </div>
                         </div>
                     </section>
@@ -447,16 +879,16 @@
                     <section class="row">
                         <div class="label">Services</div>
                         <div class="layer layer-business">
-                            <div class="layer-header">L3 Business Services</div>
+                            <div class="layer-header">L3 Workflow & Business Services</div>
                             <div class="cells">
-                                <div class="cell">Workflow Orchestrator</div>
-                                <div class="cell">Intent Classifier</div>
-                                <div class="cell">Prompt Selector</div>
-                                <div class="cell">Routing + Budget Policy</div>
-                                <div class="cell">Cost Governance</div>
-                                <div class="cell">Tenant Isolation Logic</div>
-                                <div class="cell highlight">Rapid Business Module Extension</div>
-                                <div class="cell">Service Coordination</div>
+                                <div class="cell"><span class="cell-name">Intent Workflow (LangGraph)</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Fallback Orchestrator Pipeline</span><span class="status partial">Conditional</span></div>
+                                <div class="cell"><span class="cell-name">Prompt Preparation Node</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell security-node"><span class="cell-name">Routing + Budget Policy</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Cost Estimation Node</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell analytics-node"><span class="cell-name">Data Analysis Orchestration</span><span class="status partial">Split Path</span></div>
+                                <div class="cell planned-node"><span class="cell-name">Unified Single-Path Execution</span><span class="status planned">Target</span></div>
+                                <div class="cell"><span class="cell-name">Tenant-Aware Metadata</span><span class="status implemented">Implemented</span></div>
                             </div>
                         </div>
                     </section>
@@ -466,10 +898,10 @@
                         <div class="layer layer-runtime">
                             <div class="layer-header">L4 AI Runtime</div>
                             <div class="cells">
-                                <div class="cell">RAG Engine</div>
-                                <div class="cell">LLM Dispatch Service</div>
-                                <div class="cell">Code Execution Manager</div>
-                                <div class="cell highlight">Cost Estimation Service</div>
+                                <div class="cell"><span class="cell-name">RAG Engine (Hybrid + Rerank)</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">LLM Dispatch Service</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Code Execution Manager</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell analytics-node"><span class="cell-name">Iterative Self-Healing Analytics</span><span class="status partial">Advanced Path</span></div>
                             </div>
                         </div>
                     </section>
@@ -479,14 +911,14 @@
                         <div class="layer layer-data">
                             <div class="layer-header">L5 Data Services</div>
                             <div class="cells">
-                                <div class="cell">Data Access API</div>
-                                <div class="cell">Transaction Management</div>
-                                <div class="cell">Read / Write Split</div>
-                                <div class="cell">TTL + Expiration Control</div>
-                                <div class="cell">File I/O</div>
-                                <div class="cell">Data Synchronization</div>
-                                <div class="cell">Vector Upsert Pipeline</div>
-                                <div class="cell">Backup + Recovery</div>
+                                <div class="cell"><span class="cell-name">Vector Retrieval / Chunk Access</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Cost Feature Extraction</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Data Analysis API</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Data Transfer (file/db mode)</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell planned-node"><span class="cell-name">Read/Write Split</span><span class="status planned">Target</span></div>
+                                <div class="cell"><span class="cell-name">TTL + Expiration Control</span><span class="status partial">Partial</span></div>
+                                <div class="cell planned-node"><span class="cell-name">Backup + Recovery Workflow</span><span class="status planned">Target</span></div>
+                                <div class="cell planned-node"><span class="cell-name">Online Query Rewrite Loop</span><span class="status planned">Target</span></div>
                             </div>
                         </div>
                     </section>
@@ -510,9 +942,9 @@
                                 </div>
                             </div>
                             <div class="cells cells-3">
-                                <div class="cell">PostgreSQL + pgvector</div>
-                                <div class="cell">Redis</div>
-                                <div class="cell">Search + Artifact Store</div>
+                                <div class="cell"><span class="cell-name">PostgreSQL + pgvector</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Redis Cache</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Artifact / Search Storage</span><span class="status partial">Partial</span></div>
                             </div>
                         </div>
                     </section>
@@ -522,8 +954,8 @@
                         <div class="layer layer-infra">
                             <div class="layer-header">Deployment Environment</div>
                             <div class="cells cells-2">
-                                <div class="cell">Cloud VM / Container Platform</div>
-                                <div class="cell">Dedicated Server / On-Prem Node</div>
+                                <div class="cell"><span class="cell-name">Cloud VM / Containers</span><span class="status implemented">Implemented</span></div>
+                                <div class="cell"><span class="cell-name">Dedicated / On-Prem Node</span><span class="status partial">Deployment Option</span></div>
                             </div>
                         </div>
                     </section>
@@ -537,77 +969,203 @@
         </div>
 
         <section class="subflow-section">
-            <h2 class="subflow-title">Complex Subprocess Diagrams</h2>
-            <div class="subflow-grid">
-                <article class="subflow">
-                    <h3>A. Intent Routing and Resilience</h3>
-                    <div class="node node-violet">Request Intake (Context + Session + Prompt Version)</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sky">Intent + Risk Classifier</div>
-                    <div class="arrow">↓</div>
-                    <div class="split">
-                        <div class="side-tag">Budget Guard</div>
-                        <div class="node node-sand">Policy Decision Hub</div>
-                        <div class="side-tag">Model Health Probe</div>
+            <h2 class="section-title">B. As-Is vs Target Execution Views</h2>
+            <div class="dual-panel">
+                <article class="panel">
+                    <h3>As-Is: Production-Observed Access Pattern</h3>
+                    <div class="flow-grid">
+                        <div class="flow-step violet s-io">Frontend calls <code>/api/v1/workflow/query</code> as default orchestration path</div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-step sky s-service">IntentClassificationWorkflow is primary runner</div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-split-2">
+                            <div class="flow-step sand s-process">Agent dispatch returns templated response path</div>
+                            <div class="flow-step sand s-decision">Fallback orchestrator pipeline only on init failure</div>
+                        </div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-split-3">
+                            <div class="flow-step mint s-io">RAG executes strongly via <code>/api/v1/rag/query</code></div>
+                            <div class="flow-step mint s-io">Cost ML executes strongly via <code>/api/v1/cost-estimation/*</code></div>
+                            <div class="flow-step mint s-io">Advanced analytics executes via <code>/api/v1/unified/query</code> and <code>/api/v1/data/analyze</code></div>
+                        </div>
+                        <div class="evidence">
+                            Evidence refs: <code>frontend/src/lib/api-client.ts</code>, <code>backend/api/workflow_query_routes.py</code>, <code>backend/services/intent_classification/intent_workflow.py</code>, <code>backend/main.py</code>
+                        </div>
                     </div>
-                    <div class="arrow">↓</div>
-                    <div class="row-3">
-                        <div class="node">RAG Path</div>
-                        <div class="node">Direct LLM Path</div>
-                        <div class="node">Hybrid Path</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-mint">Retry + Fallback Controller</div>
-                    <div class="loop">On timeout/error: degrade to lower-cost model and return partial-safe answer.</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-lime">Final Answer Composer + Trace ID</div>
                 </article>
 
-                <article class="subflow">
-                    <h3>B. RAG Quality Control Loop</h3>
-                    <div class="node node-violet">Chunked Knowledge Base + Embedding Index</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sky">Hybrid Retrieval (Vector + BM25)</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sand">Rerank + Freshness + Permission Filter</div>
-                    <div class="arrow">↓</div>
-                    <div class="node">Confidence Gate</div>
-                    <div class="row-2">
-                        <div class="node node-mint">Pass: Context Packager</div>
-                        <div class="node">Fail: Query Rewrite</div>
-                    </div>
-                    <div class="loop">Rewrite branch triggers second retrieval pass before packing context.</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-lime">Grounded Answer + Citation Builder</div>
-                </article>
-
-                <article class="subflow">
-                    <h3>C. Cost and Safe Execution Control</h3>
-                    <div class="node node-violet">Tenant Budget Profile + SLA Tier</div>
-                    <div class="arrow">↓</div>
-                    <div class="split">
-                        <div class="side-tag">PII Redaction</div>
-                        <div class="node node-sky">Token Estimator + Plan Generator</div>
-                        <div class="side-tag">Rate Limits</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="row-3">
-                        <div class="node">Cache Hit</div>
-                        <div class="node">LLM Execution</div>
-                        <div class="node">Sandbox Code Run</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sand">Cost Reconciler (Estimated vs Actual)</div>
-                    <div class="arrow">↓</div>
-                    <div class="row-2">
-                        <div class="node node-mint">Alert + Audit Sink</div>
-                        <div class="node node-lime">Response with Cost Metadata</div>
+                <article class="panel">
+                    <h3>Target: Single Unified Orchestrated Chain</h3>
+                    <div class="flow-grid">
+                        <div class="flow-step violet s-io">Single entry orchestration with explicit node contracts</div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-step sky s-service">Intent -> Route -> RAG / Cost ML / Dynamic Analytics in one executable graph</div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-split-3">
+                            <div class="flow-step sand s-decision">Online confidence gate + optional query rewrite pass</div>
+                            <div class="flow-step sand s-security">Standardized safety / redaction / egress controls</div>
+                            <div class="flow-step sand s-data">Unified response + provenance + cost metadata</div>
+                        </div>
+                        <div class="arrow">↓</div>
+                        <div class="flow-step lime s-cloud">One trace path, one quality gate, one policy control plane</div>
+                        <div class="evidence">
+                            This panel is target-state planning. Use status tags (`Planned`) to avoid over-claim in defense.
+                        </div>
                     </div>
                 </article>
             </div>
         </section>
 
-        <p class="note">Print tip: Browser print setting -> A3 landscape -> 100% scale -> enable background graphics.</p>
+        <section class="subflow-section">
+            <h2 class="section-title">C. Code-Aligned Complex Subprocess Diagrams</h2>
+            <div class="subflow-grid">
+                <article class="subflow">
+                    <h4>C1. Current RAG Execution (Code-Accurate)</h4>
+                    <div class="mindflow">
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step violet s-process">Client payload normalization</div></div>
+                            <div class="mind-core"><div class="flow-step violet s-io">Query -> <code>/api/v1/rag/query</code></div></div>
+                            <div class="mind-branch right"><div class="flow-step violet s-security">Auth + request schema checks</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sky s-data">Vector recall path (pgvector)</div></div>
+                            <div class="mind-core"><div class="flow-step sky s-service">Hybrid Retrieval (Vector + BM25) with adaptive weights</div></div>
+                            <div class="mind-branch right"><div class="flow-step sky s-data">BM25 lexical recall path</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sand s-decision">Adaptive weight tuning by query intent</div></div>
+                            <div class="mind-core"><div class="flow-step sand s-process">Reranker (when enabled) -> context assembly</div></div>
+                            <div class="mind-branch right"><div class="flow-step sand s-process">Top-k trim + token budget control</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step mint s-security">Optional safety guard enhancement</div></div>
+                            <div class="mind-core"><div class="flow-step mint s-process">LLM generation with citation binding</div></div>
+                            <div class="mind-branch right"><div class="flow-step mint s-service">Workflow node can consume same RAG output</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch empty"></div>
+                            <div class="mind-core"><div class="flow-step lime s-data">Answer + sources + retrieved chunks + search weights</div></div>
+                            <div class="mind-branch empty"></div>
+                        </div>
+                    </div>
+                    <div class="evidence">Evidence: <code>backend/services/rag_engine.py</code>, <code>backend/services/retrieval/hybrid_search.py</code></div>
+                </article>
+
+                <article class="subflow">
+                    <h4>C2. Current Cost ML Prediction Pipeline</h4>
+                    <div class="mindflow">
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step violet s-process">Training dataset + feature prep</div></div>
+                            <div class="mind-core"><div class="flow-step violet s-io">Train model via <code>/api/v1/cost-estimation/train</code></div></div>
+                            <div class="mind-branch right"><div class="flow-step violet s-decision">k-fold / holdout strategy settings</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sky s-service">Ridge regressor fitting</div></div>
+                            <div class="mind-core"><div class="flow-step sky s-analytics">Ridge model + k-fold CV + interval quantiles artifact</div></div>
+                            <div class="mind-branch right"><div class="flow-step sky s-data">Evaluation metrics artifact persisted</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sand s-io">Inference request via <code>/predict</code></div></div>
+                            <div class="mind-core"><div class="flow-step sand s-service">Predict via <code>/predict</code> or workflow cost_estimation_node shortcut</div></div>
+                            <div class="mind-branch right"><div class="flow-step sand s-decision">Unknown category fallback handling</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step mint s-analytics">Uncertainty interval post-processing</div></div>
+                            <div class="mind-core"><div class="flow-step mint s-data">Return overrun%, predicted actual cost, confidence interval</div></div>
+                            <div class="mind-branch right"><div class="flow-step mint s-data">Model version + metadata trace</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch empty"></div>
+                            <div class="mind-core"><div class="flow-step lime s-decision">Consumer handles fallback flag for risk-aware decisions</div></div>
+                            <div class="mind-branch empty"></div>
+                        </div>
+                    </div>
+                    <div class="evidence">Evidence: <code>backend/services/cost_estimation_service.py</code>, <code>backend/api/cost_estimation_routes.py</code>, <code>tests/integration/test_cost_estimation_api.py</code></div>
+                </article>
+
+                <article class="subflow">
+                    <h4>C3. Current LLM Governance Control Plane</h4>
+                    <div class="mindflow">
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step violet s-io">Caller selects <code>route_mode</code></div></div>
+                            <div class="mind-core"><div class="flow-step violet s-io">Dispatch request with route_mode (local_only / hybrid_auto / cloud_only)</div></div>
+                            <div class="mind-branch right"><div class="flow-step violet s-decision">Provider preference + locality constraints</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sky s-decision">Budget threshold policy</div></div>
+                            <div class="mind-core"><div class="flow-step sky s-decision">Budget policy + cloud rate limit + demo-mode policy checks</div></div>
+                            <div class="mind-branch right"><div class="flow-step sky s-decision">Cloud quota / cooldown checks</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sand s-process">PII detector + masking strategy</div></div>
+                            <div class="mind-core"><div class="flow-step sand s-security">PII redaction -> egress guard before cloud calls</div></div>
+                            <div class="mind-branch right"><div class="flow-step sand s-security">Allowlist + outbound policy tags</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step mint s-cloud">Local-model execution path</div></div>
+                            <div class="mind-core"><div class="flow-step mint s-cloud">Cloud/local execution with fallback and request metrics</div></div>
+                            <div class="mind-branch right"><div class="flow-step mint s-cloud">Cloud-model execution path with retry budget</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step lime s-data">Audit sink persistence</div></div>
+                            <div class="mind-core"><div class="flow-step lime s-data">Cost tracking + audit logs + decision annotations</div></div>
+                            <div class="mind-branch right"><div class="flow-step lime s-data">Observability traces + alert hooks</div></div>
+                        </div>
+                    </div>
+                    <div class="evidence">Evidence: <code>backend/services/llm_integration/dispatch_service.py</code>, <code>backend/services/security/redaction_service.py</code></div>
+                </article>
+
+                <article class="subflow">
+                    <h4>C4. Dynamic Advanced Analytics (Current + Gap)</h4>
+                    <div class="mindflow">
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step violet s-service">Unified agent core</div></div>
+                            <div class="mind-core"><div class="flow-step violet s-service">Unified agent and iterative tools are implemented</div></div>
+                            <div class="mind-branch right"><div class="flow-step violet s-process">Tool registry + planner contracts</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sky s-process">EDA: schema profile + data quality scan</div></div>
+                            <div class="mind-core"><div class="flow-step sky s-analytics">Supports iterative code repair, EDA, ML modeling, visual outputs</div></div>
+                            <div class="mind-branch right"><div class="flow-step sky s-analytics">Artifacts: charts, tables, model candidates</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step sand s-io">Endpoint path: <code>/api/v1/unified/query</code></div></div>
+                            <div class="mind-core"><div class="flow-step sand s-io">Currently accessed through dedicated endpoints / agent path</div></div>
+                            <div class="mind-branch right"><div class="flow-step sand s-io">Endpoint path: <code>/api/v1/data/analyze</code></div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch left"><div class="flow-step mint s-decision">Not default in <code>/api/v1/workflow/query</code></div></div>
+                            <div class="mind-core"><div class="flow-step mint s-decision">Not yet fully merged into default workflow/query runtime path</div></div>
+                            <div class="mind-branch right"><div class="flow-step mint s-process">Needs unified routing + runtime contracts</div></div>
+                        </div>
+                        <div class="mind-trunk-arrow">↓</div>
+                        <div class="mind-row">
+                            <div class="mind-branch empty"></div>
+                            <div class="mind-core"><div class="flow-step lime s-cloud">Target: promote into unified default execution graph</div></div>
+                            <div class="mind-branch empty"></div>
+                        </div>
+                    </div>
+                    <div class="evidence">Evidence: <code>backend/agents/unified_agent.py</code>, <code>backend/tools/iterative_code_execution.py</code>, <code>backend/main.py</code></div>
+                </article>
+            </div>
+        </section>
+
+        <p class="note">Print tip: Use A3 landscape, 100% scale, and enable background graphics.</p>
     </div>
 </body>
 </html>
