@@ -14,8 +14,8 @@ from backend.services.document_processing import ocr_processor, process_document
 
 @tool
 def extract_document_text(
-    file_path: Annotated[str, "文档文件路径"],
-    use_ocr: Annotated[bool, "是否使用OCR,默认True"] = True,
+    file_path: Annotated[str, "Document file path"],
+    use_ocr: Annotated[bool, "Whether to use OCR, default True"] = True,
 ) -> dict:
     """
     从文档中提取文本内容
@@ -35,7 +35,7 @@ def extract_document_text(
 
     Args:
         file_path: 文档文件的绝对路径
-        use_ocr: 是否使用OCR处理图像和扫描PDF
+        use_ocr: Whether to use OCR处理图像和扫描PDF
 
     Returns:
         提取结果字典,包含:
@@ -61,7 +61,7 @@ def extract_document_text(
         if not file_path_obj.exists():
             return {
                 "success": False,
-                "error": f"文件不存在: {file_path}",
+                "error": f"File not found: {file_path}",
                 "text": "",
                 "file_type": "unknown",
                 "method": "none",
@@ -92,8 +92,8 @@ def extract_document_text(
 
 @tool
 def ocr_image(
-    image_path: Annotated[str, "图像文件路径"],
-    language: Annotated[str, "语言代码,默认'ch'(中文)"] = "ch",
+    image_path: Annotated[str, "Image file path"],
+    language: Annotated[str, "Language code, default 'en' (English)"] = "ch",
 ) -> dict:
     """
     对图像进行OCR文字识别
@@ -108,7 +108,7 @@ def ocr_image(
     - 失败时降级到百度OCR API
 
     Args:
-        image_path: 图像文件路径
+        image_path: Image file path
         language: 识别语言
 
     Returns:
@@ -132,7 +132,7 @@ def ocr_image(
     if ocr_processor is None:
         return {
             "success": False,
-            "error": "OCR处理器不可用,请检查PaddleOCR安装",
+            "error": "OCR processor unavailable, please check PaddleOCR installation",
             "text": "",
             "confidence": 0.0,
             "method": "none",
@@ -145,7 +145,7 @@ def ocr_image(
         if not image_path_obj.exists():
             return {
                 "success": False,
-                "error": f"图像文件不存在: {image_path}",
+                "error": f"Image file not found: {image_path}",
                 "text": "",
                 "confidence": 0.0,
                 "method": "none",
@@ -181,15 +181,15 @@ def ocr_image(
 
 @tool
 def batch_extract_documents(
-    file_paths: Annotated[list[str], "文档文件路径列表"],
-    use_ocr: Annotated[bool, "是否使用OCR"] = True,
+    file_paths: Annotated[list[str], "List of document file paths"],
+    use_ocr: Annotated[bool, "Whether to use OCR"] = True,
 ) -> dict:
     """
     批量提取多个文档的文本内容
 
     Args:
-        file_paths: 文档文件路径列表
-        use_ocr: 是否使用OCR
+        file_paths: List of document file paths
+        use_ocr: Whether to use OCR
 
     Returns:
         批量提取结果字典,包含:

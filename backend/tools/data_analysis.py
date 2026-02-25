@@ -21,21 +21,21 @@ def _resolve_container_data_path(data_file: str) -> str:
 
 @tool
 def data_analysis_tool(
-    data_file: Annotated[str, "数据文件路径"],
+    data_file: Annotated[str, "Data file path"],
     analysis_type: Annotated[
-        str, "分析类型：'eda', 'correlation', 'summary', 'distribution'"
+        str, "Analysis type: 'eda', 'correlation', 'summary', 'distribution'"
     ] = "eda",
-    target_column: Annotated[Optional[str], "目标列名（用于监督学习分析）"] = None,
-    columns: Annotated[Optional[List[str]], "要分析的列名列表"] = None,
+    target_column: Annotated[Optional[str], "Target column name (for supervised learning analysis)"] = None,
+    columns: Annotated[Optional[List[str]], "List of column names to analyze"] = None,
 ) -> Dict[str, Any]:
     """
     数据分析工具 - 自动化探索性数据分析（EDA）
 
     这个工具提供全面的数据分析功能，包括：
-    1. 基础统计：数据概览、描述性统计
-    2. 缺失值分析：缺失值检测和处理建议
-    3. 相关性分析：特征间相关性矩阵和热力图
-    4. 分布分析：数据分布特征和异常值检测
+    1. 基础统计：Data Overview、描述性统计
+    2. Missing Values分析：Missing Values检测和处理建议
+    3. 相关性分析：Feature间Correlation Matrix和热力图
+    4. 分布分析：数据分布Feature和异常值检测
     5. 数据质量：数据类型、重复值、异常值检查
 
     支持的分析类型：
@@ -45,10 +45,10 @@ def data_analysis_tool(
     - 'distribution': 分布分析
 
     Args:
-        data_file: 数据文件路径（CSV、Excel等）
+        data_file: Data file path（CSV、Excel等）
         analysis_type: 分析类型
         target_column: 目标列名（可选）
-        columns: 要分析的列名列表（可选）
+        columns: List of column names to analyze（可选）
 
     Returns:
         分析结果字典，包含：
@@ -68,7 +68,7 @@ def data_analysis_tool(
         ...     "target_column": "price"
         ... })
         >>> print(f"分析成功: {result['success']}")
-        >>> print(f"数据行数: {result['data_info']['rows']}")
+        >>> print(f"数据Row Count: {result['data_info']['rows']}")
     """
 
     # 生成分析代码
@@ -123,31 +123,31 @@ def data_analysis_tool(
 
 @tool
 def data_preprocessing_tool(
-    data_file: Annotated[str, "数据文件路径"],
+    data_file: Annotated[str, "Data file path"],
     operations: Annotated[
         List[str],
-        "预处理操作列表：'clean_missing', 'remove_duplicates', 'normalize', 'encode_categorical'",
+        "Preprocessing operations: 'clean_missing', 'remove_duplicates', 'normalize', 'encode_categorical'",
     ] = ["clean_missing"],
-    output_format: Annotated[str, "输出格式：'csv', 'excel', 'json'"] = "csv",
+    output_format: Annotated[str, "Output format: 'csv', 'excel', 'json'"] = "csv",
 ) -> Dict[str, Any]:
     """
     数据预处理工具 - 自动化数据清洗和预处理
 
     这个工具提供常见的数据预处理功能：
-    1. 缺失值处理：删除、填充、插值
-    2. 重复值处理：检测和删除重复行
-    3. 数据标准化：数值特征标准化和归一化
+    1. Missing Values处理：删除、填充、插值
+    2. 重复值处理：检测和Remove duplicate rows
+    3. Data normalization：数值Feature标准化和归一化
     4. 分类编码：标签编码、独热编码
     5. 异常值处理：检测和处理异常值
 
     支持的预处理操作：
-    - 'clean_missing': 缺失值处理
+    - 'clean_missing': Missing Values处理
     - 'remove_duplicates': 删除重复值
     - 'normalize': 数值标准化
-    - 'encode_categorical': 分类变量编码
+    - 'encode_categorical': 分类Variable编码
 
     Args:
-        data_file: 数据文件路径
+        data_file: Data file path
         operations: 预处理操作列表
         output_format: 输出格式
 
@@ -158,7 +158,7 @@ def data_preprocessing_tool(
         - operations_applied: 应用的操作
         - data_quality_metrics: 数据质量指标
         - output_file: 输出文件路径
-        - preprocessing_summary: 预处理摘要
+        - preprocessing_summary: preprocessing_summary
 
     Example:
         >>> result = data_preprocessing_tool.invoke({
@@ -220,7 +220,7 @@ def _generate_analysis_code(
     target_column: Optional[str] = None,
     columns: Optional[List[str]] = None,
 ) -> str:
-    """生成数据分析代码"""
+    """Generate data analysis code"""
 
     # 确定文件读取方式
     container_data_file = _resolve_container_data_path(data_file)
@@ -229,7 +229,7 @@ def _generate_analysis_code(
     elif data_file.endswith((".xlsx", ".xls")):
         read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {container_data_file}"
+        read_code = f"# Please read data file manually: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -248,10 +248,10 @@ print("✓ Matplotlib font settings initialized")
 # 读取数据
 {read_code}
 
-print("=== 数据基本信息 ===")
-print(f"数据形状: {{df.shape}}")
+print("=== Basic Data Info ===")
+print(f"Data Shape: {{df.shape}}")
 print(f"列名: {{list(df.columns)}}")
-print(f"数据类型:\\n{{df.dtypes}}")
+print(f"Data types:\\n{{df.dtypes}}")
 
 # 选择分析的列
 """
@@ -268,10 +268,10 @@ df_analysis = df.copy()
 
     if analysis_type == "eda":
         base_code += """
-print("\\n=== 描述性统计 ===")
+print("\\n=== Descriptive Statistics ===")
 print(df_analysis.describe())
 
-print("\\n=== 缺失值分析 ===")
+print("\\n=== Missing Values分析 ===")
 missing_info = df_analysis.isnull().sum()
 missing_percentage = (missing_info / len(df_analysis)) * 100
 missing_df = pd.DataFrame({
@@ -288,21 +288,21 @@ print(f"分类列: {{categorical_columns}}")
 
 # 相关性分析（仅数值列）
 if len(numeric_columns) > 1:
-    print("\\n=== 相关性分析 ===")
+    print("\\n=== Correlation Analysis ===")
     correlation_matrix = df_analysis[numeric_columns].corr()
     print(correlation_matrix)
 
     # 生成相关性热力图
     plt.figure(figsize=(10, 8))
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)
-    plt.title('特征相关性热力图')
+    plt.title('Feature相关性热力图')
     plt.tight_layout()
     plt.savefig('/workspace/correlation_heatmap.png', dpi=300, bbox_inches='tight')
     plt.close()
     print("相关性热力图已保存: correlation_heatmap.png")
 
 # 分布分析
-print("\\n=== 分布分析 ===")
+print("\\n=== Distribution Analysis ===")
 for col in numeric_columns[:5]:  # 限制前5个数值列
     plt.figure(figsize=(12, 4))
 
@@ -313,10 +313,10 @@ for col in numeric_columns[:5]:  # 限制前5个数值列
     plt.xlabel(col)
     plt.ylabel('频次')
 
-    # 箱线图
+    # Box Plot
     plt.subplot(1, 2, 2)
     plt.boxplot(df_analysis[col].dropna())
-    plt.title(f'{{col}} 箱线图')
+    plt.title(f'{{col}} Box Plot')
     plt.ylabel(col)
 
     plt.tight_layout()
@@ -324,9 +324,9 @@ for col in numeric_columns[:5]:  # 限制前5个数值列
     plt.close()
     print(f"{{col}} 分布图已保存: {{col}}_distribution.png")
 
-# 分类变量分析
+# 分类Variable分析
 for col in categorical_columns[:5]:  # 限制前5个分类列
-    if df_analysis[col].nunique() <= 20:  # 只分析唯一值较少的分类变量
+    if df_analysis[col].nunique() <= 20:  # 只分析唯一值较少的分类Variable
         plt.figure(figsize=(10, 6))
         value_counts = df_analysis[col].value_counts()
         plt.bar(range(len(value_counts)), value_counts.values)
@@ -340,10 +340,10 @@ for col in categorical_columns[:5]:  # 限制前5个分类列
         print(f"{{col}} 柱状图已保存: {{col}}_barplot.png")
 
 print("\\n=== 数据质量评估 ===")
-print(f"重复行数: {{df_analysis.duplicated().sum()}}")
-print(f"完全重复的行数: {{df_analysis.duplicated().sum()}}")
+print(f"重复Row Count: {{df_analysis.duplicated().sum()}}")
+print(f"完全重复的Row Count: {{df_analysis.duplicated().sum()}}")
 
-# 输出分析摘要
+# 输出analysis_summary
 analysis_summary = {
     'total_rows': len(df_analysis),
     'total_columns': len(df_analysis.columns),
@@ -353,7 +353,7 @@ analysis_summary = {
     'duplicate_rows': df_analysis.duplicated().sum()
 }
 
-print("\\n=== 分析摘要 ===")
+print("\\n=== analysis_summary ===")
 print(json.dumps(analysis_summary, indent=2, ensure_ascii=False))
 """
 
@@ -362,10 +362,10 @@ print(json.dumps(analysis_summary, indent=2, ensure_ascii=False))
 numeric_columns = df_analysis.select_dtypes(include=[np.number]).columns.tolist()
 if len(numeric_columns) > 1:
     correlation_matrix = df_analysis[numeric_columns].corr()
-    print("相关性矩阵:")
+    print("Correlation Matrix:")
     print(correlation_matrix)
 
-    # 找出高相关性特征对
+    # 找出高相关性Feature对
     high_corr_pairs = []
     for i in range(len(correlation_matrix.columns)):
         for j in range(i+1, len(correlation_matrix.columns)):
@@ -377,7 +377,7 @@ if len(numeric_columns) > 1:
                     'correlation': corr_value
                 })
 
-    print("\\n高相关性特征对:")
+    print("\\n高相关性Feature对:")
     for pair in high_corr_pairs:
         print(f"{{pair['feature1']}} - {{pair['feature2']}}: {{pair['correlation']:.3f}}")
 else:
@@ -388,10 +388,10 @@ else:
         base_code += """
 print("=== 数据摘要 ===")
 print(f"数据集大小: {{df_analysis.shape}}")
-print("\\n数据类型:")
+print("\\nData types:")
 print(df_analysis.dtypes)
 
-print("\\n数值列统计:")
+print("\\nNumerical Column Statistics:")
 numeric_cols = df_analysis.select_dtypes(include=[np.number])
 if not numeric_cols.empty:
     print(numeric_cols.describe())
@@ -403,14 +403,14 @@ if not categorical_cols.empty:
         print(f"\\n{{col}}:")
         print(f"  唯一值数量: {{df_analysis[col].nunique()}}")
         print(f"  最频繁值: {{df_analysis[col].mode().iloc[0] if not df_analysis[col].mode().empty else 'N/A'}}")
-        print(f"  缺失值数量: {{df_analysis[col].isnull().sum()}}")
+        print(f"  Missing Values数量: {{df_analysis[col].isnull().sum()}}")
 """
 
     elif analysis_type == "distribution":
         base_code += """
 numeric_columns = df_analysis.select_dtypes(include=[np.number]).columns.tolist()
 
-print("=== 分布分析 ===")
+print("=== Distribution Analysis ===")
 for col in numeric_columns:
     data = df_analysis[col].dropna()
 
@@ -442,10 +442,10 @@ for col in numeric_columns:
     plt.xlabel(col)
     plt.ylabel('密度')
 
-    # 箱线图
+    # Box Plot
     plt.subplot(1, 3, 2)
     plt.boxplot(data)
-    plt.title(f'{{col}} 箱线图')
+    plt.title(f'{{col}} Box Plot')
     plt.ylabel(col)
 
     # Q-Q图
@@ -466,7 +466,7 @@ for col in numeric_columns:
 def _generate_preprocessing_code(
     data_file: str, operations: List[str], output_format: str
 ) -> str:
-    """生成数据预处理代码"""
+    """Generate data preprocessing code"""
 
     # 确定文件读取方式
     container_data_file = _resolve_container_data_path(data_file)
@@ -475,7 +475,7 @@ def _generate_preprocessing_code(
     elif data_file.endswith((".xlsx", ".xls")):
         read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {container_data_file}"
+        read_code = f"# Please read data file manually: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -488,7 +488,7 @@ warnings.filterwarnings('ignore')
 # 读取原始数据
 {read_code}
 original_shape = df.shape
-print(f"原始数据形状: {{original_shape}}")
+print(f"原始Data Shape: {{original_shape}}")
 
 df_processed = df.copy()
 preprocessing_log = []
@@ -497,29 +497,29 @@ preprocessing_log = []
 
     if "clean_missing" in operations:
         base_code += """
-# 缺失值处理
-print("\\n=== 缺失值处理 ===")
+# Missing Values处理
+print("\\n=== Missing Values处理 ===")
 missing_info = df_processed.isnull().sum()
-print("缺失值统计:")
+print("Missing Values统计:")
 print(missing_info[missing_info > 0])
 
-# 数值列缺失值用中位数填充
+# 数值列Missing Values用中位数填充
 numeric_columns = df_processed.select_dtypes(include=[np.number]).columns
 for col in numeric_columns:
     if df_processed[col].isnull().sum() > 0:
         median_val = df_processed[col].median()
         df_processed[col].fillna(median_val, inplace=True)
-        preprocessing_log.append(f"数值列 {{col}} 缺失值用中位数 {{median_val}} 填充")
+        preprocessing_log.append(f"数值列 {{col}} Missing Values用中位数 {{median_val}} 填充")
 
-# 分类列缺失值用众数填充
+# 分类列Missing Values用众数填充
 categorical_columns = df_processed.select_dtypes(include=['object']).columns
 for col in categorical_columns:
     if df_processed[col].isnull().sum() > 0:
         mode_val = df_processed[col].mode().iloc[0] if not df_processed[col].mode().empty else 'Unknown'
         df_processed[col].fillna(mode_val, inplace=True)
-        preprocessing_log.append(f"分类列 {{col}} 缺失值用众数 {{mode_val}} 填充")
+        preprocessing_log.append(f"分类列 {{col}} Missing Values用众数 {{mode_val}} 填充")
 
-print("缺失值处理完成")
+print("Missing ValuesProcessing complete")
 """
 
     if "remove_duplicates" in operations:
@@ -527,13 +527,13 @@ print("缺失值处理完成")
 # 重复值处理
 print("\\n=== 重复值处理 ===")
 duplicate_count = df_processed.duplicated().sum()
-print(f"重复行数: {{duplicate_count}}")
+print(f"重复Row Count: {{duplicate_count}}")
 
 if duplicate_count > 0:
     df_processed.drop_duplicates(inplace=True)
     preprocessing_log.append(f"删除了 {{duplicate_count}} 行重复数据")
 
-print("重复值处理完成")
+print("重复值Processing complete")
 """
 
     if "normalize" in operations:
@@ -553,21 +553,21 @@ else:
 
     if "encode_categorical" in operations:
         base_code += """
-# 分类变量编码
-print("\\n=== 分类变量编码 ===")
+# 分类Variable编码
+print("\\n=== 分类Variable编码 ===")
 categorical_columns = df_processed.select_dtypes(include=['object']).columns.tolist()
 
 for col in categorical_columns:
-    if df_processed[col].nunique() <= 10:  # 对唯一值较少的分类变量进行独热编码
+    if df_processed[col].nunique() <= 10:  # 对唯一值较少的分类Variable进行独热编码
         dummies = pd.get_dummies(df_processed[col], prefix=col)
         df_processed = pd.concat([df_processed.drop(col, axis=1), dummies], axis=1)
         preprocessing_log.append(f"分类列 {{col}} 进行了独热编码")
-    else:  # 对唯一值较多的分类变量进行标签编码
+    else:  # 对唯一值较多的分类Variable进行标签编码
         le = LabelEncoder()
         df_processed[col] = le.fit_transform(df_processed[col])
         preprocessing_log.append(f"分类列 {{col}} 进行了标签编码")
 
-print("分类变量编码完成")
+print("分类Variable编码完成")
 """
 
     # 输出处理后的数据
@@ -582,7 +582,7 @@ print("分类变量编码完成")
         save_code = "output_file = '/workspace/processed_data.csv'\ndf_processed.to_csv(output_file, index=False)"
 
     base_code += f"""
-# 保存处理后的数据
+# Save processed data
 {save_code}
 
 # 生成预处理报告
@@ -595,18 +595,18 @@ preprocessing_summary = {{
     'preprocessing_steps': preprocessing_log
 }}
 
-print("\\n=== 预处理摘要 ===")
+print("\\n=== preprocessing_summary ===")
 print(f"原始形状: {{original_shape}}")
 print(f"处理后形状: {{final_shape}}")
-print(f"删除行数: {{original_shape[0] - final_shape[0]}}")
-print(f"新增列数: {{final_shape[1] - original_shape[1]}}")
+print(f"删除Row Count: {{original_shape[0] - final_shape[0]}}")
+print(f"新增Column Count: {{final_shape[1] - original_shape[1]}}")
 print(f"输出文件: {{output_file}}")
 
 print("\\n预处理步骤:")
 for step in preprocessing_log:
     print(f"  - {{step}}")
 
-print("\\n预处理摘要JSON:")
+print("\\npreprocessing_summaryJSON:")
 print(json.dumps(preprocessing_summary, indent=2, ensure_ascii=False))
 """
 
@@ -614,7 +614,7 @@ print(json.dumps(preprocessing_summary, indent=2, ensure_ascii=False))
 
 
 def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
-    """解析分析输出"""
+    """Parse analysis output"""
     try:
         # 尝试从输出中提取JSON格式的摘要
         lines = stdout.split("\n")
@@ -622,7 +622,7 @@ def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
         json_end = None
 
         for i, line in enumerate(lines):
-            if "分析摘要" in line or "预处理摘要" in line:
+            if "analysis_summary" in line or "preprocessing_summary" in line:
                 # 查找JSON开始
                 for j in range(i, len(lines)):
                     if lines[j].strip().startswith("{"):
@@ -637,7 +637,7 @@ def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
 
         if json_start is not None and json_end is not None:
             json_str = "\n".join(lines[json_start : json_end + 1])
-            summary = eval(json_str)  # 简单的JSON解析
+            summary = eval(json_str)  # simple JSON parse
         else:
             summary = {}
 
@@ -655,7 +655,7 @@ def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.warning(f"解析分析输出失败: {e}")
+        logger.warning(f"Parse analysis output failed: {e}")
         return {
             "data_info": {},
             "statistics": {},
@@ -680,26 +680,26 @@ def _build_analysis_answer(
 
     if isinstance(rows, int) and isinstance(cols, int) and (rows > 0 or cols > 0):
         return (
-            f"分析完成（{analysis_type}）。数据集共有 {rows} 行、{cols} 列，"
-            f"其中数值列 {numeric_cols or 0} 个，分类列 {categorical_cols or 0} 个。"
+            f"Analysis complete ({analysis_type}). Dataset has {rows} rows, {cols} columns, "
+            f"with {numeric_cols or 0} numerical columns and {categorical_cols or 0} categorical columns."
         )
 
     condensed_lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
     if condensed_lines:
         return condensed_lines[0][:240]
-    return "分析完成。"
+    return "Analysis complete."
 
 
 def _parse_preprocessing_output(stdout: str) -> Dict[str, Any]:
-    """解析预处理输出"""
+    """Parse preprocessing output"""
     try:
-        # 尝试从输出中提取预处理摘要
+        # 尝试从输出中提取preprocessing_summary
         lines = stdout.split("\n")
         json_start = None
         json_end = None
 
         for i, line in enumerate(lines):
-            if "预处理摘要JSON:" in line:
+            if "preprocessing_summaryJSON:" in line:
                 # 下一行应该是JSON
                 if i + 1 < len(lines):
                     json_str = lines[i + 1]
@@ -723,7 +723,7 @@ def _parse_preprocessing_output(stdout: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.warning(f"解析预处理输出失败: {e}")
+        logger.warning(f"Parse preprocessing output failed: {e}")
         return {
             "processed_data_info": {},
             "preprocessing_summary": {},
