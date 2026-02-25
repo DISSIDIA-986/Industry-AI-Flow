@@ -1,4 +1,4 @@
-"""Rerank Tool - 使用Cross-Encoder重排序文档"""
+"""Rerank Tool - Rerank documents using Cross-Encoder"""
 
 from typing import Annotated
 
@@ -9,9 +9,9 @@ from backend.services.retrieval.reranker import Reranker
 
 @tool
 def rerank_tool(
-    query: Annotated[str, "用户查询文本"],
-    documents: Annotated[list[dict], "待排序的文档列表"],
-    top_k: Annotated[int, "返回的top文档数量"] = 5,
+    query: Annotated[str, "User query text"],
+    documents: Annotated[list[dict], "List of documents to rank"],
+    top_k: Annotated[int, "Number of top documents to return"] = 5,
 ) -> list[dict]:
     """
     文档重排序工具 - 使用Cross-Encoder模型精排文档
@@ -24,9 +24,9 @@ def rerank_tool(
     相比向量搜索，Cross-Encoder能更准确地捕捉查询-文档之间的语义关系。
 
     Args:
-        query: 用户查询文本
-        documents: 待排序的文档列表，每个文档应包含content字段
-        top_k: 返回的top文档数量（默认5）
+        query: User query text
+        documents: List of documents to rank，每个文档应包含content字段
+        top_k: Number of top documents to return（默认5）
 
     Returns:
         重排序后的top-k文档列表，按相关性分数降序排列

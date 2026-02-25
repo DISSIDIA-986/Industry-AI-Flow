@@ -10,24 +10,24 @@ logger = logging.getLogger(__name__)
 
 @tool
 def visualization_tool(
-    data_file: Annotated[str, "数据文件路径"],
+    data_file: Annotated[str, "Data file path"],
     chart_type: Annotated[
         str,
-        "图表类型：'line', 'bar', 'scatter', 'histogram', 'heatmap', 'box', 'violin', 'pie'",
+        "Chart type: 'line', 'bar', 'scatter', 'histogram', 'heatmap', 'box', 'violin', 'pie'",
     ] = "line",
-    x_column: Annotated[Optional[str], "X轴列名"] = None,
-    y_column: Annotated[Optional[str], "Y轴列名"] = None,
-    color_column: Annotated[Optional[str], "颜色分组列名"] = None,
-    title: Annotated[Optional[str], "图表标题"] = None,
-    save_format: Annotated[str, "保存格式：'png', 'jpg', 'svg', 'html'"] = "png",
-    interactive: Annotated[bool, "是否生成交互式图表"] = False,
+    x_column: Annotated[Optional[str], "X-axis column name"] = None,
+    y_column: Annotated[Optional[str], "Y-axis column name"] = None,
+    color_column: Annotated[Optional[str], "Color grouping column name"] = None,
+    title: Annotated[Optional[str], "Chart title"] = None,
+    save_format: Annotated[str, "Save format: 'png', 'jpg', 'svg', 'html'"] = "png",
+    interactive: Annotated[bool, "Whether to generate interactive charts"] = False,
 ) -> Dict[str, Any]:
     """
     可视化工具 - 自动化生成各类数据可视化图表
 
     这个工具提供全面的数据可视化功能，支持：
     1. 基础图表：折线图、柱状图、散点图、直方图
-    2. 统计图表：箱线图、小提琴图、热力图
+    2. Statistical charts: box plots, violin plots, heatmaps
     3. 分布图表：饼图、环形图、雷达图
     4. 高级可视化：3D图表、地理图表、网络图
     5. 交互式图表：基于 Plotly 的动态可视化
@@ -38,19 +38,19 @@ def visualization_tool(
     - 'scatter': 散点图
     - 'histogram': 直方图
     - 'heatmap': 热力图
-    - 'box': 箱线图
+    - 'box': Box Plot
     - 'violin': 小提琴图
     - 'pie': 饼图
 
     Args:
-        data_file: 数据文件路径
+        data_file: Data file path
         chart_type: 图表类型
-        x_column: X轴列名
-        y_column: Y轴列名
-        color_column: 颜色分组列名
-        title: 图表标题
+        x_column: X-axis column name
+        y_column: Y-axis column name
+        color_column: Color grouping column name
+        title: Chart title
         save_format: 保存格式
-        interactive: 是否生成交互式图表
+        interactive: Whether to generate interactive charts
 
     Returns:
         可视化结果字典，包含：
@@ -74,7 +74,7 @@ def visualization_tool(
         >>> print(f"图表路径: {result['file_path']}")
     """
 
-    # 生成可视化代码
+    # Generate visualization code
     viz_code = _generate_visualization_code(
         data_file,
         chart_type,
@@ -105,33 +105,33 @@ def visualization_tool(
                 }
             )
 
-            logger.info(f"可视化生成完成，类型: {chart_type}")
+            logger.info(f"Visualization complete, type: {chart_type}")
             return viz_result
         else:
             return {
                 "success": False,
-                "error": f"可视化生成失败: {result.get('error', 'Unknown error')}",
+                "error": f"Visualization generation failed: {result.get('error', 'Unknown error')}",
                 "chart_type": chart_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
             }
 
     except Exception as e:
-        logger.error(f"可视化工具异常: {e}")
-        return {"success": False, "error": f"工具异常: {str(e)}", "chart_type": chart_type}
+        logger.error(f"Visualization tool error: {e}")
+        return {"success": False, "error": f"Tool error: {str(e)}", "chart_type": chart_type}
 
 
 @tool
 def advanced_visualization_tool(
-    data_file: Annotated[str, "数据文件路径"],
+    data_file: Annotated[str, "Data file path"],
     viz_type: Annotated[
         str,
-        "高级可视化类型：'3d_scatter', 'parallel_coordinates', 'andrews_curves', 'radar', 'treemap', 'sunburst'",
+        "Advanced visualization type: '3d_scatter', 'parallel_coordinates', 'andrews_curves', 'radar', 'treemap', 'sunburst'",
     ] = "3d_scatter",
-    columns: Annotated[List[str], "要使用的列名列表"] = None,
-    group_column: Annotated[Optional[str], "分组列名"] = None,
-    title: Annotated[Optional[str], "图表标题"] = None,
-    save_format: Annotated[str, "保存格式：'png', 'jpg', 'svg', 'html'"] = "png",
+    columns: Annotated[List[str], "List of column names to use"] = None,
+    group_column: Annotated[Optional[str], "Group column name"] = None,
+    title: Annotated[Optional[str], "Chart title"] = None,
+    save_format: Annotated[str, "Save format: 'png', 'jpg', 'svg', 'html'"] = "png",
 ) -> Dict[str, Any]:
     """
     高级可视化工具 - 生成复杂的数据可视化图表
@@ -152,11 +152,11 @@ def advanced_visualization_tool(
     - 'sunburst': 旭日图
 
     Args:
-        data_file: 数据文件路径
+        data_file: Data file path
         viz_type: 高级可视化类型
-        columns: 要使用的列名列表
-        group_column: 分组列名
-        title: 图表标题
+        columns: List of column names to use
+        group_column: Group column name
+        title: Chart title
         save_format: 保存格式
 
     Returns:
@@ -171,7 +171,7 @@ def advanced_visualization_tool(
         ... })
     """
 
-    # 生成高级可视化代码
+    # Generate advanced visualization code
     adv_viz_code = _generate_advanced_viz_code(
         data_file, viz_type, columns, group_column, title, save_format
     )
@@ -195,31 +195,31 @@ def advanced_visualization_tool(
                 }
             )
 
-            logger.info(f"高级可视化生成完成，类型: {viz_type}")
+            logger.info(f"Advanced visualization complete, type: {viz_type}")
             return viz_result
         else:
             return {
                 "success": False,
-                "error": f"高级可视化生成失败: {result.get('error', 'Unknown error')}",
+                "error": f"Advanced visualization generation failed: {result.get('error', 'Unknown error')}",
                 "chart_type": viz_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
             }
 
     except Exception as e:
-        logger.error(f"高级可视化工具异常: {e}")
-        return {"success": False, "error": f"工具异常: {str(e)}", "chart_type": viz_type}
+        logger.error(f"Advanced visualization tool error: {e}")
+        return {"success": False, "error": f"Tool error: {str(e)}", "chart_type": viz_type}
 
 
 @tool
 def dashboard_generation_tool(
-    data_file: Annotated[str, "数据文件路径"],
+    data_file: Annotated[str, "Data file path"],
     dashboard_type: Annotated[
-        str, "仪表板类型：'eda', 'ml_monitoring', 'business_kpi', 'time_series'"
+        str, "Dashboard type: 'eda', 'ml_monitoring', 'business_kpi', 'time_series'"
     ] = "eda",
-    key_metrics: Annotated[List[str], "关键指标列名列表"] = None,
-    time_column: Annotated[Optional[str], "时间列名"] = None,
-    output_format: Annotated[str, "输出格式：'html', 'pdf'"] = "html",
+    key_metrics: Annotated[List[str], "List of key metric column names"] = None,
+    time_column: Annotated[Optional[str], "Time column name"] = None,
+    output_format: Annotated[str, "Output format: 'html', 'pdf'"] = "html",
 ) -> Dict[str, Any]:
     """
     仪表板生成工具 - 自动化生成数据仪表板
@@ -237,10 +237,10 @@ def dashboard_generation_tool(
     - 'time_series': 时间序列仪表板
 
     Args:
-        data_file: 数据文件路径
+        data_file: Data file path
         dashboard_type: 仪表板类型
-        key_metrics: 关键指标列名列表
-        time_column: 时间列名
+        key_metrics: List of key metric column names
+        time_column: Time column name
         output_format: 输出格式
 
     Returns:
@@ -254,7 +254,7 @@ def dashboard_generation_tool(
         ... })
     """
 
-    # 生成仪表板代码
+    # Generate dashboard code
     dashboard_code = _generate_dashboard_code(
         data_file, dashboard_type, key_metrics, time_column, output_format
     )
@@ -278,22 +278,22 @@ def dashboard_generation_tool(
                 }
             )
 
-            logger.info(f"仪表板生成完成，类型: {dashboard_type}")
+            logger.info(f"Dashboard generation complete, type: {dashboard_type}")
             return dashboard_result
         else:
             return {
                 "success": False,
-                "error": f"仪表板生成失败: {result.get('error', 'Unknown error')}",
+                "error": f"Dashboard generation failed: {result.get('error', 'Unknown error')}",
                 "dashboard_type": dashboard_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
             }
 
     except Exception as e:
-        logger.error(f"仪表板生成工具异常: {e}")
+        logger.error(f"Dashboard generation tool error: {e}")
         return {
             "success": False,
-            "error": f"工具异常: {str(e)}",
+            "error": f"Tool error: {str(e)}",
             "dashboard_type": dashboard_type,
         }
 
@@ -308,7 +308,7 @@ def _generate_visualization_code(
     save_format: str = "png",
     interactive: bool = False,
 ) -> str:
-    """生成可视化代码"""
+    """Generate visualization code"""
 
     # 确定文件读取方式
     if data_file.endswith(".csv"):
@@ -316,7 +316,7 @@ def _generate_visualization_code(
     elif data_file.endswith((".xlsx", ".xls")):
         read_code = f"df = pd.read_excel('{data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {data_file}"
+        read_code = f"# Please read data file manually: {data_file}"
 
     # 选择可视化库
     if interactive:
@@ -333,7 +333,7 @@ import {viz_lib}
 import warnings
 warnings.filterwarnings('ignore')
 
-# 设置中文字体（如果需要）
+# Set up fonts if available
 if not {interactive}:
     plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
@@ -341,8 +341,8 @@ if not {interactive}:
 # 读取数据
 {read_code}
 
-print("=== 数据信息 ===")
-print(f"数据形状: {{df.shape}}")
+print("=== Data Info ===")
+print(f"Data Shape: {{df.shape}}")
 print(f"列名: {{list(df.columns)}}")
 
 # 自动检测列（如果未指定）
@@ -560,7 +560,7 @@ def _generate_advanced_viz_code(
     title: Optional[str] = None,
     save_format: str = "png",
 ) -> str:
-    """生成高级可视化代码"""
+    """Generate advanced visualization code"""
 
     # 确定文件读取方式
     if data_file.endswith(".csv"):
@@ -568,7 +568,7 @@ def _generate_advanced_viz_code(
     elif data_file.endswith((".xlsx", ".xls")):
         read_code = f"df = pd.read_excel('{data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {data_file}"
+        read_code = f"# Please read data file manually: {data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -587,8 +587,8 @@ plt.rcParams['axes.unicode_minus'] = False
 # 读取数据
 {read_code}
 
-print("=== 数据信息 ===")
-print(f"数据形状: {{df.shape}}")
+print("=== Data Info ===")
+print(f"Data Shape: {{df.shape}}")
 print(f"列名: {{list(df.columns)}}")
 
 # 选择列
@@ -769,7 +769,7 @@ def _generate_dashboard_code(
     time_column: Optional[str] = None,
     output_format: str = "html",
 ) -> str:
-    """生成仪表板代码"""
+    """Generate dashboard code"""
 
     # 确定文件读取方式
     if data_file.endswith(".csv"):
@@ -777,7 +777,7 @@ def _generate_dashboard_code(
     elif data_file.endswith((".xlsx", ".xls")):
         read_code = f"df = pd.read_excel('{data_file}')"
     else:
-        read_code = f"# 请手动读取数据文件: {data_file}"
+        read_code = f"# Please read data file manually: {data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -795,8 +795,8 @@ plt.rcParams['axes.unicode_minus'] = False
 # 读取数据
 {read_code}
 
-print("=== 数据信息 ===")
-print(f"数据形状: {{df.shape}}")
+print("=== Data Info ===")
+print(f"Data Shape: {{df.shape}}")
 print(f"列名: {{list(df.columns)}}")
 
 # 选择关键指标
@@ -821,33 +821,33 @@ print(f"列名: {{list(df.columns)}}")
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 fig.suptitle('探索性数据分析仪表板', fontsize=16)
 
-# 1. 数据概览
+# 1. Data Overview
 axes[0, 0].text(0.1, 0.5, f'数据集形状: {df.shape}\\n数值列: {len(df.select_dtypes(include=[np.number]).columns)}\\n分类列: {len(df.select_dtypes(include=[object]).columns)}',
                 transform=axes[0, 0].transAxes, fontsize=12, verticalalignment='center')
-axes[0, 0].set_title('数据概览')
+axes[0, 0].set_title('Data Overview')
 axes[0, 0].axis('off')
 
-# 2. 缺失值分析
+# 2. Missing Values分析
 missing_data = df.isnull().sum()
 missing_data = missing_data[missing_data > 0].sort_values(ascending=False)
 if len(missing_data) > 0:
     axes[0, 1].bar(range(len(missing_data)), missing_data.values)
     axes[0, 1].set_xticks(range(len(missing_data)))
     axes[0, 1].set_xticklabels(missing_data.index, rotation=45)
-    axes[0, 1].set_title('缺失值分析')
+    axes[0, 1].set_title('Missing Values分析')
 else:
-    axes[0, 1].text(0.5, 0.5, '无缺失值', transform=axes[0, 1].transAxes,
+    axes[0, 1].text(0.5, 0.5, '无Missing Values', transform=axes[0, 1].transAxes,
                     ha='center', va='center')
-    axes[0, 1].set_title('缺失值分析')
+    axes[0, 1].set_title('Missing Values分析')
 
-# 3. 数值变量分布
+# 3. 数值Variable分布
 if len(metrics) > 0:
     df[metrics[0]].hist(bins=30, ax=axes[0, 2])
     axes[0, 2].set_title(f'{metrics[0]} 分布')
 else:
     axes[0, 2].text(0.5, 0.5, '无数值列', transform=axes[0, 2].transAxes,
                     ha='center', va='center')
-    axes[0, 2].set_title('数值变量分布')
+    axes[0, 2].set_title('数值Variable分布')
 
 # 4. 相关性热力图
 numeric_df = df.select_dtypes(include=[np.number])
@@ -861,15 +861,15 @@ else:
                     ha='center', va='center')
     axes[1, 0].set_title('相关性热力图')
 
-# 5. 箱线图
+# 5. Box Plot
 if len(metrics) >= 2:
     df[metrics[:2]].boxplot(ax=axes[1, 1])
-    axes[1, 1].set_title('箱线图')
+    axes[1, 1].set_title('Box Plot')
     axes[1, 1].tick_params(axis='x', rotation=45)
 else:
     axes[1, 1].text(0.5, 0.5, '数值列不足', transform=axes[1, 1].transAxes,
                     ha='center', va='center')
-    axes[1, 1].set_title('箱线图')
+    axes[1, 1].set_title('Box Plot')
 
 # 6. 数据质量评分
 quality_score = 100
@@ -981,7 +981,7 @@ for key, value in dashboard_info.items():
 
 
 def _parse_visualization_output(stdout: str) -> Dict[str, Any]:
-    """解析可视化输出"""
+    """Parse visualization output"""
     try:
         # 尝试从输出中提取图表信息
         lines = stdout.split("\n")
@@ -1006,7 +1006,7 @@ def _parse_visualization_output(stdout: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.warning(f"解析可视化输出失败: {e}")
+        logger.warning(f"Parse visualization output failed: {e}")
         return {
             "chart_info": {},
             "file_path": "",
@@ -1017,7 +1017,7 @@ def _parse_visualization_output(stdout: str) -> Dict[str, Any]:
 
 
 def _parse_dashboard_output(stdout: str) -> Dict[str, Any]:
-    """解析仪表板输出"""
+    """Parse dashboard output"""
     try:
         # 尝试从输出中提取仪表板信息
         lines = stdout.split("\n")
@@ -1038,7 +1038,7 @@ def _parse_dashboard_output(stdout: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.warning(f"解析仪表板输出失败: {e}")
+        logger.warning(f"Parse dashboard output failed: {e}")
         return {
             "dashboard_info": {},
             "file_path": "",

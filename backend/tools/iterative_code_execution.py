@@ -1,4 +1,4 @@
-"""可迭代代码执行工具 - 集成自我修复机制的智能代码执行"""
+"""Iterative Code Execution Tool - Smart code execution with self-healing"""
 
 import asyncio
 import logging
@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 @tool
 def iterative_code_analysis_tool(
-    request: Annotated[str, "数据分析请求描述"],
-    data_file: Annotated[Optional[str], "数据文件路径（可选）"] = None,
+    request: Annotated[str, "Data analysis request description"],
+    data_file: Annotated[Optional[str], "Data file path (optional)"] = None,
     analysis_type: Annotated[
-        str, "分析类型：'eda', 'ml_model', 'visualization', 'statistical'"
+        str, "Analysis type: 'eda', 'ml_model', 'visualization', 'statistical'"
     ] = "eda",
-    max_attempts: Annotated[int, "最大修复尝试次数"] = 5,
+    max_attempts: Annotated[int, "Maximum repair attempts"] = 5,
     transfer_method: Annotated[
-        str, "数据传递方式：'auto', 'file_mapping', 'database'"
+        str, "Data transfer method: 'auto', 'file_mapping', 'database'"
     ] = "auto",
 ) -> Dict[str, Any]:
     """
@@ -43,9 +43,9 @@ def iterative_code_analysis_tool(
 
     Args:
         request: 详细的数据分析请求
-        data_file: 数据文件路径（可选）
+        data_file: Data file path (optional)
         analysis_type: 分析类型
-        max_attempts: 最大修复尝试次数
+        max_attempts: Maximum repair attempts
         transfer_method: 数据传递方式
 
     Returns:
@@ -66,17 +66,17 @@ def iterative_code_analysis_tool(
         ...     "analysis_type": "eda"
         ... })
         >>> if result["success"]:
-        ...     print(f"分析成功，执行了 {result['attempts']} 次尝试")
+        ...     print(f"分析成功，执行了 {result['attempts']} attempts尝试")
         ...     print(f"生成了 {len(result['visualizations'])} 个可视化图表")
     """
 
     try:
-        # 准备数据文件（如果提供）
+        # Prepare data file (if provided)
         transferred_data = None
         context = {"analysis_type": analysis_type}
 
         if data_file:
-            logger.info(f"处理数据文件: {data_file}")
+            logger.info(f"Processing data file: {data_file}")
 
             # 传递数据文件
             transfer_result = data_transfer.transfer_file_for_docker(
@@ -86,7 +86,7 @@ def iterative_code_analysis_tool(
             if not transfer_result["success"]:
                 return {
                     "success": False,
-                    "error": f"数据文件传递失败: {transfer_result.get('error', 'Unknown error')}",
+                    "error": f"Data file transfer failed: {transfer_result.get('error', 'Unknown error')}",
                     "analysis_type": analysis_type,
                     "attempts": 0,
                 }
@@ -100,21 +100,21 @@ def iterative_code_analysis_tool(
                 }
             )
 
-            # 为代码执行准备数据文件路径
+            # Prepare data file path for code execution
             if transfer_result["method"] == "file_mapping":
                 data_file_for_execution = transfer_result["transferred_path"]
             else:
-                # 数据库方式，使用配置文件
+                # Database method, use config file
                 data_file_for_execution = transfer_result.get("config_file")
 
-        # 构建增强的分析请求
+        # Build enhanced analysis request
         enhanced_request = _build_enhanced_request(
             request, analysis_type, transferred_data
         )
 
-        # 异步执行可迭代分析
+        # Async iterative analysis execution
         try:
-            # 在同步环境中运行异步代码
+            # Running async code in synchronous context
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
@@ -129,20 +129,20 @@ def iterative_code_analysis_tool(
             loop.close()
 
         except Exception as e:
-            logger.error(f"可迭代执行异常: {e}")
+            logger.error(f"Iterative execution error: {e}")
             return {
                 "success": False,
-                "error": f"代码执行异常: {str(e)}",
+                "error": f"Code execution error: {str(e)}",
                 "analysis_type": analysis_type,
                 "attempts": 0,
             }
 
-        # 后处理结果
+        # Post-process results
         processed_result = _process_analysis_result(
             result, analysis_type, transferred_data
         )
 
-        # 清理传递的数据
+        # Clean up transferred data
         if transferred_data:
             cleanup_success = data_transfer.cleanup_transferred_data(transferred_data)
             processed_result["cleanup_success"] = cleanup_success
@@ -150,10 +150,10 @@ def iterative_code_analysis_tool(
         return processed_result
 
     except Exception as e:
-        logger.error(f"可迭代代码分析工具异常: {e}")
+        logger.error(f"Iterative code analysis tool error: {e}")
         return {
             "success": False,
-            "error": f"工具异常: {str(e)}",
+            "error": f"Tool error: {str(e)}",
             "analysis_type": analysis_type,
             "attempts": 0,
         }
@@ -161,11 +161,11 @@ def iterative_code_analysis_tool(
 
 @tool
 def self_healing_code_execution_tool(
-    code: Annotated[str, "要执行的 Python 代码"],
-    description: Annotated[str, "代码描述和预期结果"],
-    data_files: Annotated[Optional[List[str]], "依赖的数据文件列表"] = None,
-    max_attempts: Annotated[int, "最大自我修复尝试次数"] = 5,
-    auto_fix_imports: Annotated[bool, "是否自动修复导入错误"] = True,
+    code: Annotated[str, "Python code to execute"],
+    description: Annotated[str, "Code description and expected result"],
+    data_files: Annotated[Optional[List[str]], "List of data file dependencies"] = None,
+    max_attempts: Annotated[int, "Maximum self-healing attempts"] = 5,
+    auto_fix_imports: Annotated[bool, "Whether to auto-fix import errors"] = True,
 ) -> Dict[str, Any]:
     """
     自我修复代码执行工具 - 智能修复执行错误的代码运行器
@@ -173,7 +173,7 @@ def self_healing_code_execution_tool(
     这个工具专门用于执行可能有问题的 Python 代码，并在遇到错误时自动修复：
     1. **导入错误自动修复**: 检测缺失的导入并自动添加
     2. **语法错误修正**: 修复常见的语法问题
-    3. **变量未定义**: 自动定义常用的变量
+    3. **Variable未定义**: 自动定义常用的Variable
     4. **文件路径修复**: 修正文件访问路径
     5. **类型错误处理**: 添加必要的类型转换
     6. **索引边界检查**: 修复数组/列表越界问题
@@ -182,15 +182,15 @@ def self_healing_code_execution_tool(
     - 第一次尝试：执行原始代码
     - 第二次尝试：添加缺失的导入
     - 第三次尝试：修复语法错误
-    - 第四次尝试：定义未使用的变量
+    - 第四次尝试：定义未使用的Variable
     - 第五次尝试：修复文件路径和类型转换
 
     Args:
-        code: 要执行的 Python 代码
-        description: 代码描述和预期结果
-        data_files: 依赖的数据文件列表
-        max_attempts: 最大自我修复尝试次数
-        auto_fix_imports: 是否自动修复导入错误
+        code: Python code to execute
+        description: Code description and expected result
+        data_files: List of data file dependencies
+        max_attempts: Maximum self-healing attempts
+        auto_fix_imports: Whether to auto-fix import errors
 
     Returns:
         执行结果字典，包含：
@@ -205,7 +205,7 @@ def self_healing_code_execution_tool(
     Example:
         >>> code = '''
         # 可能包含错误的代码
-        df = read_csv('data.csv')  # 缺少 pandas 导入
+        df = read_csv('data.csv')  # missing pandas import
         print(df.head())
         '''
         >>> result = self_healing_code_execution_tool.invoke({
@@ -213,7 +213,7 @@ def self_healing_code_execution_tool(
         ...     "description": "读取并显示数据前几行"
         ... })
         >>> print(f"修复成功: {result['success']}")
-        >>> print(f"应用修复: {result['fixes_applied']}")
+        >>> print(f"Fixes applied: {result['fixes_applied']}")
     """
 
     try:
@@ -228,7 +228,7 @@ def self_healing_code_execution_tool(
                 "fixes_applied": [],
             }
 
-        # 准备数据文件
+        # Prepare data file
         transferred_files = []
         context = {"description": description, "auto_fix_imports": auto_fix_imports}
 
@@ -241,25 +241,25 @@ def self_healing_code_execution_tool(
                     transferred_files.append(transfer_result["transferred_path"])
                     context[f"data_file_{len(transferred_files)}"] = transfer_result
 
-        # 构建执行请求
+        # Build execution request
         execution_request = f"""
-执行以下 Python 代码：
+Execute the following Python code:
 
-描述: {description}
+Description: {description}
 
-要求:
-1. 执行代码并返回结果
-2. 如果遇到错误，自动修复并重试
-3. 最多尝试 {max_attempts} 次
-4. 保持代码的核心逻辑不变
+Requirements:
+1. Execute code and return results
+2. If errors occur, auto-fix and retry
+3. Maximum {max_attempts} attempts
+4. Keep the core logic unchanged
 
-代码:
+Code:
 ```python
 {code}
 ```
 """
 
-        # 异步执行自我修复
+        # Async self-healing execution
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -276,23 +276,23 @@ def self_healing_code_execution_tool(
             loop.close()
 
         except Exception as e:
-            logger.error(f"自我修复执行异常: {e}")
+            logger.error(f"Self-healing execution error: {e}")
             return {
                 "success": False,
-                "error": f"执行异常: {str(e)}",
+                "error": f"Execution error: {str(e)}",
                 "final_code": code,
                 "attempts": 0,
                 "fixes_applied": [],
             }
 
-        # 提取修复信息
+        # Extract fix information
         fixes_applied = []
         if "attempts" in result and len(result["attempts"]) > 1:
-            for attempt in result["attempts"][1:]:  # 跳过第一次原始尝试
+            for attempt in result["attempts"][1:]:  # Skip first original attempt
                 if attempt.fixes_applied:
                     fixes_applied.extend(attempt.fixes_applied)
 
-        # 清理数据文件
+        # Clean up data files
         for transfer_result in [
             tr for tr in context.values() if isinstance(tr, dict) and "success" in tr
         ]:
@@ -332,10 +332,10 @@ def self_healing_code_execution_tool(
         }
 
     except Exception as e:
-        logger.error(f"自我修复工具异常: {e}")
+        logger.error(f"Self-healing tool error: {e}")
         return {
             "success": False,
-            "error": f"工具异常: {str(e)}",
+            "error": f"Tool error: {str(e)}",
             "final_code": code,
             "attempts": 0,
             "fixes_applied": [],
@@ -345,54 +345,54 @@ def self_healing_code_execution_tool(
 def _build_enhanced_request(
     request: str, analysis_type: str, transferred_data: Optional[Dict[str, Any]] = None
 ) -> str:
-    """构建增强的分析请求"""
+    """Build enhanced analysis request"""
 
-    # 根据分析类型添加特定要求
+    # Add type-specific requirements
     type_requirements = {
         "eda": """
-探索性数据分析要求：
-1. 数据概览：形状、类型、缺失值
-2. 描述性统计：均值、中位数、标准差等
-3. 分布分析：直方图、箱线图、密度图
-4. 相关性分析：相关性矩阵和热力图
-5. 异常值检测：识别和可视化异常值
-6. 数据质量：重复值、缺失值模式分析
+Exploratory Data Analysis Requirements:
+1. Data overview: shape, types, missing values
+2. Descriptive statistics: mean, median, std, etc.
+3. Distribution analysis: histograms, box plots, density plots
+4. Correlation analysis: correlation matrix and heatmaps
+5. Outlier detection: identify and visualize outliers
+6. Data quality: duplicates and missing value pattern analysis
 """,
         "ml_model": """
-机器学习模型要求：
-1. 数据预处理：特征工程、数据清洗
-2. 特征选择：相关性分析、重要性排序
-3. 模型选择：至少尝试2-3种算法
-4. 模型训练：交叉验证、超参数调优
-5. 模型评估：准确率、精确率、召回率、F1分数
-6. 结果解释：特征重要性、模型可解释性
+Machine Learning Model Requirements:
+1. Data preprocessing: feature engineering, data cleaning
+2. Feature selection: correlation analysis, importance ranking
+3. Model selection: try at least 2-3 algorithms
+4. Model training: cross-validation, hyperparameter tuning
+5. Model evaluation: accuracy, precision, recall, F1 score
+6. Result interpretation: feature importance, model explainability
 """,
         "visualization": """
-数据可视化要求：
-1. 基础图表：柱状图、折线图、散点图
-2. 统计图表：箱线图、小提琴图、热力图
-3. 交互式图表：使用 plotly 创建可交互图表
-4. 多维可视化：3D图表、平行坐标图
-5. 美化图表：设置标题、标签、颜色主题
-6. 保存图片：高清输出多种格式
+Data Visualization Requirements:
+1. Basic charts: bar charts, line charts, scatter plots
+2. Statistical charts: box plots, violin plots, heatmaps
+3. Interactive charts: create interactive charts with Plotly
+4. Multi-dimensional visualization: 3D charts, parallel coordinates
+5. Chart styling: set titles, labels, color themes
+6. Save images: high-resolution output in multiple formats
 """,
         "statistical": """
-统计分析要求：
-1. 描述性统计：完整的数据摘要
-2. 假设检验：t检验、卡方检验等
-3. 相关性分析：Pearson、Spearman相关系数
-4. 方差分析：单因素、多因素方差分析
-5. 回归分析：线性回归、多项式回归
-6. 置信区间：参数估计的置信区间
+Statistical Analysis Requirements:
+1. Descriptive statistics: complete data summary
+2. Hypothesis testing: t-test, chi-square test, etc.
+3. Correlation analysis: Pearson, Spearman coefficients
+4. ANOVA: one-way, multi-factor analysis of variance
+5. Regression analysis: linear regression, polynomial regression
+6. Confidence intervals: parameter estimation confidence intervals
 """,
     }
 
     requirements = type_requirements.get(analysis_type, "")
 
     enhanced_request = f"""
-用户请求: {request}
+User request: {request}
 
-分析类型: {analysis_type}
+Analysis type: {analysis_type}
 
 {requirements}
 
@@ -416,11 +416,11 @@ print("✓ Matplotlib font settings initialized")
     if transferred_data:
         enhanced_request += f"""
 
-数据文件信息：
-- 文件名: {transferred_data['file_info']['name']}
-- 文件大小: {transferred_data['file_info']['size_mb']} MB
-- 传递方式: {transferred_data['method']}
-- 数据路径: {transferred_data.get('container_path', transferred_data.get('transferred_path'))}
+Data file information:
+- Filename: {transferred_data['file_info']['name']}
+- File size: {transferred_data['file_info']['size_mb']} MB
+- Transfer method: {transferred_data['method']}
+- Data path: {transferred_data.get('container_path', transferred_data.get('transferred_path'))}
 """
 
     return enhanced_request
@@ -431,7 +431,7 @@ def _process_analysis_result(
     analysis_type: str,
     transferred_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """处理分析结果"""
+    """Process analysis result"""
 
     processed = {
         "success": result.get("success", False),
@@ -447,7 +447,7 @@ def _process_analysis_result(
     }
 
     if result.get("success", False):
-        # 成功时的额外信息
+        # Additional info on success
         processed["summary"] = result.get("summary", {})
         processed["performance_metrics"] = {
             "total_attempts": result.get("attempts", 0),
@@ -456,7 +456,7 @@ def _process_analysis_result(
             "visualizations_generated": len(result.get("visualizations", [])),
         }
 
-        # 数据传递信息
+        # Data transfer info
         if transferred_data:
             processed["data_transfer"] = {
                 "method": transferred_data["method"],
@@ -464,7 +464,7 @@ def _process_analysis_result(
                 "transfer_success": True,
             }
     else:
-        # 失败时的错误分析
+        # Error analysis on failure
         processed["error_analysis"] = {
             "error_message": result.get("error_message", "Unknown error"),
             "failed_attempts": result.get("failed_attempts", []),
@@ -476,35 +476,35 @@ def _process_analysis_result(
 
 
 def _generate_error_suggestions(result: Dict[str, Any]) -> List[str]:
-    """根据错误生成修复建议"""
+    """Generate fix suggestions based on errors"""
     suggestions = []
 
     error_message = result.get("error_message", "").lower()
 
     if "import" in error_message and "no module" in error_message:
-        suggestions.append("检查并安装缺失的 Python 库")
-        suggestions.append("添加正确的 import 语句")
+        suggestions.append("Check and install missing Python libraries")
+        suggestions.append("Add correct import statements")
 
     if "file" in error_message and (
         "not found" in error_message or "no such file" in error_message
     ):
-        suggestions.append("检查文件路径是否正确")
-        suggestions.append("确认文件权限和可访问性")
+        suggestions.append("Check if file path is correct")
+        suggestions.append("Verify file permissions and accessibility")
 
     if "memory" in error_message or "out of memory" in error_message:
-        suggestions.append("减少数据集大小或使用数据采样")
-        suggestions.append("优化内存使用，避免大对象")
+        suggestions.append("Reduce dataset size or use data sampling")
+        suggestions.append("Optimize memory usage, avoid large objects")
 
     if "timeout" in error_message:
-        suggestions.append("优化算法复杂度")
-        suggestions.append("增加执行时间限制")
+        suggestions.append("Optimize algorithm complexity")
+        suggestions.append("Increase execution time limit")
 
     if "syntax" in error_message:
-        suggestions.append("检查代码语法错误")
-        suggestions.append("验证括号、引号等配对")
+        suggestions.append("Check code syntax errors")
+        suggestions.append("Verify bracket and quote pairing")
 
     if suggestions == []:
-        suggestions.append("检查代码逻辑和数据兼容性")
-        suggestions.append("尝试简化分析步骤")
+        suggestions.append("Check code logic and data compatibility")
+        suggestions.append("Try to simplify analysis steps")
 
     return suggestions
