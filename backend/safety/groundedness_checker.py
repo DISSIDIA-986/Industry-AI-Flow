@@ -12,26 +12,26 @@ logger = logging.getLogger(__name__)
 
 
 class GroundednessLevel(Enum):
-    """真实性等级"""
-    FULLY_GROUNDED = "fully_grounded"  # 完全基于上下文
-    PARTIALLY_GROUNDED = "partially_grounded"  # 部分基于上下文
-    NOT_GROUNDED = "not_grounded"  # 不基于上下文
-    HALLUCINATION = "hallucination"  # 幻觉/虚构
+    """Groundedness level"""
+    FULLY_GROUNDED = "fully_grounded"  # Fully grounded in context
+    PARTIALLY_GROUNDED = "partially_grounded"  # Partially grounded in context
+    NOT_GROUNDED = "not_grounded"  # Not grounded in context
+    HALLUCINATION = "hallucination"  # Hallucination
 
 
 class ClaimType(Enum):
-    """声明类型"""
-    FACTUAL = "factual"  # 事实性声明
-    NUMERICAL = "numerical"  # 数字性声明
-    TEMPORAL = "temporal"  # 时间性声明
-    SPATIAL = "spatial"  # 空间性声明
-    CAUSAL = "causal"  # 因果性声明
-    COMPARATIVE = "comparative"  # 比较性声明
+    """Claim type"""
+    FACTUAL = "factual"  # Factual claim
+    NUMERICAL = "numerical"  # Numerical claim
+    TEMPORAL = "temporal"  # Temporal claim
+    SPATIAL = "spatial"  # Spatial claim
+    CAUSAL = "causal"  # Causal claim
+    COMPARATIVE = "comparative"  # Comparative claim
 
 
 @dataclass
 class Claim:
-    """声明"""
+    """Claim"""
     text: str
     claim_type: ClaimType
     confidence: float
@@ -46,7 +46,7 @@ class Claim:
 
 @dataclass
 class GroundednessResult:
-    """真实性检查结果"""
+    """Groundedness check result"""
     claim: Claim
     is_grounded: bool
     supporting_context: List[str]
@@ -55,44 +55,44 @@ class GroundednessResult:
 
 
 class GroundednessChecker:
-    """真实性检查器"""
+    """Groundedness checker"""
 
-    # 事实性声明模式
+    # Factual claim模式
     factual_patterns = [
         r"\b(?:is|are|was|were|has|have|had)\b(?:\s+\w+)?(?:\s+(?:a|an|the))?\s*\w*\b",
         r"\b(?:according to|based on|as per)\b\s+\w+\b",
         r"\b(?:shows?|indicates?|demonstrates?|proves?)\b\s+that\b",
     ]
     
-    # 数字性声明模式
+    # Numerical claim模式
     numerical_patterns = [
         r"\b\d+(?:\.\d+)?\s*(?:percent|%|dollars?|\$|years?|months?|days?)\b",
         r"\b(?:increase|decrease|growth|decline)\b\s+of\s+\d+(?:\.\d+)?\b",
         r"\b(?:more than|less than|about|approximately)\b\s+\d+(?:\.\d+)?\b",
     ]
     
-    # 时间性声明模式
+    # Temporal claim模式
     temporal_patterns = [
         r"\b(?:in|on|at|during)\b\s+\d{4}(?:-\d{2})?(?:-\d{2})?\b",
         r"\b(?:before|after|since|until)\b\s+\d{4}(?:-\d{2})?(?:-\d{2})?\b",
         r"\b(?:recently|previously|currently|formerly)\b",
     ]
     
-    # 空间性声明模式
+    # Spatial claim模式
     spatial_patterns = [
         r"\b(?:in|at|on|near)\b\s+\w+\s*(?:city|country|region|area)\b",
         r"\b(?:located|situated|positioned)\b\s+(?:in|at|on)\s+\w+\b",
         r"\b(?:from|to)\b\s+\w+\s+(?:to|from)\s+\w+\b",
     ]
     
-    # 因果性声明模式
+    # Causal claim模式
     causal_patterns = [
         r"\b(?:because|since|as|due to|owing to)\b\s+\w+\b",
         r"\b(?:leads? to|results? in|causes?|triggers?)\b\s+\w+\b",
         r"\b(?:therefore|thus|hence|consequently)\b\s+\w+\b",
     ]
     
-    # 比较性声明模式
+    # Comparative claim模式
     comparative_patterns = [
         r"\b(?:more|less|better|worse|higher|lower)\b\s+than\s+\w+\b",
         r"\b(?:similar to|different from|compared to)\b\s+\w+\b",
@@ -101,16 +101,16 @@ class GroundednessChecker:
 
     def __init__(self, model_name: str = "default") -> None:
         """
-        初始化真实性检查器
+        初始化Groundedness checker
 
         Args:
-            model_name: 模型名称（预留参数）
+            model_name: Model name (reserved parameter)
         """
         self.model_name = model_name
         self._compile_patterns()
 
     def _compile_patterns(self) -> None:
-        """编译正则表达式模式"""
+        """Compile regex patterns"""
         self.patterns = {
             ClaimType.FACTUAL: [re.compile(p, re.IGNORECASE) for p in self.factual_patterns],
             ClaimType.NUMERICAL: [re.compile(p, re.IGNORECASE) for p in self.numerical_patterns],
@@ -122,14 +122,14 @@ class GroundednessChecker:
 
     def extract_claims(self, text: str, check_types: Optional[List[ClaimType]] = None) -> List[Claim]:
         """
-        从文本中提取声明
+        从文本中提取Claim
 
         Args:
             text: 输入文本
-            check_types: 要检查的声明类型
+            check_types: 要检查的Claim type
 
         Returns:
-            声明列表
+            Claim列表
         """
         if check_types is None:
             check_types = list(ClaimType)
@@ -171,21 +171,21 @@ class GroundednessChecker:
 
     def verify_claim(self, claim: Claim, context: List[str]) -> GroundednessResult:
         """
-        验证声明是否在上下文中得到支持
+        验证Claim是否在上下文中得到支持
 
         Args:
-            claim: 声明
+            claim: Claim
             context: 上下文
 
         Returns:
-            真实性检查结果
+            Groundedness check result
         """
         supporting_context = []
         confidence_score = 0.0
 
         # 简单的字符串匹配验证
         for ctx in context:
-            # 检查声明文本是否在上下文中出现
+            # 检查Claim文本是否在上下文中出现
             if claim.text.lower() in ctx.lower():
                 supporting_context.append(ctx)
                 confidence_score += 0.3
@@ -252,14 +252,14 @@ class GroundednessChecker:
             generated_text: 生成的文本
             context: 上下文列表
             threshold: 置信度阈值
-            check_types: 要检查的声明类型
+            check_types: 要检查的Claim type
 
         Returns:
             检查结果字典
         """
         logger.info(f"Checking groundedness for text of length {len(generated_text)}")
 
-        # 提取声明
+        # 提取Claim
         if check_types is None:
             check_types = list(ClaimType)
         claims = self.extract_claims(generated_text, check_types)
@@ -276,7 +276,7 @@ class GroundednessChecker:
                 "details": {"message": "No claims found in generated text"}
             }
 
-        # 验证每个声明
+        # 验证每个Claim
         results = []
         grounded_claims = []
         ungrounded_claims = []
@@ -299,7 +299,7 @@ class GroundednessChecker:
         else:
             overall_score = 1.0
 
-        # 确定真实性等级
+        # 确定Groundedness level
         if overall_score >= 0.9:
             groundedness_level = GroundednessLevel.FULLY_GROUNDED
         elif overall_score >= 0.7:
@@ -336,7 +336,7 @@ class GroundednessChecker:
             context: 上下文
 
         Returns:
-            (是否真实, 置信度分数, 不真实的声明列表)
+            (是否真实, 置信度分数, 不真实的Claim列表)
         """
         response = self.check(generated_text, context)
 
@@ -353,10 +353,10 @@ _GROUNDEDNESS_CHECKER = None
 
 def get_groundedness_checker() -> GroundednessChecker:
     """
-    获取全局真实性检查器实例
+    获取全局Groundedness checker实例
 
     Returns:
-        真实性检查器实例
+        Groundedness checker实例
     """
     global _GROUNDEDNESS_CHECKER
     if _GROUNDEDNESS_CHECKER is None:
@@ -373,7 +373,7 @@ def check_groundedness(generated_text: str, context: List[str]) -> Tuple[bool, f
         context: 上下文
 
     Returns:
-        (是否真实, 置信度分数, 不真实的声明列表)
+        (是否真实, 置信度分数, 不真实的Claim列表)
     """
     checker = get_groundedness_checker()
     return checker.check_simple(generated_text, context)
@@ -405,7 +405,7 @@ if __name__ == "__main__":
     print(f"Ungrounded Claims: {len(response['ungrounded_claims'])}")
     print(f"Hallucinated Claims: {len(response['hallucinated_claims'])}")
 
-    # 打印不真实的声明
+    # 打印不真实的Claim
     if response['ungrounded_claims'] or response['hallucinated_claims']:
         print("\nUngrounded/Hallucinated Claims:")
         for claim in response['ungrounded_claims'] + response['hallucinated_claims']:

@@ -34,7 +34,7 @@ def init_database():
         except Exception as e:
             logger.warning(f"Failed to enable pgvector extension: {e}")
             logger.info("Continuing without pgvector (vectors will be stored as TEXT)")
-            conn.rollback()  # 回滚失败的事务
+            conn.rollback()  # Rollback failed transaction
             pgvector_available = False
 
         # 创建文档表
@@ -218,7 +218,7 @@ def init_database():
         """
         )
 
-        # 创建文档操作日志表
+        # 创建文档Operation Log表
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS document_operations_log (
