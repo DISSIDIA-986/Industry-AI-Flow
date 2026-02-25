@@ -81,6 +81,6 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
 
         state = await _run_node(node_name=node_name, handler=handler, state=state, services=services)
 
-    if not state.get("response"):
+    if state.get("error") or not state.get("response"):
         state = await response_node(state, services)
     return state

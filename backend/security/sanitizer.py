@@ -46,8 +46,13 @@ def sanitize_text(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} exceeds max length of {max_length} characters.",
         )
-    # URL-decode before pattern checks so %3Cscript%3E is detected as <script>
-    decoded = unquote(stripped)
+    # URL-decode iteratively so double/triple encoding is fully resolved.
+    decoded = stripped
+    for _ in range(5):
+        next_decoded = unquote(decoded)
+        if next_decoded == decoded:
+            break
+        decoded = next_decoded
     if SCRIPT_PATTERN.search(decoded) or CONTROL_CHAR_PATTERN.search(decoded):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

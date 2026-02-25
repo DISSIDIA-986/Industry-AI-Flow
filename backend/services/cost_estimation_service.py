@@ -172,7 +172,7 @@ class _RidgeModel:
 
 
 def _parse_human_number(value: str) -> Optional[float]:
-    cleaned = value.strip().lower().replace(",", "")
+    cleaned = value.strip().lower().replace(",", "").replace(" ", "")
     multiplier = 1.0
     if cleaned.endswith("k"):
         multiplier = 1_000.0
