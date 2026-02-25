@@ -1,5 +1,5 @@
 """
-文档管理模块 - 处理文档的更新、删除和版本管理
+EN - EN,EN
 """
 
 import datetime
@@ -15,12 +15,13 @@ from backend.services.core.chunker import DocumentChunker
 from backend.services.core.embedder import embed_single_text
 from backend.services.core.vectorstore import VectorStore
 from backend.services.document_loader import DocumentLoader
+from backend.services.retrieval.document_profile import DocumentProfileService
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentOperation(Enum):
-    """文档操作类型"""
+    """EN"""
 
     CREATE = "create"
     UPDATE = "update"
@@ -30,7 +31,7 @@ class DocumentOperation(Enum):
 
 @dataclass
 class DocumentVersion:
-    """文档版本信息"""
+    """EN"""
 
     doc_id: str
     version: int
@@ -43,21 +44,34 @@ class DocumentVersion:
 
 
 class DocumentManager:
-    """文档管理器 - 处理文档的CRUD操作和版本管理"""
+    """EN - ENCRUDEN"""
 
     def __init__(self, vectorstore: VectorStore):
         self.vectorstore = vectorstore
         self.document_loader = DocumentLoader()
         self.chunker = DocumentChunker()
+        self.document_profile_service = DocumentProfileService(vectorstore)
         self._init_database()
 
+    def _refresh_profile_best_effort(self, doc_id: str) -> None:
+        try:
+            self.document_profile_service.refresh_profile_for_document(doc_id)
+        except Exception as exc:  # pragma: no cover - runtime best effort
+            logger.warning("Failed to refresh document profile for %s: %s", doc_id, exc)
+
+    def _remove_profile_best_effort(self, doc_id: str) -> None:
+        try:
+            self.document_profile_service.remove_profile(doc_id)
+        except Exception as exc:  # pragma: no cover - runtime best effort
+            logger.warning("Failed to remove document profile for %s: %s", doc_id, exc)
+
     def _init_database(self):
-        """初始化文档管理相关的数据库表"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 创建文档版本表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_versions (
@@ -76,7 +90,7 @@ class DocumentManager:
             """
             )
 
-            # 创建文档操作日志表
+            # EN
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_operations_log (
@@ -93,25 +107,25 @@ class DocumentManager:
             """
             )
 
-            # 创建文档更新触发器
+            # EN
             cur.execute(
                 """
                 CREATE OR REPLACE FUNCTION update_document_versions()
                 RETURNS TRIGGER AS $$
                 BEGIN
-                    -- 更新旧版本为非活跃状态
+                    -- EN
                     UPDATE document_versions
                     SET is_active = FALSE
                     WHERE doc_id = NEW.doc_id AND is_active = TRUE AND version != NEW.version;
 
-                    -- 返回新的活跃版本
+                    -- EN
                     RETURN NEW;
                 END;
                 $$ LANGUAGE plpgsql;
             """
             )
 
-            # 创建触发器
+            # EN
             cur.execute(
                 """
                 DROP TRIGGER IF EXISTS trigger_update_document_versions ON document_versions;
@@ -122,7 +136,7 @@ class DocumentManager:
             """
             )
 
-            # 创建索引
+            # EN
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)"
             )
@@ -148,15 +162,15 @@ class DocumentManager:
         self, doc_id: str, new_filepath: str, reason: str = None
     ) -> bool:
         """
-        更新文档内容
+        EN
 
         Args:
-            doc_id: 文档ID
-            new_filepath: 新文件路径
-            reason: 更新原因
+            doc_id: ENID
+            new_filepath: EN
+            reason: EN
 
         Returns:
-            是否更新成功
+            EN
         """
         if not settings.enable_document_update:
             logger.warning("Document update is disabled")
@@ -166,7 +180,7 @@ class DocumentManager:
         cur = conn.cursor()
 
         try:
-            # 检查文档是否存在
+            # EN
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -178,12 +192,12 @@ class DocumentManager:
 
             old_filename, old_filepath = existing_doc
 
-            # 检查新文件是否存在
+            # EN
             if not os.path.exists(new_filepath):
                 logger.error(f"New file not found: {new_filepath}")
                 return False
 
-            # 获取当前版本号
+            # EN
             cur.execute(
                 "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                 (doc_id,),
@@ -191,15 +205,15 @@ class DocumentManager:
             current_version = cur.fetchone()[0]
             new_version = current_version + 1
 
-            # 加载并处理新文档
+            # EN
             try:
-                # 加载文档内容
+                # EN
                 new_filename = os.path.basename(new_filepath)
                 documents = self.document_loader.load_document(new_filepath)
                 if not documents:
                     raise ValueError(f"No content loaded from {new_filepath}")
 
-                # 分块处理
+                # EN
                 chunks = []
                 for doc in documents:
                     doc_chunks = self.chunker.chunk_document(doc)
@@ -208,7 +222,7 @@ class DocumentManager:
                 if not chunks:
                     raise ValueError(f"No chunks generated from {new_filepath}")
 
-                # 生成嵌入向量
+                # EN
                 embeddings = [embed_single_text(chunk) for chunk in chunks]
 
             except Exception as e:
@@ -224,10 +238,10 @@ class DocumentManager:
                 )
                 return False
 
-            # 删除旧的文档块
+            # EN
             cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-            # 插入新的文档块
+            # EN
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -237,7 +251,7 @@ class DocumentManager:
                     (doc_id, i, chunk, embedding),
                 )
 
-            # 更新文档记录
+            # EN
             cur.execute(
                 """
                 UPDATE documents
@@ -247,7 +261,7 @@ class DocumentManager:
                 (new_filename, new_filepath, len(chunks), doc_id),
             )
 
-            # 创建版本记录
+            # EN
             cur.execute(
                 """
                 INSERT INTO document_versions (doc_id, version, filename, filepath, chunk_count, operation, is_active)
@@ -264,8 +278,9 @@ class DocumentManager:
             )
 
             conn.commit()
+            self._refresh_profile_best_effort(doc_id)
 
-            # 记录成功操作
+            # EN
             self._log_operation(
                 doc_id,
                 DocumentOperation.UPDATE,
@@ -301,15 +316,15 @@ class DocumentManager:
         self, doc_id: str, reason: str = None, soft_delete: bool = True
     ) -> bool:
         """
-        删除文档
+        EN
 
         Args:
-            doc_id: 文档ID
-            reason: 删除原因
-            soft_delete: 是否软删除（默认为True）
+            doc_id: ENID
+            reason: EN
+            soft_delete: EN(ENTrue)
 
         Returns:
-            是否删除成功
+            EN
         """
         if not settings.enable_document_deletion:
             logger.warning("Document deletion is disabled")
@@ -319,7 +334,7 @@ class DocumentManager:
         cur = conn.cursor()
 
         try:
-            # 获取文档信息
+            # EN
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -332,7 +347,7 @@ class DocumentManager:
             filename, filepath = doc_info
 
             if soft_delete:
-                # 软删除：只标记为非活跃状态
+                # EN:EN
                 cur.execute(
                     """
                     UPDATE document_versions
@@ -342,10 +357,10 @@ class DocumentManager:
                     (doc_id,),
                 )
 
-                # 删除文档块
+                # EN
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-                # 更新文档记录（保留基本信息）
+                # EN(EN)
                 cur.execute(
                     """
                     UPDATE documents
@@ -355,7 +370,7 @@ class DocumentManager:
                     (doc_id,),
                 )
 
-                # 创建版本记录
+                # EN
                 cur.execute(
                     "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                     (doc_id,),
@@ -379,7 +394,7 @@ class DocumentManager:
                 )
 
             else:
-                # 硬删除：完全移除
+                # EN:EN
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
                 cur.execute(
                     "DELETE FROM document_versions WHERE doc_id = %s", (doc_id,)
@@ -387,8 +402,9 @@ class DocumentManager:
                 cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
 
             conn.commit()
+            self._remove_profile_best_effort(doc_id)
 
-            # 记录操作
+            # EN
             delete_type = "soft_delete" if soft_delete else "hard_delete"
             self._log_operation(
                 doc_id,
@@ -426,21 +442,21 @@ class DocumentManager:
         self, doc_id: str, new_filepath: str, reason: str = None
     ) -> bool:
         """
-        替换文档（先删除后添加，保持相同的doc_id）
+        EN(EN,ENdoc_id)
 
         Args:
-            doc_id: 原文档ID
-            new_filepath: 新文件路径
-            reason: 替换原因
+            doc_id: ENID
+            new_filepath: EN
+            reason: EN
 
         Returns:
-            是否替换成功
+            EN
         """
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # 检查文档是否存在
+            # EN
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -452,22 +468,22 @@ class DocumentManager:
 
             old_filename, old_filepath = existing_doc
 
-            # 检查新文件是否存在
+            # EN
             if not os.path.exists(new_filepath):
                 logger.error(f"Replacement file not found: {new_filepath}")
                 return False
 
-            # 删除旧文档块
+            # EN
             cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-            # 加载并处理新文档
+            # EN
             try:
                 new_filename = os.path.basename(new_filepath)
                 documents = self.document_loader.load_document(new_filepath)
                 if not documents:
                     raise ValueError(f"No content loaded from {new_filepath}")
 
-                # 分块处理
+                # EN
                 chunks = []
                 for doc in documents:
                     doc_chunks = self.chunker.chunk_document(doc)
@@ -476,7 +492,7 @@ class DocumentManager:
                 if not chunks:
                     raise ValueError(f"No chunks generated from {new_filepath}")
 
-                # 生成嵌入向量
+                # EN
                 embeddings = [embed_single_text(chunk) for chunk in chunks]
 
             except Exception as e:
@@ -492,7 +508,7 @@ class DocumentManager:
                 )
                 return False
 
-            # 插入新的文档块
+            # EN
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -502,7 +518,7 @@ class DocumentManager:
                     (doc_id, i, chunk, embedding),
                 )
 
-            # 更新文档记录
+            # EN
             cur.execute(
                 """
                 UPDATE documents
@@ -512,7 +528,7 @@ class DocumentManager:
                 (new_filename, new_filepath, len(chunks), doc_id),
             )
 
-            # 创建版本记录
+            # EN
             cur.execute(
                 "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                 (doc_id,),
@@ -536,8 +552,9 @@ class DocumentManager:
             )
 
             conn.commit()
+            self._refresh_profile_best_effort(doc_id)
 
-            # 记录操作
+            # EN
             self._log_operation(
                 doc_id,
                 DocumentOperation.REPLACE,
@@ -570,7 +587,7 @@ class DocumentManager:
             conn.close()
 
     def get_document_versions(self, doc_id: str) -> List[DocumentVersion]:
-        """获取文档的所有版本"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -612,16 +629,16 @@ class DocumentManager:
     def restore_document_version(
         self, doc_id: str, version: int, reason: str = None
     ) -> bool:
-        """恢复文档到指定版本"""
-        # 这里可以实现版本恢复逻辑
-        # 由于需要存储历史版本的完整内容，这需要更复杂的存储策略
+        """EN"""
+        # EN
+        # EN,EN
         logger.info(
             f"Document version restoration not yet implemented for {doc_id} version {version}"
         )
         return False
 
     def get_operation_log(self, doc_id: str = None, limit: int = 50) -> List[Dict]:
-        """获取文档操作日志"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -682,7 +699,7 @@ class DocumentManager:
         status: str = "success",
         error_message: str = None,
     ):
-        """记录文档操作日志"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -712,18 +729,18 @@ class DocumentManager:
             conn.close()
 
     def get_document_statistics(self) -> Dict:
-        """获取文档统计信息"""
+        """EN"""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
             stats = {}
 
-            # 总文档数
+            # EN
             cur.execute("SELECT COUNT(*) FROM documents")
             stats["total_documents"] = cur.fetchone()[0]
 
-            # 活跃文档数
+            # EN
             cur.execute(
                 """
                 SELECT COUNT(DISTINCT dv.doc_id)
@@ -733,11 +750,11 @@ class DocumentManager:
             )
             stats["active_documents"] = cur.fetchone()[0]
 
-            # 总文档块数
+            # EN
             cur.execute("SELECT COUNT(*) FROM document_chunks")
             stats["total_chunks"] = cur.fetchone()[0]
 
-            # 版本统计
+            # EN
             cur.execute(
                 """
                 SELECT operation, COUNT(*)

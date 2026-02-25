@@ -76,11 +76,12 @@ class CodeValidator:
         "collections",
         "itertools",
         "functools",
+        "warnings",
     }
 
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
-        r"__.*__",  # Dunder methods (potential introspection)
+        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__)\b",  # Dangerous dunder attribute access
         r"globals\(",  # Global scope access
         r"locals\(",  # Local scope access
         r"vars\(",  # Variable introspection
@@ -91,6 +92,24 @@ class CodeValidator:
         r"\.system\(",  # System calls
         r"\.popen\(",  # Process execution
     ]
+
+    BLOCKED_CALL_NAMES = {
+        "open",
+        "eval",
+        "exec",
+        "compile",
+        "__import__",
+        "input",
+        "raw_input",
+    }
+    BLOCKED_ATTRIBUTE_CALLS = {
+        ("builtins", "open"),
+        ("os", "system"),
+        ("os", "popen"),
+        ("subprocess", "popen"),
+        ("subprocess", "run"),
+        ("subprocess", "call"),
+    }
 
     def __init__(self, strict_mode: bool = True):
         """
@@ -143,6 +162,11 @@ class CodeValidator:
             return import_result
 
         warnings.extend(import_result.warnings)
+
+        # Check blocked calls (including aliased calls).
+        call_result = self._validate_blocked_calls(tree)
+        if not call_result.is_valid:
+            return call_result
 
         # Check for infinite loops (basic detection)
         loop_warning = self._check_loops(tree)
@@ -198,6 +222,62 @@ class CodeValidator:
                 is_valid=True,
                 warnings=[f"Non-whitelisted import: {module}"],
             )
+
+        return ValidationResult(is_valid=True)
+
+    def _validate_blocked_calls(self, tree: ast.AST) -> ValidationResult:
+        """Validate dangerous function calls, including simple aliases."""
+        blocked_attr_calls = {
+            (base.lower(), attr.lower()) for base, attr in self.BLOCKED_ATTRIBUTE_CALLS
+        }
+        blocked_names = {name.lower() for name in self.BLOCKED_CALL_NAMES}
+        alias_names: set[str] = set()
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if not isinstance(target, ast.Name):
+                continue
+
+            if isinstance(node.value, ast.Name):
+                if node.value.id.lower() in blocked_names:
+                    alias_names.add(target.id.lower())
+                continue
+
+            if isinstance(node.value, ast.Attribute) and isinstance(
+                node.value.value, ast.Name
+            ):
+                base = node.value.value.id.lower()
+                attr = node.value.attr.lower()
+                if (base, attr) in blocked_attr_calls:
+                    alias_names.add(target.id.lower())
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+
+            if isinstance(node.func, ast.Name):
+                func_name = node.func.id.lower()
+                if func_name in blocked_names or func_name in alias_names:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked function call: {node.func.id}",
+                    )
+                continue
+
+            if isinstance(node.func, ast.Attribute) and isinstance(
+                node.func.value, ast.Name
+            ):
+                base = node.func.value.id.lower()
+                attr = node.func.attr.lower()
+                if (base, attr) in blocked_attr_calls:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked function call: {node.func.value.id}.{node.func.attr}",
+                    )
 
         return ValidationResult(is_valid=True)
 

@@ -145,9 +145,9 @@ async def test_build_memory_payload_returns_three_layers():
     for idx in range(3):
         session.add_interaction(_make_interaction(f"msg-{idx}", idx))
 
-    payload = manager.build_memory_payload(session, user_query="最新问题")
+    payload = manager.build_memory_payload(session, user_query="EN")
 
     assert "short_term" in payload and len(payload["short_term"]) == 4
     assert payload["summary"] == "Existing summary"
     assert payload["long_term"] and payload["long_term"][0]["memory_id"] == "mem-long-1"
-    assert store.last_query["query"] == "最新问题"
+    assert store.last_query["query"] == "EN"

@@ -1,5 +1,5 @@
 """
-Groundedness Checker 简化测试
+Groundedness Checker EN
 """
 
 import pytest
@@ -13,16 +13,16 @@ from backend.safety.groundedness_checker import (
 
 
 class TestGroundednessChecker:
-    """GroundednessChecker 测试类"""
+    """GroundednessChecker EN"""
     
     def test_checker_initialization(self):
-        """测试检查器初始化"""
+        """EN"""
         checker = GroundednessChecker()
         assert checker is not None
         assert hasattr(checker, 'patterns')
     
     def test_claim_type_enum(self):
-        """测试声明类型枚举"""
+        """EN"""
         assert ClaimType.FACTUAL.value == "factual"
         assert ClaimType.NUMERICAL.value == "numerical"
         assert ClaimType.TEMPORAL.value == "temporal"
@@ -31,23 +31,23 @@ class TestGroundednessChecker:
         assert ClaimType.COMPARATIVE.value == "comparative"
     
     def test_groundedness_level_enum(self):
-        """测试真实性等级枚举"""
+        """EN"""
         assert GroundednessLevel.FULLY_GROUNDED.value == "fully_grounded"
         assert GroundednessLevel.PARTIALLY_GROUNDED.value == "partially_grounded"
         assert GroundednessLevel.NOT_GROUNDED.value == "not_grounded"
         assert GroundednessLevel.HALLUCINATION.value == "hallucination"
     
     def test_check_fully_grounded_simple(self):
-        """测试完全真实的简单检查"""
+        """EN"""
         checker = GroundednessChecker()
         
-        # 简单的真实文本
+        # EN
         generated_text = "The capital of France is Paris."
         context = ["Paris is the capital of France."]
         
         response = checker.check(generated_text, context)
         
-        # 验证响应结构
+        # EN
         assert "overall_score" in response
         assert "groundedness_level" in response
         assert "grounded_claims" in response
@@ -56,11 +56,11 @@ class TestGroundednessChecker:
         assert "results" in response
         assert "details" in response
         
-        # 由于是简单实现，分数应该合理
+        # EN,EN
         assert 0 <= response['overall_score'] <= 1
     
     def test_check_empty_text(self):
-        """测试空文本检查"""
+        """EN"""
         checker = GroundednessChecker()
         
         generated_text = ""
@@ -72,7 +72,7 @@ class TestGroundednessChecker:
         assert response['groundedness_level'] == GroundednessLevel.FULLY_GROUNDED.value
     
     def test_check_empty_context(self):
-        """测试空上下文检查"""
+        """EN"""
         checker = GroundednessChecker()
         
         generated_text = "The capital of France is Paris."
@@ -80,12 +80,12 @@ class TestGroundednessChecker:
         
         response = checker.check(generated_text, context)
         
-        # 没有上下文，应该不是完全真实的
+        # EN,EN
         assert response['overall_score'] < 1.0
         assert response['groundedness_level'] != GroundednessLevel.FULLY_GROUNDED.value
     
     def test_get_groundedness_checker_singleton(self):
-        """测试单例模式"""
+        """EN"""
         checker1 = get_groundedness_checker()
         checker2 = get_groundedness_checker()
         
@@ -93,39 +93,39 @@ class TestGroundednessChecker:
         assert isinstance(checker1, GroundednessChecker)
     
     def test_check_groundedness_simple(self):
-        """测试简化接口"""
+        """EN"""
         generated_text = "The capital of France is Paris."
         context = ["Paris is the capital of France."]
         
         is_grounded, score, ungrounded = check_groundedness(generated_text, context)
         
-        # 验证返回类型
+        # EN
         assert isinstance(is_grounded, bool)
         assert isinstance(score, float)
         assert isinstance(ungrounded, list)
         
-        # 分数应该在合理范围内
+        # EN
         assert 0 <= score <= 1
     
     def test_check_with_different_thresholds(self):
-        """测试不同阈值"""
+        """EN"""
         checker = GroundednessChecker()
         
         generated_text = "The capital of France is Paris."
         context = ["Paris is the capital of France."]
         
-        # 测试低阈值
+        # EN
         response_low = checker.check(generated_text, context, threshold=0.5)
         
-        # 测试高阈值
+        # EN
         response_high = checker.check(generated_text, context, threshold=0.9)
         
-        # 验证响应存在
+        # EN
         assert response_low is not None
         assert response_high is not None
     
     def test_check_with_specific_claim_types(self):
-        """测试特定声明类型"""
+        """EN"""
         checker = GroundednessChecker()
         
         generated_text = "In 2023, GDP increased by 3.5% compared to 2022."
@@ -145,7 +145,7 @@ class TestGroundednessChecker:
         assert "overall_score" in response
     
     def test_response_structure_completeness(self):
-        """测试响应结构完整性"""
+        """EN"""
         checker = GroundednessChecker()
         
         generated_text = "Test text with multiple claims."
@@ -153,7 +153,7 @@ class TestGroundednessChecker:
         
         response = checker.check(generated_text, context)
         
-        # 验证所有必需字段
+        # EN
         required_fields = [
             'overall_score',
             'groundedness_level',
@@ -167,7 +167,7 @@ class TestGroundednessChecker:
         for field in required_fields:
             assert field in response
         
-        # 验证字段类型
+        # EN
         assert isinstance(response['overall_score'], float)
         assert isinstance(response['groundedness_level'], str)
         assert isinstance(response['grounded_claims'], list)
@@ -177,7 +177,7 @@ class TestGroundednessChecker:
         assert isinstance(response['details'], dict)
     
     def test_groundedness_level_values(self):
-        """测试真实性等级值"""
+        """EN"""
         levels = [
             GroundednessLevel.FULLY_GROUNDED,
             GroundednessLevel.PARTIALLY_GROUNDED,
@@ -190,7 +190,7 @@ class TestGroundednessChecker:
             assert len(level.value) > 0
     
     def test_claim_type_values(self):
-        """测试声明类型值"""
+        """EN"""
         types = [
             ClaimType.FACTUAL,
             ClaimType.NUMERICAL,

@@ -33,20 +33,20 @@ class OllamaClient:
         **kwargs,
     ) -> str:
         """
-        调用Ollama生成文本
+        ENOllamaEN
 
         Args:
-            prompt: 输入提示词
-            temperature: 温度参数，控制随机性 (0.0-1.0)
-            max_tokens: 最大生成token数
-            top_p: 核采样参数 (0.0-1.0)
-            stream: 是否流式输出
-            **kwargs: 其他Ollama参数
+            prompt: EN
+            temperature: EN,EN (0.0-1.0)
+            max_tokens: ENtokenEN
+            top_p: EN (0.0-1.0)
+            stream: EN
+            **kwargs: ENOllamaEN
 
         Returns:
-            生成的文本
+            EN
         """
-        # 使用传入参数或默认值
+        # EN
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -62,13 +62,13 @@ class OllamaClient:
             },
         }
 
-        # 添加其他可选参数
+        # EN
         if kwargs:
             payload["options"].update(kwargs)
 
         try:
             response = requests.post(
-                f"{self.base_url}/api/generate", json=payload, timeout=60  # 60秒超时
+                f"{self.base_url}/api/generate", json=payload, timeout=60  # 60EN
             )
             response.raise_for_status()
 
@@ -85,7 +85,7 @@ class OllamaClient:
             raise Exception(f"LLM generation error: {str(e)}")
 
     def _handle_stream_response(self, response) -> str:
-        """处理流式响应"""
+        """EN"""
         full_response = ""
         for line in response.iter_lines():
             if line:
@@ -112,16 +112,16 @@ class OllamaClient:
         top_p: Optional[float] = None,
     ) -> str:
         """
-        对话模式生成
+        EN
 
         Args:
-            messages: 消息列表，格式 [{"role": "user", "content": "..."}]
-            temperature: 温度参数
-            max_tokens: 最大token数
-            top_p: 核采样参数
+            messages: EN,EN [{"role": "user", "content": "..."}]
+            temperature: EN
+            max_tokens: ENtokenEN
+            top_p: EN
 
         Returns:
-            生成的回复
+            EN
         """
         payload = {
             "model": self.model,
@@ -150,7 +150,7 @@ class OllamaClient:
             raise Exception(f"LLM chat failed: {str(e)}")
 
     def get_model_info(self) -> Dict[str, Any]:
-        """获取模型信息"""
+        """EN"""
         try:
             response = requests.post(
                 f"{self.base_url}/api/show", json={"name": self.model}, timeout=30
@@ -162,7 +162,7 @@ class OllamaClient:
             return {}
 
     def list_models(self) -> list:
-        """列出可用模型"""
+        """EN"""
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=30)
             response.raise_for_status()
@@ -172,7 +172,7 @@ class OllamaClient:
             return []
 
     def update_config(self, **kwargs):
-        """更新默认配置"""
+        """EN"""
         valid_params = ["default_temperature", "default_max_tokens", "default_top_p"]
         for param, value in kwargs.items():
             if param in valid_params:
@@ -182,7 +182,7 @@ class OllamaClient:
                 logger.warning(f"Invalid parameter: {param}")
 
     def get_current_config(self) -> Dict[str, Any]:
-        """获取当前配置"""
+        """EN"""
         return {
             "model": self.model,
             "base_url": self.base_url,

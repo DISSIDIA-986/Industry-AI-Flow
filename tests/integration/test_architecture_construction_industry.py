@@ -15,23 +15,23 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-# 添加项目根目录到路径
+# EN
 project_root = Path(__file__).parent
 
 print("=== Architecture and Construction Industry Test Suite ===")
 print("Testing RAG system with architecture and construction domain data")
 print()
 
-# 激活虚拟环境
+# EN
 venv_python = project_root / "venv" / "bin" / "python3"
 if venv_python.exists():
-    print("✅ 虚拟环境检测成功")
+    print("✅ EN")
 else:
-    print("⚠️ 虚拟环境未找到，使用系统Python")
+    print("⚠️ EN,ENPython")
 
 
 class ArchitectureConstructionTester:
-    """架构和建筑行业测试器"""
+    """EN"""
 
     def __init__(self):
         self.test_resources_path = project_root / "test_resources"
@@ -40,26 +40,26 @@ class ArchitectureConstructionTester:
         self.test_cases_path = project_root / "test_cases"
 
     def test_dataset_loading(self):
-        """测试数据集加载"""
+        """EN"""
         print("=" * 60)
-        print("🏗️ 测试 1/5: 架构和建筑数据集加载")
+        print("🏗️ EN 1/5: EN")
         print("=" * 60)
 
         results = []
 
-        # 测试建筑项目数据集
+        # EN
         try:
             building_projects_file = (
                 self.datasets_path / "architecture_building_projects.csv"
             )
             if building_projects_file.exists():
                 df = pd.read_csv(building_projects_file)
-                print(f"✅ 建筑项目数据集加载成功:")
-                print(f"   - 数据形状: {df.shape}")
-                print(f"   - 项目类型: {df['project_type'].nunique()} 种")
-                print(f"   - 包含项目: {', '.join(df['name'].head(3).tolist())}...")
+                print(f"✅ EN:")
+                print(f"   - EN: {df.shape}")
+                print(f"   - EN: {df['project_type'].nunique()} EN")
+                print(f"   - EN: {', '.join(df['name'].head(3).tolist())}...")
 
-                # 数据质量检查
+                # EN
                 required_columns = [
                     "name",
                     "project_type",
@@ -70,16 +70,16 @@ class ArchitectureConstructionTester:
                     col for col in required_columns if col not in df.columns
                 ]
                 if missing_cols:
-                    print(f"   ⚠️ 缺失列: {missing_cols}")
+                    print(f"   ⚠️ EN: {missing_cols}")
                 else:
-                    print("   ✅ 所有必要列都存在")
+                    print("   ✅ EN")
 
-                # 基本统计
+                # EN
                 print(
-                    f"   - 建筑面积范围: {df['building_area_sqm'].min():,.0f} - {df['building_area_sqm'].max():,.0f} 平方米"
+                    f"   - EN: {df['building_area_sqm'].min():,.0f} - {df['building_area_sqm'].max():,.0f} EN"
                 )
                 print(
-                    f"   - 建设成本范围: ${df['construction_cost_usd'].min()/1e9:,.2f}B - ${df['construction_cost_usd'].max()/1e9:,.2f}B"
+                    f"   - EN: ${df['construction_cost_usd'].min()/1e9:,.2f}B - ${df['construction_cost_usd'].max()/1e9:,.2f}B"
                 )
 
                 results.append(
@@ -91,7 +91,7 @@ class ArchitectureConstructionTester:
                     }
                 )
             else:
-                print("❌ 建筑项目数据集文件不存在")
+                print("❌ EN")
                 results.append(
                     {
                         "dataset": "architecture_building_projects.csv",
@@ -100,7 +100,7 @@ class ArchitectureConstructionTester:
                 )
 
         except Exception as e:
-            print(f"❌ 建筑项目数据集加载失败: {e}")
+            print(f"❌ EN: {e}")
             results.append(
                 {
                     "dataset": "architecture_building_projects.csv",
@@ -111,18 +111,18 @@ class ArchitectureConstructionTester:
 
         print()
 
-        # 测试建筑材料数据集
+        # EN
         try:
             materials_file = (
                 self.datasets_path / "construction_materials_properties.csv"
             )
             if materials_file.exists():
                 df = pd.read_csv(materials_file)
-                print(f"✅ 建筑材料数据集加载成功:")
-                print(f"   - 数据形状: {df.shape}")
-                print(f"   - 材料类型: {', '.join(df['material_type'].tolist())}")
+                print(f"✅ EN:")
+                print(f"   - EN: {df.shape}")
+                print(f"   - EN: {', '.join(df['material_type'].tolist())}")
 
-                # 数据质量检查
+                # EN
                 required_columns = [
                     "material_type",
                     "density_kg_m3",
@@ -132,9 +132,9 @@ class ArchitectureConstructionTester:
                     col for col in required_columns if col not in df.columns
                 ]
                 if missing_cols:
-                    print(f"   ⚠️ 缺失列: {missing_cols}")
+                    print(f"   ⚠️ EN: {missing_cols}")
                 else:
-                    print("   ✅ 所有必要列都存在")
+                    print("   ✅ EN")
 
                 results.append(
                     {
@@ -145,7 +145,7 @@ class ArchitectureConstructionTester:
                     }
                 )
             else:
-                print("❌ 建筑材料数据集文件不存在")
+                print("❌ EN")
                 results.append(
                     {
                         "dataset": "construction_materials_properties.csv",
@@ -154,7 +154,7 @@ class ArchitectureConstructionTester:
                 )
 
         except Exception as e:
-            print(f"❌ 建筑材料数据集加载失败: {e}")
+            print(f"❌ EN: {e}")
             results.append(
                 {
                     "dataset": "construction_materials_properties.csv",
@@ -165,7 +165,7 @@ class ArchitectureConstructionTester:
 
         print()
 
-        # 测试JSON测试数据集
+        # ENJSONEN
         try:
             json_file = (
                 self.datasets_path / "architecture_construction_test_dataset.json"
@@ -174,15 +174,15 @@ class ArchitectureConstructionTester:
                 with open(json_file, "r", encoding="utf-8") as f:
                     json_data = json.load(f)
 
-                print(f"✅ 架构测试JSON数据集加载成功:")
-                print(f"   - 数据类型: {type(json_data)}")
+                print(f"✅ ENJSONEN:")
+                print(f"   - EN: {type(json_data)}")
 
                 if isinstance(json_data, dict):
-                    print(f"   - 包含键: {list(json_data.keys())}")
+                    print(f"   - EN: {list(json_data.keys())}")
                 elif isinstance(json_data, list):
-                    print(f"   - 列表长度: {len(json_data)}")
+                    print(f"   - EN: {len(json_data)}")
                     if json_data and isinstance(json_data[0], dict):
-                        print(f"   - 第一项键: {list(json_data[0].keys())}")
+                        print(f"   - EN: {list(json_data[0].keys())}")
 
                 results.append(
                     {
@@ -192,7 +192,7 @@ class ArchitectureConstructionTester:
                     }
                 )
             else:
-                print("❌ JSON测试数据集文件不存在")
+                print("❌ JSONEN")
                 results.append(
                     {
                         "dataset": "architecture_construction_test_dataset.json",
@@ -201,7 +201,7 @@ class ArchitectureConstructionTester:
                 )
 
         except Exception as e:
-            print(f"❌ JSON测试数据集加载失败: {e}")
+            print(f"❌ JSONEN: {e}")
             results.append(
                 {
                     "dataset": "architecture_construction_test_dataset.json",
@@ -213,20 +213,20 @@ class ArchitectureConstructionTester:
         return results
 
     def test_image_resources(self):
-        """测试图像资源"""
+        """EN"""
         print("=" * 60)
-        print("🖼️ 测试 2/5: 建筑图像资源")
+        print("🖼️ EN 2/5: EN")
         print("=" * 60)
 
         results = []
 
-        # 检查建筑平面图
+        # EN
         floor_plan = self.images_path / "architectural_floor_plan.png"
         if floor_plan.exists():
             size = floor_plan.stat().st_size
-            print(f"✅ 建筑平面图存在:")
-            print(f"   - 文件大小: {size/1024:.1f} KB")
-            print(f"   - 文件路径: {floor_plan}")
+            print(f"✅ EN:")
+            print(f"   - EN: {size/1024:.1f} KB")
+            print(f"   - EN: {floor_plan}")
             results.append(
                 {
                     "image": "architectural_floor_plan.png",
@@ -235,18 +235,18 @@ class ArchitectureConstructionTester:
                 }
             )
         else:
-            print("❌ 建筑平面图不存在")
+            print("❌ EN")
             results.append(
                 {"image": "architectural_floor_plan.png", "status": "FILE_NOT_FOUND"}
             )
 
-        # 检查建筑施工详图
+        # EN
         construction_detail = self.images_path / "construction_detail_drawing.png"
         if construction_detail.exists():
             size = construction_detail.stat().st_size
-            print(f"✅ 建筑施工详图存在:")
-            print(f"   - 文件大小: {size/1024:.1f} KB")
-            print(f"   - 文件路径: {construction_detail}")
+            print(f"✅ EN:")
+            print(f"   - EN: {size/1024:.1f} KB")
+            print(f"   - EN: {construction_detail}")
             results.append(
                 {
                     "image": "construction_detail_drawing.png",
@@ -255,29 +255,29 @@ class ArchitectureConstructionTester:
                 }
             )
         else:
-            print("❌ 建筑施工详图不存在")
+            print("❌ EN")
             results.append(
                 {"image": "construction_detail_drawing.png", "status": "FILE_NOT_FOUND"}
             )
 
         print()
 
-        # 统计所有图像文件
+        # EN
         image_files = list(self.images_path.glob("*.png")) + list(
             self.images_path.glob("*.jpg")
         )
-        print(f"📁 图像目录统计:")
-        print(f"   - 图像文件总数: {len(image_files)}")
+        print(f"📁 EN:")
+        print(f"   - EN: {len(image_files)}")
         if image_files:
             total_size = sum(f.stat().st_size for f in image_files)
-            print(f"   - 总大小: {total_size/1024/1024:.1f} MB")
+            print(f"   - EN: {total_size/1024/1024:.1f} MB")
 
             architecture_images = [
                 f
                 for f in image_files
                 if "architect" in f.name.lower() or "construction" in f.name.lower()
             ]
-            print(f"   - 架构相关图像: {len(architecture_images)}")
+            print(f"   - EN: {len(architecture_images)}")
 
             for img in architecture_images:
                 size_kb = img.stat().st_size / 1024
@@ -286,46 +286,46 @@ class ArchitectureConstructionTester:
         return results
 
     def test_ocr_on_drawings(self):
-        """测试建筑图纸OCR识别"""
+        """ENOCREN"""
         print("=" * 60)
-        print("🔍 测试 3/5: 建筑图纸OCR识别")
+        print("🔍 EN 3/5: ENOCREN")
         print("=" * 60)
 
         results = []
 
-        # 尝试导入PaddleOCR
+        # ENPaddleOCR
         try:
             from paddleocr import PaddleOCR
 
-            print("✅ PaddleOCR导入成功")
+            print("✅ PaddleOCREN")
 
-            # 初始化OCR - 使用新的API
+            # ENOCR - ENAPI
             ocr = PaddleOCR(use_textline_orientation=True, lang="en")
-            print("✅ OCR引擎初始化成功")
+            print("✅ OCREN")
 
-            # 测试建筑平面图
+            # EN
             floor_plan = self.images_path / "architectural_floor_plan.png"
             if floor_plan.exists():
                 try:
-                    print("📋 正在识别建筑平面图...")
+                    print("📋 EN...")
                     start_time = time.time()
 
                     result = ocr.predict(str(floor_plan))
                     processing_time = time.time() - start_time
 
-                    # 分析OCR结果 - 适配新API格式
+                    # ENOCREN - ENAPIEN
                     if result and len(result) > 0 and "rec_texts" in result[0]:
                         text_items = result[0]["rec_texts"]
                         scores = result[0].get("rec_scores", [])
 
-                        print(f"✅ 建筑平面图OCR识别成功:")
-                        print(f"   - 识别时间: {processing_time:.2f}秒")
-                        print(f"   - 识别文本块: {len(text_items)}个")
-                        print(f"   - 文本内容示例: {text_items[:3]}...")
+                        print(f"✅ ENOCREN:")
+                        print(f"   - EN: {processing_time:.2f}EN")
+                        print(f"   - EN: {len(text_items)}EN")
+                        print(f"   - EN: {text_items[:3]}...")
 
-                        # 显示置信度
+                        # EN
                         avg_confidence = sum(scores) / len(scores) if scores else 0
-                        print(f"   - 平均置信度: {avg_confidence:.3f}")
+                        print(f"   - EN: {avg_confidence:.3f}")
 
                         results.append(
                             {
@@ -339,7 +339,7 @@ class ArchitectureConstructionTester:
                             }
                         )
                     else:
-                        print("⚠️ 建筑平面图OCR未识别到文本")
+                        print("⚠️ ENOCREN")
                         results.append(
                             {
                                 "image": "architectural_floor_plan.png",
@@ -349,7 +349,7 @@ class ArchitectureConstructionTester:
                         )
 
                 except Exception as e:
-                    print(f"❌ 建筑平面图OCR失败: {e}")
+                    print(f"❌ ENOCREN: {e}")
                     results.append(
                         {
                             "image": "architectural_floor_plan.png",
@@ -358,7 +358,7 @@ class ArchitectureConstructionTester:
                         }
                     )
             else:
-                print("❌ 建筑平面图文件不存在")
+                print("❌ EN")
                 results.append(
                     {
                         "image": "architectural_floor_plan.png",
@@ -366,29 +366,29 @@ class ArchitectureConstructionTester:
                     }
                 )
 
-            # 测试建筑施工详图
+            # EN
             construction_detail = self.images_path / "construction_detail_drawing.png"
             if construction_detail.exists():
                 try:
-                    print("📋 正在识别建筑施工详图...")
+                    print("📋 EN...")
                     start_time = time.time()
 
                     result = ocr.predict(str(construction_detail))
                     processing_time = time.time() - start_time
 
-                    # 分析OCR结果 - 适配新API的返回格式
+                    # ENOCREN - ENAPIEN
                     if result and len(result) > 0 and "rec_texts" in result[0]:
                         text_items = result[0]["rec_texts"]
                         scores = result[0].get("rec_scores", [])
 
-                        print(f"✅ 建筑施工详图OCR识别成功:")
-                        print(f"   - 识别时间: {processing_time:.2f}秒")
-                        print(f"   - 识别文本块: {len(text_items)}个")
-                        print(f"   - 文本内容示例: {text_items[:3]}...")
+                        print(f"✅ ENOCREN:")
+                        print(f"   - EN: {processing_time:.2f}EN")
+                        print(f"   - EN: {len(text_items)}EN")
+                        print(f"   - EN: {text_items[:3]}...")
 
-                        # 显示置信度
+                        # EN
                         avg_confidence = sum(scores) / len(scores) if scores else 0
-                        print(f"   - 平均置信度: {avg_confidence:.3f}")
+                        print(f"   - EN: {avg_confidence:.3f}")
 
                         results.append(
                             {
@@ -402,7 +402,7 @@ class ArchitectureConstructionTester:
                             }
                         )
                     else:
-                        print("⚠️ 建筑施工详图OCR未识别到文本")
+                        print("⚠️ ENOCREN")
                         results.append(
                             {
                                 "image": "construction_detail_drawing.png",
@@ -412,7 +412,7 @@ class ArchitectureConstructionTester:
                         )
 
                 except Exception as e:
-                    print(f"❌ 建筑施工详图OCR失败: {e}")
+                    print(f"❌ ENOCREN: {e}")
                     results.append(
                         {
                             "image": "construction_detail_drawing.png",
@@ -421,7 +421,7 @@ class ArchitectureConstructionTester:
                         }
                     )
             else:
-                print("❌ 建筑施工详图文件不存在")
+                print("❌ EN")
                 results.append(
                     {
                         "image": "construction_detail_drawing.png",
@@ -430,8 +430,8 @@ class ArchitectureConstructionTester:
                 )
 
         except ImportError as e:
-            print(f"❌ PaddleOCR导入失败: {e}")
-            print("   这可能是因为PaddleOCR未正确安装")
+            print(f"❌ PaddleOCREN: {e}")
+            print("   ENPaddleOCREN")
             results.append(
                 {"component": "PaddleOCR", "status": "IMPORT_ERROR", "error": str(e)}
             )
@@ -439,12 +439,12 @@ class ArchitectureConstructionTester:
         return results
 
     def test_architecture_specific_queries(self):
-        """测试架构行业特定查询"""
+        """EN"""
         print("=" * 60)
-        print("🏛️ 测试 4/5: 架构行业特定查询")
+        print("🏛️ EN 4/5: EN")
         print("=" * 60)
 
-        # 模拟的架构行业查询
+        # EN
         architecture_queries = [
             {
                 "query": "What are the structural requirements for high-rise buildings?",
@@ -504,32 +504,32 @@ class ArchitectureConstructionTester:
 
         results = []
 
-        print(f"📋 测试架构行业特定查询 ({len(architecture_queries)}个):")
+        print(f"📋 EN ({len(architecture_queries)}EN):")
         print()
 
         for i, query_info in enumerate(architecture_queries, 1):
-            print(f"🔍 查询 {i}/{len(architecture_queries)}: {query_info['domain']}")
-            print(f"   问题: {query_info['query']}")
+            print(f"🔍 EN {i}/{len(architecture_queries)}: {query_info['domain']}")
+            print(f"   EN: {query_info['query']}")
 
-            # 模拟查询处理（这里我们只是验证查询的结构）
+            # EN(EN)
             query_length = len(query_info["query"])
             keyword_count = len(query_info["expected_keywords"])
 
-            print(f"   ✅ 查询长度: {query_length} 字符")
-            print(f"   ✅ 期望关键词: {keyword_count} 个")
+            print(f"   ✅ EN: {query_length} EN")
+            print(f"   ✅ EN: {keyword_count} EN")
 
-            # 验证查询是否包含期望的关键词
+            # EN
             found_keywords = [
                 kw
                 for kw in query_info["expected_keywords"]
                 if kw.lower() in query_info["query"].lower()
             ]
 
-            print(f"   ✅ 查询中包含关键词: {len(found_keywords)} 个: {found_keywords}")
+            print(f"   ✅ EN: {len(found_keywords)} EN: {found_keywords}")
 
-            # 评估查询质量
+            # EN
             quality_score = len(found_keywords) / keyword_count
-            print(f"   📊 查询质量评分: {quality_score:.2f}")
+            print(f"   📊 EN: {quality_score:.2f}")
 
             results.append(
                 {
@@ -547,44 +547,44 @@ class ArchitectureConstructionTester:
         return results
 
     def test_rag_performance_scenarios(self):
-        """测试RAG性能场景"""
+        """ENRAGEN"""
         print("=" * 60)
-        print("⚡ 测试 5/5: RAG系统架构领域性能场景")
+        print("⚡ EN 5/5: RAGEN")
         print("=" * 60)
 
-        # 基于架构和建筑测试用例文件的性能测试场景
+        # EN
         performance_scenarios = [
             {
                 "name": "Building Code Retrieval",
-                "description": "检索建筑规范信息",
+                "description": "EN",
                 "complexity": "Medium",
                 "expected_response_time": 2.0,  # seconds
                 "data_size": "Medium",
             },
             {
                 "name": "Material Properties Analysis",
-                "description": "分析建筑材料属性",
+                "description": "EN",
                 "complexity": "Low",
                 "expected_response_time": 1.0,
                 "data_size": "Small",
             },
             {
                 "name": "Structural Calculation",
-                "description": "结构计算和验证",
+                "description": "EN",
                 "complexity": "High",
                 "expected_response_time": 3.0,
                 "data_size": "Large",
             },
             {
                 "name": "Project Cost Estimation",
-                "description": "项目成本估算",
+                "description": "EN",
                 "complexity": "High",
                 "expected_response_time": 2.5,
                 "data_size": "Large",
             },
             {
                 "name": "Drawing Interpretation",
-                "description": "建筑图纸解读",
+                "description": "EN",
                 "complexity": "Medium",
                 "expected_response_time": 4.0,
                 "data_size": "Large",
@@ -593,22 +593,22 @@ class ArchitectureConstructionTester:
 
         results = []
 
-        print(f"📋 性能场景测试 ({len(performance_scenarios)}个):")
+        print(f"📋 EN ({len(performance_scenarios)}EN):")
         print()
 
         for i, scenario in enumerate(performance_scenarios, 1):
-            print(f"⚡ 场景 {i}/{len(performance_scenarios)}: {scenario['name']}")
-            print(f"   描述: {scenario['description']}")
-            print(f"   复杂度: {scenario['complexity']}")
-            print(f"   数据规模: {scenario['data_size']}")
-            print(f"   期望响应时间: {scenario['expected_response_time']}秒")
+            print(f"⚡ EN {i}/{len(performance_scenarios)}: {scenario['name']}")
+            print(f"   EN: {scenario['description']}")
+            print(f"   EN: {scenario['complexity']}")
+            print(f"   EN: {scenario['data_size']}")
+            print(f"   EN: {scenario['expected_response_time']}EN")
 
-            # 模拟性能测试
+            # EN
             try:
-                # 这里模拟RAG系统的响应时间
+                # ENRAGEN
                 import random
 
-                # 基于复杂度和数据规模模拟响应时间
+                # EN
                 base_time = {"Low": 0.5, "Medium": 1.0, "High": 2.0}[
                     scenario["complexity"]
                 ]
@@ -619,11 +619,11 @@ class ArchitectureConstructionTester:
 
                 simulated_time = (
                     base_time * size_multiplier * (0.8 + random.random() * 0.4)
-                )  # ±20%变化
+                )  # ±20%EN
 
-                print(f"   ⏱️ 模拟响应时间: {simulated_time:.2f}秒")
+                print(f"   ⏱️ EN: {simulated_time:.2f}EN")
 
-                # 性能评估
+                # EN
                 performance_ratio = simulated_time / scenario["expected_response_time"]
 
                 if performance_ratio <= 1.0:
@@ -640,7 +640,7 @@ class ArchitectureConstructionTester:
                     performance_emoji = "❌"
 
                 print(
-                    f"   {performance_emoji} 性能状态: {performance_status} (实际/期望: {performance_ratio:.2f})"
+                    f"   {performance_emoji} EN: {performance_status} (EN/EN: {performance_ratio:.2f})"
                 )
 
                 results.append(
@@ -655,7 +655,7 @@ class ArchitectureConstructionTester:
                 )
 
             except Exception as e:
-                print(f"   ❌ 性能测试失败: {e}")
+                print(f"   ❌ EN: {e}")
                 results.append(
                     {
                         "scenario_id": i,
@@ -677,12 +677,12 @@ class ArchitectureConstructionTester:
         query_results,
         performance_results,
     ):
-        """生成测试报告"""
+        """EN"""
         print("=" * 60)
-        print("📊 架构和建筑行业测试总结")
+        print("📊 EN")
         print("=" * 60)
 
-        # 统计各部分结果
+        # EN
         dataset_success = sum(
             1 for r in dataset_results if r.get("status") == "SUCCESS"
         )
@@ -705,43 +705,43 @@ class ArchitectureConstructionTester:
         )
         performance_total = len(performance_results)
 
-        print(f"📈 测试结果统计:")
+        print(f"📈 EN:")
         print(
-            f"   数据集测试: {dataset_success}/{dataset_total} ({dataset_success/dataset_total*100:.1f}%)"
+            f"   EN: {dataset_success}/{dataset_total} ({dataset_success/dataset_total*100:.1f}%)"
         )
         print(
-            f"   图像资源: {image_success}/{image_total} ({image_success/image_total*100:.1f}%)"
+            f"   EN: {image_success}/{image_total} ({image_success/image_total*100:.1f}%)"
         )
-        print(f"   OCR识别: {ocr_success}/{ocr_total} ({ocr_success/ocr_total*100:.1f}%)")
-        print(f"   查询质量: 平均 {avg_query_quality:.2f}")
+        print(f"   OCREN: {ocr_success}/{ocr_total} ({ocr_success/ocr_total*100:.1f}%)")
+        print(f"   EN: EN {avg_query_quality:.2f}")
         print(
-            f"   性能测试: {performance_excellent}/{performance_total} 优秀 ({performance_excellent/performance_total*100:.1f}%)"
+            f"   EN: {performance_excellent}/{performance_total} EN ({performance_excellent/performance_total*100:.1f}%)"
         )
         print()
 
-        # 总体评估
+        # EN
         total_tests = dataset_total + image_total + ocr_total
         total_success = dataset_success + image_success + ocr_success
         overall_success_rate = total_success / total_tests if total_tests > 0 else 0
 
-        print(f"🎯 总体成功率: {overall_success_rate:.1%}")
+        print(f"🎯 EN: {overall_success_rate:.1%}")
 
         if overall_success_rate >= 0.9:
-            print("🎉 优秀! 架构和建筑行业测试通过率超过90%")
-            print("✅ RAG系统在建筑领域表现优秀")
+            print("🎉 EN! EN90%")
+            print("✅ RAGEN")
         elif overall_success_rate >= 0.8:
-            print("👍 良好! 架构和建筑行业测试通过率超过80%")
-            print("✅ RAG系统在建筑领域基本可用")
+            print("👍 EN! EN80%")
+            print("✅ RAGEN")
         elif overall_success_rate >= 0.7:
-            print("⚠️ 一般! 架构和建筑行业测试通过率超过70%")
-            print("⚠️ RAG系统在建筑领域需要优化")
+            print("⚠️ EN! EN70%")
+            print("⚠️ RAGEN")
         else:
-            print("❌ 需要改进! 架构和建筑行业测试通过率低于70%")
-            print("❌ RAG系统在建筑领域需要重大改进")
+            print("❌ EN! EN70%")
+            print("❌ RAGEN")
 
         print()
 
-        # 保存详细报告
+        # EN
         try:
             report_data = {
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -774,40 +774,40 @@ class ArchitectureConstructionTester:
             with open(report_file, "w", encoding="utf-8") as f:
                 json.dump(report_data, f, indent=2, ensure_ascii=False)
 
-            print(f"📁 详细测试报告已保存: {report_file}")
+            print(f"📁 EN: {report_file}")
 
         except Exception as e:
-            print(f"⚠️ 保存测试报告失败: {e}")
+            print(f"⚠️ EN: {e}")
 
         return overall_success_rate
 
 
 def main():
-    """主测试函数"""
+    """EN"""
     tester = ArchitectureConstructionTester()
 
     try:
-        # 运行所有测试
-        print("🚀 开始架构和建筑行业测试套件...")
-        print(f"📅 测试时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        # EN
+        print("🚀 EN...")
+        print(f"📅 EN: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         print()
 
-        # 1. 测试数据集加载
+        # 1. EN
         dataset_results = tester.test_dataset_loading()
 
-        # 2. 测试图像资源
+        # 2. EN
         image_results = tester.test_image_resources()
 
-        # 3. 测试OCR识别
+        # 3. ENOCREN
         ocr_results = tester.test_ocr_on_drawings()
 
-        # 4. 测试架构查询
+        # 4. EN
         query_results = tester.test_architecture_specific_queries()
 
-        # 5. 测试性能场景
+        # 5. EN
         performance_results = tester.test_rag_performance_scenarios()
 
-        # 生成报告
+        # EN
         success_rate = tester.generate_test_report(
             dataset_results,
             image_results,
@@ -819,7 +819,7 @@ def main():
         return success_rate >= 0.8
 
     except Exception as e:
-        print(f"❌ 测试执行失败: {e}")
+        print(f"❌ EN: {e}")
         import traceback
 
         traceback.print_exc()

@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
 const runCrossBrowser = process.env.PW_CROSS_BROWSER === '1';
+const frontendHost = process.env.PW_FRONTEND_HOST || '127.0.0.1';
+const frontendPort = process.env.PW_FRONTEND_PORT || '3000';
+const frontendBaseUrl = `http://${frontendHost}:${frontendPort}`;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -16,7 +19,7 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: frontendBaseUrl,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -29,8 +32,8 @@ export default defineConfig({
       ]
     : [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: `npm run dev -- --hostname ${frontendHost} --port ${frontendPort}`,
+    url: `${frontendBaseUrl}/login`,
     reuseExistingServer: !isCI,
     timeout: 120 * 1000,
   },

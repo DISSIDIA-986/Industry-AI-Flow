@@ -2,8 +2,10 @@ import logging
 import os
 import threading
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 import psutil
 import uvicorn
@@ -11,20 +13,19 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
-from backend.api.document_management_routes import router as document_management_router
-from backend.api.enhanced_query_routes import router as enhanced_query_router
-
-# 导入新的API路由
+# ENAPIEN
 from backend.api.auth_routes import router as auth_router
 from backend.api.cost_estimation_routes import router as cost_estimation_router
 from backend.api.demo_mode_routes import router as demo_mode_router
+from backend.api.document_management_routes import router as document_management_router
+from backend.api.enhanced_query_routes import router as enhanced_query_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
-from backend.api.prompt_routes import router as prompt_router  # P0修复：注册Prompt路由
+from backend.api.prompt_routes import router as prompt_router  # P0EN:ENPromptEN
 from backend.api.workflow_query_routes import (
-    router as workflow_query_router,
-)  # Phase 2 scaffold
+    router as workflow_query_router,  # Phase 2 scaffold
+)
 from backend.middleware.error_handler import register_error_handlers
 from backend.observability.logging_config import configure_logging
 from backend.observability.metrics import setup_metrics
@@ -34,13 +35,16 @@ from backend.security.memory_guard import memory_guard
 from backend.security.sanitizer import sanitize_identifier, sanitize_text
 from backend.services.audit_logger import audit_logger
 from backend.services.cache.query_cache import query_cache
+from backend.services.database.driver_compat import connect as connect_db
+from backend.services.database.driver_compat import fetchall_dicts
+from backend.services.language_policy import ensure_rag_english_query
 from backend.services.security import persist_temp_file, validate_and_buffer_upload
 
-# 配置日志
+# EN
 configure_logging()
 logger = logging.getLogger(__name__)
 
-# 检查环境变量
+# EN
 try:
     from backend.config import settings
 except ImportError:
@@ -54,13 +58,19 @@ ALLOWED_UPLOAD_EXTENSIONS = (
 MAX_UPLOAD_BYTES = settings.max_upload_size_bytes if settings else 10 * 1024 * 1024
 TEMP_DATA_ROOT = settings.temp_data_dir if settings else "/tmp/luncheon_data"
 
-# 延迟导入服务模块，避免启动时的循环依赖
+# EN,EN
 rag_engine = None
 unified_orchestrator = None
 code_executor = None
 _rag_lock = threading.Lock()
 _unified_lock = threading.Lock()
 _executor_lock = threading.Lock()
+_uploaded_documents_index_ready = False
+_uploaded_documents_index_lock = threading.Lock()
+_documents_storage_root: Optional[Path] = None
+_documents_storage_root_lock = threading.Lock()
+_documents_cleanup_lock = threading.Lock()
+_last_documents_cleanup_at: Optional[datetime] = None
 
 
 def log_audit(
@@ -88,6 +98,442 @@ def log_audit(
 def enforce_memory_guard(label: str) -> float:
     """Ensure current process memory stays within the configured limits."""
     return memory_guard.ensure_within_limit(label)
+
+
+def _resolve_tenant_id(tenant: Optional[TenantContext]) -> str:
+    if tenant and tenant.tenant_id:
+        return tenant.tenant_id
+    if settings and settings.default_tenant_id:
+        return settings.default_tenant_id
+    return "public"
+
+
+def _normalize_file_path(file_path: str) -> Path:
+    path = Path(file_path).expanduser()
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parents[1] / path
+    return path
+
+
+def _resolve_documents_storage_root() -> Path:
+    global _documents_storage_root
+    if _documents_storage_root is not None:
+        return _documents_storage_root
+
+    with _documents_storage_root_lock:
+        if _documents_storage_root is not None:
+            return _documents_storage_root
+
+        configured_root = (
+            settings.documents_storage_dir if settings else ""
+        ) or "workspace/uploads/documents"
+        root = _normalize_file_path(configured_root)
+        root.mkdir(parents=True, exist_ok=True)
+        _documents_storage_root = root
+        return _documents_storage_root
+
+
+def _persist_uploaded_document_file(
+    *,
+    content: bytes,
+    sanitized_filename: str,
+    tenant: Optional[TenantContext],
+) -> str:
+    tenant_id = _resolve_tenant_id(tenant)
+    tenant_slug = "".join(
+        char if char.isalnum() or char in {"-", "_"} else "_"
+        for char in tenant_id.lower()
+    )
+    tenant_slug = (tenant_slug.strip("_") or "public")[:64]
+    day_bucket = datetime.now(UTC).strftime("%Y%m%d")
+
+    storage_root = _resolve_documents_storage_root()
+    target_dir = storage_root / tenant_slug / day_bucket
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    source_name = Path(sanitized_filename or "document")
+    stem = source_name.stem[:120] or "document"
+    extension = source_name.suffix
+    stored_filename = f"{stem}_{uuid4().hex[:12]}{extension}"
+    target_file = target_dir / stored_filename
+    with open(target_file, "wb") as buffer:
+        buffer.write(content)
+    return str(target_file)
+
+
+def _run_documents_cleanup_if_due() -> None:
+    if not settings or not settings.documents_cleanup_enabled:
+        return
+
+    global _last_documents_cleanup_at
+    now = datetime.now(UTC)
+    interval_seconds = max(1, settings.documents_cleanup_interval_minutes) * 60
+
+    with _documents_cleanup_lock:
+        if _last_documents_cleanup_at is not None:
+            elapsed = (now - _last_documents_cleanup_at).total_seconds()
+            if elapsed < interval_seconds:
+                return
+        _last_documents_cleanup_at = now
+
+    try:
+        _cleanup_uploaded_documents_metadata(now)
+        _cleanup_orphan_document_files(now)
+    except Exception as exc:
+        logger.warning("Document cleanup skipped due to error: %s", exc)
+
+
+def _cleanup_uploaded_documents_metadata(now: datetime) -> None:
+    _ensure_uploaded_documents_index_table()
+    missing_retention = timedelta(
+        days=max(1, settings.documents_missing_metadata_retention_days)
+    )
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, file_path, status, created_at
+            FROM uploaded_documents_index
+            """
+        )
+        rows = fetchall_dicts(cur)
+        missing_ids: List[str] = []
+        stale_ids: List[str] = []
+
+        for row in rows:
+            row_id = str(row.get("id") or "")
+            if not row_id:
+                continue
+
+            status = str(row.get("status") or "processed")
+            created_at = row.get("created_at")
+            created_at_utc = (
+                created_at.replace(tzinfo=UTC)
+                if hasattr(created_at, "tzinfo") and created_at.tzinfo is None
+                else created_at
+            )
+            if not isinstance(created_at_utc, datetime):
+                created_at_utc = now
+
+            file_path = str(row.get("file_path") or "")
+            file_exists = False
+            if file_path:
+                try:
+                    file_exists = _normalize_file_path(file_path).exists()
+                except Exception:
+                    file_exists = False
+
+            if status == "processed" and not file_exists:
+                missing_ids.append(row_id)
+
+            if (
+                status in {"missing", "deleted"}
+                and (now - created_at_utc) >= missing_retention
+            ):
+                stale_ids.append(row_id)
+
+        if missing_ids:
+            cur.executemany(
+                """
+                UPDATE uploaded_documents_index
+                SET status = 'missing', updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                [(row_id,) for row_id in missing_ids],
+            )
+
+        if stale_ids:
+            cur.executemany(
+                "DELETE FROM uploaded_documents_index WHERE id = %s",
+                [(row_id,) for row_id in stale_ids],
+            )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def _cleanup_orphan_document_files(now: datetime) -> None:
+    _ensure_uploaded_documents_index_table()
+    orphan_retention = timedelta(
+        days=max(1, settings.documents_orphan_file_retention_days)
+    )
+    storage_root = _resolve_documents_storage_root()
+    if not storage_root.exists():
+        return
+
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT file_path FROM uploaded_documents_index")
+        referenced_paths = {
+            _normalize_file_path(str(row.get("file_path"))).resolve()
+            for row in fetchall_dicts(cur)
+            if row.get("file_path")
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+    for file_path in storage_root.rglob("*"):
+        if not file_path.is_file():
+            continue
+
+        try:
+            resolved_path = file_path.resolve()
+        except Exception:
+            continue
+
+        if resolved_path in referenced_paths:
+            continue
+
+        modified_at = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
+        if (now - modified_at) < orphan_retention:
+            continue
+
+        try:
+            file_path.unlink()
+        except OSError:
+            continue
+
+
+def _ensure_uploaded_documents_index_table() -> None:
+    global _uploaded_documents_index_ready
+
+    if _uploaded_documents_index_ready:
+        return
+
+    with _uploaded_documents_index_lock:
+        if _uploaded_documents_index_ready:
+            return
+
+        conn = connect_db(settings.database_url)
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS uploaded_documents_index (
+                    id VARCHAR(64) PRIMARY KEY,
+                    tenant_id VARCHAR(128) NOT NULL,
+                    original_filename VARCHAR(255) NOT NULL,
+                    sanitized_filename VARCHAR(255) NOT NULL,
+                    file_path TEXT NOT NULL,
+                    size_bytes INTEGER NOT NULL,
+                    mime_type VARCHAR(255),
+                    status VARCHAR(32) NOT NULL DEFAULT 'processed',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_uploaded_documents_tenant_created
+                ON uploaded_documents_index (tenant_id, created_at DESC)
+                """
+            )
+            conn.commit()
+            _uploaded_documents_index_ready = True
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
+
+
+def _record_uploaded_document(
+    *,
+    tenant: Optional[TenantContext],
+    original_filename: str,
+    sanitized_filename: str,
+    file_path: str,
+    size_bytes: int,
+    mime_type: Optional[str] = None,
+) -> None:
+    _ensure_uploaded_documents_index_table()
+
+    tenant_id = _resolve_tenant_id(tenant)
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO uploaded_documents_index (
+                id,
+                tenant_id,
+                original_filename,
+                sanitized_filename,
+                file_path,
+                size_bytes,
+                mime_type,
+                status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'processed')
+            """,
+            (
+                f"doc-{uuid4().hex[:16]}",
+                tenant_id,
+                original_filename,
+                sanitized_filename,
+                file_path,
+                size_bytes,
+                mime_type,
+            ),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def _load_uploaded_documents(
+    *, tenant: Optional[TenantContext]
+) -> List[Dict[str, Any]]:
+    _ensure_uploaded_documents_index_table()
+    tenant_id = _resolve_tenant_id(tenant)
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT
+                id,
+                original_filename,
+                sanitized_filename,
+                file_path,
+                size_bytes,
+                mime_type,
+                status,
+                created_at
+            FROM uploaded_documents_index
+            WHERE tenant_id = %s
+            ORDER BY created_at DESC
+            LIMIT 200
+            """,
+            (tenant_id,),
+        )
+        rows = fetchall_dicts(cur)
+    finally:
+        cur.close()
+        conn.close()
+
+    docs: List[Dict[str, Any]] = []
+    for row in rows:
+        sanitized_name = str(
+            row.get("sanitized_filename") or row.get("original_filename") or "document"
+        )
+        file_path = str(row.get("file_path") or "")
+        suffix = Path(sanitized_name).suffix.lstrip(".").upper() or "FILE"
+        created_at = row.get("created_at")
+        status = str(row.get("status") or "processed")
+        if file_path and status != "deleted":
+            try:
+                if not _normalize_file_path(file_path).exists():
+                    status = "missing"
+            except Exception:
+                status = "missing"
+
+        docs.append(
+            {
+                "id": row.get("id"),
+                "name": sanitized_name,
+                "type": suffix,
+                "size": row.get("size_bytes"),
+                "uploaded_at": (
+                    created_at.isoformat()
+                    if hasattr(created_at, "isoformat")
+                    else str(created_at or "")
+                ),
+                "status": status,
+                "original_filename": row.get("original_filename"),
+                "file_path": file_path,
+                "mime_type": row.get("mime_type"),
+                "source": "uploaded_index",
+            }
+        )
+
+    if docs:
+        return docs
+
+    # Fallback: when metadata index has no rows for the default tenant,
+    # expose already-indexed vectorstore documents as read-only list items.
+    default_tenant_id = (
+        settings.default_tenant_id if settings and settings.default_tenant_id else "public"
+    )
+    if tenant_id == default_tenant_id:
+        return _load_indexed_documents_fallback(limit=200)
+
+    return docs
+
+
+def _load_indexed_documents_fallback(*, limit: int = 200) -> List[Dict[str, Any]]:
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, filename, filepath, chunk_count, created_at
+            FROM documents
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (max(1, int(limit)),),
+        )
+        rows = fetchall_dicts(cur)
+    except Exception as exc:
+        logger.warning("Failed to load indexed documents fallback: %s", exc)
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+    docs: List[Dict[str, Any]] = []
+    for row in rows:
+        filename = str(row.get("filename") or "document")
+        file_path = str(row.get("filepath") or "")
+        suffix = Path(filename).suffix.lstrip(".").upper() or "FILE"
+        created_at = row.get("created_at")
+
+        status = "processed"
+        size_bytes = 0
+        if file_path:
+            try:
+                normalized = _normalize_file_path(file_path)
+                if normalized.exists():
+                    size_bytes = int(normalized.stat().st_size)
+                else:
+                    status = "missing"
+            except Exception:
+                status = "missing"
+
+        docs.append(
+            {
+                "id": row.get("id"),
+                "name": filename,
+                "type": suffix,
+                "size": size_bytes,
+                "uploaded_at": (
+                    created_at.isoformat()
+                    if hasattr(created_at, "isoformat")
+                    else str(created_at or "")
+                ),
+                "status": status,
+                "original_filename": filename,
+                "file_path": file_path,
+                "chunk_count": int(row.get("chunk_count") or 0),
+                "source": "vector_index",
+            }
+        )
+
+    return docs
 
 
 def get_rag_engine():
@@ -143,7 +589,10 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Luncheon AI Flow - Enhanced RAG & Code Analysis",
-    description="融合知识问答、用户反馈、文档管理和数据分析能力的智能系统",
+    description=(
+        "Enterprise API for RAG, workflow orchestration, code execution, "
+        "and data analysis."
+    ),
     version="2.0.0",
     lifespan=lifespan,
     dependencies=[Depends(secure_endpoint)],
@@ -152,7 +601,7 @@ register_error_handlers(app)
 if settings and settings.enable_metrics:
     setup_metrics(app)
 
-# 注册新的API路由
+# ENAPIEN
 app.include_router(feedback_router, prefix="/api/v1", tags=["feedback"])
 app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
@@ -160,14 +609,14 @@ app.include_router(
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
 app.include_router(auth_router)
 app.include_router(cost_estimation_router)
-app.include_router(llm_dispatch_router)  # llm_dispatch_routes已包含prefix
-app.include_router(llm_cost_router)  # llm_cost_routes已包含prefix
+app.include_router(llm_dispatch_router)  # llm_dispatch_routesENprefix
+app.include_router(llm_cost_router)  # llm_cost_routesENprefix
 app.include_router(demo_mode_router)
 # prompt_routes already has prefix "/api/prompts", avoid double-prefixing to "/api/v1/api/prompts".
-app.include_router(prompt_router, tags=["prompts"])  # P0修复：注册Prompt路由
+app.include_router(prompt_router, tags=["prompts"])  # P0EN:ENPromptEN
 app.include_router(workflow_query_router)
 
-# RAG引擎将通过lazy loading初始化
+# RAGENlazy loadingEN
 
 
 class QueryRequest(BaseModel):
@@ -278,7 +727,7 @@ class VisualizationRequest(BaseModel):
 
 
 def get_memory_usage() -> float:
-    """获取当前进程内存使用(MB)"""
+    """Return current process memory usage in MB."""
     process = psutil.Process(os.getpid())
     return round(process.memory_info().rss / 1024 / 1024, 2)
 
@@ -292,10 +741,9 @@ def _resolve_data_file_for_analysis(data_file: str) -> str:
     if candidate.is_absolute():
         resolved = candidate.resolve()
         in_managed_root = resolved.is_relative_to(managed_root)
-        in_uploaded_tmp_dir = (
-            resolved.is_relative_to(tmp_root)
-            and resolved.parent.name.startswith("luncheon_data_")
-        )
+        in_uploaded_tmp_dir = resolved.is_relative_to(
+            tmp_root
+        ) and resolved.parent.name.startswith("luncheon_data_")
         if not (in_managed_root or in_uploaded_tmp_dir):
             raise HTTPException(
                 status_code=400,
@@ -316,7 +764,7 @@ def _resolve_data_file_for_analysis(data_file: str) -> str:
 @app.get("/api/v1/health")
 @app.get("/health")
 async def health(tenant: TenantContext = Depends(get_current_tenant)):
-    """健康检查"""
+    """Service health check endpoint."""
     execution_health: Dict[str, Any] = {
         "healthy": code_executor is not None,
         "mode": getattr(settings, "code_execution_provider", "docker"),
@@ -334,6 +782,19 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
     except Exception as exc:
         logger.warning("Unable to inspect code execution health: %s", exc)
 
+    embedding_health: Dict[str, Any] = {
+        "ready": False,
+        "backend": "unknown",
+        "fallback_active": True,
+        "reason": "unavailable",
+    }
+    try:
+        from backend.services.core.embedder import embedding_backend_status
+
+        embedding_health = embedding_backend_status()
+    except Exception as exc:
+        logger.warning("Unable to inspect embedding backend health: %s", exc)
+
     providers = execution_health.get("providers", {})
     docker_state = providers.get("docker", {}) if isinstance(providers, dict) else {}
 
@@ -343,6 +804,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
         "docker_available": bool(docker_state.get("healthy", False)),
         "code_execution_available": bool(execution_health.get("healthy", False)),
         "code_execution": execution_health,
+        "embedding": embedding_health,
         "version": "1.0.0",
         "tenant": tenant.tenant_id if tenant else None,
     }
@@ -351,7 +813,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
 @app.get("/api/v1/environment")
 @app.get("/environment")
 async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
-    """获取执行环境信息"""
+    """Return execution environment capabilities."""
     try:
         from backend.tools.code_execution import get_execution_environment_info
 
@@ -379,14 +841,18 @@ async def upload_document(
     file: UploadFile = File(...),
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """上传文档文件"""
+    """Upload a user document and store a sanitized temporary copy."""
     try:
         content, safe_name = await validate_and_buffer_upload(
             file,
             allowed_extensions=ALLOWED_UPLOAD_EXTENSIONS,
             max_bytes=MAX_UPLOAD_BYTES,
         )
-        file_path = persist_temp_file(content, safe_name, prefix="luncheon_docs")
+        file_path = _persist_uploaded_document_file(
+            content=content,
+            sanitized_filename=safe_name,
+            tenant=tenant,
+        )
 
         payload = {
             "status": "success",
@@ -394,14 +860,35 @@ async def upload_document(
             "sanitized_filename": safe_name,
             "file_path": file_path,
             "size": len(content),
-            "message": "文件上传成功",
+            "message": "Document uploaded successfully.",
         }
+        try:
+            _record_uploaded_document(
+                tenant=tenant,
+                original_filename=file.filename or safe_name,
+                sanitized_filename=safe_name,
+                file_path=file_path,
+                size_bytes=len(content),
+                mime_type=file.content_type,
+            )
+        except Exception as exc:
+            try:
+                os.unlink(file_path)
+            except OSError:
+                pass
+            logger.error("Failed to persist uploaded document metadata: %s", exc)
+            raise HTTPException(
+                status_code=500,
+                detail="Document upload failed: metadata persistence error",
+            ) from exc
+
         log_audit(
             action="document.upload",
             tenant=tenant,
             status="success",
             detail={"filename": safe_name, "size": len(content)},
         )
+        _run_documents_cleanup_if_due()
         return payload
     except HTTPException:
         log_audit(
@@ -418,7 +905,33 @@ async def upload_document(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
+
+
+@app.get("/api/v1/documents")
+@app.get("/documents")
+async def list_documents(tenant: TenantContext = Depends(get_current_tenant)):
+    """List uploaded documents for the current tenant from persistent metadata."""
+    try:
+        _run_documents_cleanup_if_due()
+        docs = _load_uploaded_documents(tenant=tenant)
+        log_audit(
+            action="document.list",
+            tenant=tenant,
+            status="success",
+            detail={"count": len(docs)},
+        )
+        return docs
+    except Exception as exc:
+        log_audit(
+            action="document.list",
+            tenant=tenant,
+            status="error",
+            detail={"error": str(exc)},
+        )
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list documents: {exc}"
+        ) from exc
 
 
 @app.post("/api/v1/data/upload")
@@ -427,7 +940,7 @@ async def upload_data_file(
     file: UploadFile = File(...),
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """上传数据文件（CSV、Excel等）"""
+    """Upload a data file (CSV, Excel, JSON, or TXT)."""
     try:
         allowed_extensions = (".csv", ".xlsx", ".xls", ".json", ".txt")
         content, safe_name = await validate_and_buffer_upload(
@@ -444,7 +957,7 @@ async def upload_data_file(
             "sanitized_filename": safe_name,
             "size": len(content),
             "file_type": os.path.splitext(file.filename)[1].lower(),
-            "message": "数据文件上传成功",
+            "message": "Data file uploaded successfully.",
         }
         log_audit(
             action="data.upload",
@@ -468,7 +981,7 @@ async def upload_data_file(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"数据文件上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Data upload failed: {str(e)}")
 
 
 @app.post("/api/v1/rag/query")
@@ -476,9 +989,11 @@ async def upload_data_file(
 async def rag_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """RAG查询接口"""
+    """Run a RAG query and return answer plus retrieval metadata."""
     try:
-        rag = get_rag_engine()  # 使用lazy loading获取RAG引擎
+        ensure_rag_english_query(request.question, field="question")
+
+        rag = get_rag_engine()
         cache_hit = query_cache.get(
             tenant.tenant_id if tenant else settings.default_tenant_id,
             request.question,
@@ -524,6 +1039,14 @@ async def rag_query(
             },
         )
         return result
+    except HTTPException as exc:
+        log_audit(
+            action="rag.query",
+            tenant=tenant,
+            status="error",
+            detail={"error": str(exc.detail)},
+        )
+        raise
     except Exception as e:
         log_audit(
             action="rag.query",
@@ -531,7 +1054,11 @@ async def rag_query(
             status="error",
             detail={"error": str(e)},
         )
-        return {"error": str(e), "question": request.question, "answer": "系统错误，请查看日志"}
+        return {
+            "error": str(e),
+            "question": request.question,
+            "answer": "Unable to process this query due to an internal error.",
+        }
 
 
 @app.post("/api/v1/unified/query")
@@ -539,7 +1066,7 @@ async def rag_query(
 async def unified_query(
     request: QueryRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """统一查询接口 - 融合RAG和代码分析"""
+    """Run the unified orchestrator query pipeline."""
     try:
         orchestrator = get_unified_orchestrator()
         enforce_memory_guard("unified.query")
@@ -578,7 +1105,7 @@ async def unified_query(
 async def execute_code(
     request: CodeExecutionRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """代码执行接口"""
+    """Execute user-provided code in the configured runtime."""
     try:
         from backend.tools.code_execution import code_execution_tool
 
@@ -612,7 +1139,7 @@ async def execute_code(
 async def validate_code(
     request: Dict[str, str], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """代码验证接口"""
+    """Validate code syntax and security constraints."""
     try:
         from backend.tools.code_execution import code_validation_tool
 
@@ -644,7 +1171,7 @@ async def validate_code(
 async def analyze_data(
     request: DataAnalysisRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """数据分析接口"""
+    """Run data analysis on an uploaded dataset."""
     try:
         from backend.tools.data_analysis import data_analysis_tool
 
@@ -698,7 +1225,7 @@ async def analyze_data(
 async def preprocess_data(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """数据预处理接口"""
+    """Apply data preprocessing operations."""
     try:
         from backend.tools.data_analysis import data_preprocessing_tool
 
@@ -730,7 +1257,7 @@ async def preprocess_data(
 async def generate_visualization(
     request: VisualizationRequest, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """可视化生成接口"""
+    """Generate a visualization from uploaded data."""
     try:
         from backend.tools.visualization import visualization_tool
 
@@ -769,7 +1296,7 @@ async def generate_visualization(
 async def generate_advanced_visualization(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """高级可视化接口"""
+    """Generate advanced visualizations using composite settings."""
     try:
         from backend.tools.visualization import advanced_visualization_tool
 
@@ -801,7 +1328,7 @@ async def generate_advanced_visualization(
 async def generate_dashboard(
     request: Dict[str, Any], tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """仪表板生成接口"""
+    """Generate dashboard artifacts for uploaded datasets."""
     try:
         from backend.tools.visualization import dashboard_generation_tool
 
@@ -833,11 +1360,11 @@ async def generate_dashboard(
 async def get_visualization_file(
     filename: str, tenant: TenantContext = Depends(get_current_tenant)
 ):
-    """获取可视化文件"""
+    """Download a generated visualization file."""
     try:
         safe_name = os.path.basename(filename)
         if safe_name != filename:
-            raise HTTPException(status_code=400, detail="非法的文件名")
+            raise HTTPException(status_code=400, detail="Invalid file name.")
 
         file_path = os.path.join(TEMP_DATA_ROOT, safe_name)
         if os.path.exists(file_path):
@@ -855,7 +1382,7 @@ async def get_visualization_file(
             status="error",
             detail={"filename": safe_name, "reason": "not_found"},
         )
-        raise HTTPException(status_code=404, detail="文件不存在")
+        raise HTTPException(status_code=404, detail="Visualization file not found.")
     except HTTPException:
         raise
     except Exception as e:
@@ -865,7 +1392,9 @@ async def get_visualization_file(
             status="error",
             detail={"filename": filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"文件获取失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve visualization: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

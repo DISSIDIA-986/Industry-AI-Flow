@@ -1,10 +1,10 @@
 """
-文档处理服务包初始化
+EN
 
-导出核心组件:
-- OCRProcessor: OCR处理器（支持本地PaddleOCR和API）
-- DocumentExtractor: 文档内容提取器
-- process_document: 便捷处理函数
+EN:
+- OCRProcessor: OCREN(ENPaddleOCRENAPI)
+- DocumentExtractor: EN
+- process_document: EN
 """
 
 from backend.services.document_processing.document_extractor import (
@@ -17,12 +17,12 @@ from backend.services.document_processing.ocr_processor import (
     process_image_with_ocr,
 )
 
-# 创建全局OCR处理器实例（延迟初始化）
+# ENOCREN(EN)
 _global_ocr_processor = None
 
 
 def get_ocr_processor() -> OCRProcessor:
-    """获取全局OCR处理器实例（单例模式）"""
+    """ENOCREN(EN)"""
     global _global_ocr_processor
     if _global_ocr_processor is None:
         try:
@@ -31,12 +31,12 @@ def get_ocr_processor() -> OCRProcessor:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"无法初始化OCR处理器: {e}")
+            logger.warning(f"ENOCREN: {e}")
             _global_ocr_processor = None
     return _global_ocr_processor
 
 
-# 为向后兼容性提供ocr_processor别名
+# ENocr_processorEN
 ocr_processor = get_ocr_processor()
 
 

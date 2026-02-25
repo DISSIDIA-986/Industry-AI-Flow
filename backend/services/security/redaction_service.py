@@ -21,10 +21,14 @@ class RedactionResult:
 class RedactionService:
     # Keep patterns conservative to avoid over-redaction.
     PATTERNS = {
-        "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+        # Unicode-aware email matcher with delimiter guards.
+        "email": re.compile(
+            r"[^\s@<>()\[\]{}\"',.;:,:]+@[^\s@<>()\[\]{}\"',.;:,:]+\.[^\s@<>()\[\]{}\"',.;:,:]+"
+        ),
         "phone_cn": re.compile(r"\b(?:\+?86[- ]?)?1[3-9]\d{9}\b"),
+        # US number requires explicit separators/parentheses to avoid over-matching plain 10-digit ids.
         "phone_us": re.compile(
-            r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"
+            r"(?<!\w)(?:\+1[-.\s]?)?(?:\(\d{3}\)[-.\s]?|\d{3}[-.\s])\d{3}[-.\s]\d{4}(?!\w)"
         ),
         "id_like": re.compile(r"\b\d{15,18}[0-9Xx]?\b"),
         "ipv4": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
@@ -32,13 +36,13 @@ class RedactionService:
 
     def redact(self, text: str) -> RedactionResult:
         """
-        脱敏处理，包含异常处理和降级策略
+        EN,EN
         
         Args:
-            text: 需要脱敏的文本
+            text: EN
             
         Returns:
-            RedactionResult: 脱敏结果，异常时返回原始文本
+            RedactionResult: EN,EN
         """
         if not text:
             return RedactionResult(text="", hit_count=0, categories=[], replacements={})
@@ -65,7 +69,7 @@ class RedactionService:
                 replacements=replacements,
             )
         except Exception as e:
-            # 降级策略：脱敏失败时返回原始文本并记录警告
+            # EN:EN
             logger.warning(f"Redaction failed: {e}, returning original text")
             return RedactionResult(
                 text=text,

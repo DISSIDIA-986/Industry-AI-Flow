@@ -1,4 +1,4 @@
-"""RAG Agent - 使用统一 Agent 构建接口。"""
+"""RAG Agent - EN Agent EN."""
 
 import logging
 
@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 
 def _get_llm():
     """
-    根据配置获取LLM实例
+    ENLLMEN
 
-    支持的提供商：
-    - ollama: 本地Ollama服务（Qwen2.5等）
-    - zhipu: 智谱AI云服务（GLM-4系列，通过Anthropic兼容接口）
+    EN:
+    - ollama: ENOllamaEN(Qwen2.5EN)
+    - zhipu: ENAIEN(GLM-4EN,ENAnthropicEN)
 
     Returns:
-        配置好的LLM实例
+        ENLLMEN
     """
     if settings.llm_provider == "zhipu":
         try:
@@ -35,12 +35,12 @@ def _get_llm():
             )
             return build_legacy_llm_invoke_adapter()
 
-        # 使用智谱AI（通过Anthropic兼容接口）
+        # ENAI(ENAnthropicEN)
         return ChatAnthropic(
             model=settings.zhipu_model,
             api_key=settings.zhipu_api_key,
             base_url=settings.zhipu_base_url,
-            timeout=settings.api_timeout_ms / 1000,  # 转换为秒
+            timeout=settings.api_timeout_ms / 1000,  # EN
             temperature=0,
         )
     else:
@@ -53,7 +53,7 @@ def _get_llm():
             )
             return build_legacy_llm_invoke_adapter()
 
-        # 使用本地Ollama（默认）
+        # ENOllama(EN)
         return ChatOllama(
             model=settings.ollama_model, base_url=settings.ollama_host, temperature=0
         )
@@ -61,62 +61,62 @@ def _get_llm():
 
 def build_rag_agent():
     """
-    构建RAG Agent - 使用LangChain 1.0新特性
+    ENRAG Agent - ENLangChain 1.0EN
 
-    核心特性：
-    1. 统一create_agent API：简化Agent创建流程
-    2. TypedDict-based状态：符合1.0规范
-    3. 工具化检索：LLM自主决策何时检索和重排序
-    4. 结构化流程：检索 → 重排序 → 生成答案
-    5. 多LLM支持：Ollama本地 + 智谱AI云服务
+    EN:
+    1. ENcreate_agent API:ENAgentEN
+    2. TypedDict-basedEN:EN1.0EN
+    3. EN:LLMEN
+    4. EN:EN → EN → EN
+    5. ENLLMEN:OllamaEN + ENAIEN
 
     Returns:
-        配置好的RAG Agent实例
+        ENRAG AgentEN
 
     Example:
         >>> agent = build_rag_agent()
         >>> result = agent.invoke({
         ...     "messages": [],
-        ...     "question": "什么是LangChain 1.0的主要改进？"
+        ...     "question": "ENLangChain 1.0EN?"
         ... })
         >>> print(result["final_answer"])
     """
 
-    # 1. 初始化LLM（根据配置选择提供商）
+    # 1. ENLLM(EN)
     llm = _get_llm()
 
-    # 2. 定义系统提示词（指导Agent工作流程）
-    system_prompt = """你是一个专业的RAG助手，帮助用户基于文档库回答问题。
+    # 2. EN(ENAgentEN)
+    system_prompt = """ENRAGEN,EN.
 
-**工作流程**：
-1. 收到用户问题后，使用`hybrid_retrieval_tool`检索相关文档（建议top_k=10）
-2. 使用`rerank_tool`对检索结果重排序，获取最相关的top-5文档
-3. 基于重排序后的文档，生成准确、简洁的回答
+**EN**:
+1. EN,EN`hybrid_retrieval_tool`EN(ENtop_k=10)
+2. EN`rerank_tool`EN,ENtop-5EN
+3. EN,EN,EN
 
-**重要规则**：
-- 所有回答必须基于检索到的文档内容
-- 如果文档不足以回答问题，明确说"根据现有文档，我无法回答这个问题"
-- 引用文档时，注明文档ID（doc_id）
-- 保持回答简洁、准确、专业
-- 不要编造信息或推测
+**EN**:
+- EN
+- EN,EN"EN,EN"
+- EN,ENID(doc_id)
+- EN,EN,EN
+- EN
 
-**输出格式**：
-你的回答应该包含：
-1. 基于文档的答案
-2. 引用的文档来源（如：根据文档doc-123和doc-456）
-3. 置信度说明（如果文档支持度不足，需说明）
+**EN**:
+EN:
+1. EN
+2. EN(EN:ENdoc-123ENdoc-456)
+3. EN(EN,EN)
 """
 
-    # 3. 创建Agent（使用LangChain 1.0统一API）
+    # 3. ENAgent(ENLangChain 1.0ENAPI)
     agent = create_agent_compat(
         model=llm,
         tools=[hybrid_retrieval_tool, rerank_tool],
         system_prompt=system_prompt,
-        # state_schema=RAGAgentState,  # 暂时注释，先测试基础功能
+        # state_schema=RAGAgentState,  # EN,EN
     )
 
     return agent
 
 
-# 全局Agent实例（避免重复初始化）
+# ENAgentEN(EN)
 rag_agent = build_rag_agent()

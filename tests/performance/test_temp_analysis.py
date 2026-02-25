@@ -8,39 +8,39 @@ import seaborn as sns
 
 warnings.filterwarnings("ignore")
 
-# 设置matplotlib
+# ENmatplotlib
 plt.rcParams["figure.figsize"] = (12, 8)
 plt.rcParams["savefig.dpi"] = 150
 plt.rcParams["figure.dpi"] = 100
 
 
 def analyze_housing_data():
-    """分析房价数据"""
+    """EN"""
 
-    print("=== 房价数据分析开始 ===")
+    print("=== EN ===")
 
-    # 1. 加载数据
+    # 1. EN
     data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
-    print(f"数据加载成功: {df.shape}")
-    print(f"列名: {list(df.columns)}")
+    print(f"EN: {df.shape}")
+    print(f"EN: {list(df.columns)}")
 
-    # 2. 基础统计
-    print("\n=== 基础统计信息 ===")
-    print(f"价格范围: {df['price'].min():,.0f} - {df['price'].max():,.0f}")
-    print(f"平均价格: {df['price'].mean():,.0f}")
-    print(f"平均面积: {df['area'].mean():,.0f} sq.ft")
+    # 2. EN
+    print("\n=== EN ===")
+    print(f"EN: {df['price'].min():,.0f} - {df['price'].max():,.0f}")
+    print(f"EN: {df['price'].mean():,.0f}")
+    print(f"EN: {df['area'].mean():,.0f} sq.ft")
 
-    # 3. 相关性分析
+    # 3. EN
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     correlation = df[numeric_cols].corr()["price"].sort_values(ascending=False)
-    print("\n=== 价格相关性排名 ===")
+    print("\n=== EN ===")
     for feature, corr in correlation.items():
         if feature != "price":
             print(f"{feature}: {corr:.3f}")
 
-    # 4. 创建分析结果
+    # 4. EN
     results = {
         "total_records": len(df),
         "price_stats": {
@@ -61,14 +61,14 @@ def analyze_housing_data():
         .to_dict(),
     }
 
-    print("\n=== 分析完成 ===")
-    print(f"处理了 {results['total_records']} 条记录")
-    print(f"最重要的特征: {list(results['feature_importance'].keys())[:3]}")
+    print("\n=== EN ===")
+    print(f"EN {results['total_records']} EN")
+    print(f"EN: {list(results['feature_importance'].keys())[:3]}")
 
     return results
 
 
-# 执行分析
+# EN
 if __name__ == "__main__":
     results = analyze_housing_data()
-    print(f"\n分析结果摘要: {len(results)} 个主要指标")
+    print(f"\nEN: {len(results)} EN")

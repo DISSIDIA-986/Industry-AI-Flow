@@ -15,11 +15,11 @@ test.describe('Authentication and access control', () => {
 
     await expect(page.getByRole('heading', { name: 'Industry AI Flow' })).toBeVisible();
     await expect(page.getByPlaceholder('your@email.com')).toBeVisible();
-    await expect(page.getByRole('button', { name: '登录' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
 
     await page.goto('/register');
     await expect(page).toHaveURL(/\/register$/);
-    await expect(page.getByRole('heading', { name: '创建账户' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'create Account' })).toBeVisible();
   });
 
   test('allows demo user login and redirects out of login page', async ({ page }) => {
@@ -28,10 +28,10 @@ test.describe('Authentication and access control', () => {
 
     await page.getByPlaceholder('your@email.com').fill('demo@example.com');
     await page.getByPlaceholder('••••••••').fill('demo123');
-    await clickByJs(page.getByRole('button', { name: '登录' }));
+    await clickByJs(page.getByRole('button', { name: 'Log in' }));
 
     await expect(page).not.toHaveURL(/\/login$/);
-    await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
   });
 });
 
@@ -43,49 +43,56 @@ test.describe('Authenticated core journeys', () => {
 
   test('workflow chat sends message and renders AI response', async ({ page }) => {
     await page.goto('/workflow-chat');
-    await expect(page.getByRole('heading', { name: '工作流聊天' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Workflow chat' })).toBeVisible();
 
-    const prompt = 'E2E: 请分析这个项目的预算风险';
-    await page.getByPlaceholder('输入您的问题或查询...').fill(prompt);
-    await clickByJs(page.getByRole('button', { name: '发送' }));
+    const prompt = 'E2E: Please analyze the budget risks of this project';
+    const followUp = 'Which section of the reference document supports this answer?';
+    await page.getByPlaceholder('Enter your question or query...').fill(prompt);
+    await clickByJs(page.getByRole('button', { name: 'send' }));
 
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
     await expect(page.getByText(`E2E workflow response for: ${prompt}`)).toBeVisible();
+    await expect(page.getByText('Suggested follow-up questions:')).toBeVisible();
+
+    const followUpButton = page.getByRole('button', { name: followUp }).first();
+    await expect(followUpButton).toBeVisible();
+    await clickByJs(followUpButton);
+    await expect(page.getByPlaceholder('Enter your question or query...')).toHaveValue(followUp);
   });
 
   test('workflow chat supports quick prompt and websocket toggle', async ({ page }) => {
     await page.goto('/workflow-chat');
 
-    const quickPrompt = '估算一个20层办公楼在多伦多的成本风险';
+    const quickPrompt = 'Estimating the cost risk of a 20-story office building in Toronto';
     await clickByJs(page.getByRole('button', { name: quickPrompt }));
-    await expect(page.getByPlaceholder('输入您的问题或查询...')).toHaveValue(quickPrompt);
+    await expect(page.getByPlaceholder('Enter your question or query...')).toHaveValue(quickPrompt);
 
-    await clickByJs(page.getByRole('button', { name: 'WebSocket: 关' }));
-    await expect(page.getByRole('button', { name: 'WebSocket: 开' })).toBeVisible();
+    await clickByJs(page.getByRole('button', { name: 'WebSocket: close' }));
+    await expect(page.getByRole('button', { name: 'WebSocket: open' })).toBeVisible();
     await expect(page.locator('span.text-xs.text-gray-600').first()).toContainText(
-      /已连接|连接中|未连接/,
+      /Connected|Connecting|Not connected/,
     );
   });
 
   test('documents page supports search and empty state', async ({ page }) => {
     await page.goto('/documents-integrated');
-    await expect(page.getByRole('heading', { name: '文档管理' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Document management' })).toBeVisible();
 
-    const searchInput = page.getByPlaceholder('搜索文档名称或类型...');
-    await searchInput.fill('施工安全规范');
-    await expect(page.getByText('施工安全规范.pdf')).toBeVisible();
+    const searchInput = page.getByPlaceholder('Search document name or type...');
+    await searchInput.fill('Construction safety regulations');
+    await expect(page.getByText('Construction safety regulations.pdf')).toBeVisible();
 
     await searchInput.fill('this-document-does-not-exist');
-    await expect(page.getByText('没有找到文档')).toBeVisible();
+    await expect(page.getByText('No document found')).toBeVisible();
   });
 
   test('data dashboard renders and supports time range switch', async ({ page }) => {
     await page.goto('/data-dashboard');
-    await expect(page.getByRole('heading', { name: '数据分析仪表板' })).toBeVisible();
-    await expect(page.getByText('实时系统监控')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Data analysis dashboard' })).toBeVisible();
+    await expect(page.getByText('Real-time system monitoring')).toBeVisible();
 
-    await clickByJs(page.getByRole('button', { name: '周度' }));
-    await expect(page.getByRole('button', { name: '周度' })).toHaveClass(/bg-blue-600/);
+    await clickByJs(page.getByRole('button', { name: 'Weekly' }));
+    await expect(page.getByRole('button', { name: 'Weekly' })).toHaveClass(/bg-blue-600/);
   });
 
   test('cost estimation runs single and batch prediction', async ({ page }) => {
@@ -100,15 +107,15 @@ test.describe('Authenticated core journeys', () => {
     await expect(page.getByRole('heading', { name: 'Batch Prediction Queue (1)' })).toBeVisible();
 
     await clickByJs(page.getByRole('button', { name: 'Run Batch' }));
-    await expect(page.getByRole('cell', { name: '$1,250,000' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: /1,250,000/ })).toBeVisible();
   });
 
   test('api integration page executes checks and shows pass state', async ({ page }) => {
     await page.goto('/api-integration-test');
-    await expect(page.getByRole('heading', { name: 'API集成测试' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'APIIntegration testing' })).toBeVisible();
 
-    await clickByJs(page.getByRole('button', { name: '运行所有测试' }));
-    await expect(page.getByText('✅ 测试通过').first()).toBeVisible({ timeout: 10000 });
+    await clickByJs(page.getByRole('button', { name: 'Run all tests' }));
+    await expect(page.getByText('✅ Test passed').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('navbar supports cross-page navigation', async ({ page }) => {

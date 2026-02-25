@@ -1,14 +1,14 @@
 """
-安全防护层：接地度检查与免责声明
+EN:EN
 
-实现建筑安全信息的零幻觉防护：
-- NLI接地度检查
-- 置信度阈值过滤
-- 强制安全免责声明
-- 拒绝回答策略
+EN:
+- NLIEN
+- EN
+- EN
+- EN
 
-创建时间: 2026-02-09
-优先级: P0 (Week 2任务)
+EN: 2026-02-09
+EN: P0 (Week 2EN)
 """
 
 import logging
@@ -20,43 +20,43 @@ logger = logging.getLogger(__name__)
 
 
 class SafetyLevel(Enum):
-    """安全等级分类"""
+    """EN"""
 
-    INFORMATIONAL = "informational"  # 信息性回答（低风险）
-    ADVISORY = "advisory"  # 建议性回答（中风险）
-    SAFETY_CRITICAL = "safety_critical"  # 安全关键回答（高风险）
+    INFORMATIONAL = "informational"  # EN(EN)
+    ADVISORY = "advisory"  # EN(EN)
+    SAFETY_CRITICAL = "safety_critical"  # EN(EN)
 
 
 class GroundednessChecker:
     """
-    接地度检查器：验证答案是否基于检索到的上下文
+    EN:EN
 
-    防止建筑规范幻觉：
-    - 错误的建筑规范引用
-    - 虚假的材料规格
-    - 编造的安全程序
+    EN:
+    - EN
+    - EN
+    - EN
     """
 
     def __init__(self, confidence_threshold: float = 0.80):
         """
         Args:
-            confidence_threshold: 最低置信度阈值（默认0.80）
+            confidence_threshold: EN(EN0.80)
         """
         self.confidence_threshold = confidence_threshold
 
     def check_safety_level(self, answer: str) -> SafetyLevel:
         """
-        分类回答的安全等级
+        EN
 
         Args:
-            answer: LLM生成的答案
+            answer: LLMEN
 
         Returns:
-            SafetyLevel枚举
+            SafetyLevelEN
         """
         answer_lower = answer.lower()
 
-        # 安全关键关键词
+        # EN
         safety_critical_keywords = [
             "ohs",
             "occupational health and safety",
@@ -74,7 +74,7 @@ class GroundednessChecker:
             "hazardous",
         ]
 
-        # 建议性关键词
+        # EN
         advisory_keywords = [
             "recommend",
             "suggest",
@@ -83,12 +83,12 @@ class GroundednessChecker:
             "guideline",
         ]
 
-        # 检查是否包含安全关键关键词
+        # EN
         for keyword in safety_critical_keywords:
             if keyword in answer_lower:
                 return SafetyLevel.SAFETY_CRITICAL
 
-        # 检查是否包含建议性关键词
+        # EN
         for keyword in advisory_keywords:
             if keyword in answer_lower:
                 return SafetyLevel.ADVISORY
@@ -102,21 +102,21 @@ class GroundednessChecker:
         llm_client=None,
     ) -> Tuple[float, bool]:
         """
-        检查答案是否从上下文中推导（接地度NLI检查）
+        EN(ENNLIEN)
 
         Args:
-            answer: LLM生成的答案
-            context: 检索到的上下文列表
-            llm_client: LLM客户端（用于NLI推理）
+            answer: LLMEN
+            context: EN
+            llm_client: LLMEN(ENNLIEN)
 
         Returns:
-            (置信度分数, 是否通过检查)
+            (EN, EN)
         """
         if not context:
             logger.warning("No context provided for groundedness check")
             return 0.0, False
 
-        # 轻量词级接地度检查：比 split() 更稳健（处理中英文标点和连字符）
+        # EN:EN split() EN(EN)
         answer_tokens = self._tokenize(answer)
         context_tokens = self._tokenize(" ".join(context))
 
@@ -127,12 +127,12 @@ class GroundednessChecker:
         context_vocab = set(context_tokens)
         overlap = answer_vocab & context_vocab
 
-        # 回答支撑率：回答中的关键token有多少被上下文覆盖（核心指标）
+        # EN:ENtokenEN(EN)
         support_ratio = len(overlap) / len(answer_vocab)
-        # 上下文命中率：仅做轻度加成，避免长上下文被过度惩罚
+        # EN:EN,EN
         context_hit_ratio = len(overlap) / len(context_vocab)
 
-        # 长回答在短上下文下易幻觉，增加轻度长度惩罚
+        # EN,EN
         length_penalty = 0.0
         if len(answer_tokens) > len(context_tokens) * 2:
             length_penalty = min(
@@ -168,26 +168,26 @@ class GroundednessChecker:
 
     def add_disclaimer(self, answer: str, safety_level: SafetyLevel) -> str:
         """
-        根据安全等级添加免责声明
+        EN
 
         Args:
-            answer: 原始答案
-            safety_level: 安全等级
+            answer: EN
+            safety_level: EN
 
         Returns:
-            带免责声明的答案
+            EN
         """
         disclaimers = {
             SafetyLevel.SAFETY_CRITICAL: (
                 "\n\n---\n"
-                "⚠️ **安全免责声明**: 此为AI生成指导，仅供参考。"
-                "请始终对照官方Alberta OHS Act/Building Code验证。"
-                "不替代专业工程建议或官方法规解读。"
+                "⚠️ **EN**: ENAIEN,EN."
+                "ENAlberta OHS Act/Building CodeEN."
+                "EN."
             ),
             SafetyLevel.ADVISORY: (
-                "\n\n---\n" "💡 **建议**: 此回答基于建筑行业最佳实践，" "具体应用请参考项目相关规范和标准。"
+                "\n\n---\n" "💡 **EN**: EN," "EN."
             ),
-            SafetyLevel.INFORMATIONAL: "",  # 信息性回答无需免责声明
+            SafetyLevel.INFORMATIONAL: "",  # EN
         }
 
         disclaimer = disclaimers.get(safety_level, "")
@@ -199,27 +199,27 @@ class GroundednessChecker:
         safety_level: SafetyLevel,
     ) -> Tuple[bool, Optional[str]]:
         """
-        判断是否应该拒绝回答
+        EN
 
         Args:
-            confidence: 接地度置信度
-            safety_level: 安全等级
+            confidence: EN
+            safety_level: EN
 
         Returns:
-            (是否拒绝, 拒绝原因)
+            (EN, EN)
         """
-        # 如果置信度过低，拒绝回答
+        # EN,EN
         if confidence < self.confidence_threshold:
-            return True, ("抱歉，我无法基于现有文档找到足够准确的信息来回答此问题。" "请尝试重新表述问题，或查阅官方建筑规范文档。")
+            return True, ("EN,EN." "EN,EN.")
 
-        # 如果是安全关键问题但置信度不够高，拒绝回答
+        # EN,EN
         if safety_level == SafetyLevel.SAFETY_CRITICAL and confidence < max(
             0.85, self.confidence_threshold + 0.05
         ):
             return True, (
-                "此问题涉及建筑安全规范，需要更高的准确性。"
-                "请查阅官方Alberta OHS Act或咨询专业工程师。"
-                "AI助手不能替代专业安全建议。"
+                "EN,EN."
+                "ENAlberta OHS ActEN."
+                "AIEN."
             )
 
         return False, None
@@ -231,23 +231,23 @@ class GroundednessChecker:
         llm_client=None,
     ) -> str:
         """
-        完整的安全检查流程：检查 -> 增强 -> 添加免责声明
+        EN:EN -> EN -> EN
 
         Args:
-            answer: LLM生成的答案
-            context: 检索到的上下文
-            llm_client: LLM客户端（可选）
+            answer: LLMEN
+            context: EN
+            llm_client: LLMEN(EN)
 
         Returns:
-            增强后的答案（可能包含免责声明或拒绝消息）
+            EN(EN)
         """
-        # 1. 检查安全等级
+        # 1. EN
         safety_level = self.check_safety_level(answer)
 
-        # 2. 检查接地度
+        # 2. EN
         confidence, _ = self.check_groundedness(answer, context, llm_client)
 
-        # 3. 判断是否应该拒绝回答
+        # 3. EN
         should_refuse, refusal_message = self.should_refuse_to_answer(
             confidence,
             safety_level,
@@ -257,7 +257,7 @@ class GroundednessChecker:
             logger.warning("Refusing to answer due to low confidence")
             return refusal_message
 
-        # 4. 添加免责声明
+        # 4. EN
         enhanced_answer = self.add_disclaimer(answer, safety_level)
 
         return enhanced_answer
@@ -265,9 +265,9 @@ class GroundednessChecker:
 
 class SafetyGuard:
     """
-    安全防护层主类：集成接地度检查和免责声明
+    EN:EN
 
-    使用示例:
+    EN:
     ```python
     safety_guard = SafetyGuard(confidence_threshold=0.80)
     answer = safety_guard.check_and_enhance_answer(
@@ -281,7 +281,7 @@ class SafetyGuard:
     def __init__(self, confidence_threshold: float = 0.80):
         """
         Args:
-            confidence_threshold: 最低置信度阈值（默认0.80）
+            confidence_threshold: EN(EN0.80)
         """
         self.groundedness_checker = GroundednessChecker(confidence_threshold)
         logger.info(
@@ -296,30 +296,30 @@ class SafetyGuard:
         llm_client=None,
     ) -> Dict[str, Any]:
         """
-        处理LLM响应，添加安全防护
+        ENLLMEN,EN
 
         Args:
-            answer: LLM生成的答案
-            context: 检索到的上下文
-            llm_client: LLM客户端（可选，用于NLI检查）
+            answer: LLMEN
+            context: EN
+            llm_client: LLMEN(EN,ENNLIEN)
 
         Returns:
-            处理结果字典 {
+            EN {
                 "enhanced_answer": str,
                 "safety_level": SafetyLevel,
                 "confidence": float,
                 "passed_checks": bool,
             }
         """
-        # 检查安全等级
+        # EN
         safety_level = self.groundedness_checker.check_safety_level(answer)
 
-        # 检查接地度
+        # EN
         confidence, passed = self.groundedness_checker.check_groundedness(
             answer, context, llm_client
         )
 
-        # 判断是否拒绝回答
+        # EN
         (
             should_refuse,
             refusal_message,
@@ -334,7 +334,7 @@ class SafetyGuard:
                 "refused": True,
             }
 
-        # 添加免责声明
+        # EN
         enhanced_answer = self.groundedness_checker.add_disclaimer(answer, safety_level)
 
         return {
@@ -346,22 +346,22 @@ class SafetyGuard:
         }
 
 
-# 便捷函数
+# EN
 def create_safety_guard(confidence_threshold: float = 0.80) -> SafetyGuard:
-    """创建安全防护器实例"""
+    """EN"""
     return SafetyGuard(confidence_threshold)
 
 
 if __name__ == "__main__":
-    # 测试安全防护层
+    # EN
     logging.basicConfig(level=logging.INFO)
 
-    print("🛡️ 安全防护层测试")
+    print("🛡️ EN")
     print("=" * 60)
 
     safety_guard = create_safety_guard()
 
-    # 测试案例1：安全关键问题
+    # EN1:EN
     answer1 = (
         "According to Alberta OHS Part 23, scaffolding above 3 meters requires "
         "guardrails on all open sides and toe boards at least 89mm high."
@@ -372,19 +372,19 @@ if __name__ == "__main__":
     ]
 
     result1 = safety_guard.process_response(answer1, context1)
-    print("\n测试案例1：安全关键问题")
-    print(f"原始答案: {answer1[:80]}...")
-    print(f"安全等级: {result1['safety_level'].value}")
-    print(f"置信度: {result1['confidence']:.2f}")
-    print(f"增强后答案:\n{result1['enhanced_answer']}")
+    print("\nEN1:EN")
+    print(f"EN: {answer1[:80]}...")
+    print(f"EN: {result1['safety_level'].value}")
+    print(f"EN: {result1['confidence']:.2f}")
+    print(f"EN:\n{result1['enhanced_answer']}")
 
-    # 测试案例2：低置信度拒绝
-    answer2 = "The concrete strength should be around 30-40 MPa."  # 不准确的回答
-    context2 = []  # 无上下文
+    # EN2:EN
+    answer2 = "The concrete strength should be around 30-40 MPa."  # EN
+    context2 = []  # EN
 
     result2 = safety_guard.process_response(answer2, context2)
-    print("\n测试案例2：低置信度拒绝")
-    print(f"原始答案: {answer2}")
-    print(f"置信度: {result2['confidence']:.2f}")
-    print(f"是否拒绝: {result2['refused']}")
-    print(f"返回消息: {result2['enhanced_answer']}")
+    print("\nEN2:EN")
+    print(f"EN: {answer2}")
+    print(f"EN: {result2['confidence']:.2f}")
+    print(f"EN: {result2['refused']}")
+    print(f"EN: {result2['enhanced_answer']}")

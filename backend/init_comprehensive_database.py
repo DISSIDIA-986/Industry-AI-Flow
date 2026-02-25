@@ -502,7 +502,7 @@ Format the output as structured JSON with clear categorization.""",
 
 def main():
     """主函数"""
-    # 从环境变量或配置文件获取数据库URL
+    # 从环境Variable或配置文件获取数据库URL
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         logger.error("DATABASE_URL environment variable not set")

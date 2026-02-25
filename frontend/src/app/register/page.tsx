@@ -29,9 +29,9 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
-    // 验证密码匹配
+    // Verify password match
     if (formData.password !== formData.confirmPassword) {
-      setError('两次输入的密码不匹配')
+      setError('The passwords entered twice do not match')
       setLoading(false)
       return
     }
@@ -40,13 +40,13 @@ export default function RegisterPage() {
       await register(formData.name, formData.email, formData.password)
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '注册失败')
+      setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
       setLoading(false)
     }
   }
 
-  // 显示认证上下文中的错误
+  // Show errors in authentication context
   const displayError = error || authError
 
   return (
@@ -54,15 +54,15 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            创建账户
+            create Account
           </h1>
-          <p className="text-gray-600">加入Industry AI Flow平台</p>
+          <p className="text-gray-600">join inIndustry AI Flowplatform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              姓名
+              Name
             </label>
             <input
               type="text"
@@ -70,14 +70,14 @@ export default function RegisterPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              placeholder="张三"
+              placeholder="Zhang San"
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              邮箱地址
+              Email address
             </label>
             <input
               type="email"
@@ -92,7 +92,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              密码
+              password
             </label>
             <input
               type="password"
@@ -107,7 +107,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              确认密码
+              Confirm Password
             </label>
             <input
               type="password"
@@ -131,15 +131,15 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '注册中...' : '注册账户'}
+            {loading ? 'Registering...' : 'Register an account'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            已有账户？{' '}
+            Already have an account?{' '}
             <Link href="/login" className="text-blue-600 hover:text-blue-800 font-medium">
-              立即登录
+              Log in now
             </Link>
           </p>
         </div>

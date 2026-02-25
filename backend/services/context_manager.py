@@ -1,6 +1,6 @@
 """
-上下文管理服务
-为意图分类器提供丰富的上下文信息，包括会话历史、文件信息、用户偏好等
+EN
+EN,EN,EN,EN
 """
 
 import asyncio
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FileContext:
-    """文件上下文信息"""
+    """EN"""
 
     file_id: str
     file_name: str
@@ -32,7 +32,7 @@ class FileContext:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """EN"""
         data = asdict(self)
         data["upload_time"] = self.upload_time.isoformat()
         return data
@@ -40,7 +40,7 @@ class FileContext:
 
 @dataclass
 class InteractionRecord:
-    """交互记录"""
+    """EN"""
 
     record_id: str
     timestamp: datetime
@@ -53,7 +53,7 @@ class InteractionRecord:
     success: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """EN"""
         data = asdict(self)
         data["timestamp"] = self.timestamp.isoformat()
         return data
@@ -61,7 +61,7 @@ class InteractionRecord:
 
 @dataclass
 class SessionContext:
-    """会话上下文"""
+    """EN"""
 
     session_id: str
     user_id: Optional[str] = None
@@ -84,45 +84,45 @@ class SessionContext:
     long_term_memory_refs: List[str] = field(default_factory=list)
 
     def add_interaction(self, record: InteractionRecord):
-        """添加交互记录"""
+        """EN"""
         self.interaction_history.append(record)
         self.last_activity = record.timestamp
         self.query_count += 1
 
-        # 更新检测到的意图
+        # EN
         if record.classified_intent not in self.detected_intents:
             self.detected_intents.append(record.classified_intent)
-            # 只保留最近10个意图
+            # EN10EN
             if len(self.detected_intents) > 10:
                 self.detected_intents = self.detected_intents[-10:]
 
-        # 更新完成率
+        # EN
         successful_interactions = sum(1 for r in self.interaction_history if r.success)
         self.completion_rate = successful_interactions / max(
             len(self.interaction_history), 1
         )
 
     def add_uploaded_file(self, file_context: FileContext):
-        """添加上传文件"""
+        """EN"""
         self.uploaded_files.append(file_context)
-        # 只保留最近10个文件
+        # EN10EN
         if len(self.uploaded_files) > 10:
             self.uploaded_files = self.uploaded_files[-10:]
 
     def get_recent_intents(self, limit: int = 5) -> List[str]:
-        """获取最近的意图列表"""
+        """EN"""
         return self.detected_intents[-limit:] if self.detected_intents else []
 
     def get_session_duration(self) -> float:
-        """获取会话持续时间（秒）"""
+        """EN(EN)"""
         return (self.last_activity - self.start_time).total_seconds()
 
     def update_session_stage(self):
-        """更新会话阶段"""
+        """EN"""
         duration = self.get_session_duration()
         query_count = self.query_count
 
-        if duration < 60:  # 1分钟内
+        if duration < 60:  # 1EN
             self.session_stage = "initial"
         elif query_count < 3:
             self.session_stage = "exploring"
@@ -132,7 +132,7 @@ class SessionContext:
             self.session_stage = "closing"
 
     def get_context_summary(self) -> Dict[str, Any]:
-        """获取上下文摘要"""
+        """EN"""
         return {
             "session_id": self.session_id,
             "duration_minutes": round(self.get_session_duration() / 60, 1),
@@ -147,24 +147,24 @@ class SessionContext:
 
 
 class ContextManager:
-    """上下文管理器"""
+    """EN"""
 
     def __init__(self, storage_backend: str = "memory", cache_ttl: int = 3600):
         """
-        初始化上下文管理器
+        EN
 
         Args:
-            storage_backend: 存储后端 ("memory", "database", "redis")
-            cache_ttl: 缓存过期时间（秒）
+            storage_backend: EN ("memory", "database", "redis")
+            cache_ttl: EN(EN)
         """
         self.storage_backend = storage_backend
         self.cache_ttl = cache_ttl
 
-        # 内存缓存
+        # EN
         self._session_cache: Dict[str, SessionContext] = {}
         self._file_cache: Dict[str, FileContext] = {}
 
-        # 统计信息
+        # EN
         self.stats = {
             "active_sessions": 0,
             "total_interactions": 0,
@@ -176,59 +176,59 @@ class ContextManager:
             ConversationMemoryManager() if settings.enable_conversation_memory else None
         )
 
-        logger.info(f"上下文管理器初始化完成，后端: {storage_backend}")
+        logger.info(f"EN,EN: {storage_backend}")
 
     async def get_session_context(
         self, session_id: str, user_id: Optional[str] = None
     ) -> SessionContext:
         """
-        获取会话上下文
+        EN
 
         Args:
-            session_id: 会话ID
-            user_id: 用户ID
+            session_id: ENID
+            user_id: ENID
 
         Returns:
-            SessionContext: 会话上下文
+            SessionContext: EN
         """
-        # 检查缓存
+        # EN
         if session_id in self._session_cache:
             session = self._session_cache[session_id]
-            # 验证会话是否仍然有效（24小时内有活动）
+            # EN(24EN)
             if (datetime.now() - session.last_activity).total_seconds() < 86400:
                 self.stats["cache_hits"] += 1
-                logger.debug(f"从缓存获取会话: {session_id}")
+                logger.debug(f"EN: {session_id}")
                 return session
             else:
-                # 会话过期，从缓存中移除
+                # EN,EN
                 del self._session_cache[session_id]
 
-        # 创建新会话或从存储加载
+        # EN
         session = await self._load_session_from_storage(session_id, user_id)
 
-        # 添加到缓存
+        # EN
         self._session_cache[session_id] = session
         self._update_active_sessions_count()
 
-        logger.info(f"创建/加载会话上下文: {session_id}")
+        logger.info(f"EN/EN: {session_id}")
         return session
 
     async def update_session_context(
         self, session_id: str, updates: Dict[str, Any]
     ) -> SessionContext:
         """
-        更新会话上下文
+        EN
 
         Args:
-            session_id: 会话ID
-            updates: 更新字段
+            session_id: ENID
+            updates: EN
 
         Returns:
-            SessionContext: 更新后的会话上下文
+            SessionContext: EN
         """
         session = await self.get_session_context(session_id)
 
-        # 应用更新
+        # EN
         for field, value in updates.items():
             if hasattr(session, field):
                 setattr(session, field, value)
@@ -236,10 +236,10 @@ class ContextManager:
         session.last_activity = datetime.now()
         session.update_session_stage()
 
-        # 保存到存储
+        # EN
         await self._save_session_to_storage(session)
 
-        # 更新缓存
+        # EN
         self._session_cache[session_id] = session
 
         return session
@@ -248,7 +248,7 @@ class ContextManager:
         self, session_id: str, user_query: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        获取会话的记忆层摘要
+        EN
         """
         if not self.memory_manager:
             return {}
@@ -267,17 +267,17 @@ class ContextManager:
         success: bool = True,
     ) -> None:
         """
-        添加交互记录
+        EN
 
         Args:
-            session_id: 会话ID
-            user_query: 用户查询
-            classified_intent: 分类意图
-            agent_response: Agent响应
-            confidence: 置信度
-            processing_time_ms: 处理时间
-            user_feedback: 用户反馈
-            success: 是否成功
+            session_id: ENID
+            user_query: EN
+            classified_intent: EN
+            agent_response: AgentEN
+            confidence: EN
+            processing_time_ms: EN
+            user_feedback: EN
+            success: EN
         """
         session = await self.get_session_context(session_id)
 
@@ -296,12 +296,12 @@ class ContextManager:
         session.add_interaction(record)
         session.detected_intents.append(classified_intent)
 
-        # 更新满意度分数（基于用户反馈）
+        # EN(EN)
         if user_feedback is not None:
             if session.satisfaction_score is None:
                 session.satisfaction_score = user_feedback
             else:
-                # 计算移动平均
+                # EN
                 session.satisfaction_score = (
                     session.satisfaction_score * 0.8 + user_feedback * 0.2
                 )
@@ -326,17 +326,17 @@ class ContextManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        添加上传文件记录
+        EN
 
         Args:
-            session_id: 会话ID
-            file_id: 文件ID
-            file_name: 文件名
-            file_type: 文件类型
-            file_size: 文件大小
-            file_path: 文件路径
-            preview: 文件预览
-            metadata: 文件元数据
+            session_id: ENID
+            file_id: ENID
+            file_name: EN
+            file_type: EN
+            file_size: EN
+            file_path: EN
+            preview: EN
+            metadata: EN
         """
         file_context = FileContext(
             file_id=file_id,
@@ -352,9 +352,9 @@ class ContextManager:
         session = await self.get_session_context(session_id)
         session.add_uploaded_file(file_context)
 
-        # 更新会话主题（如果这是第一个文件）
+        # EN(EN)
         if len(session.uploaded_files) == 1:
-            session.session_topic = f"文件处理: {file_name}"
+            session.session_topic = f"EN: {file_name}"
 
         await self._save_session_to_storage(session)
         self._session_cache[session_id] = session
@@ -367,20 +367,20 @@ class ContextManager:
         current_query: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        获取增强的上下文信息
+        EN
 
         Args:
-            session_id: 会话ID
-            max_history: 最大历史记录数
-            include_files: 是否包含文件信息
-            current_query: 当前用户提问，用于检索相关记忆
+            session_id: ENID
+            max_history: EN
+            include_files: EN
+            current_query: EN,EN
 
         Returns:
-            Dict[str, Any]: 增强的上下文信息
+            Dict[str, Any]: EN
         """
         session = await self.get_session_context(session_id)
 
-        # 基础上下文
+        # EN
         context = {
             "session_info": session.get_context_summary(),
             "recent_intents": session.get_recent_intents(),
@@ -388,14 +388,14 @@ class ContextManager:
             "session_stage": session.session_stage,
         }
 
-        # 历史交互
+        # EN
         if session.interaction_history:
             recent_history = session.interaction_history[-max_history:]
             context["interaction_history"] = [
                 record.to_dict() for record in recent_history
             ]
 
-        # 文件信息
+        # EN
         if include_files and session.uploaded_files:
             context["file_context"] = {
                 "total_files": len(session.uploaded_files),
@@ -407,23 +407,23 @@ class ContextManager:
                 ),
             }
 
-        # 用户偏好
+        # EN
         if session.user_preferences:
             context["user_preferences"] = session.user_preferences
 
-        # 上下文关键词
+        # EN
         context_keywords = []
 
-        # 从交互历史中提取关键词
+        # EN
         for record in session.interaction_history[-5:]:
             context_keywords.extend(self._extract_keywords(record.user_query))
             context_keywords.extend(self._extract_keywords(record.agent_response))
 
-        # 从文件名中提取关键词
+        # EN
         for file in session.uploaded_files[-3:]:
             context_keywords.append(file.file_name)
 
-        # 去重并清理
+        # EN
         context["context_keywords"] = list(
             set(
                 word
@@ -468,7 +468,7 @@ class ContextManager:
             )
         )[
             :20
-        ]  # 限制关键词数量
+        ]  # EN
 
         if self.memory_manager:
             context["memory_layers"] = self.memory_manager.build_memory_payload(
@@ -479,13 +479,13 @@ class ContextManager:
 
     async def analyze_session_patterns(self, session_id: str) -> Dict[str, Any]:
         """
-        分析会话模式
+        EN
 
         Args:
-            session_id: 会话ID
+            session_id: ENID
 
         Returns:
-            Dict[str, Any]: 会话模式分析结果
+            Dict[str, Any]: EN
         """
         session = await self.get_session_context(session_id)
 
@@ -503,28 +503,28 @@ class ContextManager:
         return patterns
 
     def _extract_keywords(self, text: str) -> List[str]:
-        """从文本中提取关键词"""
+        """EN"""
         if not text:
             return []
 
-        # 简单的关键词提取
+        # EN
         words = re.findall(r"\b[a-zA-Z\u4e00-\u9fff]{2,}\b", text.lower())
         return words
 
     def _analyze_query_patterns(self, session: SessionContext) -> Dict[str, Any]:
-        """分析查询模式"""
+        """EN"""
         if not session.interaction_history:
             return {}
 
         queries = [record.user_query for record in session.interaction_history]
 
-        # 查询长度分析
+        # EN
         lengths = [len(query) for query in queries]
 
-        # 查询类型分析
-        question_count = sum(1 for query in queries if "?" in query or "？" in query)
+        # EN
+        question_count = sum(1 for query in queries if "?" in query or "?" in query)
         statement_count = sum(
-            1 for query in queries if query.endswith(".") or query.endswith("。")
+            1 for query in queries if query.endswith(".") or query.endswith(".")
         )
 
         return {
@@ -536,11 +536,11 @@ class ContextManager:
         }
 
     def _analyze_intent_evolution(self, session: SessionContext) -> Dict[str, Any]:
-        """分析意图演化"""
+        """EN"""
         if len(session.detected_intents) < 2:
             return {"status": "insufficient_data"}
 
-        # 意图变化分析
+        # EN
         intent_changes = 0
         for i in range(1, len(session.detected_intents)):
             if session.detected_intents[i] != session.detected_intents[i - 1]:
@@ -558,13 +558,13 @@ class ContextManager:
         }
 
     def _analyze_time_distribution(self, session: SessionContext) -> Dict[str, Any]:
-        """分析时间分布"""
+        """EN"""
         if len(session.interaction_history) < 2:
             return {"status": "insufficient_data"}
 
         timestamps = [record.timestamp for record in session.interaction_history]
 
-        # 计算交互间隔
+        # EN
         intervals = []
         for i in range(1, len(timestamps)):
             interval = (timestamps[i] - timestamps[i - 1]).total_seconds()
@@ -578,14 +578,14 @@ class ContextManager:
         }
 
     def _analyze_success_patterns(self, session: SessionContext) -> Dict[str, Any]:
-        """分析成功模式"""
+        """EN"""
         if not session.interaction_history:
             return {"status": "no_data"}
 
         successful = sum(1 for record in session.interaction_history if record.success)
         total = len(session.interaction_history)
 
-        # 置信度分析
+        # EN
         confidences = [record.confidence for record in session.interaction_history]
 
         return {
@@ -598,7 +598,7 @@ class ContextManager:
         }
 
     def _analyze_interaction_rhythm(self, session: SessionContext) -> Dict[str, Any]:
-        """分析交互节奏"""
+        """EN"""
         if len(session.interaction_history) < 2:
             return {"status": "insufficient_data"}
 
@@ -607,7 +607,7 @@ class ContextManager:
             record.processing_time_ms for record in session.interaction_history
         ]
 
-        # 计算交互节奏
+        # EN
         intervals = []
         for i in range(1, len(timestamps)):
             interval = (timestamps[i] - timestamps[i - 1]).total_seconds()
@@ -616,48 +616,48 @@ class ContextManager:
         return {
             "avg_interaction_interval": sum(intervals) / max(len(intervals), 1),
             "interaction_frequency": len(session.interaction_history)
-            / max(session.get_session_duration() / 60, 1),  # 每分钟
+            / max(session.get_session_duration() / 60, 1),  # EN
             "avg_processing_time": sum(processing_times)
             / max(len(processing_times), 1),
-            "processing_time_trend": "stable",  # 简化版本，可以添加趋势分析
+            "processing_time_trend": "stable",  # EN,EN
         }
 
     async def _load_session_from_storage(
         self, session_id: str, user_id: Optional[str] = None
     ) -> SessionContext:
-        """从存储加载会话"""
-        # 模拟从数据库加载
+        """EN"""
+        # EN
         return SessionContext(
             session_id=session_id,
             user_id=user_id,
             start_time=datetime.now() - timedelta(minutes=5),
             last_activity=datetime.now() - timedelta(minutes=1),
             query_count=2,
-            session_topic="初始对话",
+            session_topic="EN",
             detected_intents=["knowledge_retrieval"],
             user_preferences={"language": "zh-CN", "response_style": "professional"},
-            context_keywords=["查询", "信息", "帮助"],
+            context_keywords=["EN", "EN", "EN"],
         )
 
     async def _save_session_to_storage(self, session: SessionContext) -> None:
-        """保存会话到存储"""
-        # 这里应该保存到实际的数据库
+        """EN"""
+        # EN
         # await database.save_session(session.to_dict())
         pass
 
     def _update_active_sessions_count(self):
-        """更新活跃会话数"""
+        """EN"""
         current_time = datetime.now()
         active_count = 0
 
         for session in self._session_cache.values():
-            if (current_time - session.last_activity).total_seconds() < 3600:  # 1小时内活跃
+            if (current_time - session.last_activity).total_seconds() < 3600:  # 1EN
                 active_count += 1
 
         self.stats["active_sessions"] = active_count
 
     def get_stats(self) -> Dict[str, Any]:
-        """获取管理器统计信息"""
+        """EN"""
         return {
             **self.stats,
             "cache_size": len(self._session_cache),
@@ -666,14 +666,14 @@ class ContextManager:
         }
 
     def clear_cache(self):
-        """清空缓存"""
+        """EN"""
         self._session_cache.clear()
         self._file_cache.clear()
         self.stats["cache_hits"] = 0
-        logger.info("上下文缓存已清空")
+        logger.info("EN")
 
     async def cleanup_expired_sessions(self, max_age_hours: int = 24) -> int:
-        """清理过期会话"""
+        """EN"""
         current_time = datetime.now()
         expired_sessions = []
 
@@ -683,11 +683,11 @@ class ContextManager:
                 expired_sessions.append(session_id)
                 del self._session_cache[session_id]
 
-        logger.info(f"清理了 {len(expired_sessions)} 个过期会话")
+        logger.info(f"EN {len(expired_sessions)} EN")
         return len(expired_sessions)
 
     async def health_check(self) -> Dict[str, Any]:
-        """健康检查"""
+        """EN"""
         return {
             "status": "healthy",
             "storage_backend": self.storage_backend,

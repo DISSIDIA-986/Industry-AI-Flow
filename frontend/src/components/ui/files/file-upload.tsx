@@ -29,7 +29,7 @@ export function FileUpload({
   accept = '.csv,.xlsx,.xls,.pdf,.txt,.json',
   maxSize,
   multiple = false,
-  label = '选择文件',
+  label = 'Select file',
   helpText,
   className = '',
 }: FileUploadProps) {

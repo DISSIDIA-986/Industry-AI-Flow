@@ -22,6 +22,7 @@ from docker.errors import APIError, ContainerError, ImageNotFound
 from docker.types import DeviceRequest
 
 import docker
+from backend.config import settings
 
 
 @dataclass
@@ -41,6 +42,51 @@ class ExecutionResult:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _is_subpath(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _allowed_data_roots() -> list[Path]:
+    roots = [
+        Path.cwd().resolve(),
+        Path(settings.temp_data_dir).resolve(),
+        Path(tempfile.gettempdir()).resolve(),
+    ]
+    env_tmp = os.getenv("TMPDIR")
+    if env_tmp:
+        roots.append(Path(env_tmp).resolve())
+    # Deduplicate while preserving order.
+    seen: set[Path] = set()
+    unique_roots: list[Path] = []
+    for root in roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        unique_roots.append(root)
+    return unique_roots
+
+
+def _resolve_allowed_data_file(path_value: str) -> Path:
+    candidate = Path(path_value).expanduser()
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+
+    allowed_roots = _allowed_data_roots()
+    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
+        raise ValueError("data file path is outside allowed paths")
+
+    if not candidate.exists() or not candidate.is_file():
+        raise ValueError(f"data file not found: {candidate}")
+
+    return candidate
 
 
 class DockerExecutor:
@@ -124,6 +170,7 @@ class DockerExecutor:
         self,
         code: str,
         input_files: Optional[dict[str, bytes]] = None,
+        timeout: Optional[int] = None,
     ) -> ExecutionResult:
         """
         Execute Python code in isolated Docker container.
@@ -136,6 +183,17 @@ class DockerExecutor:
             ExecutionResult with stdout, stderr, and output files
         """
         start_time = time.time()
+
+        # Validate code before execution
+        validation_errors = self._validate_code(code)
+        if validation_errors:
+            return ExecutionResult(
+                success=False,
+                stdout="",
+                stderr="",
+                error=f"Code validation failed: {'; '.join(validation_errors)}",
+                execution_time=time.time() - start_time,
+            )
 
         # Create temporary directory for file exchange
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -153,7 +211,7 @@ class DockerExecutor:
 
             try:
                 # Run container
-                result = self._run_container(workspace)
+                result = self._run_container(workspace, timeout=timeout)
 
                 # Collect output files (excluding main.py)
                 output_files = {}
@@ -191,7 +249,7 @@ class DockerExecutor:
                     execution_time=execution_time,
                 )
 
-    def _run_container(self, workspace: Path) -> dict:
+    def _run_container(self, workspace: Path, timeout: Optional[int] = None) -> dict:
         """Run Docker container with security constraints."""
         container = None
         try:
@@ -221,7 +279,8 @@ class DockerExecutor:
             container = self.client.containers.run(**container_config)
 
             # Wait for completion with timeout
-            exit_status = container.wait(timeout=self.timeout)
+            effective_timeout = timeout if timeout is not None else self.timeout
+            exit_status = container.wait(timeout=effective_timeout)
 
             # Get logs
             stdout = container.logs(stdout=True, stderr=False).decode("utf-8")
@@ -257,74 +316,65 @@ class DockerExecutor:
         timeout: Optional[int] = None,
     ) -> dict:
         """
-        执行代码（兼容旧接口）
+        EN(EN)
 
         Args:
-            code: Python代码
-            data_files: 数据文件路径列表
-            timeout: 超时时间（秒）
+            code: PythonEN
+            data_files: EN
+            timeout: EN(EN)
 
         Returns:
-            执行结果字典
+            EN
         """
-        # 覆盖超时时间（如果提供）
-        old_timeout = self.timeout
-        if timeout is not None:
-            self.timeout = timeout
+        # EN
+        input_files = {}
+        if data_files:
+            for file_path in data_files:
+                try:
+                    allowed_file = _resolve_allowed_data_file(file_path)
+                    with allowed_file.open("rb") as f:
+                        input_files[allowed_file.name] = f.read()
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "error": f"Failed to load data file {file_path}: {e}",
+                        "stdout": "",
+                        "stderr": "",
+                        "exit_code": -1,
+                        "execution_time": 0,
+                        "visualizations": [],
+                    }
 
-        try:
-            # 读取数据文件
-            input_files = {}
-            if data_files:
-                for file_path in data_files:
-                    try:
-                        with open(file_path, "rb") as f:
-                            input_files[Path(file_path).name] = f.read()
-                    except Exception as e:
-                        return {
-                            "success": False,
-                            "error": f"无法读取数据文件 {file_path}: {e}",
-                            "stdout": "",
-                            "stderr": "",
-                            "exit_code": -1,
-                            "execution_time": 0,
-                            "visualizations": [],
-                        }
+        # EN
+        result = self.execute(code, input_files, timeout=timeout)
 
-            # 执行代码
-            result = self.execute(code, input_files)
+        # EN
+        visualizations = [
+            name
+            for name in result.output_files.keys()
+            if name.endswith((".png", ".jpg", ".svg", ".pdf", ".html"))
+        ]
 
-            # 转换为旧格式
-            visualizations = [
-                name
-                for name in result.output_files.keys()
-                if name.endswith((".png", ".jpg", ".svg", ".pdf", ".html"))
-            ]
-
-            return {
-                "success": result.success,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "error": result.error,
-                "exit_code": 0 if result.success else 1,
-                "execution_time": result.execution_time,
-                "visualizations": visualizations,
-                "output_files": result.output_files,
-            }
-
-        finally:
-            # 恢复原超时时间
-            self.timeout = old_timeout
+        return {
+            "success": result.success,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "error": result.error,
+            "exit_code": 0 if result.success else 1,
+            "execution_time": result.execution_time,
+            "visualizations": visualizations,
+            "output_files": result.output_files,
+        }
 
     def _validate_code(self, code: str) -> list[str]:
         """
-        验证代码（兼容旧接口）
+        EN(EN)
 
         Args:
-            code: Python代码
+            code: PythonEN
 
         Returns:
-            错误列表（空列表表示通过验证）
+            EN(EN)
         """
         from backend.services.code_executor.validator import validate_code
 

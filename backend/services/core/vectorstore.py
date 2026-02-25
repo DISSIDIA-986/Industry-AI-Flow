@@ -20,9 +20,9 @@ class VectorStore:
             VectorStore._indexes_ready = True
 
     def get_connection(self):
-        """获取数据库连接"""
+        """EN"""
         conn = connect_db(self.database_url)
-        # 尝试注册 pgvector，如果不可用则跳过
+        # EN pgvector,EN
         register_pgvector(conn)
         return conn
 
@@ -55,7 +55,7 @@ class VectorStore:
             # Do not crash app if indexes cannot be created
             import logging
 
-            logging.getLogger(__name__).warning("无法创建向量索引: %s", exc)
+            logging.getLogger(__name__).warning("EN: %s", exc)
         finally:
             if "cur" in locals():
                 cur.close()
@@ -69,14 +69,14 @@ class VectorStore:
         chunks: list[str],
         embeddings: list[list[float]],
     ) -> str:
-        """存储文档及其分块向量"""
+        """EN"""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
         query_type = "store_document"
 
         try:
-            # 1. 插入文档记录
+            # 1. EN
             doc_id = str(uuid.uuid4())
             cur.execute(
                 """
@@ -86,7 +86,7 @@ class VectorStore:
                 (doc_id, filename, filepath, len(chunks)),
             )
 
-            # 2. 插入所有文档块和向量
+            # 2. EN
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -97,6 +97,18 @@ class VectorStore:
                 )
 
             conn.commit()
+            try:
+                from backend.services.retrieval.document_profile import (
+                    DocumentProfileService,
+                )
+
+                DocumentProfileService(self).refresh_profile_for_document(doc_id)
+            except Exception as exc:  # pragma: no cover - best effort enrichment
+                logging.getLogger(__name__).warning(
+                    "Failed to refresh document profile for %s: %s",
+                    doc_id,
+                    exc,
+                )
             return doc_id
 
         except Exception as e:
@@ -110,14 +122,14 @@ class VectorStore:
     def similarity_search(
         self, query_embedding: list[float], top_k: int = 3
     ) -> list[dict]:
-        """向量相似度搜索（兼容无pgvector的环境）"""
+        """EN(ENpgvectorEN)"""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
         query_type = "similarity_search"
 
         try:
-            # 检查是否安装了 pgvector 扩展
+            # EN pgvector EN
             cur.execute(
                 """
                 SELECT EXISTS(
@@ -128,7 +140,7 @@ class VectorStore:
             has_pgvector = cur.fetchone()[0]
 
             if has_pgvector:
-                # 使用 pgvector 的余弦相似度
+                # EN pgvector EN
                 embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
                 cur.execute(
                     """
@@ -146,7 +158,7 @@ class VectorStore:
                     (embedding_str, top_k),
                 )
             else:
-                # 回退到 Python 计算相似度（向量存储为 TEXT）
+                # EN Python EN(EN TEXT)
                 cur.execute(
                     """
                     SELECT
@@ -161,7 +173,7 @@ class VectorStore:
                 """
                 )
 
-                # 计算余弦相似度
+                # EN
                 import numpy as np
                 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -169,15 +181,15 @@ class VectorStore:
                 query_vec = np.array(query_embedding).reshape(1, -1)
 
                 for row in cur.fetchall():
-                    # 解析存储的向量（PostgreSQL 数组格式 {x,y,z}）
+                    # EN(PostgreSQL EN {x,y,z})
                     embedding_str = row[3]
                     if embedding_str.startswith("{") and embedding_str.endswith("}"):
-                        # PostgreSQL 数组格式
-                        embedding_str = embedding_str[1:-1]  # 去除首尾的 {}
+                        # PostgreSQL EN
+                        embedding_str = embedding_str[1:-1]  # EN {}
                     stored_embedding = [float(x) for x in embedding_str.split(",")]
                     stored_vec = np.array(stored_embedding).reshape(1, -1)
 
-                    # 计算相似度（转为距离）
+                    # EN(EN)
                     similarity = cosine_similarity(query_vec, stored_vec)[0][0]
                     distance = 1 - similarity
 
@@ -191,7 +203,7 @@ class VectorStore:
                         }
                     )
 
-                # 排序并取 top_k
+                # EN top_k
                 all_results.sort(key=lambda x: x["distance"])
                 return all_results[:top_k]
 
@@ -215,7 +227,7 @@ class VectorStore:
             self._record_duration(query_type, start_time)
 
     def get_document_count(self) -> int:
-        """获取文档总数"""
+        """EN"""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
@@ -229,7 +241,7 @@ class VectorStore:
             self._record_duration("documents_count", start_time)
 
     def get_chunk_count(self) -> int:
-        """获取文档块总数"""
+        """EN"""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
@@ -241,6 +253,24 @@ class VectorStore:
             cur.close()
             conn.close()
             self._record_duration("chunks_count", start_time)
+
+    def delete_by_doc_id(self, doc_id: str) -> None:
+        """Delete a document and its chunks by document ID."""
+        conn = self.get_connection()
+        cur = conn.cursor()
+        start_time = time.monotonic()
+
+        try:
+            cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
+            cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
+            self._record_duration("delete_document", start_time)
 
     def _record_duration(self, query_type: str, start_time: float) -> None:
         duration = time.monotonic() - start_time

@@ -1,35 +1,35 @@
-// 表单组件
+// form component
 export * from './forms'
 export { default as Forms } from './forms'
 
-// 表格组件
+// Table component
 export * from './tables'
 export { default as Tables } from './tables'
 
-// 卡片组件
+// card component
 export * from './cards'
 export { default as Cards } from './cards'
 
-// 模态框组件
+// Modal component
 export * from './modals'
 export { default as Modals } from './modals'
 
-// 反馈组件
+// feedback component
 export * from './feedback'
 export { default as Feedback } from './feedback'
 
-// 文件组件
+// file component
 export * from './files'
 export { default as Files } from './files'
 
-// 图表组件
+// chart component
 export * from './charts'
 export { default as Charts } from './charts'
 
-// 导航组件
+// Navigation component
 export { default as Navbar } from './Navbar'
 export { default as ProtectedRoute } from './ProtectedRoute'
 export { default as DashboardShell } from './dashboard-shell-simple'
 
-// 配置上下文
+// Configuration context
 export { AppConfigProvider, useAppConfig } from './app-config-context'

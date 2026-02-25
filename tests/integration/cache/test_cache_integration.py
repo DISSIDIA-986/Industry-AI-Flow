@@ -1,7 +1,7 @@
 """
-缓存集成测试
+EN
 
-测试缓存与数据库、LLM调用的集成
+EN,LLMEN
 """
 
 import pytest
@@ -13,16 +13,16 @@ from backend.services.cache.query_cache import QueryCache
 @pytest.mark.integration
 @pytest.mark.cache
 class TestCacheIntegration:
-    """缓存集成测试类"""
+    """EN"""
 
     @pytest.fixture
     def cache(self):
-        """创建缓存实例"""
+        """EN"""
         return QueryCache()
 
     def test_cache_with_database_integration(self, cache):
-        """测试缓存与数据库集成"""
-        # 模拟从数据库获取数据
+        """EN"""
+        # EN
         def fetch_from_db(tenant_id, question, top_k):
             return {
                 "tenant_id": tenant_id,
@@ -31,46 +31,46 @@ class TestCacheIntegration:
                 "top_k": top_k
             }
         
-        # 第一次查询（缓存未命中）
+        # EN(EN)
         tenant_id = "tenant1"
         question = "What is Python?"
         top_k = 5
         
         result1 = cache.get(tenant_id, question, top_k)
-        assert result1 is None  # 缓存未命中
+        assert result1 is None  # EN
         
-        # 从数据库获取并缓存
+        # EN
         db_result = fetch_from_db(tenant_id, question, top_k)
         cache.set(tenant_id, question, top_k, db_result)
         
-        # 第二次查询（缓存命中）
+        # EN(EN)
         result2 = cache.get(tenant_id, question, top_k)
         assert result2 is not None
         assert result2["answer"] == f"Answer to: {question}"
         assert result2["tenant_id"] == tenant_id
 
     def test_cache_ttl_expiration_integration(self, cache):
-        """测试缓存TTL过期集成"""
+        """ENTTLEN"""
         with patch('backend.config.settings.query_cache_ttl_seconds', 1):
             cache = QueryCache()
             
-            # 设置缓存
+            # EN
             cache.set("tenant1", "query", 5, {"result": "cached"})
             
-            # 立即获取应该命中
+            # EN
             result1 = cache.get("tenant1", "query", 5)
             assert result1 is not None
             
-            # 等待过期
+            # EN
             time.sleep(2)
             
-            # 过期后应该未命中
+            # EN
             result2 = cache.get("tenant1", "query", 5)
             assert result2 is None
 
     def test_cache_with_llm_integration(self, cache):
-        """测试缓存与LLM调用集成"""
-        # 模拟LLM调用
+        """ENLLMEN"""
+        # ENLLMEN
         def call_llm(question):
             return {
                 "question": question,
@@ -81,43 +81,43 @@ class TestCacheIntegration:
         question = "Explain machine learning"
         tenant_id = "tenant1"
         
-        # 第一次LLM调用（缓存未命中）
+        # ENLLMEN(EN)
         cache_result = cache.get(tenant_id, question, 5)
         assert cache_result is None
         
-        # 调用LLM
+        # ENLLM
         llm_result = call_llm(question)
         
-        # 缓存结果
+        # EN
         cache.set(tenant_id, question, 5, llm_result)
         
-        # 第二次相同问题（缓存命中，无需调用LLM）
+        # EN(EN,ENLLM)
         cached_result = cache.get(tenant_id, question, 5)
         assert cached_result is not None
         assert cached_result["answer"] == llm_result["answer"]
         
-        # 验证缓存键唯一性
+        # EN
         same_result = cache.get(tenant_id, question, 5)
         assert same_result["answer"] == cached_result["answer"]
 
     def test_multi_tenant_cache_isolation(self, cache):
-        """测试多租户缓存隔离"""
-        # 相同问题，不同租户
+        """EN"""
+        # EN,EN
         question = "What is AI?"
         
-        # 租户1缓存
+        # EN1EN
         cache.set("tenant1", question, 5, {
             "tenant": "tenant1",
             "answer": "Tenant1's answer"
         })
         
-        # 租户2缓存
+        # EN2EN
         cache.set("tenant2", question, 5, {
             "tenant": "tenant2",
             "answer": "Tenant2's answer"
         })
         
-        # 验证租户隔离
+        # EN
         result1 = cache.get("tenant1", question, 5)
         result2 = cache.get("tenant2", question, 5)
         
@@ -126,17 +126,17 @@ class TestCacheIntegration:
         assert result1["answer"] != result2["answer"]
 
     def test_cache_with_different_top_k(self, cache):
-        """测试不同top_k的缓存隔离"""
+        """ENtop_kEN"""
         question = "What is Python?"
         tenant_id = "tenant1"
         
-        # top_k=5的缓存
+        # top_k=5EN
         cache.set(tenant_id, question, 5, {"results": ["a", "b", "c", "d", "e"]})
         
-        # top_k=10的缓存
+        # top_k=10EN
         cache.set(tenant_id, question, 10, {"results": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]})
         
-        # 验证top_k隔离
+        # ENtop_kEN
         result5 = cache.get(tenant_id, question, 5)
         result10 = cache.get(tenant_id, question, 10)
         
@@ -145,45 +145,45 @@ class TestCacheIntegration:
         assert result5 != result10
 
     def test_cache_clear_integration(self, cache):
-        """测试缓存清理集成"""
-        # 设置多个缓存
+        """EN"""
+        # EN
         for i in range(10):
             cache.set(f"tenant{i % 3}", f"question{i}", 5, {"data": i})
         
-        # 验证缓存存在
+        # EN
         stats_before = cache.stats()
         assert stats_before["current_size"] == 10
         
-        # 清空缓存
+        # EN
         cache.clear()
         
-        # 验证缓存已清空
+        # EN
         stats_after = cache.stats()
         assert stats_after["current_size"] == 0
         
-        # 验证所有缓存都无效
+        # EN
         for i in range(10):
             result = cache.get(f"tenant{i % 3}", f"question{i}", 5)
             assert result is None
 
     def test_cache_disabled_integration(self, cache):
-        """测试缓存禁用时的集成"""
+        """EN"""
         with patch('backend.config.settings.query_cache_enabled', False):
             cache = QueryCache()
             
-            # 尝试设置缓存
+            # EN
             cache.set("tenant1", "query", 5, {"result": "data"})
             
-            # 验证缓存未生效
+            # EN
             result = cache.get("tenant1", "query", 5)
             assert result is None
             
-            # 验证统计显示缓存禁用
+            # EN
             stats = cache.stats()
             assert stats["enabled"] is False
 
     def test_concurrent_cache_operations(self, cache):
-        """测试并发缓存操作集成"""
+        """EN"""
         import threading
         
         errors = []
@@ -195,17 +195,17 @@ class TestCacheIntegration:
                 question = f"question{i}"
                 top_k = 5
                 
-                # 写入缓存
+                # EN
                 cache.set(tenant_id, question, top_k, {"data": i})
                 
-                # 读取缓存
+                # EN
                 result = cache.get(tenant_id, question, top_k)
                 
                 results.append((i, result))
             except Exception as e:
                 errors.append(e)
         
-        # 创建100个并发操作
+        # EN100EN
         threads = [
             threading.Thread(target=concurrent_operation, args=(i,))
             for i in range(100)
@@ -217,28 +217,28 @@ class TestCacheIntegration:
         for t in threads:
             t.join()
         
-        # 验证没有错误
-        assert len(errors) == 0, f"并发操作错误: {errors}"
+        # EN
+        assert len(errors) == 0, f"EN: {errors}"
         
-        # 验证操作成功
+        # EN
         assert len(results) == 100
         
-        # 验证数据一致性
+        # EN
         for i, result in results:
             assert result is not None
             assert result["data"] == i
 
     def test_cache_stats_integration(self, cache):
-        """测试缓存统计集成"""
-        # 初始统计
+        """EN"""
+        # EN
         stats_initial = cache.stats()
         initial_size = stats_initial["current_size"]
         
-        # 添加缓存
+        # EN
         for i in range(10):
             cache.set(f"tenant{i}", f"question{i}", 5, {"data": i})
         
-        # 更新后的统计
+        # EN
         stats_after = cache.stats()
         
         assert stats_after["current_size"] == initial_size + 10
@@ -248,7 +248,7 @@ class TestCacheIntegration:
         assert stats_after["thread_safe"] is True
 
     def test_cache_with_complex_data(self, cache):
-        """测试复杂缓存数据集成"""
+        """EN"""
         complex_data = {
             "question": "What is deep learning?",
             "answer": "Deep learning is...",
@@ -264,10 +264,10 @@ class TestCacheIntegration:
             "timestamp": "2026-02-09T23:00:00Z"
         }
         
-        # 缓存复杂数据
+        # EN
         cache.set("tenant1", "complex query", 5, complex_data)
         
-        # 检索复杂数据
+        # EN
         result = cache.get("tenant1", "complex query", 5)
         
         assert result is not None
@@ -277,34 +277,34 @@ class TestCacheIntegration:
         assert result["metadata"]["tokens"]["total"] == 150
 
     def test_cache_question_normalization(self, cache):
-        """测试问题文本标准化"""
-        # 相同问题，不同格式
+        """EN"""
+        # EN,EN
         questions = [
             "What is Python?",
-            "what is python?",  # 小写
-            "What   is   Python?",  # 多余空格
-            "  What is Python?  ",  # 前后空格
+            "what is python?",  # EN
+            "What   is   Python?",  # EN
+            "  What is Python?  ",  # EN
         ]
         
-        # 第一个问题缓存
+        # EN
         cache.set("tenant1", questions[0], 5, {"answer": "Python is..."})
         
-        # 验证所有格式都能命中缓存
+        # EN
         for question in questions:
             result = cache.get("tenant1", question, 5)
-            # 注意：当前实现可能只标准化空格，不处理大小写
-            # 这里主要验证空格标准化
+            # EN:EN,EN
+            # EN
             if question.strip() == questions[0].strip():
                 assert result is not None
 
     def test_cache_with_special_characters(self, cache):
-        """测试特殊字符缓存集成"""
+        """EN"""
         special_questions = [
             "What's the meaning of 'life'?",
             "Use <html> tags",
             "Math: 2 + 2 = 4",
             "Emoji: 😀🎉",
-            "中文：什么是AI？"
+            "EN:ENAI?"
         ]
         
         for question in special_questions:
@@ -314,8 +314,8 @@ class TestCacheIntegration:
             assert result["cached"] is True
 
     def test_cache_hit_rate_tracking(self, cache):
-        """测试缓存命中率跟踪"""
-        # 首轮使用唯一问题，确保全部miss
+        """EN"""
+        # EN,ENmiss
         first_round_questions = [f"q{i}" for i in range(1, 7)]
         hits = 0
         misses = 0
@@ -324,16 +324,16 @@ class TestCacheIntegration:
             result = cache.get("tenant1", question, 5)
             if result is None:
                 misses += 1
-                # 模拟从数据库获取并缓存
+                # EN
                 cache.set("tenant1", question, 5, {"answer": f"Answer to {question}"})
             else:
                 hits += 1
 
-        # 第一轮：全部miss
+        # EN:ENmiss
         assert hits == 0
         assert misses == 6
 
-        # 第二轮：复用同一批问题，应全部hit
+        # EN:EN,ENhit
         hits = 0
         misses = 0
 
@@ -344,20 +344,20 @@ class TestCacheIntegration:
             else:
                 hits += 1
 
-        # 第二轮：全部hit
+        # EN:ENhit
         assert hits == 6
         assert misses == 0
 
     def test_cache_max_size_limit(self, cache):
-        """测试缓存大小限制"""
+        """EN"""
         with patch('backend.config.settings.query_cache_maxsize', 5):
             cache = QueryCache()
             
-            # 添加超过最大大小的缓存
+            # EN
             for i in range(10):
                 cache.set(f"tenant{i}", f"question{i}", 5, {"data": i})
             
-            # 验证缓存大小不超过最大值
+            # EN
             stats = cache.stats()
             assert stats["current_size"] <= stats["max_size"]
             assert stats["max_size"] == 5
@@ -368,13 +368,13 @@ class TestCacheIntegration:
         ("tenant3", "q3", 3, {"c": 3}),
     ])
     def test_cache_parametrized_operations(self, cache, tenant_id, question, top_k, data):
-        """参数化测试缓存操作"""
-        # 设置
+        """EN"""
+        # EN
         cache.set(tenant_id, question, top_k, data)
         
-        # 获取
+        # EN
         result = cache.get(tenant_id, question, top_k)
         
-        # 验证
+        # EN
         assert result is not None
         assert result == data

@@ -161,7 +161,7 @@ export function Pagination({
 }: PaginationProps) {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
   
-  // 只显示当前页附近的页码
+  // Only show page numbers near the current page
   const visiblePages = pages.filter(page => {
     return (
       page === 1 ||
@@ -173,7 +173,7 @@ export function Pagination({
   return (
     <div className={`flex items-center justify-between ${className}`}>
       <div className="text-sm text-gray-700">
-        第 <span className="font-medium">{currentPage}</span> 页，共 <span className="font-medium">{totalPages}</span> 页
+        No. <span className="font-medium">{currentPage}</span> Pages, total <span className="font-medium">{totalPages}</span> Page
       </div>
       
       <div className="flex space-x-2">
@@ -182,7 +182,7 @@ export function Pagination({
           disabled={currentPage === 1}
           className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
-          上一页
+          Previous page
         </button>
         
         <div className="flex space-x-1">
@@ -216,7 +216,7 @@ export function Pagination({
           disabled={currentPage === totalPages}
           className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
-          下一页
+          Next page
         </button>
       </div>
     </div>

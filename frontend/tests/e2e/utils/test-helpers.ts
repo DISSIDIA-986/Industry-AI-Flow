@@ -1,12 +1,12 @@
 import { expect, BrowserContext, Page } from '@playwright/test';
 
 /**
- * 测试辅助工具函数
- * 提供通用的测试功能和工具
+ * Test helper functions
+ * Provide common testing functions and tools
  */
 
 /**
- * 截取页面截图
+ * Take a screenshot of the page
  */
 export async function takeScreenshot(page: Page, name: string) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -16,19 +16,19 @@ export async function takeScreenshot(page: Page, name: string) {
 }
 
 /**
- * 记录测试日志
+ * Record test log
  */
 export function logTestStep(step: string, details?: any) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${step}`);
   
   if (details) {
-    console.log('详细信息:', JSON.stringify(details, null, 2));
+    console.log('Details:', JSON.stringify(details, null, 2));
   }
 }
 
 /**
- * 模拟网络延迟
+ * Simulate network latency
  */
 export async function simulateNetworkDelay(page: Page, delayMs: number) {
   await page.route('**', async route => {
@@ -38,14 +38,14 @@ export async function simulateNetworkDelay(page: Page, delayMs: number) {
 }
 
 /**
- * 模拟API失败
+ * simulationAPIfail
  */
 export async function simulateAPIFailure(page: Page, endpointPattern: string) {
   await page.route(endpointPattern, route => route.abort());
 }
 
 /**
- * 模拟慢速API响应
+ * Simulate slow speedAPIresponse
  */
 export async function simulateSlowAPI(page: Page, endpointPattern: string, delayMs = 2000) {
   await page.route(endpointPattern, async route => {
@@ -55,7 +55,7 @@ export async function simulateSlowAPI(page: Page, endpointPattern: string, delay
 }
 
 /**
- * 模拟空数据响应
+ * Simulate empty data response
  */
 export async function simulateEmptyData(page: Page, endpointPattern: string) {
   await page.route(endpointPattern, async route => {
@@ -66,7 +66,7 @@ export async function simulateEmptyData(page: Page, endpointPattern: string) {
 }
 
 /**
- * 模拟错误响应
+ * Simulate error response
  */
 export async function simulateErrorResponse(page: Page, endpointPattern: string, statusCode = 500) {
   await page.route(endpointPattern, async route => {
@@ -83,7 +83,7 @@ export async function simulateErrorResponse(page: Page, endpointPattern: string,
 }
 
 /**
- * 验证页面性能指标
+ * Verify page performance metrics
  */
 export async function verifyPerformanceMetrics(page: Page) {
   const metrics = await page.evaluate(() => {
@@ -98,35 +98,35 @@ export async function verifyPerformanceMetrics(page: Page) {
     };
   });
 
-  logTestStep('页面性能指标', metrics);
+  logTestStep('Page performance metrics', metrics);
   
-  // 性能断言
-  expect(metrics.loadTime).toBeLessThan(3000); // 页面加载时间应小于3秒
-  expect(metrics.firstContentfulPaint).toBeLessThan(2000); // FCP应小于2秒
+  // Performance assertions
+  expect(metrics.loadTime).toBeLessThan(3000); // Page load time should be less than 3 seconds
+  expect(metrics.firstContentfulPaint).toBeLessThan(2000); // FCPShould be less than 2 seconds
   
   return metrics;
 }
 
 /**
- * 验证无障碍性
+ * Verify accessibility
  */
 export async function verifyAccessibility(page: Page) {
-  // 检查标题
+  // Check title
   const title = await page.title();
   expect(title).toBeTruthy();
   expect(title.length).toBeGreaterThan(0);
   
-  // 检查语言属性
+  // Check language properties
   const lang = await page.getAttribute('html', 'lang');
   expect(lang).toBeTruthy();
   
-  // 检查图片alt属性
+  // Check picturesaltproperty
   const imagesWithoutAlt = await page.$$eval('img', imgs => 
     imgs.filter(img => !img.alt).length
   );
   expect(imagesWithoutAlt).toBe(0);
   
-  // 检查表单标签
+  // Check form tags
   const formInputsWithoutLabel = await page.$$eval('input, select, textarea', elements =>
     elements.filter(el => {
       const id = el.id;
@@ -136,7 +136,7 @@ export async function verifyAccessibility(page: Page) {
   );
   expect(formInputsWithoutLabel).toBe(0);
   
-  logTestStep('无障碍性检查通过', {
+  logTestStep('Accessibility check passed', {
     title,
     lang,
     imagesWithoutAlt,
@@ -145,7 +145,7 @@ export async function verifyAccessibility(page: Page) {
 }
 
 /**
- * 验证响应式设计
+ * Validate responsive design
  */
 export async function verifyResponsiveDesign(page: Page) {
   const viewports = [
@@ -157,19 +157,19 @@ export async function verifyResponsiveDesign(page: Page) {
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     
-    // 检查关键元素在不同视口下是否可见
+    // Check whether key elements are visible in different viewports
     const heading = page.getByRole('heading', { name: /Industry AI Flow/i }).first();
     await expect(heading).toBeVisible();
     
-    // 截取不同视口的截图
+    // Take screenshots of different viewports
     await takeScreenshot(page, `responsive-${viewport.name}`);
     
-    logTestStep(`响应式设计检查 - ${viewport.name}`, viewport);
+    logTestStep(`Responsive design check - ${viewport.name}`, viewport);
   }
 }
 
 /**
- * 创建测试用户
+ * Create test user
  */
 export async function createTestUser(context: BrowserContext) {
   const testUser = {
@@ -178,37 +178,37 @@ export async function createTestUser(context: BrowserContext) {
     name: 'Test User'
   };
   
-  // 这里可以添加创建测试用户的逻辑
-  // 例如通过API或数据库操作
+  // Here you can add logic to create test users
+  // For example viaAPIor database operations
   
   return testUser;
 }
 
 /**
- * 清理测试数据
+ * Clean test data
  */
 export async function cleanupTestData(userEmail: string) {
-  // 这里可以添加清理测试数据的逻辑
-  // 例如通过API或数据库操作删除测试用户
-  logTestStep('清理测试数据', { userEmail });
+  // Here you can add logic to clean test data
+  // For example viaAPIOr database operation to delete the test user
+  logTestStep('Clean test data', { userEmail });
 }
 
 /**
- * 等待元素可见
+ * Wait for element to be visible
  */
 export async function waitForElement(page: Page, selector: string, timeout = 10000) {
   await page.waitForSelector(selector, { state: 'visible', timeout });
 }
 
 /**
- * 等待元素包含文本
+ * Wait for element to contain text
  */
 export async function waitForText(page: Page, text: string, timeout = 10000) {
   await page.waitForSelector(`:has-text("${text}")`, { state: 'visible', timeout });
 }
 
 /**
- * 验证页面URL
+ * Verification pageURL
  */
 export async function verifyPageURL(page: Page, expectedPattern: RegExp | string) {
   if (typeof expectedPattern === 'string') {
@@ -219,21 +219,21 @@ export async function verifyPageURL(page: Page, expectedPattern: RegExp | string
 }
 
 /**
- * 验证页面标题
+ * Verify page title
  */
 export async function verifyPageTitle(page: Page, expectedTitle: string | RegExp) {
   await expect(page).toHaveTitle(expectedTitle);
 }
 
 /**
- * 执行JavaScript代码
+ * implementJavaScriptcode
  */
 export async function executeScript<T>(page: Page, script: string): Promise<T> {
   return await page.evaluate(script);
 }
 
 /**
- * 获取控制台错误
+ * Get console error
  */
 export async function getConsoleErrors(page: Page): Promise<string[]> {
   const errors: string[] = [];
@@ -248,13 +248,13 @@ export async function getConsoleErrors(page: Page): Promise<string[]> {
 }
 
 /**
- * 验证没有JavaScript错误
+ * Verify noJavaScriptmistake
  */
 export async function verifyNoConsoleErrors(page: Page) {
   const errors = await getConsoleErrors(page);
   expect(errors).toHaveLength(0);
   
   if (errors.length > 0) {
-    logTestStep('发现JavaScript错误', errors);
+    logTestStep('DiscoverJavaScriptmistake', errors);
   }
 }

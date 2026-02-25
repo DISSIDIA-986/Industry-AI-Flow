@@ -1,8 +1,8 @@
-// 模拟数据生成器
+// Simulation Data Generator
 export class MockDataGenerator {
-  // 生成时间序列数据
+  // Generate time series data
   static generateTimeSeriesData(count: number = 12, startValue: number = 100) {
-    const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+    const months = ['1moon', '2moon', '3moon', '4moon', '5moon', '6moon', '7moon', '8moon', '9moon', '10moon', '11moon', '12moon']
     const data = []
     
     for (let i = 0; i < count; i++) {
@@ -18,8 +18,8 @@ export class MockDataGenerator {
     return data
   }
   
-  // 生成分类数据
-  static generateCategoryData(categories: string[] = ['住宅', '商业', '工业', '基础设施', '医疗']) {
+  // Generate categorical data
+  static generateCategoryData(categories: string[] = ['Residential', 'Business', 'industry', 'infrastructure', 'medical']) {
     return categories.map(category => ({
       name: category,
       value: Math.round(50 + Math.random() * 200),
@@ -28,27 +28,27 @@ export class MockDataGenerator {
     }))
   }
   
-  // 生成成本分布数据
+  // Generate cost distribution data
   static generateCostDistribution() {
-    const categories = ['材料', '人工', '设备', '管理', '其他']
+    const categories = ['Material', 'Artificial', 'equipment', 'manage', 'other']
     return categories.map(category => ({
       name: category,
       value: Math.round(20 + Math.random() * 50)
     }))
   }
   
-  // 生成风险雷达图数据
+  // Generate risk radar chart data
   static generateRiskRadarData() {
-    const subjects = ['成本风险', '时间风险', '质量风险', '安全风险', '合规风险', '技术风险']
+    const subjects = ['cost risk', 'time risk', 'quality risk', 'security risk', 'Compliance risk', 'technology risk']
     return subjects.map(subject => ({
       subject,
       value: Math.round(60 + Math.random() * 40)
     }))
   }
   
-  // 生成项目进度数据
+  // Generate project progress data
   static generateProjectProgress() {
-    const projects = ['办公楼A', '医院B', '学校C', '商场D', '住宅E']
+    const projects = ['office buildingA', 'HospitalB', 'SchoolC', 'shopping mallD', 'ResidentialE']
     return projects.map(project => ({
       name: project,
       progress: Math.round(Math.random() * 100),
@@ -58,7 +58,7 @@ export class MockDataGenerator {
     }))
   }
   
-  // 生成KPI指标数据
+  // generateKPIIndicator data
   static generateKPIMetrics() {
     return {
       totalProjects: Math.round(50 + Math.random() * 100),
@@ -70,7 +70,7 @@ export class MockDataGenerator {
     }
   }
   
-  // 生成实时监控数据
+  // Generate real-time monitoring data
   static generateRealTimeData() {
     const now = new Date()
     const data = []
@@ -89,9 +89,9 @@ export class MockDataGenerator {
     return data.reverse()
   }
   
-  // 生成成本估算对比数据
+  // Generate cost estimate comparison data
   static generateCostComparison() {
-    const methods = ['历史数据', '专家评估', 'AI预测', '市场基准']
+    const methods = ['historical data', 'Expert assessment', 'AIpredict', 'market benchmark']
     return methods.map(method => ({
       name: method,
       estimate: Math.round(1000000 + Math.random() * 500000),
@@ -101,57 +101,57 @@ export class MockDataGenerator {
   }
 }
 
-// 数据API
+// dataAPI
 export const dataApi = {
-  // 获取时间序列数据
+  // Get time series data
   async getTimeSeriesData() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateTimeSeriesData()
   },
   
-  // 获取分类数据
+  // Get categorical data
   async getCategoryData() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateCategoryData()
   },
   
-  // 获取成本分布数据
+  // Get cost distribution data
   async getCostDistribution() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateCostDistribution()
   },
   
-  // 获取风险数据
+  // Get risk data
   async getRiskData() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateRiskRadarData()
   },
   
-  // 获取项目进度数据
+  // Get project progress data
   async getProjectProgress() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateProjectProgress()
   },
   
-  // 获取KPI指标
+  // GetKPIindex
   async getKPIMetrics() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateKPIMetrics()
   },
   
-  // 获取实时数据
+  // Get real-time data
   async getRealTimeData() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateRealTimeData()
   },
   
-  // 获取成本对比数据
+  // Get cost comparison data
   async getCostComparison() {
     await new Promise(resolve => setTimeout(resolve, 300))
     return MockDataGenerator.generateCostComparison()
   },
   
-  // 获取所有数据
+  // Get all data
   async getAllData() {
     await new Promise(resolve => setTimeout(resolve, 500))
     return {
@@ -167,5 +167,5 @@ export const dataApi = {
   }
 }
 
-// 导出
+// Export
 export default dataApi

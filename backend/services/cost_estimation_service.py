@@ -48,26 +48,51 @@ _PROJECT_TYPE_KEYWORDS: Dict[str, List[str]] = {
     "residential_single_family": [
         "residential single family",
         "single family",
-        "独栋住宅",
-        "单户住宅",
+        "single-family",
+        "detached house",
     ],
     "residential_multi_family": [
         "residential multi family",
         "multi family",
-        "多户住宅",
-        "公寓住宅",
+        "multi-family",
+        "apartment",
     ],
-    "commercial_office": ["commercial office", "office building", "办公楼", "写字楼"],
-    "commercial_retail": ["commercial retail", "retail", "shopping", "商业零售", "商场"],
-    "industrial_warehouse": ["industrial warehouse", "warehouse", "工业仓储", "仓库"],
-    "education_school": ["education school", "school", "校园", "学校"],
-    "healthcare_hospital": ["healthcare hospital", "hospital", "医院", "医疗建筑"],
-    "infrastructure_bridge": ["infrastructure bridge", "bridge", "桥梁", "基础设施桥梁"],
+    "commercial_office": [
+        "commercial office",
+        "office building",
+        "office tower",
+        "business office",
+    ],
+    "commercial_retail": [
+        "commercial retail",
+        "retail",
+        "shopping",
+        "shopping center",
+    ],
+    "industrial_warehouse": [
+        "industrial warehouse",
+        "warehouse",
+        "distribution center",
+        "logistics hub",
+    ],
+    "education_school": ["education school", "school", "campus", "education facility"],
+    "healthcare_hospital": [
+        "healthcare hospital",
+        "hospital",
+        "medical center",
+        "healthcare facility",
+    ],
+    "infrastructure_bridge": [
+        "infrastructure bridge",
+        "bridge",
+        "infrastructure project",
+        "transport bridge",
+    ],
     "renovation_commercial": [
         "renovation commercial",
         "commercial renovation",
-        "商业改造",
-        "改造项目",
+        "tenant improvement",
+        "retrofit",
     ],
 }
 
@@ -86,49 +111,49 @@ _LOCATION_KEYWORDS: List[str] = [
 
 _NUMERIC_PATTERNS: Dict[str, List[str]] = {
     "sqft": [
-        r"(?:sqft|square\s*feet|面积|建筑面积)\s*[:=]?\s*([0-9][0-9,.\s]*)",
+        r"(?:sqft|square\s*feet|square\s*ft|area)\s*[:=]?\s*([0-9][0-9,.\s]*)",
     ],
     "floors": [
-        r"(?:floors?|storeys?|stories|楼层)\s*[:=]?\s*([0-9]+)",
+        r"(?:floors?|storeys?|stories|levels?)\s*[:=]?\s*([0-9]+)",
     ],
     "num_units": [
-        r"(?:units?|num\s*units|户数)\s*[:=]?\s*([0-9]+)",
+        r"(?:units?|num\s*units|apartments?|homes?)\s*[:=]?\s*([0-9]+)",
     ],
     "planned_duration_weeks": [
-        r"(?:planned\s*duration|duration|weeks?|工期)\s*[:=]?\s*([0-9][0-9,.\s]*)",
+        r"(?:planned\s*duration|duration|weeks?|timeline|schedule)\s*[:=]?\s*([0-9][0-9,.\s]*)",
     ],
     "estimated_cost_cad": [
-        r"(?:estimated\s*cost|estimate|budget|预算|估算成本|预估成本)\s*[:=]?\s*([0-9][0-9,.\s]*[kmb]?)",
+        r"(?:estimated\s*cost|estimate|budget|project\s*cost|target\s*cost|cost)\s*[:=]?\s*([0-9][0-9,.\s]*[kmb]?)",
     ],
     "contractor_rating": [
-        r"(?:contractor\s*rating|rating|承包商评分)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:contractor\s*rating|builder\s*rating|rating)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "complexity_score": [
-        r"(?:complexity|复杂度)\s*[:=]?\s*([0-9]+)",
+        r"(?:complexity|complexity\s*score)\s*[:=]?\s*([0-9]+)",
     ],
     "team_experience_years": [
-        r"(?:team\s*experience|experience\s*years|团队经验)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:team\s*experience|experience\s*years|years\s*experience)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "num_change_orders": [
-        r"(?:change\s*orders?|变更单)\s*[:=]?\s*([0-9]+)",
+        r"(?:change\s*orders?|variation\s*orders?)\s*[:=]?\s*([0-9]+)",
     ],
     "weather_risk_factor": [
-        r"(?:weather\s*risk|天气风险)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:weather\s*risk|climate\s*risk)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "material_volatility": [
-        r"(?:material\s*volatility|材料波动)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:material\s*volatility|material\s*risk)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "num_subcontractors": [
-        r"(?:subcontractors?|分包商数量)\s*[:=]?\s*([0-9]+)",
+        r"(?:subcontractors?|subs?)\s*[:=]?\s*([0-9]+)",
     ],
     "budget_pressure": [
-        r"(?:budget\s*pressure|预算压力)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:budget\s*pressure|budget\s*stress)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "risk_score": [
-        r"(?:risk\s*score|风险评分)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:risk\s*score|overall\s*risk)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "risk_score_original": [
-        r"(?:risk\s*score\s*original|原始风险评分)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:risk\s*score\s*original|baseline\s*risk\s*score)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
 }
 
@@ -196,7 +221,11 @@ def extract_cost_features_from_query(query: str) -> Dict[str, Any]:
 
     # Generic location capture fallback: "location Toronto"
     if "location" not in extracted:
-        loc_match = re.search(r"(?:location|城市)\s*[:=]?\s*([A-Za-z][A-Za-z\s-]{1,30})", text, re.IGNORECASE)
+        loc_match = re.search(
+            r"(?:location|city|region)\s*[:=]?\s*([A-Za-z][A-Za-z\s-]{1,30})",
+            text,
+            re.IGNORECASE,
+        )
         if loc_match:
             extracted["location"] = loc_match.group(1).strip().title()
 
@@ -611,6 +640,8 @@ class CostEstimationService:
             if row[col] not in levels[col]:
                 unknown_categories[col] = row[col]
 
+        confidence_degraded = bool(unknown_categories)
+
         return {
             "predicted_cost_overrun_pct": pred_overrun,
             "predicted_actual_cost_cad": pred_actual_cost,
@@ -624,6 +655,7 @@ class CostEstimationService:
                 "ape_quantile": ape_quantile,
             },
             "unknown_categories": unknown_categories,
+            "confidence_degraded": confidence_degraded,
         }
 
     def predict_batch(

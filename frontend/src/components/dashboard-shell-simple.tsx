@@ -8,8 +8,8 @@ interface DashboardShellProps {
 
 export default function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <div className="shell-root">
-      <div className="shell-main">
+    <div className="shell-root-simple">
+      <div className="shell-main-simple">
         <div className="shell-content">
           {children}
         </div>

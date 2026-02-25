@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.services.core.embedder import embed_query_text
+from backend.services.core.embedder import embed_query_text, embedding_backend_status
 from backend.services.core.vectorstore import VectorStore
 from backend.services.retrieval.hybrid_search import HybridRetriever
 
@@ -154,6 +154,7 @@ def _run_retrieval_mode(
     retriever: HybridRetriever,
     vector_store: VectorStore,
     top_k: int,
+    semantic_fallback_to_hybrid: bool = False,
 ) -> dict:
     per_case = []
     latencies_ms = []
@@ -162,8 +163,16 @@ def _run_retrieval_mode(
     for case in QUERY_CASES:
         started = time.perf_counter()
         if mode == "semantic":
-            query_embedding = embed_query_text(case.query)
-            results = vector_store.similarity_search(query_embedding, top_k=top_k)
+            if semantic_fallback_to_hybrid:
+                results = retriever.search(
+                    query=case.query,
+                    top_k=top_k,
+                    vector_weight=1.0,
+                    bm25_weight=0.0,
+                )
+            else:
+                query_embedding = embed_query_text(case.query)
+                results = vector_store.similarity_search(query_embedding, top_k=top_k)
         elif mode == "hybrid":
             results = retriever.search(
                 query=case.query, top_k=top_k, vector_weight=0.7, bm25_weight=0.3
@@ -497,13 +506,32 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
 
 def run_validation() -> dict:
     started = time.perf_counter()
+    embedding_status_before_probe = embedding_backend_status()
+    try:
+        # Force one probe embedding so readiness reflects actual runtime capability.
+        embed_query_text("construction-rag-e2e-embedding-probe")
+    except Exception:
+        pass
+    embedding_status = embedding_backend_status()
+    require_embedding_ready = (
+        os.getenv("RAG_E2E_REQUIRE_EMBEDDING_READY", "false").strip().lower() == "true"
+    )
+    embedding_ready_pass = bool(
+        embedding_status.get("ready", False)
+        and not embedding_status.get("fallback_active", False)
+    )
+    semantic_fallback_to_hybrid = bool(embedding_status.get("fallback_active", False))
     vector_store = VectorStore()
     retriever = HybridRetriever(vector_store)
     retriever.build_bm25_index()
 
     storage = _check_storage(vector_store)
     retrieval_semantic = _run_retrieval_mode(
-        mode="semantic", retriever=retriever, vector_store=vector_store, top_k=8
+        mode="semantic",
+        retriever=retriever,
+        vector_store=vector_store,
+        top_k=8,
+        semantic_fallback_to_hybrid=semantic_fallback_to_hybrid,
     )
     retrieval_hybrid = _run_retrieval_mode(
         mode="hybrid", retriever=retriever, vector_store=vector_store, top_k=8
@@ -519,7 +547,11 @@ def run_validation() -> dict:
     mode_pass = bool(semantic_pass and hybrid_pass and keyword_pass)
     workflow_quality_pass = bool(workflow_api.get("quality_pass", False))
     overall_pass = bool(
-        storage["pass"] and workflow_api["pass"] and workflow_quality_pass and mode_pass
+        storage["pass"]
+        and workflow_api["pass"]
+        and workflow_quality_pass
+        and mode_pass
+        and (embedding_ready_pass or not require_embedding_ready)
     )
 
     elapsed_ms = (time.perf_counter() - started) * 1000
@@ -528,6 +560,13 @@ def run_validation() -> dict:
         "seed_dir": str(
             PROJECT_ROOT / "test_resources" / "documents" / "construction_seed_2026q1"
         ),
+        "embedding_backend_validation": {
+            "status": embedding_status,
+            "status_before_probe": embedding_status_before_probe,
+            "require_ready": require_embedding_ready,
+            "pass": embedding_ready_pass,
+            "semantic_fallback_to_hybrid": semantic_fallback_to_hybrid,
+        },
         "storage_validation": storage,
         "retrieval_validation": {
             "semantic": retrieval_semantic,
@@ -537,12 +576,14 @@ def run_validation() -> dict:
         "workflow_api_validation": workflow_api,
         "acceptance": {
             "storage_pass": storage["pass"],
+            "embedding_ready_pass": embedding_ready_pass,
             "retrieval_modes_pass": mode_pass,
             "retrieval_thresholds": {
                 "semantic_min_pass_rate": 0.5,
                 "hybrid_min_pass_rate": 0.75,
                 "keyword_min_pass_rate": 0.75,
             },
+            "embedding_require_ready": require_embedding_ready,
             "retrieval_mode_breakdown": {
                 "semantic_pass": semantic_pass,
                 "hybrid_pass": hybrid_pass,
@@ -566,6 +607,7 @@ def main() -> int:
 
     acceptance = report["acceptance"]
     print("Construction RAG E2E validation finished.")
+    print(f"embedding_ready_pass={acceptance['embedding_ready_pass']}")
     print(f"storage_pass={acceptance['storage_pass']}")
     print(f"retrieval_modes_pass={acceptance['retrieval_modes_pass']}")
     print(f"workflow_api_pass={acceptance['workflow_api_pass']}")

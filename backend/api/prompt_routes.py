@@ -1,6 +1,6 @@
 """
-Prompt管理API路由
-提供RESTful API用于Prompt的CRUD、版本管理、性能监控等功能
+Prompt Management API
+RESTful API for prompt CRUD, testing, usage logging, and experiments.
 """
 
 import json
@@ -23,23 +23,23 @@ from backend.services.prompt_manager import (
 
 logger = logging.getLogger(__name__)
 
-# 创建路由器
+# EN
 router = APIRouter(prefix="/api/prompts", tags=["prompts"])
 
 
-# Pydantic模型定义
+# PydanticEN
 class PromptVariableCreate(BaseModel):
-    name: str = Field(..., description="变量名")
-    type: str = Field(default="string", description="变量类型")
-    required: bool = Field(default=True, description="是否必需")
-    default_value: Any = Field(default=None, description="默认值")
-    description: str = Field(default="", description="描述")
-    validation_regex: str = Field(default=None, description="验证正则")
-    options: List[Any] = Field(default=None, description="可选值列表")
+    name: str = Field(..., description="Description")
+    type: str = Field(default="string", description="Description")
+    required: bool = Field(default=True, description="Description")
+    default_value: Any = Field(default=None, description="Description")
+    description: str = Field(default="", description="Description")
+    validation_regex: str = Field(default=None, description="Description")
+    options: List[Any] = Field(default=None, description="Description")
 
 
-class PromptListResponse(BaseModel):  # P0修复：添加列表响应模型
-    """Prompt列表响应模型"""
+class PromptListResponse(BaseModel):  # P0EN:EN
+    """Prompt"""
     id: UUID
     name: str
     category: str
@@ -74,71 +74,71 @@ class PromptListPageResponse(BaseModel):
 
 
 class PromptCreate(BaseModel):
-    name: str = Field(..., description="Prompt名称")
-    category: str = Field(..., description="Prompt分类")
-    subcategory: Optional[str] = Field(None, description="子分类")
-    version: str = Field(default="1.0.0", description="版本号")
-    content: str = Field(..., description="Prompt内容")
-    variables: Optional[List[PromptVariableCreate]] = Field(None, description="变量定义")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="元数据")
-    priority: int = Field(default=0, description="优先级")
-    tags: Optional[List[str]] = Field(None, description="标签列表")
-    created_by: Optional[str] = Field(None, description="创建者")
+    name: str = Field(..., description="Prompt")
+    category: str = Field(..., description="Prompt")
+    subcategory: Optional[str] = Field(None, description="Description")
+    version: str = Field(default="1.0.0", description="Description")
+    content: str = Field(..., description="Prompt")
+    variables: Optional[List[PromptVariableCreate]] = Field(None, description="Description")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Description")
+    priority: int = Field(default=0, description="Description")
+    tags: Optional[List[str]] = Field(None, description="Description")
+    created_by: Optional[str] = Field(None, description="Description")
 
 
 class PromptUpdate(BaseModel):
-    content: Optional[str] = Field(None, description="Prompt内容")
-    variables: Optional[List[PromptVariableCreate]] = Field(None, description="变量定义")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="元数据")
-    priority: Optional[int] = Field(None, description="优先级")
-    tags: Optional[List[str]] = Field(None, description="标签列表")
-    change_description: Optional[str] = Field(None, description="变更描述")
-    updated_by: Optional[str] = Field(None, description="更新者")  # P0修复：添加updated_by字段
-    create_new_version: bool = Field(default=True, description="是否创建新版本")
+    content: Optional[str] = Field(None, description="Prompt")
+    variables: Optional[List[PromptVariableCreate]] = Field(None, description="Description")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Description")
+    priority: Optional[int] = Field(None, description="Description")
+    tags: Optional[List[str]] = Field(None, description="Description")
+    change_description: Optional[str] = Field(None, description="Description")
+    updated_by: Optional[str] = Field(None, description="Description")  # P0EN:ENupdated_byEN
+    create_new_version: bool = Field(default=True, description="Description")
 
 
 class PromptTest(BaseModel):
-    variables: Dict[str, Any] = Field(..., description="测试变量值")
-    context: Optional[Dict[str, Any]] = Field(None, description="测试上下文")
+    variables: Dict[str, Any] = Field(..., description="Description")
+    context: Optional[Dict[str, Any]] = Field(None, description="Description")
 
 
 class ExperimentCreate(BaseModel):
-    name: str = Field(..., description="实验名称")
-    description: Optional[str] = Field(None, description="实验描述")
-    prompt_a_id: UUID = Field(..., description="A版本Prompt ID")
-    prompt_b_id: UUID = Field(..., description="B版本Prompt ID")
-    traffic_split: float = Field(default=0.5, gt=0, lt=1, description="A版本流量比例")
-    metrics: Optional[Dict[str, Any]] = Field(None, description="评估指标")
-    created_by: Optional[str] = Field(None, description="创建者")
+    name: str = Field(..., description="Description")
+    description: Optional[str] = Field(None, description="Description")
+    prompt_a_id: UUID = Field(..., description="Prompt A ID")
+    prompt_b_id: UUID = Field(..., description="Prompt B ID")
+    traffic_split: float = Field(default=0.5, gt=0, lt=1, description="Traffic split for prompt A")
+    metrics: Optional[Dict[str, Any]] = Field(None, description="Description")
+    created_by: Optional[str] = Field(None, description="Description")
 
 
 class ExperimentTrafficUpdate(BaseModel):
-    traffic_split: float = Field(..., gt=0, lt=1, description="A版本流量比例")
+    traffic_split: float = Field(..., gt=0, lt=1, description="Traffic split for prompt A")
 
 
 class ExperimentStatusUpdate(BaseModel):
-    status: str = Field(..., description="实验状态: active/paused/completed/cancelled")
+    status: str = Field(..., description="Experiment status: active/paused/completed/cancelled")
 
 
 class UsageLogCreate(BaseModel):
     prompt_id: UUID = Field(..., description="Prompt ID")
-    session_id: Optional[str] = Field(None, description="会话ID")
-    context: Optional[Dict[str, Any]] = Field(None, description="使用上下文")
-    variables_used: Optional[Dict[str, Any]] = Field(None, description="使用的变量")
-    execution_time_ms: int = Field(..., description="执行时间(毫秒)")
-    success: bool = Field(..., description="是否成功")
-    error_message: Optional[str] = Field(None, description="错误信息")
-    user_feedback: Optional[int] = Field(None, ge=1, le=5, description="用户反馈")
-    llm_response: Optional[Dict[str, Any]] = Field(None, description="LLM响应")
-    tokens_used: int = Field(default=0, description="Token使用量")
-    model_name: Optional[str] = Field(None, description="模型名称")
-    temperature: Optional[float] = Field(None, description="温度参数")
+    session_id: Optional[str] = Field(None, description="Session ID")
+    context: Optional[Dict[str, Any]] = Field(None, description="Description")
+    variables_used: Optional[Dict[str, Any]] = Field(None, description="Description")
+    execution_time_ms: int = Field(..., description="Execution time in milliseconds")
+    success: bool = Field(..., description="Description")
+    error_message: Optional[str] = Field(None, description="Description")
+    user_feedback: Optional[int] = Field(None, ge=1, le=5, description="Description")
+    llm_response: Optional[Dict[str, Any]] = Field(None, description="LLM response payload")
+    tokens_used: int = Field(default=0, description="Token usage")
+    model_name: Optional[str] = Field(None, description="Description")
+    temperature: Optional[float] = Field(None, description="Description")
 
 
-# 依赖注入：获取Prompt Manager
+# EN:ENPrompt Manager
 async def get_prompt_manager() -> PromptManager:
-    """获取Prompt管理器实例（这里需要实际的依赖注入逻辑）"""
-    # 实际实现中应该从应用上下文获取
+    """Build and return a PromptManager instance."""
+    # EN
     from backend.config import get_database_pool
 
     pool = await get_database_pool()
@@ -147,19 +147,19 @@ async def get_prompt_manager() -> PromptManager:
 
 @router.get("/", response_model=PromptListPageResponse)
 async def list_prompts(
-    category: Optional[str] = Query(None, description="按分类筛选"),
-    is_active: Optional[bool] = Query(None, description="是否激活"),
-    is_latest: Optional[bool] = Query(True, description="是否最新版本"),
-    page: int = Query(1, ge=1, description="页码"),
-    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    category: Optional[str] = Query(None, description="Description"),
+    is_active: Optional[bool] = Query(None, description="Description"),
+    is_latest: Optional[bool] = Query(True, description="Description"),
+    page: int = Query(1, ge=1, description="Description"),
+    size: int = Query(20, ge=1, le=100, description="Description"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    获取Prompt列表
+    Prompt API endpoint
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # 构建查询条件
+            # EN
             conditions = []
             params = []
             param_count = 0
@@ -181,7 +181,7 @@ async def list_prompts(
 
             where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-            # 查询数据
+            # EN
             query = f"""
                 SELECT p.*,
                        COALESCE(
@@ -200,7 +200,7 @@ async def list_prompts(
             params.extend([size, (page - 1) * size])
             rows = await conn.fetch(query, *params)
 
-            # 获取总数
+            # EN
             count_query = f"""
                 SELECT COUNT(DISTINCT p.id)
                 FROM prompts p
@@ -211,7 +211,7 @@ async def list_prompts(
             prompts = []
             for row in rows:
                 prompt_data = dict(row)
-                # 转换variables
+                # ENvariables
                 if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
                 if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
@@ -229,7 +229,7 @@ async def list_prompts(
             }
 
     except Exception as e:
-        logger.error(f"获取Prompt列表失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -238,17 +238,17 @@ async def get_prompt(
     prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
     """
-    获取指定Prompt详情
+    Prompt API endpoint
     """
     try:
         prompt_info = await prompt_manager._get_prompt_by_id(prompt_id)
         if not prompt_info:
-            raise HTTPException(status_code=404, detail="Prompt不存在")
+            raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # 获取性能统计
+        # EN
         performance = await prompt_manager.get_prompt_performance(prompt_id)
 
-        # 获取版本历史
+        # EN
         async with prompt_manager.db_pool.acquire() as conn:
             versions_query = """
                 SELECT version, change_description, created_at, created_by
@@ -269,7 +269,7 @@ async def get_prompt(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取Prompt详情失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -279,15 +279,15 @@ async def create_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    创建新Prompt
+    ENPrompt
     """
     try:
-        # 转换变量类型
+        # EN
         variables = None
         if prompt_data.variables:
             variables = [PromptVariable(**var.dict()) for var in prompt_data.variables]
 
-        # 创建Prompt
+        # ENPrompt
         prompt_info = await prompt_manager.create_prompt(
             name=prompt_data.name,
             category=prompt_data.category,
@@ -304,13 +304,13 @@ async def create_prompt(
         return {
             "success": True,
             "prompt": prompt_info.to_dict(),
-            "message": "Prompt创建成功",
+            "message": "Prompt created successfully.",
         }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"创建Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -321,15 +321,15 @@ async def update_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    更新Prompt
+    ENPrompt
     """
     try:
-        # 转换变量类型
+        # EN
         variables = None
         if prompt_data.variables:
             variables = [PromptVariable(**var.dict()) for var in prompt_data.variables]
 
-        # 更新Prompt（P0修复：使用正确的updated_by字段）
+        # ENPrompt(P0EN:ENupdated_byEN)
         prompt_info = await prompt_manager.update_prompt(
             prompt_id=prompt_id,
             content=prompt_data.content,
@@ -338,20 +338,20 @@ async def update_prompt(
             priority=prompt_data.priority,
             tags=prompt_data.tags,
             change_description=prompt_data.change_description,
-            updated_by=prompt_data.updated_by,  # 修复：使用updated_by而不是created_by
+            updated_by=prompt_data.updated_by,  # EN:ENupdated_byENcreated_by
             create_new_version=prompt_data.create_new_version,
         )
 
         return {
             "success": True,
             "prompt": prompt_info.to_dict(),
-            "message": "Prompt更新成功",
+            "message": "Prompt updated successfully.",
         }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"更新Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -360,20 +360,20 @@ async def delete_prompt(
     prompt_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
     """
-    删除Prompt（软删除）
+    Soft-delete a prompt.
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # 软删除：设置为非激活状态
+            # EN:EN
             await conn.execute(
                 "UPDATE prompts SET is_active = false, updated_at = NOW() WHERE id = $1",
                 prompt_id,
             )
 
-        return {"success": True, "message": "Prompt删除成功"}
+        return {"success": True, "message": "Prompt archived successfully."}
 
     except Exception as e:
-        logger.error(f"删除Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -384,20 +384,20 @@ async def test_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    测试Prompt渲染
+    Prompt API endpoint
     """
     try:
-        # 获取Prompt
+        # ENPrompt
         prompt_info = await prompt_manager._get_prompt_by_id(prompt_id)
         if not prompt_info:
-            raise HTTPException(status_code=404, detail="Prompt不存在")
+            raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # 渲染模板
+        # EN
         rendered_content = prompt_manager._render_template(
             prompt_info.content, test_data.variables
         )
 
-        # 验证必需变量
+        # EN
         missing_variables = []
         for var in prompt_info.variables:
             if var.required and var.name not in test_data.variables:
@@ -419,26 +419,26 @@ async def test_prompt(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"测试Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{prompt_id:uuid}/performance", response_model=Dict[str, Any])
 async def get_prompt_performance(
     prompt_id: UUID,
-    days: int = Query(7, ge=1, le=365, description="统计天数"),
+    days: int = Query(7, ge=1, le=365, description="Description"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    获取Prompt性能统计
+    Prompt API endpoint
     """
     try:
-        # 基础性能统计
+        # EN
         performance = await prompt_manager.get_prompt_performance(prompt_id)
         if not performance:
-            raise HTTPException(status_code=404, detail="Prompt不存在")
+            raise HTTPException(status_code=404, detail="Prompt performance not found.")
 
-        # 详细使用日志统计（P0修复：参数化days）
+        # EN(P0EN:ENdays)
         async with prompt_manager.db_pool.acquire() as conn:
             detailed_query = """
                 SELECT
@@ -457,7 +457,7 @@ async def get_prompt_performance(
 
             daily_stats = await conn.fetch(detailed_query, prompt_id, days)
 
-            # 最近的使用记录
+            # EN
             recent_logs_query = """
                 SELECT session_id, context, success, execution_time_ms,
                        user_feedback, tokens_used, created_at
@@ -478,7 +478,7 @@ async def get_prompt_performance(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取Prompt性能统计失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -488,7 +488,7 @@ async def record_usage_log(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    记录Prompt使用日志
+    Prompt API endpoint
     """
     try:
         usage_log = UsageLog(
@@ -508,10 +508,10 @@ async def record_usage_log(
 
         await prompt_manager.record_usage_log(usage_log)
 
-        return {"success": True, "message": "使用日志记录成功"}
+        return {"success": True, "message": "Usage log recorded successfully."}
 
     except Exception as e:
-        logger.error(f"记录使用日志失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -520,7 +520,7 @@ async def create_experiment(
     experiment: ExperimentCreate,
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
-    """创建A/B实验。"""
+    """ENA/BEN."""
     try:
         created = await prompt_manager.create_experiment(
             name=experiment.name,
@@ -535,19 +535,19 @@ async def create_experiment(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"创建Prompt实验失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/experiments", response_model=Dict[str, Any])
 async def list_experiments(
-    status: Optional[str] = Query(None, description="状态筛选"),
-    category: Optional[str] = Query(None, description="分类筛选"),
-    page: int = Query(1, ge=1, description="页码"),
-    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    status: Optional[str] = Query(None, description="Description"),
+    category: Optional[str] = Query(None, description="Description"),
+    page: int = Query(1, ge=1, description="Description"),
+    size: int = Query(20, ge=1, le=100, description="Description"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
-    """分页获取实验列表。"""
+    """Prompt API endpoint."""
     try:
         data, total = await prompt_manager.list_experiments(
             status=status,
@@ -568,7 +568,7 @@ async def list_experiments(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"获取Prompt实验列表失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -576,16 +576,16 @@ async def list_experiments(
 async def get_experiment(
     experiment_id: UUID, prompt_manager: PromptManager = Depends(get_prompt_manager)
 ):
-    """获取实验详情。"""
+    """Prompt API endpoint."""
     try:
         experiment = await prompt_manager.get_experiment(experiment_id)
         if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment不存在")
+            raise HTTPException(status_code=404, detail="Experiment not found.")
         return {"success": True, "experiment": experiment}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取Prompt实验详情失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -595,21 +595,21 @@ async def update_experiment_traffic(
     payload: ExperimentTrafficUpdate,
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
-    """更新实验流量比例。"""
+    """Prompt API endpoint."""
     try:
         experiment = await prompt_manager.update_experiment_traffic(
             experiment_id=experiment_id,
             traffic_split=payload.traffic_split,
         )
         if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment不存在")
+            raise HTTPException(status_code=404, detail="Experiment not found.")
         return {"success": True, "experiment": experiment}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"更新Prompt实验流量失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -619,28 +619,28 @@ async def update_experiment_status(
     payload: ExperimentStatusUpdate,
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
-    """更新实验状态。"""
+    """Prompt API endpoint."""
     try:
         experiment = await prompt_manager.update_experiment_status(
             experiment_id=experiment_id,
             status=payload.status,
         )
         if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment不存在")
+            raise HTTPException(status_code=404, detail="Experiment not found.")
         return {"success": True, "experiment": experiment}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"更新Prompt实验状态失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/categories/list", response_model=List[str])
 async def list_categories(prompt_manager: PromptManager = Depends(get_prompt_manager)):
     """
-    获取所有Prompt分类
+    Prompt API endpoint
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
@@ -651,14 +651,14 @@ async def list_categories(prompt_manager: PromptManager = Depends(get_prompt_man
         return [row["category"] for row in categories]
 
     except Exception as e:
-        logger.error(f"获取分类列表失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tags/list", response_model=List[Dict[str, Any]])
 async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager)):
     """
-    获取所有标签
+    List prompt tags with usage statistics.
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
@@ -677,19 +677,19 @@ async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager))
         return [dict(row) for row in tags]
 
     except Exception as e:
-        logger.error(f"获取标签列表失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/metrics/summary", response_model=Dict[str, Any])
 async def get_prompt_metrics_summary(
-    days: int = Query(7, ge=1, le=365, description="统计窗口天数"),
-    category: Optional[str] = Query(None, description="分类筛选"),
-    top_limit: int = Query(10, ge=1, le=50, description="热门Prompt返回数量"),
+    days: int = Query(7, ge=1, le=365, description="Description"),
+    category: Optional[str] = Query(None, description="Description"),
+    top_limit: int = Query(10, ge=1, le=50, description="Prompt metric limit"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    获取Prompt使用汇总指标（窗口统计、热门Prompt、按日趋势）。
+    Return prompt usage summary metrics.
     """
     try:
         return await prompt_manager.get_usage_summary(
@@ -698,24 +698,24 @@ async def get_prompt_metrics_summary(
             top_limit=top_limit,
         )
     except Exception as e:
-        logger.error(f"获取Prompt汇总指标失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/search", response_model=List[PromptListResponse])  # P0修复：使用正确的响应模型
+@router.get("/search", response_model=List[PromptListResponse])  # P0EN:EN
 async def search_prompts(
-    q: str = Query(..., description="搜索关键词"),
-    category: Optional[str] = Query(None, description="分类筛选"),
-    limit: int = Query(10, ge=1, le=50, description="结果数量限制"),
+    q: str = Query(..., description="Description"),
+    category: Optional[str] = Query(None, description="Description"),
+    limit: int = Query(10, ge=1, le=50, description="Description"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    搜索Prompt
+    ENPrompt
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # 构建搜索查询（P0修复：正确的参数绑定）
-            params = [f"%{q}%"]  # $1: 模糊搜索参数
+            # EN(P0EN:EN)
+            params = [f"%{q}%"]  # $1: EN
             conditions = ["(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"]
 
             if category:
@@ -759,27 +759,27 @@ async def search_prompts(
             return results
 
     except Exception as e:
-        logger.error(f"搜索Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{prompt_id:uuid}/clone", response_model=Dict[str, Any])
 async def clone_prompt(
     prompt_id: UUID,
-    new_name: str = Query(..., description="新Prompt名称"),
-    new_version: str = Query(default="1.0.0", description="新版本号"),
+    new_name: str = Query(..., description="Prompt metric limit"),
+    new_version: str = Query(default="1.0.0", description="Description"),
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    克隆Prompt
+    ENPrompt
     """
     try:
-        # 获取原Prompt
+        # ENPrompt
         original_prompt = await prompt_manager._get_prompt_by_id(prompt_id)
         if not original_prompt:
-            raise HTTPException(status_code=404, detail="Prompt不存在")
+            raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # 创建新Prompt
+        # ENPrompt
         cloned_prompt = await prompt_manager.create_prompt(
             name=new_name,
             category=original_prompt.category,
@@ -796,11 +796,11 @@ async def clone_prompt(
         return {
             "success": True,
             "prompt": cloned_prompt.to_dict(),
-            "message": "Prompt克隆成功",
+            "message": "Prompt cloned successfully.",
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"克隆Prompt失败: {e}")
+        logger.error(f"Prompt API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

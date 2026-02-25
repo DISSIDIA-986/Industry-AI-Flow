@@ -22,7 +22,11 @@ class DockerExecutionProvider:
         files: Optional[Dict[str, bytes]] = None,
         timeout_s: int = 60,
     ) -> ExecutionResult:
-        result = self.executor.execute(code, input_files=files)
+        try:
+            result = self.executor.execute(code, input_files=files, timeout=timeout_s)
+        except TypeError:
+            # Backward compatibility for custom executors without timeout parameter.
+            result = self.executor.execute(code, input_files=files)
         return ExecutionResult(
             success=result.success,
             stdout=result.stdout,

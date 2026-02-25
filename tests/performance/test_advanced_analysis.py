@@ -11,18 +11,18 @@ warnings.filterwarnings("ignore")
 
 
 def advanced_housing_analysis():
-    """高级房价分析 - 机器学习建模"""
+    """EN - EN"""
 
-    print("=== 高级房价分析开始 ===")
+    print("=== EN ===")
 
-    # 1. 数据预处理
+    # 1. EN
     data_path = "test_resources/datasets/Housing.csv"
     df = pd.read_csv(data_path)
 
-    print(f"原始数据形状: {df.shape}")
+    print(f"EN: {df.shape}")
 
-    # 2. 特征工程
-    # 处理分类变量
+    # 2. EN
+    # EN
     categorical_cols = [
         "mainroad",
         "guestroom",
@@ -37,25 +37,25 @@ def advanced_housing_analysis():
     for col in categorical_cols:
         df[col] = le.fit_transform(df[col])
 
-    print(f"特征工程完成，处理后形状: {df.shape}")
+    print(f"EN,EN: {df.shape}")
 
-    # 3. 准备数据
+    # 3. EN
     X = df.drop("price", axis=1)
     y = df["price"]
 
-    # 4. 分割数据
+    # 4. EN
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    print(f"训练集大小: {X_train.shape}")
-    print(f"测试集大小: {X_test.shape}")
+    print(f"EN: {X_train.shape}")
+    print(f"EN: {X_test.shape}")
 
-    # 5. 训练模型
+    # 5. EN
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
-    # 6. 预测和评估
+    # 6. EN
     y_pred = model.predict(X_test)
 
     mae = mean_absolute_error(y_test, y_pred)
@@ -63,20 +63,20 @@ def advanced_housing_analysis():
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, y_pred)
 
-    # 7. 特征重要性
+    # 7. EN
     feature_importance = pd.DataFrame(
         {"feature": X.columns, "importance": model.feature_importances_}
     ).sort_values("importance", ascending=False)
 
-    print("\n=== 模型评估结果 ===")
-    print(f"平均绝对误差 (MAE): {mae:,.0f}")
-    print(f"均方根误差 (RMSE): {rmse:,.0f}")
-    print(f"R² 分数: {r2:.3f}")
+    print("\n=== EN ===")
+    print(f"EN (MAE): {mae:,.0f}")
+    print(f"EN (RMSE): {rmse:,.0f}")
+    print(f"R² EN: {r2:.3f}")
 
-    print("\n=== 特征重要性排名 ===")
+    print("\n=== EN ===")
     print(feature_importance.head(10))
 
-    # 8. 创建结果摘要
+    # 8. EN
     results = {
         "model_performance": {
             "mae": float(mae),
@@ -95,14 +95,14 @@ def advanced_housing_analysis():
         },
     }
 
-    print("\n=== 高级分析完成 ===")
-    print(f"模型R²分数: {r2:.3f}")
-    print(f"最重要的特征: {feature_importance.iloc[0]['feature']}")
+    print("\n=== EN ===")
+    print(f"ENR²EN: {r2:.3f}")
+    print(f"EN: {feature_importance.iloc[0]['feature']}")
 
     return results
 
 
-# 执行高级分析
+# EN
 if __name__ == "__main__":
     results = advanced_housing_analysis()
-    print(f"\n高级分析完成，生成了 {len(results)} 个主要指标")
+    print(f"\nEN,EN {len(results)} EN")
