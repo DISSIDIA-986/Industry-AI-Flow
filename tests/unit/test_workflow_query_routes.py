@@ -332,7 +332,7 @@ async def test_workflow_query_rejects_chinese_input():
     ) as client:
         resp = await client.post(
             "/api/v1/workflow/query",
-            json={"query": "请帮我分析成本风险"},
+            json={"query": "Please help me analyze cost risk"},
         )
 
     assert resp.status_code == 400

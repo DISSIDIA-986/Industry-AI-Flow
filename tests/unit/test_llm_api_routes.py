@@ -225,7 +225,7 @@ async def test_enhanced_query_rejects_chinese_input(monkeypatch):
     ) as client:
         resp = await client.post(
             "/api/v1/query",
-            json={"question": "请分析这个工程项目"},
+            json={"question": "Please analyze this construction project"},
         )
 
     assert resp.status_code == 400
