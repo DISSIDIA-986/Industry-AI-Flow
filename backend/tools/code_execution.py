@@ -1,4 +1,4 @@
-"""代码执行工具 - LangChain 工具接口"""
+"""Code Execution Tool - LangChain Tool Interface"""
 
 import logging
 from typing import Annotated, Any, Dict, List, Optional
@@ -33,9 +33,9 @@ def _validation_failure_payload(validation_error: str, warnings: list[str]) -> D
 
 @tool
 def code_execution_tool(
-    code: Annotated[str, "要执行的 Python 代码"],
-    data_files: Annotated[Optional[List[str]], "数据文件路径列表"] = None,
-    timeout: Annotated[Optional[int], "执行超时时间（秒）"] = None,
+    code: Annotated[str, "Python code to execute"],
+    data_files: Annotated[Optional[List[str]], "List of data file paths"] = None,
+    timeout: Annotated[Optional[int], "Execution timeout in seconds"] = None,
 ) -> Dict[str, Any]:
     """
     代码执行工具 - 在安全的 Docker 沙箱环境中执行 Python 代码
@@ -44,18 +44,18 @@ def code_execution_tool(
     1. 数据分析：pandas、numpy 数据处理
     2. 可视化：matplotlib、seaborn、plotly 图表生成
     3. 机器学习：scikit-learn、xgboost 模型训练
-    4. 安全沙箱：Docker 容器隔离，资源限制
+    4. 安全沙箱：Docker container isolation，资源限制
 
     安全特性：
     - 禁止危险的系统调用（os.system、subprocess 等）
-    - 网络访问禁用
+    - Network access disabled
     - 资源限制（CPU、内存、时间）
-    - 非root用户执行
-    - 临时文件系统隔离
+    - Non-root user execution
+    - Temporary filesystem隔离
 
     Args:
-        code: 要执行的 Python 代码
-        data_files: 数据文件路径列表（CSV、Excel等）
+        code: Python code to execute
+        data_files: Data file path列表（CSV、Excel等）
         timeout: 执行超时时间（秒），默认使用配置值
 
     Returns:
@@ -67,7 +67,7 @@ def code_execution_tool(
         - execution_time: 执行时间（秒）
         - visualizations: 生成的可视化文件列表
         - error: 错误信息（如果失败）
-        - validation_errors: 代码安全检查错误
+        - validation_errors: Code safety checks错误
 
     Example:
         >>> result = code_execution_tool.invoke({
@@ -138,7 +138,7 @@ def code_execution_tool(
 
 
 @tool
-def code_validation_tool(code: Annotated[str, "要验证的 Python 代码"]) -> Dict[str, Any]:
+def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dict[str, Any]:
     """
     代码验证工具 - 检查 Python 代码的安全性和语法正确性
 
@@ -262,13 +262,13 @@ def get_execution_environment_info() -> Dict[str, Any]:
 
     # 安全特性
     security_features = [
-        "Docker 容器隔离",
-        "非root用户执行",
-        "网络访问禁用",
-        "资源限制（CPU/内存/时间）",
-        "临时文件系统",
-        "代码安全检查",
-        "危险操作黑名单",
+        "Docker container isolation",
+        "Non-root user execution",
+        "Network access disabled",
+        "Resource limits (CPU/memory/time)",
+        "Temporary filesystem",
+        "Code safety checks",
+        "Dangerous operation blocklist",
     ]
 
     # 可用库列表（基于Docker镜像）
@@ -315,7 +315,7 @@ def get_execution_environment_info() -> Dict[str, Any]:
         "security_features": security_features,
         "configuration": {
             "enable_docker_sandbox": settings.enable_docker_sandbox,
-            "max_iterations": 3,  # Agent 最大迭代次数
+            "max_iterations": 3,  # Agent max iterations
             "supported_file_types": [".csv", ".xlsx", ".xls", ".json", ".txt"],
             "visualization_formats": [".png", ".jpg", ".svg", ".html", ".pdf"],
         },
