@@ -153,9 +153,10 @@ class TestAudit3_7_ResponseNodeDebugLeak:
 
 @pytest.mark.unit
 class TestAudit3_8_PipelineOrdering:
-    """In graph.py, code_exec_node (index 7) runs BEFORE safety_node
-    (index 8). If code_exec_node processes malicious code, it executes
-    before safety_node has a chance to block the request."""
+    """Verify that safety_node runs BEFORE code_exec_node in the pipeline.
+    Previously, code_exec_node was at index 7 and safety_node at index 8,
+    meaning malicious code could execute before the safety guard blocked it.
+    This was fixed by swapping them."""
 
     def test_safety_before_code_exec_in_pipeline(self):
         from backend.services.workflows.graph import run_workflow_pipeline
@@ -171,12 +172,11 @@ class TestAudit3_8_PipelineOrdering:
             "Both safety_node and code_exec_node must exist in pipeline"
         )
 
-        # DOCUMENT: code_exec_node currently runs BEFORE safety_node
-        # This is a design concern — safety should validate FIRST
-        assert code_exec_pos < safety_pos, (
-            "AUDIT3-8: code_exec_node runs before safety_node in the pipeline. "
-            "This means potentially malicious code is executed before the "
-            "safety guard can block it."
+        # FIXED: safety_node must run BEFORE code_exec_node
+        assert safety_pos < code_exec_pos, (
+            "AUDIT3-8: safety_node must run before code_exec_node in the "
+            "pipeline to prevent malicious code execution before safety "
+            "validation."
         )
 
 
