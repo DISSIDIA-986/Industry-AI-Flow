@@ -12,16 +12,16 @@ from backend.services.llm_integration.llm_client import LLMClientFactory
 logger = logging.getLogger(__name__)
 
 EXTRACTION_PROMPT = """
-EN.EN,EN,EN JSON EN,EN:
-- user_profile: EN
-- preferences: EN,EN
-- tasks: EN
-- facts: EN
+Analyze the following conversation and extract structured information into a JSON object with these categories:
+- user_profile: Information about the user (role, expertise, organization)
+- preferences: User preferences and settings mentioned in conversation
+- tasks: Tasks, goals, or action items discussed
+- facts: Key factual information, decisions, or conclusions reached
 
-EN,EN.
-EN JSON,EN.
+Only include categories that have relevant content. If a category has no relevant information, omit it.
+Return valid JSON only, with no additional text.
 
-EN:
+Conversation:
 {dialogue}
 """
 
@@ -36,7 +36,7 @@ class StructuredMemoryExtractor:
             )
             self.available = True
         except Exception as exc:  # pragma: no cover
-            logger.warning("EN: %s", exc)
+            logger.warning("Failed to initialize memory extractor LLM client: %s", exc)
             self.client = None
             self.available = False
 
@@ -45,7 +45,7 @@ class StructuredMemoryExtractor:
             return []
 
         dialogue = "\n".join(
-            f"EN: {record.user_query}\nEN: {record.agent_response}\n"
+            f"User: {record.user_query}\nAssistant: {record.agent_response}\n"
             for record in interactions
         )
         prompt = EXTRACTION_PROMPT.format(dialogue=dialogue)
@@ -54,7 +54,7 @@ class StructuredMemoryExtractor:
             response = self.client.generate(prompt, temperature=0.0, max_tokens=512)
             json_payload = self._safe_parse_json(response)
         except Exception as exc:  # pragma: no cover
-            logger.error("EN: %s", exc)
+            logger.error("Memory extraction failed: %s", exc)
             return []
 
         memories: List[dict] = []
