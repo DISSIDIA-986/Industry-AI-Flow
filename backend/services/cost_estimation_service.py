@@ -554,7 +554,7 @@ def train_cost_estimation_model(
 class CostEstimationService:
     """Loads model artifact and serves project-level predictions."""
 
-    DEFAULT_MODEL_PATH = Path("workspace/models/cost_estimation/latest.json")
+    DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent.parent / "workspace" / "models" / "cost_estimation" / "latest.json"
 
     def __init__(self, model_path: Optional[Path] = None):
         self.model_path = model_path or self.DEFAULT_MODEL_PATH
@@ -642,6 +642,11 @@ class CostEstimationService:
 
         confidence_degraded = bool(unknown_categories)
 
+        warning = None
+        if unknown_categories:
+            cats = ", ".join(f"{k}={v}" for k, v in unknown_categories.items())
+            warning = f"Unknown categories detected ({cats}). Prediction confidence is degraded."
+
         return {
             "predicted_cost_overrun_pct": pred_overrun,
             "predicted_actual_cost_cad": pred_actual_cost,
@@ -656,6 +661,7 @@ class CostEstimationService:
             },
             "unknown_categories": unknown_categories,
             "confidence_degraded": confidence_degraded,
+            "warning": warning,
         }
 
     def predict_batch(

@@ -92,5 +92,5 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     if not state.get("response") and not state.get("error"):
         state = await response_node(state, services)
     elif state.get("error") and not state.get("response"):
-        state["response"] = state["error"]
+        state["response"] = "An error occurred while processing your request. Please try again."
     return state

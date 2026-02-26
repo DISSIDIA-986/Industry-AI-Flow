@@ -832,7 +832,8 @@ async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
             status="error",
             detail={"error": str(e)},
         )
-        return {"error": str(e), "docker_available": False}
+        logger.exception("Environment inspect failed: %s", e)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 
 @app.post("/api/v1/documents/upload")
@@ -1155,18 +1156,17 @@ async def validate_code(
         )
         return result
     except Exception as e:
+        logger.exception("Code validation failed: %s", e)
         log_audit(
             action="code.validate",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "valid": False,
-            "error": str(e),
-            "syntax_errors": [str(e)],
-            "security_errors": [],
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/data/analyze")
@@ -1210,17 +1210,17 @@ async def analyze_data(
         )
         raise
     except Exception as e:
+        logger.exception("Data analysis failed: %s", e)
         log_audit(
             action="data.analyze",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "success": False,
-            "error": str(e),
-            "analysis_type": request.analysis_type,
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/data/preprocess")
@@ -1242,17 +1242,17 @@ async def preprocess_data(
         )
         return result
     except Exception as e:
+        logger.exception("Data preprocessing failed: %s", e)
         log_audit(
             action="data.preprocess",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "success": False,
-            "error": str(e),
-            "operations_applied": request.get("operations", []),
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/visualization/generate")
@@ -1291,7 +1291,8 @@ async def generate_visualization(
             status="error",
             detail={"error": str(e)},
         )
-        return {"success": False, "error": str(e), "chart_type": request.chart_type}
+        logger.exception("Visualization generation failed: %s", e)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
 
 
 @app.post("/api/v1/visualization/advanced")
@@ -1313,17 +1314,17 @@ async def generate_advanced_visualization(
         )
         return result
     except Exception as e:
+        logger.exception("Advanced visualization failed: %s", e)
         log_audit(
             action="visualization.advanced",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "success": False,
-            "error": str(e),
-            "viz_type": request.get("viz_type", "unknown"),
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/dashboard/generate")
@@ -1345,17 +1346,17 @@ async def generate_dashboard(
         )
         return result
     except Exception as e:
+        logger.exception("Dashboard generation failed: %s", e)
         log_audit(
             action="dashboard.generate",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "success": False,
-            "error": str(e),
-            "dashboard_type": request.get("dashboard_type", "unknown"),
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.get("/api/v1/files/visualizations/{filename}")

@@ -112,7 +112,7 @@ class DockerCodeExecutor:
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
                         func_name = node.func.id
-                        if func_name in ["exec", "eval", "compile"]:
+                        if func_name in ["exec", "eval", "compile", "getattr", "setattr", "delattr", "__import__"]:
                             errors.append(f"EN: {func_name}")
                     elif isinstance(node.func, ast.Attribute):
                         if isinstance(node.func.value, ast.Name):
@@ -335,7 +335,8 @@ def get_code_executor():
     global _code_executor
     if _code_executor is None:
         try:
-            _code_executor = DockerCodeExecutor()
+            instance = DockerCodeExecutor()
+            _code_executor = instance
         except (CodeExecutionError, Exception) as exc:
             logger.warning("Docker unavailable for code execution: %s", exc)
             _code_executor = None

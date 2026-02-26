@@ -103,6 +103,14 @@ class DispatchService:
         return round(min(0.90, base + length_boost), 4)
 
     @staticmethod
+    def _truncate_prompt(prompt: str, max_tokens: int, context_window: int = 4096) -> str:
+        reserved_output = max_tokens or 512
+        max_input_chars = (context_window - reserved_output) * 3
+        if len(prompt) > max_input_chars:
+            return prompt[:max_input_chars]
+        return prompt
+
+    @staticmethod
     def _resolve_model_name(client, fallback: str) -> str:
         if client is None:
             return fallback
@@ -194,8 +202,9 @@ class DispatchService:
         provider = settings.resolved_local_backend
         try:
             client = self._get_local_client()
+            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512)
             text = client.generate(
-                req.prompt,
+                prompt,
                 temperature=req.temperature,
                 max_tokens=req.max_tokens,
                 top_p=req.top_p,
@@ -385,15 +394,16 @@ class DispatchService:
         try:
             client = self._get_cloud_client()
             model = self._resolve_model_name(client, provider)
+            prompt_text = self._truncate_prompt(redaction.text, req.max_tokens or 512)
             text = client.generate(
-                redaction.text,
+                prompt_text,
                 temperature=req.temperature,
                 max_tokens=req.max_tokens,
                 top_p=req.top_p,
             )
             cloud_window.append(now)
             latency_ms = int((time.time() - started) * 1000)
-            usage = self.cost_tracker.estimate_usage(redaction.text, text)
+            usage = self.cost_tracker.estimate_usage(prompt_text, text)
             cost = self.cost_tracker.estimate_cost(
                 provider=provider, model=model, usage=usage
             )
