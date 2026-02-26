@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 _model: Any = None
 _active_backend: str | None = None
-_FALLBACK_DIM = int(getattr(settings, "embedding_dim", 384) or 384)
+_FALLBACK_DIM = int(getattr(settings, "embedding_dim", 768) or 768)
 
 
 class _FastEmbedAdapter:
