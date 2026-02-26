@@ -61,8 +61,18 @@ def get_code_executor() -> Optional[Any]:
     return _global_executor
 
 
-# ENcode_executorEN
-code_executor = get_code_executor()
+# Lazy proxy: code_executor is resolved on first access, not at import time.
+# Callers that import `code_executor` directly get None initially;
+# prefer calling get_code_executor() for the up-to-date reference.
+code_executor: Optional[Any] = None
+
+
+def _init_code_executor() -> Optional[Any]:
+    """Initialize code_executor on first real use."""
+    global code_executor
+    if code_executor is None:
+        code_executor = get_code_executor()
+    return code_executor
 
 
 def get_code_execution_manager() -> Optional[CodeExecutionManager]:
@@ -133,5 +143,6 @@ __all__ = [
     "get_code_executor",
     "get_code_execution_manager",
     "code_executor",
+    "_init_code_executor",
     "CodeExecutionError",
 ]

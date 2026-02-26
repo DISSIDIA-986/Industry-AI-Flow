@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from backend.config import settings
-from backend.services.code_executor import code_executor, get_code_execution_manager
+from backend.services.code_executor import get_code_executor, get_code_execution_manager
 from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
@@ -31,11 +31,19 @@ class DataAnalysisAgent:
         Args:
             llm_client: LLMEN,EN
         """
-        self.llm_client = llm_client or LLMClientFactory.create_client(
-            backend=settings.resolved_local_backend
-        )
+        if llm_client is not None:
+            self.llm_client = llm_client
+        else:
+            try:
+                self.llm_client = LLMClientFactory.create_client(
+                    backend=settings.resolved_local_backend
+                )
+            except Exception as exc:
+                logger.warning("LLM client creation failed: %s; data analysis LLM features disabled", exc)
+                self.llm_client = None
+
         self.code_execution_manager = get_code_execution_manager()
-        self.code_executor = code_executor
+        self.code_executor = get_code_executor()
 
         if not self.code_execution_manager and not self.code_executor:
             logger.warning("Code execution provider unavailable, data analysis is degraded")
@@ -239,6 +247,10 @@ class DataAnalysisAgent:
         prompt = self._build_code_generation_prompt(
             question, data_file_path, dataset_metadata
         )
+
+        if self.llm_client is None:
+            logger.warning("LLM client unavailable, falling back to template code generation")
+            return self._generate_template_code(question, data_file_path, dataset_metadata)
 
         try:
             # ENLLMEN
@@ -574,14 +586,20 @@ for val, pct in percentages.items():
         return f"EN,EN.EN {dataset_metadata.get('rows', 'unknown')} EN {dataset_metadata.get('columns', 'unknown')} EN."
 
 
-# EN — lazy initialization to avoid import-time crashes
+# Lazy initialization to avoid import-time crashes
 _data_analysis_agent: DataAnalysisAgent | None = None
 
 
 def get_data_analysis_agent() -> DataAnalysisAgent:
+    """Lazy factory — creates agent on first call, handles missing LLM gracefully."""
     global _data_analysis_agent
     if _data_analysis_agent is None:
-        _data_analysis_agent = DataAnalysisAgent()
+        try:
+            _data_analysis_agent = DataAnalysisAgent()
+        except Exception as _exc:
+            logger.warning("DataAnalysisAgent init failed: %s", _exc)
+            _data_analysis_agent = DataAnalysisAgent.__new__(DataAnalysisAgent)
+            _data_analysis_agent.llm_client = None
     return _data_analysis_agent
 
 
