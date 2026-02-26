@@ -574,5 +574,16 @@ for val, pct in percentages.items():
         return f"EN,EN.EN {dataset_metadata.get('rows', 'unknown')} EN {dataset_metadata.get('columns', 'unknown')} EN."
 
 
-# EN
-data_analysis_agent = DataAnalysisAgent()
+# EN — lazy initialization to avoid import-time crashes
+_data_analysis_agent: DataAnalysisAgent | None = None
+
+
+def get_data_analysis_agent() -> DataAnalysisAgent:
+    global _data_analysis_agent
+    if _data_analysis_agent is None:
+        _data_analysis_agent = DataAnalysisAgent()
+    return _data_analysis_agent
+
+
+# Backward compatibility — use get_data_analysis_agent() instead
+data_analysis_agent = None

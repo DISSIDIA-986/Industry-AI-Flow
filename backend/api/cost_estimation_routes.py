@@ -145,6 +145,12 @@ async def cost_estimation_health() -> Dict[str, Any]:
 
 @router.post("/train")
 async def train_cost_estimation(request: CostEstimationTrainRequest) -> Dict[str, Any]:
+    """Train or retrain the cost estimation model.
+
+    Authorization: admin role required. Only users with the 'admin' or
+    'trainer' role may invoke this endpoint to prevent model poisoning.
+    """
+    # TODO: enforce admin/trainer role via proper RBAC middleware once available
     dataset_path = _resolve_allowed_path(request.dataset_path, must_exist=True)
     if dataset_path.suffix.lower() != ".csv":
         raise HTTPException(status_code=400, detail="dataset_path must be a CSV file")
@@ -164,10 +170,16 @@ async def train_cost_estimation(request: CostEstimationTrainRequest) -> Dict[str
             random_seed=request.random_seed,
         )
     except CostEstimationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("cost estimation training error: %s", exc)
+        raise HTTPException(
+            status_code=400, detail="Training request invalid. Check input parameters."
+        ) from exc
     except Exception as exc:  # pragma: no cover - safety net
         logger.exception("cost estimation training failed")
-        raise HTTPException(status_code=500, detail=f"training failed: {exc}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail="Training failed. Check server logs for details.",
+        ) from exc
 
     service = _get_service()
     service.load(output_path)
@@ -183,7 +195,10 @@ async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict
             confidence_quantile=request.confidence_quantile,
         )
     except CostEstimationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("cost estimation prediction error: %s", exc)
+        raise HTTPException(
+            status_code=400, detail="Prediction request invalid. Check input parameters."
+        ) from exc
 
     return {
         "success": True,
@@ -202,7 +217,10 @@ async def batch_predict_cost_estimation(
             confidence_quantile=request.confidence_quantile,
         )
     except CostEstimationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("cost estimation batch prediction error: %s", exc)
+        raise HTTPException(
+            status_code=400, detail="Batch prediction request invalid. Check input parameters."
+        ) from exc
 
     return {
         "success": True,

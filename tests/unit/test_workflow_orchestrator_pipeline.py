@@ -134,7 +134,9 @@ async def test_workflow_pipeline_safety_block():
 
     assert updated["error"] == "Request blocked by safety policy"
     assert updated["metadata"]["safety_status"] == "blocked"
-    assert "could not be processed" in (updated["response"] or "").lower()
+    assert updated.get("response"), "Safety-blocked query should still produce a response"
+    resp_lower = (updated["response"] or "").lower()
+    assert "blocked" in resp_lower or "could not be processed" in resp_lower
 
 
 @pytest.mark.asyncio

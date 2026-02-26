@@ -8,8 +8,16 @@ from typing import Optional
 import bleach
 from fastapi import HTTPException, status
 
-SCRIPT_PATTERN = re.compile(r"<\s*script.*?>", re.IGNORECASE | re.DOTALL)
-SQL_PATTERN = re.compile(r"(drop\s+table|union\s+select|--|;)", re.IGNORECASE)
+SCRIPT_PATTERN = re.compile(
+    r"(<\s*script.*?>|<[^>]+\s+on\w+\s*=|javascript\s*:)",
+    re.IGNORECASE | re.DOTALL,
+)
+SQL_PATTERN = re.compile(
+    r"(drop\s+table|union\s+select|union\s*/\*.*?\*/\s*select|--|;"
+    r"|'\s*or\s+.*?=|'\s*or\s+'"
+    r"|delete\s+from|insert\s+into|update\s+.*?\s+set)",
+    re.IGNORECASE,
+)
 CONTROL_CHAR_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 

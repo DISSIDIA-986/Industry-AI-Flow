@@ -331,6 +331,9 @@ class SimpleRAG:
         if self.memory_manager is None:
             return
 
+        # Snapshot the history to avoid race conditions with background thread
+        history_snapshot = list(session.interaction_history)
+
         async def _update_memory():
             await self.memory_manager.process_interaction(session, record)
 

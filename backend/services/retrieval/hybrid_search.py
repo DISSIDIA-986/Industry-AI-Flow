@@ -273,13 +273,13 @@ class HybridRetriever:
             if chunk_id is None:
                 continue
             fused_scores[chunk_id] = (
-                fused_scores.get(chunk_id, 0) + vector_weight / rank
+                fused_scores.get(chunk_id, 0) + vector_weight / (60 + rank)
             )
 
         # BM25 EN
         for rank, (chunk_index, score) in enumerate(bm25_top, 1):
             chunk_id = self.doc_chunks[chunk_index]["id"]
-            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / rank
+            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / (60 + rank)
 
         # 4. EN top_k EN
         sorted_chunks = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[
