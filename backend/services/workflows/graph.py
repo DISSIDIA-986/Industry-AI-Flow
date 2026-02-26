@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from backend.services.workflows.nodes.code_exec_node import code_exec_node
 from backend.services.workflows.nodes.cost_estimation_node import cost_estimation_node
@@ -43,8 +46,9 @@ async def _run_node(
         return updated
     except Exception as exc:  # pragma: no cover - safety net
         node_latency[node_name] = int((time.perf_counter() - started) * 1000)
+        logger.exception("Workflow node '%s' failed: %s", node_name, exc)
         metadata["failed_node"] = node_name
-        state["error"] = f"{node_name} failed: {exc}"
+        state["error"] = "I encountered an issue processing your request. Please try again."
         return state
 
 
@@ -64,6 +68,10 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
         ("code_exec_node", code_exec_node),
         ("response_node", response_node),
     ]
+
+    # Clear stale shortcut flag from previous turns
+    metadata = state.setdefault("metadata", {})
+    metadata.pop("shortcut_response", None)
 
     for node_name, handler in pipeline:
         if state.get("error"):
