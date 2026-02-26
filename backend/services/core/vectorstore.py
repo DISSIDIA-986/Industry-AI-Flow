@@ -141,6 +141,7 @@ class VectorStore:
 
             if has_pgvector:
                 # EN pgvector EN
+                cur.execute("SET ivfflat.probes = 10")
                 embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
                 cur.execute(
                     """
