@@ -274,6 +274,7 @@ class DataAnalysisAgent:
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> str:
         """ENPrompt"""
+        clean_question = question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
         columns_desc = "\n".join(
             [
                 f"  - {col['name']} ({col['type']})"
@@ -290,7 +291,7 @@ class DataAnalysisAgent:
 - EN:
 {columns_desc}
 
-**EN**: {question}
+**EN**: {clean_question}
 
 **EN**:
 1. ENpandasEN: pd.read_csv() EN pd.read_excel()
@@ -362,12 +363,12 @@ ENPythonEN,EN.EN```python EN ```EN."""
         elif any(
             keyword in question_lower for keyword in ["max", "EN", "EN", "highest"]
         ):
-            return self._template_max(filename, dataset_metadata)
+            return self._template_max(filename, dataset_metadata, question)
 
         elif any(
             keyword in question_lower for keyword in ["min", "EN", "EN", "lowest"]
         ):
-            return self._template_min(filename, dataset_metadata)
+            return self._template_min(filename, dataset_metadata, question)
 
         elif any(
             keyword in question_lower for keyword in ["count", "EN", "EN", "how many"]
@@ -432,14 +433,14 @@ print(f"'{target_col}'EN: {{avg_value:.2f}}")
         else:
             return self._template_describe(filename, metadata)
 
-    def _template_max(self, filename: str, metadata: Dict) -> str:
+    def _template_max(self, filename: str, metadata: Dict, question: str = "") -> str:
         """EN"""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "max" in col
         ]
 
         if numeric_cols:
-            target_col = numeric_cols[0]
+            target_col = self._pick_relevant_column(numeric_cols, question)
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
@@ -451,14 +452,14 @@ print(f"EN: {{max_row.to_dict()}}")
         else:
             return self._template_describe(filename, metadata)
 
-    def _template_min(self, filename: str, metadata: Dict) -> str:
+    def _template_min(self, filename: str, metadata: Dict, question: str = "") -> str:
         """EN"""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "min" in col
         ]
 
         if numeric_cols:
-            target_col = numeric_cols[0]
+            target_col = self._pick_relevant_column(numeric_cols, question)
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')

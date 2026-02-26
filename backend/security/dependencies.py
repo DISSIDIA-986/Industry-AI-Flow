@@ -96,6 +96,13 @@ async def secure_endpoint(
     tenant_id = (
         request.headers.get(settings.tenant_header) or settings.default_tenant_id
     )
+    import re as _re
+    if tenant_id and tenant_id != settings.default_tenant_id:
+        if not _re.match(r'^[a-zA-Z0-9_-]{1,64}$', tenant_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid tenant identifier format",
+            )
     if (
         not tenant_id
         and settings.multi_tenant_mode

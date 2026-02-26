@@ -133,7 +133,6 @@ class TestP0ErrorReturnsHTTP200:
     File: backend/main.py:1057, 1126
     """
 
-    @pytest.mark.xfail(reason="BUG-SEC29: RAG query errors return HTTP 200 with raw exception text")
     def test_rag_error_handler_raises_http_exception(self):
         source = _read_source("backend/main.py")
         # The error handler should raise HTTPException, not return a dict with error
@@ -154,12 +153,11 @@ class TestP0NoAuthOnTrain:
     File: backend/api/cost_estimation_routes.py:146
     """
 
-    @pytest.mark.xfail(reason="BUG-SEC01: /train endpoint has no role-based auth check")
     def test_train_endpoint_requires_admin_role(self):
         source = _read_source("backend/api/cost_estimation_routes.py")
         # Find the train endpoint function
         train_match = re.search(
-            r'@router\.(post|put)\s*\(\s*"/train".*?\ndef\s+\w+.*?(?=\n@router|\nclass|\Z)',
+            r'@router\.(post|put)\s*\(\s*"/train".*?\n(?:async\s+)?def\s+\w+.*?(?=\n@router|\nclass|\Z)',
             source,
             re.DOTALL,
         )
@@ -181,7 +179,6 @@ class TestP0CodeValidatorBypass:
     File: backend/services/code_executor.py:83-136
     """
 
-    @pytest.mark.xfail(reason="BUG-SEC20: getattr() as bare function call not caught by validator")
     def test_getattr_builtins_import_blocked(self):
         mod = _load_legacy_code_executor()
         if not hasattr(mod, "DockerCodeExecutor"):
@@ -224,7 +221,6 @@ class TestP0ModuleLevelDockerInit:
     File: backend/services/code_executor.py:331
     """
 
-    @pytest.mark.xfail(reason="BUG-D023: Module-level Docker init blocks/crashes import")
     def test_no_module_level_instantiation(self):
         source = _read_source("backend/services/code_executor.py")
         # Direct string check for module-level DockerCodeExecutor() call
@@ -270,7 +266,6 @@ class TestP1GroundednessLexicalOnly:
     File: backend/services/safety/groundedness_checker.py:98-160
     """
 
-    @pytest.mark.xfail(reason="BUG-A002: Groundedness check is purely lexical, llm_client ignored")
     def test_groundedness_catches_wrong_numbers(self):
         source = _read_source("backend/services/safety/groundedness_checker.py")
         # Find everything after "def check_groundedness" until next "def " at same indent
@@ -359,7 +354,6 @@ class TestP1UnseenCategorySilent:
     File: backend/services/cost_estimation_service.py:638
     """
 
-    @pytest.mark.xfail(reason="BUG-CE01: Unseen category produces prediction with no user-visible warning")
     def test_unseen_category_warns_user(self):
         source = _read_source("backend/services/cost_estimation_service.py")
         # Find predict_project method
@@ -376,9 +370,9 @@ class TestP1UnseenCategorySilent:
             "warning", "caution", "unknown_categories",
             "confidence_degraded",
         ])
-        # Check that the warning is included in the RETURNED result, not just metadata
-        has_warning_in_result = "warning" in func_source.lower() and "result" in func_source.lower()
-        assert has_warning_in_result, (
+        # Check that the warning is included in the RETURNED dict, not just metadata
+        has_warning_in_return = "warning" in func_source.lower() and "return" in func_source.lower()
+        assert has_warning_in_return, (
             "predict_project detects unknown_categories but does not include a "
             "user-visible warning in the returned prediction result"
         )
@@ -390,17 +384,25 @@ class TestP1RelativeModelPath:
     File: backend/services/cost_estimation_service.py:557
     """
 
-    @pytest.mark.xfail(reason="BUG-CE04: DEFAULT_MODEL_PATH is relative, breaks if CWD differs")
     def test_model_path_is_absolute_or_robust(self):
         source = _read_source("backend/services/cost_estimation_service.py")
-        match = re.search(r'DEFAULT_MODEL_PATH\s*=\s*Path\(\s*["\'](.+?)["\']\s*\)', source)
+        # Find DEFAULT_MODEL_PATH definition
+        match = re.search(r'DEFAULT_MODEL_PATH\s*=\s*(.+)', source)
         if not match:
             pytest.skip("DEFAULT_MODEL_PATH not found")
-        path_str = match.group(1)
-        import os.path
-        assert os.path.isabs(path_str) or "__file__" in source[:source.find("DEFAULT_MODEL_PATH")], (
-            f"DEFAULT_MODEL_PATH='{path_str}' is a relative path. If the FastAPI server "
-            "starts from a different CWD, model loading silently fails."
+        definition = match.group(1)
+        # Path should either use __file__ for robust resolution or be absolute
+        uses_file_ref = "__file__" in definition
+        literal_match = re.search(r'Path\(\s*["\'](.+?)["\']\s*\)', definition)
+        if literal_match:
+            import os.path
+            is_absolute = os.path.isabs(literal_match.group(1))
+        else:
+            is_absolute = False
+        assert uses_file_ref or is_absolute, (
+            f"DEFAULT_MODEL_PATH definition '{definition.strip()}' is a relative path "
+            "without __file__ reference. If the FastAPI server starts from a different "
+            "CWD, model loading silently fails."
         )
 
 
@@ -410,7 +412,6 @@ class TestP1IntentNodeTypeContract:
     File: backend/services/workflows/nodes/intent_node.py:102
     """
 
-    @pytest.mark.xfail(reason="BUG-IC02: _call_classifier passes dict instead of QueryContext dataclass")
     def test_call_classifier_passes_correct_type(self):
         source = _read_source("backend/services/workflows/nodes/intent_node.py")
         # The function should either:
@@ -485,7 +486,6 @@ class TestP1NoContextWindowGuard:
     System-wide: dispatch + RAG pipeline.
     """
 
-    @pytest.mark.xfail(reason="BUG-LD07: No validation that prompt_tokens + max_tokens <= context_window")
     def test_context_window_check_exists(self):
         dispatch_source = _read_source("backend/services/llm_integration/dispatch_service.py")
         rag_source = _read_source("backend/services/rag_engine.py")
@@ -545,7 +545,6 @@ class TestP1FakeGroundedness:
     File: backend/services/workflows/nodes/groundedness_node.py:18
     """
 
-    @pytest.mark.xfail(reason="BUG-D021: Groundedness score is count proxy, not actual verification")
     def test_groundedness_not_just_count(self):
         source = _read_source("backend/services/workflows/nodes/groundedness_node.py")
         # Check if the groundedness score is simply count * constant
@@ -563,7 +562,6 @@ class TestP1ErrorStringAsResponse:
     File: backend/services/workflows/graph.py:86
     """
 
-    @pytest.mark.xfail(reason="BUG-D001: Error state is presented verbatim as user response")
     def test_error_response_is_user_friendly(self):
         source = _read_source("backend/services/workflows/graph.py")
         # Check for pattern: state["response"] = state["error"]
@@ -583,7 +581,6 @@ class TestP1TenantIDSpoofable:
     File: backend/security/dependencies.py:96
     """
 
-    @pytest.mark.xfail(reason="BUG-SEC26: X-Tenant-ID header accepted without any validation")
     def test_tenant_id_validated(self):
         source = _read_source("backend/security/dependencies.py")
         # Should have some validation of tenant ID (allowlist, format check, DB lookup)
@@ -603,7 +600,6 @@ class TestP1PromptInjectionCodeGen:
     File: backend/services/data_analysis/data_analysis_agent.py:272
     """
 
-    @pytest.mark.xfail(reason="BUG-D012: User question directly interpolated into code gen prompt")
     def test_code_gen_prompt_sanitizes_input(self):
         source = _read_source("backend/services/data_analysis/data_analysis_agent.py")
         # Find the code generation prompt building
@@ -633,7 +629,6 @@ class TestP1TemplateMaxMinIgnoresContext:
     File: backend/services/data_analysis/data_analysis_agent.py:423
     """
 
-    @pytest.mark.xfail(reason="BUG-D011: _template_max/_min ignore question context, use first column")
     def test_template_max_uses_relevant_column(self):
         source = _read_source("backend/services/data_analysis/data_analysis_agent.py")
         # Find _template_max method

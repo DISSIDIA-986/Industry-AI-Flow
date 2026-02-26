@@ -149,6 +149,22 @@ class GroundednessChecker:
             ),
         )
 
+        if llm_client is not None:
+            try:
+                verification_prompt = (
+                    "Does the following answer accurately reflect the provided context? "
+                    "Reply with a confidence score between 0.0 and 1.0.\n\n"
+                    f"Context: {' '.join(context[:3])[:1000]}\n\n"
+                    f"Answer: {answer[:500]}\n\nScore:"
+                )
+                llm_response = llm_client.generate(verification_prompt, temperature=0.0, max_tokens=10)
+                score_match = re.search(r'(0\.\d+|1\.0|0|1)', str(llm_response))
+                if score_match:
+                    llm_score = float(score_match.group(1))
+                    confidence = confidence * 0.4 + llm_score * 0.6
+            except Exception as exc:
+                logger.warning("LLM groundedness check failed, using lexical score: %s", exc)
+
         passed = confidence >= self.confidence_threshold
 
         logger.info(

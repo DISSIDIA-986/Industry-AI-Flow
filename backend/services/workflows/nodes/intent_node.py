@@ -96,11 +96,21 @@ def _extract_intent_value(raw: Any) -> Optional[str]:
 async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
     import inspect
 
+    try:
+        from backend.services.intent_classification.models import QueryContext
+        if isinstance(metadata, dict):
+            valid_fields = set(QueryContext.__dataclass_fields__) if hasattr(QueryContext, '__dataclass_fields__') else set()
+            context_obj = QueryContext(**{k: v for k, v in metadata.items() if k in valid_fields}) if valid_fields else metadata
+        else:
+            context_obj = metadata
+    except (ImportError, TypeError):
+        context_obj = metadata
+
     if hasattr(classifier, "classify_intent"):
         sig = inspect.signature(classifier.classify_intent)
         params = set(sig.parameters.keys()) - {"self"}
         if {"query", "context"} <= params:
-            result = classifier.classify_intent(query=query, context=metadata)
+            result = classifier.classify_intent(query=query, context=context_obj)
         elif {"query", "metadata"} <= params:
             result = classifier.classify_intent(query=query, metadata=metadata)
         elif "query" in params:
