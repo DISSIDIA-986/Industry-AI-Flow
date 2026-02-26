@@ -66,7 +66,12 @@ class TestR7_1_GraphSkipsResponseNodeOnError:
                 "R7-1: state['response'] is empty. graph.py incorrectly "
                 "skipped response_node after an error occurred."
             )
-            assert "Blocked by safety policy" in final_state.get("response", ""), "Message should reflect error."
+            # Response should be a user-friendly message, NOT the raw internal error
+            response = final_state.get("response", "")
+            assert "Blocked by safety policy" not in response, (
+                "Response should not leak raw internal error messages"
+            )
+            assert response, "Response should not be empty after error"
 
 
 # ---------------------------------------------------------------------------

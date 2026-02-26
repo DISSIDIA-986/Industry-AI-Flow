@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from backend.services.workflows.state import WorkflowState
@@ -43,7 +44,9 @@ async def code_exec_node(state: WorkflowState, services: Any) -> WorkflowState:
         }
         return state
 
-    result = manager.execute_code(
+    # Run synchronous execute_code in thread pool to avoid blocking event loop
+    result = await asyncio.to_thread(
+        manager.execute_code,
         code=code,
         data_files=metadata.get("code_execution_files"),
         timeout=timeout,

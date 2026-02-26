@@ -41,7 +41,7 @@ class _MemoryInteraction:
 class _MemorySession:
     session_id: str
     user_id: Optional[str] = None
-    language_preference: str = "zh"
+    language_preference: str = "en"
     interaction_history: list[_MemoryInteraction] = field(default_factory=list)
     summary_memory: str = ""
     last_summary_time: Optional[datetime] = None
@@ -159,7 +159,7 @@ class SimpleRAG:
         # EN,EN
         context_parts = []
         for i, chunk in enumerate(similar_chunks, 1):
-            context_parts.append(f"[EN{i}]\n{chunk['content']}")
+            context_parts.append(f"[Reference {i}]\n{chunk['content']}")
         context = "\n\n".join(context_parts)
 
         memory_payload = {}
@@ -234,25 +234,25 @@ class SimpleRAG:
         context: str,
         memory_payload: Optional[dict] = None,
     ) -> str:
-        """EN"""
+        """Build the RAG prompt with context, memory, and instructions."""
         memory_context = self._format_memory_payload(memory_payload or {})
-        return f"""EN.EN.
+        return f"""You are a knowledgeable construction industry assistant. Answer the question based strictly on the provided context.
 
-**EN**:
-1. EN
-2. EN
-3. EN,EN"EN"
-4. EN,EN,EN
+**Instructions**:
+1. Answer based only on the provided reference documents below.
+2. Cite which reference document(s) support your answer.
+3. If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
+4. Be precise with numbers, units, and technical specifications. Do not guess or fabricate values.
 
-**EN**:
+**Conversation History**:
 {memory_context}
 
-**EN**:
+**Reference Documents**:
 {context}
 
-**EN**:{question}
+**Question**: {question}
 
-**EN**:"""
+**Answer**:"""
 
     @staticmethod
     def _format_memory_payload(memory_payload: dict) -> str:
@@ -261,14 +261,14 @@ class SimpleRAG:
         long_term = memory_payload.get("long_term") or []
 
         if not short_term and not summary and not long_term:
-            return "EN."
+            return "No prior conversation history."
 
         lines: list[str] = []
         if summary:
-            lines.append(f"- EN: {summary}")
+            lines.append(f"- Conversation summary: {summary}")
 
         if short_term:
-            lines.append("- EN:")
+            lines.append("- Recent dialogue:")
             for entry in short_term[-6:]:
                 role = entry.get("role", "unknown")
                 content = str(entry.get("content", "")).strip()
@@ -276,7 +276,7 @@ class SimpleRAG:
                     lines.append(f"  - {role}: {content[:240]}")
 
         if long_term:
-            lines.append("- EN:")
+            lines.append("- Long-term memory:")
             for item in long_term[:3]:
                 content = item.get("content")
                 if isinstance(content, dict):

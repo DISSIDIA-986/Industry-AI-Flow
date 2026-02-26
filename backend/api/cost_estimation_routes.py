@@ -171,7 +171,7 @@ async def train_cost_estimation(request: CostEstimationTrainRequest) -> Dict[str
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - safety net
         logger.exception("cost estimation training failed")
-        raise HTTPException(status_code=500, detail=f"training failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Model training failed. Check server logs for details.") from exc
 
     service = await _get_service()
     await asyncio.to_thread(service.load, output_path)

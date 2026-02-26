@@ -54,13 +54,13 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     """
     pipeline = [
         ("intent_node", intent_node),
+        ("safety_node", safety_node),
         ("cost_estimation_node", cost_estimation_node),
         ("retrieval_node", retrieval_node),
         ("rerank_node", rerank_node),
         ("prompt_node", prompt_node),
         ("groundedness_node", groundedness_node),
         ("route_node", route_node),
-        ("safety_node", safety_node),
         ("code_exec_node", code_exec_node),
         ("response_node", response_node),
     ]
