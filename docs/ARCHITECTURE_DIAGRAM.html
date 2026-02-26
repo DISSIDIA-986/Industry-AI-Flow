@@ -3,611 +3,1022 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - System Architecture Poster</title>
+    <title>Industry AI Flow - System Architecture</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --page-bg: #e9edf2;
-            --board-bg: #d9dde2;
-            --stroke: #4e5968;
-            --text-main: #1e2a36;
-            --label-bg: #a8c7e9;
-            --access-bg: #c6ddf2;
-            --api-bg: #f4ca7a;
-            --business-bg: #ebc0c4;
-            --runtime-bg: #b8ddc7;
-            --data-bg: #f1d3ac;
-            --storage-bg: #a7a5ec;
-            --infra-bg: #8cb5df;
-            --security-bg: #e58a8a;
-            --observe-bg: #8bdf8b;
-            --cell-bg: #f4f6f8;
-            --focus-bg: #76b7e5;
-            --violet: #6e63dc;
-            --mint: #9ee3d3;
-            --sand: #f0dfc6;
-            --sky: #bfe4f7;
-            --lime: #c9e9b2;
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #22262f;
+            --surface-3: #2a2e3a;
+            --border: #333844;
+            --border-light: #444b5a;
+            --text: #e8ecf1;
+            --text-muted: #8b95a5;
+            --text-dim: #6b7585;
+
+            /* Stage Colors */
+            --stage-user: #3b82f6;
+            --stage-user-bg: rgba(59, 130, 246, 0.08);
+            --stage-user-border: rgba(59, 130, 246, 0.25);
+
+            --stage-gateway: #f59e0b;
+            --stage-gateway-bg: rgba(245, 158, 11, 0.08);
+            --stage-gateway-border: rgba(245, 158, 11, 0.25);
+
+            --stage-orch: #ec4899;
+            --stage-orch-bg: rgba(236, 72, 153, 0.08);
+            --stage-orch-border: rgba(236, 72, 153, 0.25);
+
+            --stage-ai: #10b981;
+            --stage-ai-bg: rgba(16, 185, 129, 0.08);
+            --stage-ai-border: rgba(16, 185, 129, 0.25);
+
+            --stage-data: #8b5cf6;
+            --stage-data-bg: rgba(139, 92, 246, 0.08);
+            --stage-data-border: rgba(139, 92, 246, 0.25);
+
+            --panel-security: #ef4444;
+            --panel-observe: #06b6d4;
+
+            --arrow: #4b5563;
+            --arrow-head: #6b7585;
+            --dot-active: #22c55e;
+            --dot-warn: #f59e0b;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: "Segoe UI", "Arial", sans-serif;
-            background: var(--page-bg);
-            color: var(--text-main);
-            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
         }
 
         .poster {
-            width: min(1900px, 100%);
+            max-width: 1920px;
             margin: 0 auto;
-            background: #ffffff;
-            border: 2px solid #717d8f;
-            padding: 20px;
         }
 
-        .title {
+        /* ── Header ── */
+        .header {
             text-align: center;
-            margin-bottom: 8px;
-            font-size: 34px;
-            letter-spacing: 0.5px;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .subtitle {
-            text-align: center;
-            font-size: 18px;
-            margin-bottom: 16px;
-            color: #394657;
-        }
-
-        .diagram {
-            background: var(--board-bg);
-            border: 2px solid #7c8798;
-            padding: 12px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 138px;
-            gap: 10px;
-        }
-
-        .stack {
-            display: grid;
-            gap: 10px;
-        }
-
-        .row {
-            display: grid;
-            grid-template-columns: 126px 1fr;
-            gap: 8px;
-            align-items: stretch;
-        }
-
-        .label {
-            border: 1.6px solid var(--stroke);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 8px;
-            font-size: 20px;
-            font-weight: 700;
-            line-height: 1.2;
-            clip-path: polygon(12% 0%, 100% 0%, 100% 100%, 12% 100%, 0% 50%);
-            background: var(--label-bg);
-        }
-
-        .layer {
-            border: 1.6px solid var(--stroke);
-            border-radius: 4px;
-            padding: 10px 12px;
-            display: grid;
-            gap: 8px;
-        }
-
-        .layer-header {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-        }
-
-        .cells {
-            display: grid;
-            gap: 7px;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-
-        .cell {
-            border: 1.4px solid #646d7b;
-            background: var(--cell-bg);
-            min-height: 56px;
-            padding: 8px 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-size: 16px;
-            line-height: 1.2;
-            font-weight: 600;
-        }
-
-        .highlight {
-            background: var(--focus-bg);
-            font-weight: 700;
-        }
-
-        .layer-access { background: var(--access-bg); }
-        .layer-api { background: var(--api-bg); }
-        .layer-business { background: var(--business-bg); }
-        .layer-runtime { background: var(--runtime-bg); }
-        .layer-data { background: var(--data-bg); }
-        .layer-storage { background: var(--storage-bg); }
-        .layer-infra { background: var(--infra-bg); }
-
-        .cells-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .cells-3 {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .cylinders {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .db-group {
-            border: 1.4px solid #666ea0;
-            border-radius: 4px;
-            background: rgba(144, 145, 231, 0.45);
-            display: flex;
-            justify-content: center;
-            gap: 18px;
-            padding: 10px 6px;
-        }
-
-        .cylinder {
-            width: 82px;
-            height: 102px;
-            border: 1.4px solid #616161;
-            border-radius: 45% / 12%;
-            position: relative;
-            background: #f4f4f4;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: 700;
-            color: #252525;
-        }
-
-        .cylinder::before {
-            content: "";
-            position: absolute;
-            top: -1px;
-            left: 0;
-            right: 0;
-            height: 18px;
-            border: 1.4px solid #616161;
-            border-radius: 50%;
-            background: #eeeeee;
-        }
-
-        .cylinder span {
-            z-index: 1;
-        }
-
-        .cylinder.alt {
-            background: #d5d5d5;
-        }
-
-        .sidebars {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .bar {
-            border: 1.6px solid var(--stroke);
-            border-radius: 4px;
-            min-height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 31px;
-            font-weight: 700;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            letter-spacing: 4px;
-            padding: 10px 0;
-            text-align: center;
-        }
-
-        .bar-observe {
-            background: var(--observe-bg);
-        }
-
-        .bar-security {
-            background: var(--security-bg);
-        }
-
-        .subflow-section {
-            margin-top: 16px;
-            background: var(--board-bg);
-            border: 2px solid #7c8798;
-            padding: 12px;
-        }
-
-        .subflow-title {
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .subflow-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .subflow {
-            border: 1.6px solid #4d5868;
-            background: #d4d9e0;
-            padding: 10px;
-            display: grid;
-            gap: 6px;
-            align-content: start;
-            min-height: 540px;
-        }
-
-        .subflow h3 {
-            font-size: 17px;
-            text-align: center;
-            margin-bottom: 2px;
-        }
-
-        .node {
-            border: 1.4px solid #4a5562;
-            border-radius: 3px;
-            background: #f6f8fa;
-            min-height: 44px;
-            padding: 6px 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.15;
-        }
-
-        .node-violet { background: var(--violet); color: #ffffff; }
-        .node-mint { background: var(--mint); }
-        .node-sand { background: var(--sand); }
-        .node-sky { background: var(--sky); }
-        .node-lime { background: var(--lime); }
-
-        .arrow {
-            text-align: center;
-            font-size: 24px;
-            line-height: 1;
+        .header h1 {
+            font-size: 28px;
             font-weight: 800;
-            color: #1b2430;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
         }
 
-        .row-3 {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 6px;
+        .header p {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
         }
 
-        .row-2 {
+        /* ── Main Layout: Flow + Side Panel ── */
+        .main-layout {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 6px;
+            grid-template-columns: 1fr 240px;
+            gap: 20px;
+            align-items: start;
         }
 
-        .split {
+        /* ── Flow Container ── */
+        .flow-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .flow {
             display: grid;
-            grid-template-columns: 70px 1fr 70px;
-            gap: 6px;
+            grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
+            gap: 0;
             align-items: stretch;
         }
 
-        .side-tag {
-            border: 1.2px solid #4e5968;
-            border-radius: 3px;
-            background: #ffffff;
-            padding: 4px 3px;
-            font-size: 11px;
-            text-align: center;
-            font-weight: 700;
+        /* ── Stages ── */
+        .stage {
+            border-radius: 10px;
+            padding: 16px;
+            min-width: 0;
+        }
+
+        .stage-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stage-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .stage-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .stage-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .stage-components {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* Component Cards */
+        .comp {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            line-height: 1.3;
+        }
+
+        .comp:hover {
+            background: var(--surface-3);
+            border-color: var(--border-light);
+            transform: translateX(2px);
+        }
+
+        .comp-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .dot-active { background: var(--dot-active); box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+        .dot-warn { background: var(--dot-warn); box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+
+        .comp-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            width: 18px;
+            text-align: center;
+        }
+
+        .comp-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comp-highlight {
+            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        /* Separator within stages */
+        .stage-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 6px 0;
+        }
+
+        .stage-sub {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            margin-top: 4px;
+        }
+
+        /* Stage-specific colors */
+        .stage-user { background: var(--stage-user-bg); border: 1px solid var(--stage-user-border); }
+        .stage-user .stage-icon { background: rgba(59, 130, 246, 0.2); color: var(--stage-user); }
+        .stage-user .stage-label { color: var(--stage-user); }
+
+        .stage-gateway { background: var(--stage-gateway-bg); border: 1px solid var(--stage-gateway-border); }
+        .stage-gateway .stage-icon { background: rgba(245, 158, 11, 0.2); color: var(--stage-gateway); }
+        .stage-gateway .stage-label { color: var(--stage-gateway); }
+
+        .stage-orch { background: var(--stage-orch-bg); border: 1px solid var(--stage-orch-border); }
+        .stage-orch .stage-icon { background: rgba(236, 72, 153, 0.2); color: var(--stage-orch); }
+        .stage-orch .stage-label { color: var(--stage-orch); }
+
+        .stage-ai { background: var(--stage-ai-bg); border: 1px solid var(--stage-ai-border); }
+        .stage-ai .stage-icon { background: rgba(16, 185, 129, 0.2); color: var(--stage-ai); }
+        .stage-ai .stage-label { color: var(--stage-ai); }
+
+        .stage-data { background: var(--stage-data-bg); border: 1px solid var(--stage-data-border); }
+        .stage-data .stage-icon { background: rgba(139, 92, 246, 0.2); color: var(--stage-data); }
+        .stage-data .stage-label { color: var(--stage-data); }
+
+        /* ── Flow Arrows ── */
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            min-width: 40px;
+        }
+
+        .flow-arrow svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Side Panel ── */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-box {
+            border-radius: 10px;
+            padding: 16px;
+            flex: 1;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .panel-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .panel-security {
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .panel-security .panel-icon { background: rgba(239, 68, 68, 0.2); color: var(--panel-security); }
+        .panel-security .panel-label { color: var(--panel-security); }
+
+        .panel-observe {
+            background: rgba(6, 182, 212, 0.06);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+        .panel-observe .panel-icon { background: rgba(6, 182, 212, 0.2); color: var(--panel-observe); }
+        .panel-observe .panel-label { color: var(--panel-observe); }
+
+        .panel-components {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .panel-comp {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 9px;
+            font-size: 11px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s ease;
+            line-height: 1.3;
+        }
+
+        .panel-comp:hover {
+            background: var(--surface-3);
+        }
+
+        .panel-comp-icon {
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        /* ── Subprocess Section ── */
+        .subprocess-section {
+            margin-top: 24px;
+        }
+
+        .subprocess-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .subprocess-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .subprocess-header p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .subprocess-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .subprocess {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .subprocess h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 14px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sub-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sub-node {
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.3;
+            border: 1px solid var(--border);
+        }
+
+        .sub-node-primary {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+        }
+
+        .sub-node-info {
+            background: rgba(59, 130, 246, 0.12);
+            border-color: rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+        }
+
+        .sub-node-warm {
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.25);
+            color: #fcd34d;
+        }
+
+        .sub-node-success {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+        }
+
+        .sub-node-result {
+            background: rgba(34, 197, 94, 0.12);
+            border-color: rgba(34, 197, 94, 0.25);
+            color: #86efac;
+        }
+
+        .sub-node-default {
+            background: var(--surface-2);
+            color: var(--text-muted);
+        }
+
+        .sub-arrow {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .sub-row {
+            display: grid;
+            gap: 5px;
+        }
+
+        .sub-row-3 { grid-template-columns: repeat(3, 1fr); }
+        .sub-row-2 { grid-template-columns: repeat(2, 1fr); }
+
+        .sub-split {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 5px;
+            align-items: stretch;
+        }
+
+        .sub-side-tag {
+            background: var(--surface-3);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
             line-height: 1.1;
         }
 
-        .loop {
-            border: 1.3px dashed #4b5565;
-            border-radius: 4px;
-            background: #edf1f4;
-            min-height: 36px;
-            padding: 5px 7px;
-            font-size: 12px;
-            line-height: 1.2;
+        .sub-loop {
+            border: 1px dashed var(--border-light);
+            border-radius: 5px;
+            background: var(--surface-2);
+            padding: 6px 8px;
+            font-size: 10px;
+            color: var(--text-dim);
+            text-align: center;
+            line-height: 1.3;
+            font-style: italic;
+        }
+
+        /* ── Deployment Bar ── */
+        .deploy-bar {
+            margin-top: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 32px;
+        }
+
+        .deploy-bar .deploy-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-dim);
+        }
+
+        .deploy-bar .deploy-items {
+            display: flex;
+            gap: 12px;
+        }
+
+        .deploy-item {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Footer ── */
+        .footer {
             text-align: center;
-            font-weight: 600;
+            margin-top: 20px;
+            font-size: 12px;
+            color: var(--text-dim);
         }
 
-        .note {
-            margin-top: 12px;
-            font-size: 15px;
-            color: #384455;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        @media (max-width: 1400px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebars {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .bar {
-                writing-mode: horizontal-tb;
-                letter-spacing: 0;
-                font-size: 22px;
-                min-height: 60px;
-            }
-
-            .subflow-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .subflow {
-                min-height: auto;
-            }
-        }
-
+        /* ── Print ── */
         @media print {
-            @page {
-                size: A3 landscape;
-                margin: 6mm;
-            }
+            @page { size: A3 landscape; margin: 6mm; }
+            body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .poster { max-width: 100%; }
+        }
 
-            body {
-                background: #ffffff;
-                padding: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+        /* ── Responsive ── */
+        @media (max-width: 1400px) {
+            .main-layout {
+                grid-template-columns: 1fr;
             }
-
-            .poster {
-                width: 100%;
-                border: 0;
-                padding: 0;
+            .side-panel {
+                flex-direction: row;
             }
-
-            .subflow {
-                break-inside: avoid-page;
-                page-break-inside: avoid;
+            .flow {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .flow-arrow {
+                transform: rotate(90deg);
+                padding: 8px 0;
+                min-width: unset;
+            }
+            .subprocess-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
     <div class="poster">
-        <h1 class="title">Industry AI Flow - System Architecture</h1>
-        <p class="subtitle">Visio-Style Layered View for Capstone Poster Printing</p>
 
-        <div class="diagram">
-            <div class="grid">
-                <div class="stack">
-                    <section class="row">
-                        <div class="label">Access</div>
-                        <div class="layer layer-access">
-                            <div class="layer-header">L1 Access Endpoints</div>
-                            <div class="cells">
-                                <div class="cell">Streamlit Web UI</div>
-                                <div class="cell">Prompt Admin UI</div>
-                                <div class="cell">External API Client</div>
-                                <div class="cell highlight">Third-Party Integration</div>
+        <!-- Header -->
+        <div class="header">
+            <h1>Industry AI Flow — System Architecture</h1>
+            <p>Left-to-right request lifecycle · from user interaction to persistent storage</p>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+
+            <!-- Flow Container -->
+            <div class="flow-container">
+                <div class="flow">
+
+                    <!-- ━━ STAGE 1: User Interaction ━━ -->
+                    <div class="stage stage-user">
+                        <div class="stage-header">
+                            <div class="stage-icon">👤</div>
+                            <div>
+                                <div class="stage-label">Stage 1</div>
                             </div>
                         </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">API</div>
-                        <div class="layer layer-api">
-                            <div class="layer-header">L2 API Gateway</div>
-                            <div class="cells">
-                                <div class="cell">FastAPI Routers</div>
-                                <div class="cell">Authentication + RBAC</div>
-                                <div class="cell">Input Validation</div>
-                                <div class="cell">Request Cache (Redis)</div>
+                        <div class="stage-title">User Interaction</div>
+                        <div class="stage-sub">Access Endpoints</div>
+                        <div class="stage-components">
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🖥️</span>
+                                <span class="comp-text">Streamlit Web UI</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">⚙️</span>
+                                <span class="comp-text">Prompt Admin UI</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔌</span>
+                                <span class="comp-text">External API Client</span>
+                            </div>
+                            <div class="comp comp-highlight">
+                                <span class="comp-dot dot-warn"></span>
+                                <span class="comp-icon">🔗</span>
+                                <span class="comp-text">Third-Party Integration</span>
                             </div>
                         </div>
-                    </section>
+                    </div>
 
-                    <section class="row">
-                        <div class="label">Services</div>
-                        <div class="layer layer-business">
-                            <div class="layer-header">L3 Business Services</div>
-                            <div class="cells">
-                                <div class="cell">Workflow Orchestrator</div>
-                                <div class="cell">Intent Classifier</div>
-                                <div class="cell">Prompt Selector</div>
-                                <div class="cell">Routing + Budget Policy</div>
-                                <div class="cell">Cost Governance</div>
-                                <div class="cell">Tenant Isolation Logic</div>
-                                <div class="cell highlight">Rapid Business Module Extension</div>
-                                <div class="cell">Service Coordination</div>
+                    <!-- Arrow 1→2 -->
+                    <div class="flow-arrow">
+                        <svg width="32" height="60" viewBox="0 0 32 60" fill="none">
+                            <path d="M4 30 L24 30" stroke="var(--arrow)" stroke-width="2" stroke-dasharray="3 3"/>
+                            <path d="M20 24 L28 30 L20 36" stroke="var(--arrow-head)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <!-- ━━ STAGE 2: API Gateway ━━ -->
+                    <div class="stage stage-gateway">
+                        <div class="stage-header">
+                            <div class="stage-icon">🚪</div>
+                            <div>
+                                <div class="stage-label">Stage 2</div>
                             </div>
                         </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">AI</div>
-                        <div class="layer layer-runtime">
-                            <div class="layer-header">L4 AI Runtime</div>
-                            <div class="cells">
-                                <div class="cell">RAG Engine</div>
-                                <div class="cell">LLM Dispatch Service</div>
-                                <div class="cell">Code Execution Manager</div>
-                                <div class="cell highlight">Cost Estimation Service</div>
+                        <div class="stage-title">API Gateway</div>
+                        <div class="stage-sub">Request Handling</div>
+                        <div class="stage-components">
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">⚡</span>
+                                <span class="comp-text">FastAPI Routers</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔐</span>
+                                <span class="comp-text">Authentication + RBAC</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">✅</span>
+                                <span class="comp-text">Input Validation</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">💾</span>
+                                <span class="comp-text">Request Cache (Redis)</span>
                             </div>
                         </div>
-                    </section>
+                    </div>
 
-                    <section class="row">
-                        <div class="label">Data</div>
-                        <div class="layer layer-data">
-                            <div class="layer-header">L5 Data Services</div>
-                            <div class="cells">
-                                <div class="cell">Data Access API</div>
-                                <div class="cell">Transaction Management</div>
-                                <div class="cell">Read / Write Split</div>
-                                <div class="cell">TTL + Expiration Control</div>
-                                <div class="cell">File I/O</div>
-                                <div class="cell">Data Synchronization</div>
-                                <div class="cell">Vector Upsert Pipeline</div>
-                                <div class="cell">Backup + Recovery</div>
+                    <!-- Arrow 2→3 -->
+                    <div class="flow-arrow">
+                        <svg width="32" height="60" viewBox="0 0 32 60" fill="none">
+                            <path d="M4 30 L24 30" stroke="var(--arrow)" stroke-width="2" stroke-dasharray="3 3"/>
+                            <path d="M20 24 L28 30 L20 36" stroke="var(--arrow-head)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <!-- ━━ STAGE 3: Orchestration ━━ -->
+                    <div class="stage stage-orch">
+                        <div class="stage-header">
+                            <div class="stage-icon">🎯</div>
+                            <div>
+                                <div class="stage-label">Stage 3</div>
                             </div>
                         </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">Storage</div>
-                        <div class="layer layer-storage">
-                            <div class="layer-header">L6 Storage Systems</div>
-                            <div class="cylinders">
-                                <div class="db-group">
-                                    <div class="cylinder"><span>SQL</span></div>
-                                    <div class="cylinder alt"><span>SQL</span></div>
-                                </div>
-                                <div class="db-group">
-                                    <div class="cylinder"><span>KV</span></div>
-                                    <div class="cylinder alt"><span>KV</span></div>
-                                </div>
-                                <div class="db-group">
-                                    <div class="cylinder"><span>IDX</span></div>
-                                    <div class="cylinder alt"><span>IDX</span></div>
-                                </div>
+                        <div class="stage-title">Orchestration</div>
+                        <div class="stage-sub">Business Services</div>
+                        <div class="stage-components">
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔀</span>
+                                <span class="comp-text">Workflow Orchestrator</span>
                             </div>
-                            <div class="cells cells-3">
-                                <div class="cell">PostgreSQL + pgvector</div>
-                                <div class="cell">Redis</div>
-                                <div class="cell">Search + Artifact Store</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🧠</span>
+                                <span class="comp-text">Intent Classifier</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📝</span>
+                                <span class="comp-text">Prompt Selector</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🛤️</span>
+                                <span class="comp-text">Routing + Budget Policy</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">💰</span>
+                                <span class="comp-text">Cost Governance</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🏢</span>
+                                <span class="comp-text">Tenant Isolation Logic</span>
+                            </div>
+                            <div class="comp comp-highlight">
+                                <span class="comp-dot dot-warn"></span>
+                                <span class="comp-icon">🚀</span>
+                                <span class="comp-text">Rapid Business Module Extension</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📡</span>
+                                <span class="comp-text">Service Coordination</span>
                             </div>
                         </div>
-                    </section>
+                    </div>
 
-                    <section class="row">
-                        <div class="label">Runtime</div>
-                        <div class="layer layer-infra">
-                            <div class="layer-header">Deployment Environment</div>
-                            <div class="cells cells-2">
-                                <div class="cell">Cloud VM / Container Platform</div>
-                                <div class="cell">Dedicated Server / On-Prem Node</div>
+                    <!-- Arrow 3→4 -->
+                    <div class="flow-arrow">
+                        <svg width="32" height="60" viewBox="0 0 32 60" fill="none">
+                            <path d="M4 30 L24 30" stroke="var(--arrow)" stroke-width="2" stroke-dasharray="3 3"/>
+                            <path d="M20 24 L28 30 L20 36" stroke="var(--arrow-head)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <!-- ━━ STAGE 4: AI Services ━━ -->
+                    <div class="stage stage-ai">
+                        <div class="stage-header">
+                            <div class="stage-icon">🤖</div>
+                            <div>
+                                <div class="stage-label">Stage 4</div>
                             </div>
                         </div>
-                    </section>
+                        <div class="stage-title">AI Services</div>
+                        <div class="stage-sub">AI Runtime</div>
+                        <div class="stage-components">
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📚</span>
+                                <span class="comp-text">RAG Engine</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🧩</span>
+                                <span class="comp-text">LLM Dispatch Service</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">▶️</span>
+                                <span class="comp-text">Code Execution Manager</span>
+                            </div>
+                            <div class="comp comp-highlight">
+                                <span class="comp-dot dot-warn"></span>
+                                <span class="comp-icon">📊</span>
+                                <span class="comp-text">Cost Estimation Service</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow 4→5 -->
+                    <div class="flow-arrow">
+                        <svg width="32" height="60" viewBox="0 0 32 60" fill="none">
+                            <path d="M4 30 L24 30" stroke="var(--arrow)" stroke-width="2" stroke-dasharray="3 3"/>
+                            <path d="M20 24 L28 30 L20 36" stroke="var(--arrow-head)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <!-- ━━ STAGE 5: Data & Storage ━━ -->
+                    <div class="stage stage-data">
+                        <div class="stage-header">
+                            <div class="stage-icon">🗄️</div>
+                            <div>
+                                <div class="stage-label">Stage 5</div>
+                            </div>
+                        </div>
+                        <div class="stage-title">Data & Storage</div>
+                        <div class="stage-sub">Data Services</div>
+                        <div class="stage-components">
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔗</span>
+                                <span class="comp-text">Data Access API</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔄</span>
+                                <span class="comp-text">Transaction Management</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📖</span>
+                                <span class="comp-text">Read / Write Split</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">⏱️</span>
+                                <span class="comp-text">TTL + Expiration Control</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">Storage Systems</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🐘</span>
+                                <span class="comp-text">PostgreSQL + pgvector</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">⚡</span>
+                                <span class="comp-text">Redis</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔍</span>
+                                <span class="comp-text">Search + Artifact Store</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">Persistence Ops</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📁</span>
+                                <span class="comp-text">File I/O</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">🔃</span>
+                                <span class="comp-text">Data Synchronization</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">📐</span>
+                                <span class="comp-text">Vector Upsert Pipeline</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">💿</span>
+                                <span class="comp-text">Backup + Recovery</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /flow -->
+            </div><!-- /flow-container -->
+
+            <!-- ━━ Side Panel: Security & Observability ━━ -->
+            <div class="side-panel">
+
+                <div class="panel-box panel-security">
+                    <div class="panel-header">
+                        <div class="panel-icon">🛡️</div>
+                        <div class="panel-label">Security &<br>Access Control</div>
+                    </div>
+                    <div class="panel-components">
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🔑</span>
+                            JWT + API Key Auth
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">👥</span>
+                            RBAC Enforcement
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🏢</span>
+                            Tenant Isolation
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🧹</span>
+                            Input Sanitization
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🚫</span>
+                            Rate Limiting
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🔒</span>
+                            PII Redaction
+                        </div>
+                    </div>
                 </div>
 
-                <aside class="sidebars">
-                    <div class="bar bar-observe">Audit &amp; Observability</div>
-                    <div class="bar bar-security">Security &amp; Access Control</div>
-                </aside>
+                <div class="panel-box panel-observe">
+                    <div class="panel-header">
+                        <div class="panel-icon">📡</div>
+                        <div class="panel-label">Audit &<br>Observability</div>
+                    </div>
+                    <div class="panel-components">
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">📋</span>
+                            Request Tracing
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">📊</span>
+                            Cost Tracking
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">📈</span>
+                            Performance Metrics
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">🔔</span>
+                            Alerting Pipeline
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">📝</span>
+                            Audit Log Sink
+                        </div>
+                        <div class="panel-comp">
+                            <span class="panel-comp-icon">❤️</span>
+                            Health Checks
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /side-panel -->
+        </div><!-- /main-layout -->
+
+        <!-- ━━ Deployment Bar ━━ -->
+        <div class="deploy-bar">
+            <div class="deploy-label">Deployment</div>
+            <div class="deploy-items">
+                <div class="deploy-item">
+                    <span>☁️</span> Cloud VM / Container Platform
+                </div>
+                <div class="deploy-item">
+                    <span>🏠</span> Dedicated Server / On-Prem Node
+                </div>
             </div>
         </div>
 
-        <section class="subflow-section">
-            <h2 class="subflow-title">Complex Subprocess Diagrams</h2>
-            <div class="subflow-grid">
-                <article class="subflow">
+        <!-- ━━ Subprocess Section ━━ -->
+        <section class="subprocess-section">
+            <div class="subprocess-header">
+                <h2>Complex Subprocess Diagrams</h2>
+                <p>Detailed internal flows for core processing pipelines</p>
+            </div>
+
+            <div class="subprocess-grid">
+
+                <!-- A. Intent Routing and Resilience -->
+                <article class="subprocess">
                     <h3>A. Intent Routing and Resilience</h3>
-                    <div class="node node-violet">Request Intake (Context + Session + Prompt Version)</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sky">Intent + Risk Classifier</div>
-                    <div class="arrow">↓</div>
-                    <div class="split">
-                        <div class="side-tag">Budget Guard</div>
-                        <div class="node node-sand">Policy Decision Hub</div>
-                        <div class="side-tag">Model Health Probe</div>
+                    <div class="sub-flow">
+                        <div class="sub-node sub-node-primary">Request Intake (Context + Session + Prompt Version)</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-info">Intent + Risk Classifier</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-split">
+                            <div class="sub-side-tag">Budget Guard</div>
+                            <div class="sub-node sub-node-warm">Policy Decision Hub</div>
+                            <div class="sub-side-tag">Model Health Probe</div>
+                        </div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-row sub-row-3">
+                            <div class="sub-node sub-node-default">RAG Path</div>
+                            <div class="sub-node sub-node-default">Direct LLM Path</div>
+                            <div class="sub-node sub-node-default">Hybrid Path</div>
+                        </div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-success">Retry + Fallback Controller</div>
+                        <div class="sub-loop">On timeout/error: degrade to lower-cost model and return partial-safe answer.</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-result">Final Answer Composer + Trace ID</div>
                     </div>
-                    <div class="arrow">↓</div>
-                    <div class="row-3">
-                        <div class="node">RAG Path</div>
-                        <div class="node">Direct LLM Path</div>
-                        <div class="node">Hybrid Path</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-mint">Retry + Fallback Controller</div>
-                    <div class="loop">On timeout/error: degrade to lower-cost model and return partial-safe answer.</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-lime">Final Answer Composer + Trace ID</div>
                 </article>
 
-                <article class="subflow">
+                <!-- B. RAG Quality Control Loop -->
+                <article class="subprocess">
                     <h3>B. RAG Quality Control Loop</h3>
-                    <div class="node node-violet">Chunked Knowledge Base + Embedding Index</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sky">Hybrid Retrieval (Vector + BM25)</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sand">Rerank + Freshness + Permission Filter</div>
-                    <div class="arrow">↓</div>
-                    <div class="node">Confidence Gate</div>
-                    <div class="row-2">
-                        <div class="node node-mint">Pass: Context Packager</div>
-                        <div class="node">Fail: Query Rewrite</div>
+                    <div class="sub-flow">
+                        <div class="sub-node sub-node-primary">Chunked Knowledge Base + Embedding Index</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-info">Hybrid Retrieval (Vector + BM25)</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-warm">Rerank + Freshness + Permission Filter</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-default">Confidence Gate</div>
+                        <div class="sub-row sub-row-2">
+                            <div class="sub-node sub-node-success">Pass: Context Packager</div>
+                            <div class="sub-node sub-node-default">Fail: Query Rewrite</div>
+                        </div>
+                        <div class="sub-loop">Rewrite branch triggers second retrieval pass before packing context.</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-result">Grounded Answer + Citation Builder</div>
                     </div>
-                    <div class="loop">Rewrite branch triggers second retrieval pass before packing context.</div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-lime">Grounded Answer + Citation Builder</div>
                 </article>
 
-                <article class="subflow">
+                <!-- C. Cost and Safe Execution Control -->
+                <article class="subprocess">
                     <h3>C. Cost and Safe Execution Control</h3>
-                    <div class="node node-violet">Tenant Budget Profile + SLA Tier</div>
-                    <div class="arrow">↓</div>
-                    <div class="split">
-                        <div class="side-tag">PII Redaction</div>
-                        <div class="node node-sky">Token Estimator + Plan Generator</div>
-                        <div class="side-tag">Rate Limits</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="row-3">
-                        <div class="node">Cache Hit</div>
-                        <div class="node">LLM Execution</div>
-                        <div class="node">Sandbox Code Run</div>
-                    </div>
-                    <div class="arrow">↓</div>
-                    <div class="node node-sand">Cost Reconciler (Estimated vs Actual)</div>
-                    <div class="arrow">↓</div>
-                    <div class="row-2">
-                        <div class="node node-mint">Alert + Audit Sink</div>
-                        <div class="node node-lime">Response with Cost Metadata</div>
+                    <div class="sub-flow">
+                        <div class="sub-node sub-node-primary">Tenant Budget Profile + SLA Tier</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-split">
+                            <div class="sub-side-tag">PII Redaction</div>
+                            <div class="sub-node sub-node-info">Token Estimator + Plan Generator</div>
+                            <div class="sub-side-tag">Rate Limits</div>
+                        </div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-row sub-row-3">
+                            <div class="sub-node sub-node-default">Cache Hit</div>
+                            <div class="sub-node sub-node-default">LLM Execution</div>
+                            <div class="sub-node sub-node-default">Sandbox Code Run</div>
+                        </div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-warm">Cost Reconciler (Estimated vs Actual)</div>
+                        <div class="sub-arrow">↓</div>
+                        <div class="sub-row sub-row-2">
+                            <div class="sub-node sub-node-success">Alert + Audit Sink</div>
+                            <div class="sub-node sub-node-result">Response with Cost Metadata</div>
+                        </div>
                     </div>
                 </article>
+
             </div>
         </section>
 
-        <p class="note">Print tip: Browser print setting -> A3 landscape -> 100% scale -> enable background graphics.</p>
+        <p class="footer">Print tip: Browser → A3 landscape → 100% scale → enable background graphics</p>
+
     </div>
 </body>
 </html>
