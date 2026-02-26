@@ -58,7 +58,6 @@ class TestP0SafetyDisclaimers:
     File: backend/services/safety/groundedness_checker.py:169-222
     """
 
-    @pytest.mark.xfail(reason="BUG-A013: Safety disclaimers contain corrupted EN placeholders")
     def test_safety_critical_disclaimer_is_readable_english(self):
         source = _read_source("backend/services/safety/groundedness_checker.py")
         assert "SAFETY_CRITICAL" in source, "SafetyLevel.SAFETY_CRITICAL not found"
@@ -81,7 +80,6 @@ class TestP0SafetyDisclaimers:
             "(e.g., 'verify', 'consult a professional'), not EN placeholders"
         )
 
-    @pytest.mark.xfail(reason="BUG-A014: Refusal messages contain corrupted EN placeholders")
     def test_refusal_message_is_readable_english(self):
         source = _read_source("backend/services/safety/groundedness_checker.py")
         # Count occurrences of the placeholder pattern "EN" used as content
@@ -99,7 +97,6 @@ class TestP0FallbackEmbeddingDim:
     File: backend/services/core/embedder.py:26
     """
 
-    @pytest.mark.xfail(reason="BUG-A005: Fallback embedding dim defaults to 384, not 768")
     def test_fallback_dim_matches_database_schema(self):
         source = _read_source("backend/services/core/embedder.py")
         # The fallback dimension should be 768 to match pgvector schema
@@ -118,7 +115,6 @@ class TestP0DispatchENCheck:
     File: backend/services/llm_integration/dispatch_service.py:66
     """
 
-    @pytest.mark.xfail(reason="BUG-LD02: 'EN' literal in confidence check matches common English text")
     def test_confidence_estimator_no_false_positive_on_english(self):
         source = _read_source("backend/services/llm_integration/dispatch_service.py")
         # The confidence estimator should NOT contain bare '"EN"' checks
@@ -203,7 +199,6 @@ class TestP0DataAnalysisAgentInit:
     File: backend/services/data_analysis/data_analysis_agent.py:34
     """
 
-    @pytest.mark.xfail(reason="BUG-D008: DataAnalysisAgent init crashes without LLM server")
     def test_data_analysis_agent_handles_missing_llm_gracefully(self):
         source = _read_source("backend/services/data_analysis/data_analysis_agent.py")
         tree = ast.parse(source)
@@ -255,7 +250,6 @@ class TestP1IVFFlatProbes:
     File: backend/services/core/vectorstore.py:131-159
     """
 
-    @pytest.mark.xfail(reason="BUG-A001: SET ivfflat.probes not called before similarity search")
     def test_similarity_search_sets_probes(self):
         source = _read_source("backend/services/core/vectorstore.py")
         # Should contain SET ivfflat.probes before the similarity search query
@@ -306,7 +300,6 @@ class TestP1MemoryPromptCorrupted:
     Files: backend/services/memory/summary.py, extractor.py
     """
 
-    @pytest.mark.xfail(reason="BUG-A003: Memory summary prompt contains corrupted Chinese placeholders")
     def test_summary_prompt_is_english(self):
         import glob
         summary_files = glob.glob("backend/services/memory/summary*.py")
@@ -319,7 +312,6 @@ class TestP1MemoryPromptCorrupted:
                 "memory summary prompt is not readable English"
             )
 
-    @pytest.mark.xfail(reason="BUG-A004: Memory extraction prompt contains corrupted Chinese placeholders")
     def test_extraction_prompt_is_english(self):
         import glob
         extractor_files = glob.glob("backend/services/memory/extractor*.py")
@@ -342,7 +334,6 @@ class TestP1MemoryRaceCondition:
     File: backend/services/rag_engine.py:335-352
     """
 
-    @pytest.mark.xfail(reason="BUG-A009: history_snapshot variable created but never passed to background thread")
     def test_history_snapshot_is_used(self):
         source = _read_source("backend/services/rag_engine.py")
         if "history_snapshot" not in source:
@@ -442,7 +433,6 @@ class TestP1ConfidenceHeuristic:
     File: backend/services/llm_integration/dispatch_service.py:58
     """
 
-    @pytest.mark.xfail(reason="BUG-LD01: 600+ char response always gets 0.95 confidence")
     def test_confidence_not_purely_length_based(self):
         source = _read_source("backend/services/llm_integration/dispatch_service.py")
         match = re.search(
@@ -473,7 +463,6 @@ class TestP1DoubleFallbackEmpty:
     File: backend/services/llm_integration/dispatch_service.py:263
     """
 
-    @pytest.mark.xfail(reason="BUG-LD03: Double fallback returns empty text with no error message")
     def test_fallback_chain_returns_meaningful_error(self):
         source = _read_source("backend/services/llm_integration/dispatch_service.py")
         # When both local and cloud fail, the user should get a meaningful error
@@ -518,7 +507,6 @@ class TestP1ShortcutResponseSticky:
     File: backend/services/workflows/graph.py:73
     """
 
-    @pytest.mark.xfail(reason="BUG-XC01: shortcut_response flag persists across session turns")
     def test_shortcut_flag_cleared_between_queries(self):
         source = _read_source("backend/services/workflows/graph.py")
         # The graph should clear shortcut_response at the start of each run
@@ -539,7 +527,6 @@ class TestP1ThreadingLockInAsync:
     File: backend/api/cost_estimation_routes.py:25
     """
 
-    @pytest.mark.xfail(reason="BUG-D014: threading.Lock in async handler blocks entire event loop")
     def test_no_threading_lock_in_async_routes(self):
         source = _read_source("backend/api/cost_estimation_routes.py")
         has_threading_lock = "threading.Lock()" in source
