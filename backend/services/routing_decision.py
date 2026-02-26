@@ -432,19 +432,19 @@ class RoutingDecisionEngine:
 
         # EN
         keyword_intent_mapping = {
-            "EN": "data_analysis",
-            "EN": "data_analysis",
-            "EN": "data_analysis",
-            "EN": "cost_estimation",
-            "EN": "cost_estimation",
-            "EN": "cost_estimation",
-            "EN": "cost_estimation",
-            "EN": "document_processing",
+            "analyze": "data_analysis",
+            "dataset": "data_analysis",
+            "chart": "data_analysis",
+            "cost": "cost_estimation",
+            "budget": "cost_estimation",
+            "estimate": "cost_estimation",
+            "price": "cost_estimation",
+            "document": "document_processing",
             "PDF": "document_processing",
-            "EN": "document_processing",
-            "EN": "code_execution",
-            "EN": "code_execution",
-            "EN": "code_execution",
+            "upload": "document_processing",
+            "code": "code_execution",
+            "script": "code_execution",
+            "execute": "code_execution",
         }
 
         for keyword in keywords:
@@ -464,36 +464,35 @@ class RoutingDecisionEngine:
         # EN
         clarification_templates = {
             "knowledge_retrieval": [
-                "EN,EN?",
-                "EN?",
-                "EN?",
+                "Could you be more specific about what information you're looking for?",
+                "Are you asking about a specific standard or regulation?",
+                "Would you like to search within a particular document?",
             ],
             "data_analysis": [
-                "EN?EN,EN?",
-                "EN?",
-                "EN?EN?",
+                "Do you have a dataset to analyze? If so, what format is it in?",
+                "What specific analysis would you like to perform?",
+                "Are you looking for summary statistics or a specific visualization?",
             ],
             "document_processing": [
-                "EN?ENPDFEN,EN?",
-                "EN?EN,EN?",
-                "ENOCREN?",
+                "What type of document would you like to process? For example, PDF, image, or spreadsheet?",
+                "Would you like to extract text, data, or both from the document?",
+                "Do you need OCR for scanned documents?",
             ],
             "code_execution": [
-                "EN?EN,EN?",
-                "EN?",
-                "EN?",
+                "What programming task would you like to accomplish?",
+                "Do you have existing code to run, or do you need code generated?",
+                "What programming language should the code be in?",
             ],
         }
 
         questions = clarification_templates.get(
-            intent, ["EN?", "EN?"]
+            intent, ["Could you clarify your request?", "What would you like me to help you with?"]
         )
 
-        # EN
-        if "EN" in keywords and intent == "data_analysis":
-            questions.insert(0, "EN?")
+        if "dataset" in keywords and intent == "data_analysis":
+            questions.insert(0, "What analysis would you like to perform on your dataset?")
         elif "PDF" in keywords and intent == "document_processing":
-            questions.insert(0, "ENPDFEN?")
+            questions.insert(0, "Would you like to extract text from the PDF or process it another way?")
 
         return questions[:2]  # EN2EN
 

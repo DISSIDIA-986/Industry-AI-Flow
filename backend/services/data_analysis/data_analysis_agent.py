@@ -278,42 +278,42 @@ class DataAnalysisAgent:
             ]
         )
 
-        return f"""EN.ENPythonEN.
+        return f"""You are a data analysis assistant. Write Python code to answer the user's question about the dataset.
 
-**EN**:
-- EN: {os.path.basename(data_file_path)}
-- EN: {dataset_metadata.get('rows', 'unknown')}
-- EN: {dataset_metadata.get('columns', 'unknown')}
-- EN:
+**Dataset Information**:
+- Filename: {os.path.basename(data_file_path)}
+- Rows: {dataset_metadata.get('rows', 'unknown')}
+- Columns: {dataset_metadata.get('columns', 'unknown')}
+- Column details:
 {columns_desc}
 
-**EN**: {question}
+**User Question**: {question}
 
-**EN**:
-1. ENpandasEN: pd.read_csv() EN pd.read_excel()
-2. EN /workspace/{os.path.basename(data_file_path)}
-3. EN,EN print() EN
-4. EN,EN
-5. EN,EN /workspace/ EN
-6. EN
-7. EN30EN
+**Requirements**:
+1. Use pandas to load the data: pd.read_csv() or pd.read_excel()
+2. Data file path: /workspace/{os.path.basename(data_file_path)}
+3. Output results using print() statements
+4. Include data validation and handle missing values
+5. Save any visualizations to /workspace/ directory
+6. Keep the code concise and well-commented
+7. Code must complete within 30 seconds
 
-**EN**:
+**Example**:
 ```python
 import pandas as pd
 import numpy as np
 
-# EN
+# Load the dataset
 df = pd.read_csv('/workspace/{os.path.basename(data_file_path)}')
 
-# EN
+# Perform analysis
 # ... your analysis code ...
 
-# EN
-print("EN: ...")
+# Output results
+print("Analysis results: ...")
 ```
 
-ENPythonEN,EN.EN```python EN ```EN."""
+Return ONLY Python code. Wrap the code in ```python and ``` markers."""
 
     def _extract_code_from_response(self, response: str) -> Optional[str]:
         """ENLLMEN"""
@@ -346,51 +346,51 @@ ENPythonEN,EN.EN```python EN ```EN."""
     def _generate_template_code(
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> str:
-        """EN"""
+        """Generate template-based analysis code when LLM code generation fails."""
         filename = os.path.basename(data_file_path)
 
-        # EN
+        # Classify question by keyword matching
         question_lower = question.lower()
 
-        # EN
-        if any(keyword in question_lower for keyword in ["average", "EN", "mean"]):
+        # Average / mean calculation
+        if any(keyword in question_lower for keyword in ["average", "avg", "mean"]):
             return self._template_average(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["max", "EN", "EN", "highest"]
+            keyword in question_lower for keyword in ["max", "maximum", "largest", "highest"]
         ):
             return self._template_max(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["min", "EN", "EN", "lowest"]
+            keyword in question_lower for keyword in ["min", "minimum", "smallest", "lowest"]
         ):
             return self._template_min(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["count", "EN", "EN", "how many"]
+            keyword in question_lower for keyword in ["count", "total", "number of", "how many"]
         ):
             return self._template_count(filename, dataset_metadata)
 
         elif any(
-            keyword in question_lower for keyword in ["percentage", "EN", "EN", "%"]
+            keyword in question_lower for keyword in ["percentage", "proportion", "ratio", "%"]
         ):
             return self._template_percentage(filename, dataset_metadata)
 
         else:
-            # EN:EN
+            # Default: descriptive statistics overview
             return self._template_describe(filename, dataset_metadata)
 
     def _template_describe(self, filename: str, metadata: Dict) -> str:
-        """EN"""
+        """Generate code for descriptive statistics overview."""
         return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
-print("EN:")
-print(f"EN: {{len(df)}}")
-print(f"EN: {{len(df.columns)}}")
-print("\\nEN:")
+print("Dataset Overview:")
+print(f"Total rows: {{len(df)}}")
+print(f"Total columns: {{len(df.columns)}}")
+print("\\nColumn types:")
 print(df.dtypes)
-print("\\nEN:")
+print("\\nStatistical summary:")
 print(df.describe())
 """
 
@@ -413,7 +413,7 @@ print(df.describe())
         return numeric_cols[0]
 
     def _template_average(self, filename: str, metadata: Dict, question: str = "") -> str:
-        """EN"""
+        """Generate code for average/mean value calculations."""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "mean" in col
         ]
@@ -424,13 +424,13 @@ print(df.describe())
 
 df = pd.read_csv('/workspace/{filename}')
 avg_value = df['{target_col}'].mean()
-print(f"'{target_col}'EN: {{avg_value:.2f}}")
+print(f"Average of '{target_col}': {{avg_value:.2f}}")
 """
         else:
             return self._template_describe(filename, metadata)
 
     def _template_max(self, filename: str, metadata: Dict, question: str = "") -> str:
-        """EN"""
+        """Generate code for maximum value queries."""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "max" in col
         ]
@@ -442,14 +442,14 @@ print(f"'{target_col}'EN: {{avg_value:.2f}}")
 df = pd.read_csv('/workspace/{filename}')
 max_value = df['{target_col}'].max()
 max_row = df[df['{target_col}'] == max_value].iloc[0]
-print(f"EN'{target_col}': {{max_value}}")
-print(f"EN: {{max_row.to_dict()}}")
+print(f"Maximum of '{target_col}': {{max_value}}")
+print(f"Row with max value: {{max_row.to_dict()}}")
 """
         else:
             return self._template_describe(filename, metadata)
 
     def _template_min(self, filename: str, metadata: Dict, question: str = "") -> str:
-        """EN"""
+        """Template for minimum value queries."""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "min" in col
         ]
@@ -461,14 +461,14 @@ print(f"EN: {{max_row.to_dict()}}")
 df = pd.read_csv('/workspace/{filename}')
 min_value = df['{target_col}'].min()
 min_row = df[df['{target_col}'] == min_value].iloc[0]
-print(f"EN'{target_col}': {{min_value}}")
-print(f"EN: {{min_row.to_dict()}}")
+print(f"Minimum of '{target_col}': {{min_value}}")
+print(f"Row with min value: {{min_row.to_dict()}}")
 """
         else:
             return self._template_describe(filename, metadata)
 
     def _template_count(self, filename: str, metadata: Dict) -> str:
-        """EN"""
+        """Generate code to count values in categorical columns."""
         categorical_cols = [
             col["name"]
             for col in metadata.get("columns_info", [])
@@ -481,18 +481,18 @@ print(f"EN: {{min_row.to_dict()}}")
 
 df = pd.read_csv('/workspace/{filename}')
 value_counts = df['{target_col}'].value_counts()
-print(f"'{target_col}'EN:")
+print(f"Value counts for '{target_col}':")
 print(value_counts)
 """
         else:
             return f"""import pandas as pd
 
 df = pd.read_csv('/workspace/{filename}')
-print(f"EN: {{len(df)}}")
+print(f"Total rows: {{len(df)}}")
 """
 
     def _template_percentage(self, filename: str, metadata: Dict) -> str:
-        """EN"""
+        """Generate code to calculate percentage distribution of categorical columns."""
         categorical_cols = [
             col["name"]
             for col in metadata.get("columns_info", [])
@@ -506,7 +506,7 @@ print(f"EN: {{len(df)}}")
 df = pd.read_csv('/workspace/{filename}')
 value_counts = df['{target_col}'].value_counts()
 percentages = (value_counts / len(df) * 100).round(2)
-print(f"'{target_col}'EN:")
+print(f"Percentage distribution for '{target_col}':")
 for val, pct in percentages.items():
     print(f"  {{val}}: {{pct}}%")
 """
@@ -517,70 +517,70 @@ for val, pct in percentages.items():
         self, stdout: str, question: str, dataset_metadata: Dict[str, Any]
     ) -> str:
         """
-        EN
+        Parse and format the execution output from the code sandbox.
 
         Args:
-            stdout: EN
-            question: EN
-            dataset_metadata: EN
+            stdout: Raw standard output from code execution
+            question: The user's original question
+            dataset_metadata: Metadata about the dataset being analyzed
 
         Returns:
-            EN
+            Formatted analysis result string
         """
         if not stdout.strip():
-            return "EN,EN."
+            return "The analysis completed but produced no output."
 
-        # EN
+        # Clean whitespace
         cleaned_output = stdout.strip()
 
-        # EN,EN
+        # If output already ends with punctuation, return as-is
         if cleaned_output.endswith((".", ".", "!", "!")):
             return cleaned_output
 
-        # EN,EN
-        return f"EN:\n{cleaned_output}"
+        # Wrap raw output with a header
+        return f"Analysis result:\n{cleaned_output}"
 
     def _generate_fallback_answer(
         self, question: str, dataset_metadata: Dict[str, Any], error_message: str
     ) -> str:
         """
-        EN(EN)
+        Generate a metadata-based fallback answer when code execution fails.
 
         Args:
-            question: EN
-            dataset_metadata: EN
-            error_message: EN
+            question: The user's original question
+            dataset_metadata: Metadata about the dataset
+            error_message: The error that caused the fallback
 
         Returns:
-            EN
+            A best-effort answer based on dataset metadata
         """
-        # EN
+        # Classify question by keywords
         question_lower = question.lower()
 
-        # EN
+        # Questions about columns / features
         if (
             "feature" in question_lower
             or "column" in question_lower
-            or "EN" in question_lower
-            or "EN" in question_lower
+            or "field" in question_lower
+            or "variable" in question_lower
         ):
             columns = dataset_metadata.get("column_names", [])
             if columns:
-                return f"EN: {', '.join(columns)}"
+                return f"The dataset contains the following columns: {', '.join(columns)}"
 
-        # EN
+        # Questions about row count / size
         if (
             "how many" in question_lower
-            or "EN" in question_lower
+            or "count" in question_lower
             or "row" in question_lower
-            or "EN" in question_lower
+            or "record" in question_lower
         ):
             rows = dataset_metadata.get("rows")
             if rows:
-                return f"EN {rows} EN."
+                return f"The dataset contains {rows} rows."
 
-        # EN
-        return f"EN,EN.EN {dataset_metadata.get('rows', 'unknown')} EN {dataset_metadata.get('columns', 'unknown')} EN."
+        # Default fallback
+        return f"I was unable to complete the analysis due to an execution error. The dataset has {dataset_metadata.get('rows', 'unknown')} rows and {dataset_metadata.get('columns', 'unknown')} columns."
 
 
 # Lazy singleton — avoids import-time side effects (LLM client, Docker init).
