@@ -74,17 +74,17 @@ class DispatchService:
             "i don't know",
             "i'm not sure",
             "i am not sure",
+            "i cannot determine",
             "i cannot",
-            "i'm unable",
+            "i'm unable to",
             "i am unable",
+            "i do not have enough information",
+            "insufficient information",
             "no information",
             "not enough context",
         ]
         if any(phrase in lowered for phrase in uncertainty_phrases):
             return 0.4
-
-        # Check for placeholder tokens
-        if "EN" in text:
             return 0.55
 
         # Check for repetition: split into sentences and look for duplicates

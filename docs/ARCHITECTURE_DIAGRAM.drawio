@@ -1,0 +1,543 @@
+<mxfile host="app.diagrams.net" modified="2026-02-25T00:00:00.000Z" agent="Claude Code" version="24.7.12" type="device">
+  <diagram id="page-overview" name="System Overview">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="ov-title" value="Industry AI Flow — System Overview" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#1E293B;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="800" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Client -->
+        <mxCell id="ov-client" value="&lt;b&gt;Client&lt;/b&gt;&lt;br&gt;Next.js Frontend&lt;br&gt;API Consumers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="140" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- FastAPI Gateway -->
+        <mxCell id="ov-gateway" value="&lt;b&gt;FastAPI Gateway&lt;/b&gt;&lt;br&gt;&lt;hr&gt;4 Security Layers:&lt;br&gt;1. API Key Auth&lt;br&gt;2. Rate Limiting&lt;br&gt;3. Input Sanitization&lt;br&gt;4. Tenant Isolation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="240" y="200" width="190" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Path A: Direct RAG -->
+        <mxCell id="ov-path-a" value="&lt;b&gt;Path A: Direct RAG&lt;/b&gt;&lt;br&gt;&lt;hr&gt;Embed → Hybrid Search&lt;br&gt;→ Rerank → LLM → Safety" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="140" width="280" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Path B: 10-Node Workflow -->
+        <mxCell id="ov-path-b" value="&lt;b&gt;Path B: 10-Node Workflow&lt;/b&gt;&lt;br&gt;&lt;hr&gt;Intent → Cost → Retrieve&lt;br&gt;→ Rerank → Prompt → Ground&lt;br&gt;→ Route → Code → Safety → Response" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="260" width="280" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Path C: Unified Agent -->
+        <mxCell id="ov-path-c" value="&lt;b&gt;Path C: Unified Agent&lt;/b&gt;&lt;br&gt;&lt;hr&gt;ReAct Loop with 8 tools&lt;br&gt;(RAG, Cost ML, Code Exec,&lt;br&gt;Data Analysis, ...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="520" y="390" width="280" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Response -->
+        <mxCell id="ov-response" value="&lt;b&gt;Structured&lt;br&gt;Response&lt;/b&gt;&lt;br&gt;+ Sources&lt;br&gt;+ Metadata&lt;br&gt;+ Confidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="880" y="240" width="140" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- Shared Services Bar -->
+        <mxCell id="ov-shared-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="980" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-shared-title" value="&lt;b&gt;Shared Services&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#475569;" vertex="1" parent="1">
+          <mxGeometry x="50" y="560" width="150" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ov-svc-llm" value="&lt;b&gt;LLM Dispatch&lt;/b&gt;&lt;br&gt;llama.cpp / Ollama&lt;br&gt;/ Zhipu AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#0369A1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="50" y="582" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-svc-pg" value="&lt;b&gt;PostgreSQL&lt;br&gt;+ pgvector&lt;/b&gt;&lt;br&gt;IVFFlat index" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="230" y="582" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-svc-mem" value="&lt;b&gt;Memory (3-layer)&lt;/b&gt;&lt;br&gt;Short-term + Summary&lt;br&gt;+ Long-term" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="410" y="582" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-svc-sec" value="&lt;b&gt;Security&lt;/b&gt;&lt;br&gt;Auth + RBAC&lt;br&gt;+ PII Redaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="590" y="582" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-svc-obs" value="&lt;b&gt;Observability&lt;/b&gt;&lt;br&gt;Prometheus Metrics&lt;br&gt;+ Structured Logging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#0369A1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="770" y="582" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Client -> Gateway -->
+        <mxCell id="ov-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="ov-client" target="ov-gateway">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Gateway -> Path A -->
+        <mxCell id="ov-e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="ov-gateway" target="ov-path-a">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Gateway -> Path B -->
+        <mxCell id="ov-e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="ov-gateway" target="ov-path-b">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Gateway -> Path C -->
+        <mxCell id="ov-e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;" edge="1" parent="1" source="ov-gateway" target="ov-path-c">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Path A -> Response -->
+        <mxCell id="ov-e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="ov-path-a" target="ov-response">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Path B -> Response -->
+        <mxCell id="ov-e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="ov-path-b" target="ov-response">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Path C -> Response -->
+        <mxCell id="ov-e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;" edge="1" parent="1" source="ov-path-c" target="ov-response">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Response -> Client (return) -->
+        <mxCell id="ov-e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;entryX=1;entryY=0;" edge="1" parent="1" source="ov-response" target="ov-client">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="300"/>
+              <mxPoint x="1060" y="100"/>
+              <mxPoint x="110" y="100"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Dashed lines from paths down to shared services -->
+        <mxCell id="ov-e9" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#94A3B8;strokeWidth=1;dashed=1;" edge="1" parent="1" source="ov-path-a" target="ov-shared-bg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-e10" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#94A3B8;strokeWidth=1;dashed=1;" edge="1" parent="1" source="ov-path-b" target="ov-shared-bg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ov-e11" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#94A3B8;strokeWidth=1;dashed=1;" edge="1" parent="1" source="ov-path-c" target="ov-shared-bg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page-rag" name="RAG Pipeline">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="rag-title" value="RAG Pipeline Detail" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#1E293B;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="600" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 1. User Query -->
+        <mxCell id="rag-query" value="&lt;b&gt;User Query&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=14;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="440" y="80" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 2. Auth + Rate Limit -->
+        <mxCell id="rag-auth" value="&lt;b&gt;Auth + Rate Limit&lt;/b&gt;&lt;br&gt;API Key · Tenant ID · IP throttle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="170" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 3. Cache Check (diamond) -->
+        <mxCell id="rag-cache" value="Cache&lt;br&gt;Hit?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="480" y="260" width="120" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Cache Hit label -->
+        <mxCell id="rag-cache-hit" value="&lt;b&gt;Yes&lt;/b&gt; → Return cached response" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#92400E;" vertex="1" parent="1">
+          <mxGeometry x="620" y="280" width="220" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- 4. Embedding -->
+        <mxCell id="rag-embed" value="&lt;b&gt;Embedding&lt;/b&gt;&lt;br&gt;nomic-embed-v1.5 (768-dim)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="380" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Fork label -->
+        <mxCell id="rag-fork-label" value="⑤ Parallel Fork" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#3B82F6;" vertex="1" parent="1">
+          <mxGeometry x="470" y="450" width="140" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- 5a. Vector Search -->
+        <mxCell id="rag-vector" value="&lt;b&gt;Vector Search&lt;/b&gt;&lt;br&gt;pgvector IVFFlat&lt;br&gt;cosine similarity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="220" y="480" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- 5b. BM25 Search -->
+        <mxCell id="rag-bm25" value="&lt;b&gt;BM25 Search&lt;/b&gt;&lt;br&gt;NLTK tokenizer&lt;br&gt;keyword matching" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="660" y="480" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- 6. RRF Fusion -->
+        <mxCell id="rag-rrf" value="&lt;b&gt;RRF Fusion&lt;/b&gt;&lt;br&gt;0.7 vector / 0.3 BM25" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="600" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 7. BGE Reranker -->
+        <mxCell id="rag-rerank" value="&lt;b&gt;BGE Reranker&lt;/b&gt;&lt;br&gt;bge-reranker-base · cross-encoder scoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="690" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 8. Context Building -->
+        <mxCell id="rag-ctx" value="&lt;b&gt;Context Building&lt;/b&gt;&lt;br&gt;[doc_1], [doc_2], ... [doc_k]&lt;br&gt;with source attribution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="780" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- 9. LLM Generate -->
+        <mxCell id="rag-llm" value="&lt;b&gt;LLM Generate&lt;/b&gt;&lt;br&gt;Qwen2.5:7b via Ollama" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="880" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 10. Safety Guard -->
+        <mxCell id="rag-safety" value="&lt;b&gt;Safety Guard&lt;/b&gt;&lt;br&gt;confidence ≥ 0.8 required" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="970" width="300" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- 11. Structured Response -->
+        <mxCell id="rag-resp" value="&lt;b&gt;Structured Response&lt;/b&gt;&lt;br&gt;answer + sources + chunks + confidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="390" y="1060" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="rag-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-query" target="rag-auth">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rag-e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-auth" target="rag-cache">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Cache miss (No) -->
+        <mxCell id="rag-e3" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-cache" target="rag-embed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Cache hit arrow -->
+        <mxCell id="rag-e3b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#92400E;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;" edge="1" parent="1" source="rag-cache" target="rag-cache-hit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Embed -> Vector -->
+        <mxCell id="rag-e4a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;exitX=0.25;exitY=1;" edge="1" parent="1" source="rag-embed" target="rag-vector">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Embed -> BM25 -->
+        <mxCell id="rag-e4b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;exitX=0.75;exitY=1;" edge="1" parent="1" source="rag-embed" target="rag-bm25">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Vector -> RRF -->
+        <mxCell id="rag-e5a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="rag-vector" target="rag-rrf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- BM25 -> RRF -->
+        <mxCell id="rag-e5b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="rag-bm25" target="rag-rrf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- RRF -> Rerank -->
+        <mxCell id="rag-e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-rrf" target="rag-rerank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Rerank -> Context -->
+        <mxCell id="rag-e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-rerank" target="rag-ctx">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Context -> LLM -->
+        <mxCell id="rag-e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-ctx" target="rag-llm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- LLM -> Safety -->
+        <mxCell id="rag-e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-llm" target="rag-safety">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Safety -> Response -->
+        <mxCell id="rag-e10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="rag-safety" target="rag-resp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page-llm" name="LLM Dispatch">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="llm-title" value="LLM Dispatch Decision Tree (dispatch_service.py)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#1E293B;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="1000" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Start -->
+        <mxCell id="llm-start" value="&lt;b&gt;Generate Request&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=14;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="640" y="80" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Demo Mode Check -->
+        <mxCell id="llm-demo" value="demo_mode?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="170" width="120" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Scripted Replay -->
+        <mxCell id="llm-scripted" value="&lt;b&gt;Scripted Replay&lt;/b&gt;&lt;br&gt;Return cached response" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="920" y="180" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Resolve hybrid_mode -->
+        <mxCell id="llm-resolve" value="&lt;b&gt;Resolve hybrid_mode&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="290" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Mode Decision Diamond -->
+        <mxCell id="llm-mode" value="Route&lt;br&gt;Mode?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="370" width="140" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- LOCAL_ONLY Path -->
+        <mxCell id="llm-local-label" value="local_only" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#3B82F6;" vertex="1" parent="1">
+          <mxGeometry x="290" y="400" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-local" value="&lt;b&gt;llama.cpp or Ollama&lt;/b&gt;&lt;br&gt;Qwen2.5:7b" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="510" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-local-resp" value="&lt;b&gt;Local Response&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="220" y="610" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- CLOUD_ONLY Path -->
+        <mxCell id="llm-cloud-label" value="cloud_only" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#DC2626;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="400" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-pii" value="&lt;b&gt;PII Redaction&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="460" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-egress" value="&lt;b&gt;Egress Guard&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="520" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-rate" value="&lt;b&gt;Rate Limit Check&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="580" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-budget" value="&lt;b&gt;Budget Check&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="640" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-zhipu" value="&lt;b&gt;Zhipu AI&lt;/b&gt;&lt;br&gt;GLM-4-Plus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="710" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-cloud-resp" value="&lt;b&gt;Cloud Response&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="800" width="140" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- HYBRID_AUTO Path -->
+        <mxCell id="llm-hybrid-label" value="hybrid_auto" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#8B5CF6;" vertex="1" parent="1">
+          <mxGeometry x="690" y="490" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-try-local" value="&lt;b&gt;Try Local First&lt;/b&gt;&lt;br&gt;llama.cpp / Ollama" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="630" y="530" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-conf" value="confidence&lt;br&gt;≥ 0.75?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="620" width="120" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-hybrid-ok" value="&lt;b&gt;Return Local&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="540" y="730" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-fallback" value="&lt;b&gt;Fallback to Cloud&lt;/b&gt;&lt;br&gt;record_llm_fallback()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="725" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Blockers Note -->
+        <mxCell id="llm-blockers" value="&lt;b&gt;Cloud-Path Blockers:&lt;/b&gt;&lt;br&gt;• demo_mode_force_local&lt;br&gt;• rate_limit exceeded&lt;br&gt;• block_cloud flag&lt;br&gt;• egress_block active" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=11;align=left;spacingLeft=8;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="510" width="200" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="llm-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="llm-start" target="llm-demo">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- demo yes -->
+        <mxCell id="llm-e2" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#92400E;strokeWidth=1;exitX=1;exitY=0.5;" edge="1" parent="1" source="llm-demo" target="llm-scripted">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- demo no -->
+        <mxCell id="llm-e3" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="llm-demo" target="llm-resolve">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="llm-resolve" target="llm-mode">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- mode -> local_only -->
+        <mxCell id="llm-e5" value="local_only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;exitX=0;exitY=0.5;" edge="1" parent="1" source="llm-mode" target="llm-local">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e5b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="llm-local" target="llm-local-resp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- mode -> cloud_only -->
+        <mxCell id="llm-e6" value="cloud_only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=2;exitX=1;exitY=0.5;" edge="1" parent="1" source="llm-mode" target="llm-pii">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e6b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=1;" edge="1" parent="1" source="llm-pii" target="llm-egress">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e6c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=1;" edge="1" parent="1" source="llm-egress" target="llm-rate">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e6d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=1;" edge="1" parent="1" source="llm-rate" target="llm-budget">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e6e" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="llm-budget" target="llm-zhipu">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e6f" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;" edge="1" parent="1" source="llm-zhipu" target="llm-cloud-resp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- mode -> hybrid_auto -->
+        <mxCell id="llm-e7" value="hybrid_auto" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;exitX=0.5;exitY=1;" edge="1" parent="1" source="llm-mode" target="llm-try-local">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm-e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="llm-try-local" target="llm-conf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- confidence yes -->
+        <mxCell id="llm-e9" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;exitX=0;exitY=1;" edge="1" parent="1" source="llm-conf" target="llm-hybrid-ok">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- confidence no -> fallback -->
+        <mxCell id="llm-e10" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=2;exitX=1;exitY=1;" edge="1" parent="1" source="llm-conf" target="llm-fallback">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- fallback -> cloud path -->
+        <mxCell id="llm-e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=1;dashed=1;" edge="1" parent="1" source="llm-fallback" target="llm-pii">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="990" y="750"/>
+              <mxPoint x="990" y="480"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page-workflow" name="Workflow Pipeline">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="wf-title" value="10-Node Workflow Pipeline (IntentClassificationWorkflow)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#1E293B;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="1400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 1: intent_node -->
+        <mxCell id="wf-n1" value="&lt;b&gt;① intent_node&lt;/b&gt;&lt;br&gt;Intent Classification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 2: cost_estimation_node -->
+        <mxCell id="wf-n2" value="&lt;b&gt;② cost_estimation&lt;br&gt;_node&lt;/b&gt;&lt;br&gt;ML Cost Prediction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 3: retrieval_node -->
+        <mxCell id="wf-n3" value="&lt;b&gt;③ retrieval_node&lt;/b&gt;&lt;br&gt;Hybrid Search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 4: rerank_node -->
+        <mxCell id="wf-n4" value="&lt;b&gt;④ rerank_node&lt;/b&gt;&lt;br&gt;BGE Reranker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#3B82F6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="640" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 5: prompt_node -->
+        <mxCell id="wf-n5" value="&lt;b&gt;⑤ prompt_node&lt;/b&gt;&lt;br&gt;Prompt Assembly" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="840" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 6: groundedness_node -->
+        <mxCell id="wf-n6" value="&lt;b&gt;⑥ groundedness&lt;br&gt;_node&lt;/b&gt;&lt;br&gt;Fact Checking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 7: route_node -->
+        <mxCell id="wf-n7" value="&lt;b&gt;⑦ route_node&lt;/b&gt;&lt;br&gt;LLM Dispatch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#8B5CF6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 8: code_exec_node -->
+        <mxCell id="wf-n8" value="&lt;b&gt;⑧ code_exec_node&lt;/b&gt;&lt;br&gt;Sandboxed Execution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 9: safety_node -->
+        <mxCell id="wf-n9" value="&lt;b&gt;⑨ safety_node&lt;/b&gt;&lt;br&gt;Safety Guard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1640" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Node 10: response_node -->
+        <mxCell id="wf-n10" value="&lt;b&gt;⑩ response_node&lt;/b&gt;&lt;br&gt;Format + Return" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontSize=11;arcSize=30;" vertex="1" parent="1">
+          <mxGeometry x="1840" y="200" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Sequential arrows between nodes -->
+        <mxCell id="wf-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="wf-n1" target="wf-n2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="wf-n2" target="wf-n3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="wf-n3" target="wf-n4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#3B82F6;strokeWidth=2;" edge="1" parent="1" source="wf-n4" target="wf-n5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="wf-n5" target="wf-n6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;" edge="1" parent="1" source="wf-n6" target="wf-n7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8B5CF6;strokeWidth=2;" edge="1" parent="1" source="wf-n7" target="wf-n8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#059669;strokeWidth=2;" edge="1" parent="1" source="wf-n8" target="wf-n9">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=2;" edge="1" parent="1" source="wf-n9" target="wf-n10">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Shortcut: cost_estimation_node -> safety_node (dashed) -->
+        <mxCell id="wf-shortcut" value="shortcut_response" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DC2626;strokeWidth=1;dashed=1;dashPattern=8 4;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="wf-n2" target="wf-n9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="315" y="340"/>
+              <mxPoint x="1715" y="340"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Note: prompt_node skip -->
+        <mxCell id="wf-note1" value="Note: prompt_node skipped&lt;br&gt;if prompt_manager is None" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#92400E;fontSize=10;size=14;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="820" y="100" width="190" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="wf-note1-e" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#92400E;strokeWidth=1;dashed=1;" edge="1" parent="1" source="wf-note1" target="wf-n5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Note: per-node latency -->
+        <mxCell id="wf-note2" value="Per-node latency tracked in&lt;br&gt;metrics.node_latency_ms" style="shape=note;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#0369A1;fontSize=10;size=14;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="880" y="400" width="190" height="50" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

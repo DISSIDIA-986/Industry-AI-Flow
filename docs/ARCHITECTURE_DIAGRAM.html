@@ -3,1169 +3,1536 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow - Architecture Review Edition</title>
+    <title>Industry AI Flow — Enterprise RAG Architecture</title>
     <style>
+        /* ============================================================
+           Design Tokens
+           ============================================================ */
         :root {
-            --page-bg: #e9edf2;
-            --board-bg: #d9dde2;
-            --stroke: #4e5968;
-            --text-main: #1e2a36;
-            --access-bg: #c6ddf2;
-            --api-bg: #f4ca7a;
-            --business-bg: #ebc0c4;
-            --runtime-bg: #b8ddc7;
-            --data-bg: #f1d3ac;
-            --storage-bg: #a7a5ec;
-            --infra-bg: #8cb5df;
-            --security-bg: #e58a8a;
-            --observe-bg: #8bdf8b;
-            --lane-bg: #d8eef8;
-            --cell-bg: #f6f8fa;
-            --shape-ink: #1f4ea6;
-            --impl: #38a169;
-            --partial: #d69e2e;
-            --planned: #718096;
-            --violet: #6e63dc;
-            --mint: #9ee3d3;
-            --sand: #f0dfc6;
-            --sky: #bfe4f7;
-            --lime: #c9e9b2;
+            --path-rag: #3B82F6;
+            --path-workflow: #8B5CF6;
+            --path-agent: #059669;
+            --security: #DC2626;
+            --storage: #92400E;
+            --observability: #0369A1;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text: #1E293B;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+            --radius: 8px;
+
+            /* Layer backgrounds */
+            --layer-presentation: #EFF6FF;
+            --layer-gateway: #FEF2F2;
+            --layer-intelligence: #F5F3FF;
+            --layer-service: #FFF7ED;
+            --layer-data: #ECFDF5;
+            --layer-infra: #F1F5F9;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        /* ============================================================
+           Reset & Base
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: "Segoe UI", "Arial", sans-serif;
-            background: var(--page-bg);
-            color: var(--text-main);
-            padding: 18px;
+            font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
+        /* ============================================================
+           Poster Container
+           ============================================================ */
         .poster {
-            width: min(1950px, 100%);
+            max-width: 1600px;
             margin: 0 auto;
-            background: #fff;
-            border: 2px solid #717d8f;
-            padding: 16px;
+            padding: 2rem 2.5rem;
         }
 
-        .title {
+        /* ============================================================
+           Header Band
+           ============================================================ */
+        .header-band {
             text-align: center;
-            font-size: 34px;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 17px;
-            margin-bottom: 12px;
-            color: #394657;
-            font-weight: 600;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 23px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .board {
-            background: var(--board-bg);
-            border: 2px solid #7c8798;
-            padding: 10px;
-        }
-
-        .api-lanes {
-            margin-bottom: 10px;
-            border: 1.6px solid var(--stroke);
-            background: #d0e7f3;
-            padding: 8px;
-        }
-
-        .api-lanes h3 {
-            font-size: 16px;
-            margin-bottom: 6px;
-            text-align: center;
-        }
-
-        .lane-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .lane {
-            border: 1.3px solid #5d6a79;
-            background: var(--lane-bg);
-            min-height: 56px;
-            padding: 6px;
-            text-align: center;
-            font-size: 12px;
-            line-height: 1.2;
-            font-weight: 600;
-        }
-
-        .lane::before {
-            content: "";
-            display: inline-block;
-            width: 20px;
-            height: 14px;
-            margin: 0 6px 0 0;
-            vertical-align: -2px;
-            background: var(--shape-ink);
-            border-radius: 2px;
-        }
-
-        .lane:nth-child(1)::before {
-            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
-        }
-
-        .lane:nth-child(2)::before {
-            border-radius: 45% / 24%;
-        }
-
-        .lane:nth-child(3)::before {
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
-            border-radius: 0;
-        }
-
-        .lane:nth-child(4)::before {
-            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
-        }
-
-        .lane code {
-            font-size: 11px;
-            background: #eff4f8;
-            border: 1px solid #b6c2cc;
-            padding: 1px 4px;
-            border-radius: 3px;
-            display: inline-block;
-            margin-top: 4px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 130px;
-            gap: 8px;
-        }
-
-        .stack {
-            display: grid;
-            gap: 8px;
-        }
-
-        .row {
-            display: grid;
-            grid-template-columns: 118px 1fr;
-            gap: 8px;
-            align-items: stretch;
-        }
-
-        .label {
-            border: 1.6px solid var(--stroke);
-            background: #b9d4ec;
-            clip-path: polygon(12% 0%, 100% 0%, 100% 100%, 12% 100%, 0% 50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-size: 18px;
-            font-weight: 700;
-            padding: 6px;
-        }
-
-        .layer {
-            border: 1.6px solid var(--stroke);
-            border-radius: 4px;
-            padding: 8px 10px;
-            display: grid;
-            gap: 6px;
-        }
-
-        .layer-header {
-            font-size: 19px;
-            font-weight: 800;
-            letter-spacing: 0.2px;
-        }
-
-        .cells {
-            display: grid;
-            gap: 6px;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-
-        .cells-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .cells-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
-        .cell {
-            border: 1.3px solid #646d7b;
-            background: var(--cell-bg);
-            min-height: 54px;
-            padding: 5px 6px 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            gap: 3px;
-            position: relative;
-        }
-
-        .cell-name {
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.15;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .cell-name::before {
-            content: "";
-            width: 16px;
-            height: 14px;
-            background: var(--shape-ink);
-            border-radius: 2px;
-            flex: 0 0 auto;
-        }
-
-        .layer-access .cell .cell-name::before {
-            width: 20px;
-            height: 15px;
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) center top / 20px 11px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) center bottom / 10px 3px no-repeat;
-        }
-
-        .layer-api .cell .cell-name::before {
-            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
-        }
-
-        .layer-business .cell .cell-name::before {
-            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
-        }
-
-        .layer-runtime .cell .cell-name::before {
-            width: 20px;
-            height: 14px;
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
-        }
-
-        .layer-data .cell .cell-name::before {
-            clip-path: polygon(10% 20%, 90% 20%, 100% 50%, 90% 80%, 10% 80%, 0% 50%);
-        }
-
-        .layer-storage .cell .cell-name::before {
-            border-radius: 45% / 24%;
-        }
-
-        .layer-infra .cell .cell-name::before {
-            width: 18px;
-            height: 10px;
-            border-radius: 10px;
-            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
-        }
-
-        .cell.planned-node .cell-name::before {
-            width: 14px;
-            height: 14px;
-            border-radius: 0;
-            transform: rotate(45deg);
-        }
-
-        .cell.security-node .cell-name::before {
-            border-radius: 0;
-            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
-        }
-
-        .cell.analytics-node .cell-name::before {
-            width: 20px;
-            height: 14px;
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
-        }
-
-        .status {
-            border: 1px solid #4a5568;
-            border-radius: 20px;
-            padding: 1px 7px;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.2px;
+            padding: 2rem 1rem 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+            border-radius: var(--radius);
             color: #fff;
         }
 
-        .implemented { background: var(--impl); }
-        .partial { background: var(--partial); }
-        .planned { background: var(--planned); }
-
-        .layer-access { background: var(--access-bg); }
-        .layer-api { background: var(--api-bg); }
-        .layer-business { background: var(--business-bg); }
-        .layer-runtime { background: var(--runtime-bg); }
-        .layer-data { background: var(--data-bg); }
-        .layer-storage { background: var(--storage-bg); }
-        .layer-infra { background: var(--infra-bg); }
-
-        .cylinders {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .db-group {
-            border: 1.3px solid #666ea0;
-            border-radius: 4px;
-            background: rgba(144, 145, 231, 0.45);
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            padding: 8px 6px;
-        }
-
-        .cylinder {
-            width: 70px;
-            height: 92px;
-            border: 1.3px solid #616161;
-            border-radius: 45% / 12%;
-            position: relative;
-            background: #f4f4f4;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .cylinder::before {
-            content: "";
-            position: absolute;
-            top: -1px;
-            left: 0;
-            right: 0;
-            height: 16px;
-            border: 1.3px solid #616161;
-            border-radius: 50%;
-            background: #eee;
-        }
-
-        .cylinder span { z-index: 1; }
-        .cylinder.alt { background: #d5d5d5; }
-
-        .sidebars {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-
-        .bar {
-            border: 1.6px solid var(--stroke);
-            border-radius: 4px;
-            min-height: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            text-align: center;
-            font-size: 25px;
+        .header-band h1 {
+            font-size: 2.8rem;
             font-weight: 800;
-            letter-spacing: 3px;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
         }
 
-        .bar::before {
-            content: "";
-            width: 18px;
-            height: 14px;
-            background: var(--shape-ink);
-            border-radius: 2px;
+        .header-band .subtitle {
+            font-size: 1rem;
+            color: #CBD5E1;
+            margin-bottom: 1.2rem;
         }
 
-        .bar-observe::before {
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 1px 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 7px 3px / 4px 11px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 13px 5px / 4px 9px no-repeat;
+        .tech-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 1.2rem;
         }
 
-        .bar-security::before {
-            border-radius: 0;
-            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
+        .pill {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.12);
+            color: #E2E8F0;
+            border: 1px solid rgba(255,255,255,0.2);
+            letter-spacing: 0.02em;
         }
-
-        .bar-observe { background: var(--observe-bg); }
-        .bar-security { background: var(--security-bg); }
 
         .legend {
             display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-            margin-bottom: 10px;
             flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #CBD5E1;
         }
 
-        .legend .chip {
-            border: 1.2px solid #4e5968;
-            border-radius: 14px;
-            padding: 2px 9px;
-            font-size: 11px;
-            font-weight: 700;
-            background: #fff;
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
-        .chip .dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
+        .legend-dot {
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-
-        .dot-impl { background: var(--impl); }
-        .dot-partial { background: var(--partial); }
-        .dot-planned { background: var(--planned); }
-
-        .shape-palette {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .shape-item {
-            border: 1.2px solid #4e5968;
-            border-radius: 6px;
-            background: #fff;
-            padding: 4px 8px;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .shape-icon {
-            width: 20px;
-            height: 14px;
-            background: var(--shape-ink);
             display: inline-block;
-            border-radius: 2px;
         }
 
-        .shape-icon.web {
-            width: 20px;
-            height: 15px;
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) center top / 20px 11px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) center bottom / 10px 3px no-repeat;
+        .legend-sep {
+            width: 1px;
+            height: 18px;
+            background: rgba(255,255,255,0.25);
         }
 
-        .shape-icon.api { clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%); }
-        .shape-icon.service {
-            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
-        }
-        .shape-icon.decision {
-            width: 14px;
-            height: 14px;
-            border-radius: 0;
-            transform: rotate(45deg);
-        }
-        .shape-icon.db {
-            border-radius: 45% / 22%;
-        }
-        .shape-icon.cloud {
-            width: 18px;
-            height: 10px;
-            border-radius: 10px;
-            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
-        }
-        .shape-icon.security {
-            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
-        }
-        .shape-icon.analytics {
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 2px 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 8px 4px / 4px 10px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 14px 6px / 4px 8px no-repeat;
-        }
-
-        .dual-panel {
-            margin-top: 12px;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-
-        .panel {
-            border: 1.6px solid #4d5868;
-            background: #d4d9e0;
-            padding: 8px;
-        }
-
-        .panel h3 {
-            font-size: 17px;
-            text-align: center;
-            margin-bottom: 6px;
-        }
-
-        .flow-step {
-            border: 1.2px solid #556170;
-            background: #f5f7f9;
-            min-height: 50px;
-            padding: 8px 10px;
-            font-size: 13px;
-            line-height: 1.15;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            text-align: left;
-            position: relative;
-        }
-
-        .flow-step::before {
-            content: "";
-            position: static;
-            display: inline-block;
-            width: 18px;
-            height: 14px;
-            background: var(--shape-ink);
-            border-radius: 2px;
-            flex: 0 0 auto;
-            margin-right: 8px;
-        }
-
-        .flow-step.s-io::before {
-            clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
-        }
-
-        .flow-step.s-decision::before {
-            width: 14px;
-            height: 14px;
-            border-radius: 0;
-            transform: rotate(45deg);
-        }
-
-        .flow-step.s-service::before {
-            clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
-        }
-
-        .flow-step.s-data::before {
-            border-radius: 45% / 22%;
-        }
-
-        .flow-step.s-cloud::before {
-            width: 18px;
-            height: 10px;
-            border-radius: 8px;
-            box-shadow: -5px 1px 0 -1px var(--shape-ink), 5px 1px 0 -1px var(--shape-ink);
-        }
-
-        .flow-step.s-security::before {
-            border-radius: 0;
-            clip-path: polygon(50% 0%, 88% 16%, 88% 52%, 50% 100%, 12% 52%, 12% 16%);
-        }
-
-        .flow-step.s-analytics::before {
-            border-radius: 0;
-            background:
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 0 8px / 4px 6px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 6px 4px / 4px 10px no-repeat,
-                linear-gradient(var(--shape-ink), var(--shape-ink)) 12px 6px / 4px 8px no-repeat;
-        }
-
-        .flow-step.sky { background: var(--sky); }
-        .flow-step.violet { background: var(--violet); color: #fff; }
-        .flow-step.sand { background: var(--sand); }
-        .flow-step.mint { background: var(--mint); }
-        .flow-step.lime { background: var(--lime); }
-
-        .flow-grid {
-            display: grid;
-            gap: 6px;
-        }
-
-        .flow-split-2 {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .flow-split-3 {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .arrow {
-            text-align: center;
-            font-size: 20px;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .subflow-section {
-            margin-top: 12px;
-            background: var(--board-bg);
-            border: 2px solid #7c8798;
-            padding: 12px;
-        }
-
-        .subflow-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 18px;
-        }
-
-        .subflow {
-            border: 1.5px solid #4d5868;
-            background: #d4d9e0;
-            padding: 14px;
-            display: grid;
-            gap: 10px;
-            align-content: start;
-            min-height: auto;
-        }
-
-        .subflow h4 {
-            text-align: center;
-            font-size: 15px;
-        }
-
-        .mindflow {
-            display: grid;
-            gap: 8px;
-        }
-
-        .mind-row {
-            display: grid;
-            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.5fr) minmax(0, 0.95fr);
-            gap: 10px;
-            align-items: center;
-        }
-
-        .mind-core .flow-step {
-            min-height: 52px;
-        }
-
-        .mind-branch {
-            min-height: 52px;
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-
-        .mind-branch .flow-step {
-            min-height: 44px;
-            padding: 7px 8px;
-            font-size: 12px;
-            line-height: 1.1;
-        }
-
-        .mind-branch.left::after,
-        .mind-branch.right::before {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 18px;
-            font-weight: 800;
-            color: #445163;
-            line-height: 1;
-        }
-
-        .mind-branch.left::after {
-            content: "→";
-            right: -6px;
-        }
-
-        .mind-branch.right::before {
-            content: "←";
-            left: -6px;
-        }
-
-        .mind-branch.empty {
-            min-height: 0;
-        }
-
-        .mind-branch.empty::before,
-        .mind-branch.empty::after {
-            content: none;
-        }
-
-        .mind-trunk-arrow {
-            text-align: center;
-            font-size: 22px;
-            font-weight: 800;
-            line-height: 1;
-            color: #3e4a5a;
-        }
-
-        .evidence {
-            border: 1.2px dashed #5e6876;
-            background: #edf1f4;
-            padding: 4px 6px;
-            font-size: 11px;
-            line-height: 1.2;
+        .legend-status {
             font-weight: 600;
         }
 
-        .note {
-            margin-top: 10px;
+        /* ============================================================
+           Section Titles
+           ============================================================ */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            letter-spacing: -0.01em;
+        }
+
+        .section-title span {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        /* ============================================================
+           Node Cards
+           ============================================================ */
+        .node {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--border);
+            box-shadow: var(--shadow);
+            padding: 0.75rem 1rem;
+            position: relative;
+        }
+
+        .node--blue   { border-left-color: var(--path-rag); }
+        .node--purple { border-left-color: var(--path-workflow); }
+        .node--green  { border-left-color: var(--path-agent); }
+        .node--red    { border-left-color: var(--security); }
+        .node--brown  { border-left-color: var(--storage); }
+        .node--deep   { border-left-color: var(--observability); }
+        .node--dark   { border-left-color: var(--text); }
+
+        .node-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .node-body {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .node-body ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .node-body li {
+            padding: 0.15rem 0;
+        }
+
+        .node-body li::before {
+            content: "·";
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-right: 0.35rem;
+        }
+
+        /* ============================================================
+           Badge
+           ============================================================ */
+        .badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            line-height: 1.3;
+        }
+
+        .badge--impl    { background: #DCFCE7; color: #166534; }
+        .badge--partial  { background: #FEF3C7; color: #92400E; }
+        .badge--planned  { background: #F1F5F9; color: #64748B; }
+
+        /* ============================================================
+           Icon (SVG use)
+           ============================================================ */
+        .icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .icon--sm {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ============================================================
+           Section A — Layered Architecture Diagram (Shape Grammar)
+           ============================================================ */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr 32px 32px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        /* Legend row spans all columns */
+        .arch-legend {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.6rem 1rem;
+            background: #F8FAFC;
+            border-bottom: 2px solid var(--border);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .arch-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .legend-shape {
+            width: 20px;
+            height: 16px;
+            display: inline-block;
+            border: 1.5px solid var(--text-muted);
+        }
+        .legend-shape--pill { border-radius: 999px; }
+        .legend-shape--rect { border-radius: 4px; }
+        .legend-shape--hex {
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            background: var(--path-rag);
+            border: none;
+        }
+        .legend-shape--cyl { border-radius: 4px 4px 50% 50% / 4px 4px 8px 8px; background: #FFFBEB; border-color: #D97706; }
+        .legend-shape--shield { background: #FEF2F2; border-color: var(--security); border-radius: 4px; }
+        .legend-sep {
+            width: 1px;
+            height: 16px;
+            background: var(--border);
+        }
+
+        /* Per-row left label with arrow shape */
+        .arch-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            font-size: 14px;
+            padding: 0.5rem 0.4rem 0.5rem 0.7rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            line-height: 1.25;
+            color: var(--text);
+            clip-path: polygon(8% 0%, 100% 0%, 100% 100%, 8% 100%, 0% 50%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Per-row content area */
+        .arch-content {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            min-height: 56px;
+        }
+
+        /* Color-coded right sidebars */
+        .arch-bar {
+            writing-mode: vertical-lr;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .arch-bar--security {
+            background: var(--security);
+            grid-column: 3;
+            grid-row: 2 / 8;
+        }
+        .arch-bar--observability {
+            background: var(--observability);
+            grid-column: 4;
+            grid-row: 2 / 8;
+        }
+
+        /* ---- Shape-based chip system ---- */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+            background: #fff;
+            border: 1.5px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .chip .icon { width: 16px; height: 16px; flex-shrink: 0; }
+        .chip .badge { font-size: 0.65rem; margin-left: 0.15rem; }
+        .badge--impl { color: var(--path-agent); }
+        .badge--partial { color: #D97706; }
+        .badge--planned { color: var(--text-muted); }
+
+        /* Entry/exit — pill */
+        .chip--pill {
+            border-radius: 999px;
+            background: #F8FAFC;
+            border-color: #CBD5E1;
+        }
+        /* Services — rounded rectangle */
+        .chip--svc {
+            border-radius: 6px;
+        }
+        /* AI/ML — colored left border + tint */
+        .chip--ai {
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
+            border-left: 3px solid currentColor;
+        }
+        .chip--ai-blue { border-left-color: var(--path-rag); background: #EFF6FF; }
+        .chip--ai-purple { border-left-color: var(--path-workflow); background: #F5F3FF; }
+        .chip--ai-green { border-left-color: var(--path-agent); background: #ECFDF5; }
+        /* Storage — cylinder-ish bottom rounding */
+        .chip--store {
+            border-radius: 6px 6px 12px 12px;
+            background: #FFFBEB;
+            border-color: #D97706;
+        }
+        /* Security — red tint + shield border */
+        .chip--sec {
+            border-radius: 6px;
+            background: #FEF2F2;
+            border-color: #FECACA;
+            border-left: 3px solid var(--security);
+        }
+        /* Cloud/external — dashed */
+        .chip--cloud {
+            border-radius: 6px;
+            border-style: dashed;
+            border-color: var(--observability);
+        }
+
+        /* ============================================================
+           Section B — 3-Column Query Paths
+           ============================================================ */
+        .paths-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .path-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .path-header {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius) var(--radius) 0 0;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .path-header--blue   { background: var(--path-rag); }
+        .path-header--purple { background: var(--path-workflow); }
+        .path-header--green  { background: var(--path-agent); }
+
+        .path-body {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 0.8rem;
+        }
+
+        .flow-step:last-child { border-bottom: none; }
+
+        .step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .step-num--blue   { background: var(--path-rag); }
+        .step-num--purple { background: var(--path-workflow); }
+        .step-num--green  { background: var(--path-agent); }
+
+        .step-label {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .step-detail {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Fork / merge visual for RAG parallel section */
+        .fork-container {
+            margin: 0.5rem 0;
+            padding: 0.6rem 0.75rem;
+            border: 1px dashed var(--path-rag);
+            border-radius: 6px;
+            background: #EFF6FF;
+        }
+
+        .fork-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--path-rag);
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .fork-branches {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .fork-branch {
+            background: var(--card-bg);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid #BFDBFE;
+            text-align: center;
+        }
+
+        /* Shortcut arrow for workflow */
+        .shortcut {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.6rem;
+            margin: 0.4rem 0;
+            border: 1px dashed var(--path-workflow);
+            border-radius: 6px;
+            background: #F5F3FF;
+            font-size: 0.7rem;
+            color: var(--path-workflow);
+            font-weight: 600;
+        }
+
+        /* Agent loop box */
+        .react-loop {
+            border: 2px solid var(--path-agent);
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: #ECFDF5;
+            position: relative;
+        }
+
+        .react-loop-label {
+            position: absolute;
+            top: -0.6rem;
+            left: 0.75rem;
+            background: var(--path-agent);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .react-cycle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--path-agent);
+        }
+
+        .react-cycle .arrow { font-weight: 300; font-size: 1rem; }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+
+        .tool-chip {
+            font-size: 0.7rem;
+            padding: 0.35rem 0.5rem;
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 4px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* ============================================================
+           Section C — Cross-Cutting Services (4 columns)
+           ============================================================ */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .service-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .service-header {
+            padding: 0.6rem 0.9rem;
+            border-radius: var(--radius) var(--radius) 0 0;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #fff;
+        }
+
+        .service-body {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            padding: 0.9rem;
+            flex: 1;
+        }
+
+        .service-header--text   { background: var(--text); }
+        .service-header--brown  { background: var(--storage); }
+        .service-header--red    { background: var(--security); }
+        .service-header--deep   { background: var(--observability); }
+
+        /* Decision tree for LLM dispatch */
+        .decision-tree {
+            font-size: 0.75rem;
+        }
+
+        .dt-root {
+            font-weight: 700;
+            padding: 0.4rem 0.6rem;
+            background: #F1F5F9;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .dt-branch {
+            padding-left: 0.75rem;
+            border-left: 2px solid var(--border);
+            margin-left: 0.5rem;
+        }
+
+        .dt-item {
+            padding: 0.35rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.3rem;
+        }
+
+        .dt-label {
+            font-weight: 600;
+        }
+
+        .dt-arrow {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .dt-note {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 0.4rem;
+            padding: 0.35rem 0.5rem;
+            background: #FEF2F2;
+            border-radius: 4px;
+            border-left: 2px solid var(--security);
+        }
+
+        /* Memory layers */
+        .memory-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .memory-layer {
+            padding: 0.5rem 0.7rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+        }
+
+        .memory-layer-title {
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 0.15rem;
+        }
+
+        .memory-layer--short  { background: #EFF6FF; border-color: #BFDBFE; }
+        .memory-layer--summary { background: #F5F3FF; border-color: #DDD6FE; }
+        .memory-layer--long   { background: #ECFDF5; border-color: #BBF7D0; }
+
+        /* Security layers */
+        .security-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .sec-layer {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+        }
+
+        .sec-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--security);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .sec-detail {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .sec-extra {
+            margin-top: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: #FFF7ED;
+            border: 1px solid #FED7AA;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--storage);
+        }
+
+        /* Observability items */
+        .obs-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .obs-item {
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            background: #F0F9FF;
+            border: 1px solid #BAE6FD;
+        }
+
+        .obs-item code {
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: 0.7rem;
+            background: #E0F2FE;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .obs-item strong {
             font-weight: 700;
         }
 
-        @media (max-width: 1450px) {
-            .lane-grid,
-            .subflow-grid {
-                grid-template-columns: 1fr;
-            }
+        /* ============================================================
+           Footer
+           ============================================================ */
+        .footer {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
 
-            .mind-row {
-                grid-template-columns: 1fr;
-                gap: 6px;
-            }
+        .footer-status {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
 
-            .mind-branch.left::after,
-            .mind-branch.right::before {
-                content: none;
-            }
+        .footer-status em {
+            color: var(--path-agent);
+            font-style: normal;
+        }
 
-            .grid {
-                grid-template-columns: 1fr;
-            }
+        .footer-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
 
-            .sidebars {
+        .footer-pill {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            background: #F1F5F9;
+            color: var(--text-muted);
+            font-weight: 500;
+            border: 1px solid var(--border);
+        }
+
+        .footer-files {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .footer-files code {
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: 0.68rem;
+            background: #F1F5F9;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        /* ============================================================
+           Responsive
+           ============================================================ */
+        @media (max-width: 1200px) {
+            .services-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+            .arch-label {
+                font-size: 0.6rem;
+                padding: 0.3rem 0.2rem 0.3rem 0.5rem;
+            }
+            .arch-bar { font-size: 0.55rem; }
+        }
 
-            .bar {
-                writing-mode: horizontal-tb;
-                letter-spacing: 0;
-                min-height: 54px;
-                font-size: 20px;
+        @media (max-width: 800px) {
+            .poster { padding: 1rem; }
+            .header-band h1 { font-size: 1.8rem; }
+            .arch-grid {
+                grid-template-columns: 1fr;
+            }
+            .arch-label {
+                clip-path: none;
+                padding: 0.4rem 0.75rem;
+                font-size: 0.65rem;
+            }
+            .arch-bar { display: none; }
+            .arch-legend { gap: 0.75rem; font-size: 0.65rem; }
+            .paths-grid {
+                grid-template-columns: 1fr;
+            }
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            .fork-branches {
+                grid-template-columns: 1fr;
             }
         }
 
+        /* ============================================================
+           Print Styles
+           ============================================================ */
         @media print {
-            @page {
-                size: A3 landscape;
-                margin: 6mm;
-            }
-
+            @page { size: A1 landscape; margin: 10mm; }
             body {
+                font-size: 14px;
                 background: #fff;
-                padding: 0;
+            }
+            .poster { max-width: none; padding: 0; }
+            section { break-inside: avoid; }
+            .header-band {
+                background: #1E293B !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-
-            .poster {
-                width: 100%;
-                border: 0;
-                padding: 0;
+            .node, .path-body, .service-body, .arch-grid, .footer {
+                box-shadow: none;
+                border-color: #CBD5E1;
             }
-
-            .panel, .subflow {
-                break-inside: avoid-page;
-                page-break-inside: avoid;
+            .arch-bar, .arch-label, .chip .badge, .arch-legend {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .step-num, .sec-num, .path-header, .service-header, .react-loop-label {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
 </head>
 <body>
-    <div class="poster">
-        <h1 class="title">Industry AI Flow - Architecture (As-Is + Target)</h1>
-        <p class="subtitle">Capstone Poster Edition: Code-Aligned Views for RAG, Cost ML Prediction, and Dynamic Analytics</p>
 
-        <div class="board">
-            <h2 class="section-title">A. Layered System View with Implementation Status</h2>
+    <!-- ============================================================
+         SVG Icon Sprite (hidden)
+         ============================================================ -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <symbol id="icon-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+            <line x1="4" y1="22" x2="4" y2="15"/>
+        </symbol>
+        <symbol id="icon-service" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+        </symbol>
+        <symbol id="icon-decision" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </symbol>
+        <symbol id="icon-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </symbol>
+        <symbol id="icon-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
+        </symbol>
+        <symbol id="icon-local" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+            <rect x="9" y="9" width="6" height="6"/>
+            <line x1="9" y1="1" x2="9" y2="4"/>
+            <line x1="15" y1="1" x2="15" y2="4"/>
+            <line x1="9" y1="20" x2="9" y2="23"/>
+            <line x1="15" y1="20" x2="15" y2="23"/>
+            <line x1="20" y1="9" x2="23" y2="9"/>
+            <line x1="20" y1="14" x2="23" y2="14"/>
+            <line x1="1" y1="9" x2="4" y2="9"/>
+            <line x1="1" y1="14" x2="4" y2="14"/>
+        </symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </symbol>
+        <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+        </symbol>
+        <symbol id="icon-memory" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </symbol>
+        <symbol id="icon-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </symbol>
+        <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+        </symbol>
+    </svg>
+
+    <main class="poster">
+
+        <!-- ============================================================
+             Header Band
+             ============================================================ -->
+        <header class="header-band">
+            <h1>Industry AI Flow</h1>
+            <p class="subtitle">Enterprise RAG System for Construction Intelligence</p>
+            <div class="tech-pills">
+                <span class="pill">FastAPI</span>
+                <span class="pill">LangChain 1.0</span>
+                <span class="pill">pgvector</span>
+                <span class="pill">Ollama Qwen2.5:7b</span>
+                <span class="pill">nomic-embed-v1.5</span>
+                <span class="pill">PaddleOCR</span>
+                <span class="pill">Prometheus</span>
+                <span class="pill">PostgreSQL 14+</span>
+            </div>
             <div class="legend">
-                <span class="chip"><span class="dot dot-impl"></span>Implemented</span>
-                <span class="chip"><span class="dot dot-partial"></span>Partial / Conditional</span>
-                <span class="chip"><span class="dot dot-planned"></span>Planned / Target</span>
-            </div>
-            <div class="shape-palette">
-                <span class="shape-item"><span class="shape-icon web"></span>Web Client</span>
-                <span class="shape-item"><span class="shape-icon api"></span>API / I-O</span>
-                <span class="shape-item"><span class="shape-icon service"></span>Service</span>
-                <span class="shape-item"><span class="shape-icon decision"></span>Decision</span>
-                <span class="shape-item"><span class="shape-icon db"></span>Data Store</span>
-                <span class="shape-item"><span class="shape-icon cloud"></span>Cloud Runtime</span>
-                <span class="shape-item"><span class="shape-icon security"></span>Security</span>
-                <span class="shape-item"><span class="shape-icon analytics"></span>Analytics</span>
-            </div>
-
-            <section class="api-lanes">
-                <h3>API Entry Lanes (Current Runtime Access Paths)</h3>
-                <div class="lane-grid">
-                    <div class="lane">
-                        Workflow Orchestration Entry
-                        <br><code>/api/v1/workflow/query</code>
-                    </div>
-                    <div class="lane">
-                        Direct RAG Entry
-                        <br><code>/api/v1/rag/query</code>
-                    </div>
-                    <div class="lane">
-                        Unified Agent Entry
-                        <br><code>/api/v1/unified/query</code>
-                    </div>
-                    <div class="lane">
-                        Dedicated Prediction / Analytics APIs
-                        <br><code>/api/v1/cost-estimation/*</code> + <code>/api/v1/data/analyze</code>
-                    </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:var(--path-rag)"></span>
+                    Path A: Direct RAG
                 </div>
-                <div style="margin-top:6px;text-align:center;font-size:12px;font-weight:700;">
-                    Frontend and backend are fully decoupled. Frontend consumes backend APIs over HTTP.
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:var(--path-workflow)"></span>
+                    Path B: Workflow Pipeline
                 </div>
-            </section>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:var(--path-agent)"></span>
+                    Path C: Unified Agent
+                </div>
+                <div class="legend-sep"></div>
+                <div class="legend-item">
+                    <span class="legend-status">&#9679;</span> Implemented
+                </div>
+                <div class="legend-item">
+                    <span class="legend-status">&#9684;</span> Partial
+                </div>
+                <div class="legend-item">
+                    <span class="legend-status">&#9675;</span> Planned
+                </div>
+            </div>
+        </header>
 
-            <div class="grid">
-                <div class="stack">
-                    <section class="row">
-                        <div class="label">Access</div>
-                        <div class="layer layer-access">
-                            <div class="layer-header">L1 Access Endpoints</div>
-                            <div class="cells">
-                                <div class="cell"><span class="cell-name">Web Frontend (Next.js)</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Prompt Admin Frontend</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">External API Client</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Third-Party Integration</span><span class="status partial">Partial</span></div>
-                            </div>
-                        </div>
-                    </section>
+        <!-- ============================================================
+             Section A — Layered Architecture Overview
+             ============================================================ -->
+        <section>
+            <h2 class="section-title">System Overview <span>Six-layer architecture with cross-cutting concerns</span></h2>
+            <div class="arch-grid">
 
-                    <section class="row">
-                        <div class="label">API</div>
-                        <div class="layer layer-api">
-                            <div class="layer-header">L2 API Gateway</div>
-                            <div class="cells">
-                                <div class="cell"><span class="cell-name">FastAPI Routers</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell security-node"><span class="cell-name">Auth + RBAC</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Input Validation</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Query Cache (RAG)</span><span class="status implemented">Implemented</span></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">Services</div>
-                        <div class="layer layer-business">
-                            <div class="layer-header">L3 Workflow & Business Services</div>
-                            <div class="cells">
-                                <div class="cell"><span class="cell-name">Intent Workflow (LangGraph)</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Fallback Orchestrator Pipeline</span><span class="status partial">Conditional</span></div>
-                                <div class="cell"><span class="cell-name">Prompt Preparation Node</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell security-node"><span class="cell-name">Routing + Budget Policy</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Cost Estimation Node</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell analytics-node"><span class="cell-name">Data Analysis Orchestration</span><span class="status partial">Split Path</span></div>
-                                <div class="cell planned-node"><span class="cell-name">Unified Single-Path Execution</span><span class="status planned">Target</span></div>
-                                <div class="cell"><span class="cell-name">Tenant-Aware Metadata</span><span class="status implemented">Implemented</span></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">AI</div>
-                        <div class="layer layer-runtime">
-                            <div class="layer-header">L4 AI Runtime</div>
-                            <div class="cells">
-                                <div class="cell"><span class="cell-name">RAG Engine (Hybrid + Rerank)</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">LLM Dispatch Service</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Code Execution Manager</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell analytics-node"><span class="cell-name">Iterative Self-Healing Analytics</span><span class="status partial">Advanced Path</span></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">Data</div>
-                        <div class="layer layer-data">
-                            <div class="layer-header">L5 Data Services</div>
-                            <div class="cells">
-                                <div class="cell"><span class="cell-name">Vector Retrieval / Chunk Access</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Cost Feature Extraction</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Data Analysis API</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Data Transfer (file/db mode)</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell planned-node"><span class="cell-name">Read/Write Split</span><span class="status planned">Target</span></div>
-                                <div class="cell"><span class="cell-name">TTL + Expiration Control</span><span class="status partial">Partial</span></div>
-                                <div class="cell planned-node"><span class="cell-name">Backup + Recovery Workflow</span><span class="status planned">Target</span></div>
-                                <div class="cell planned-node"><span class="cell-name">Online Query Rewrite Loop</span><span class="status planned">Target</span></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">Storage</div>
-                        <div class="layer layer-storage">
-                            <div class="layer-header">L6 Storage Systems</div>
-                            <div class="cylinders">
-                                <div class="db-group">
-                                    <div class="cylinder"><span>SQL</span></div>
-                                    <div class="cylinder alt"><span>SQL</span></div>
-                                </div>
-                                <div class="db-group">
-                                    <div class="cylinder"><span>KV</span></div>
-                                    <div class="cylinder alt"><span>KV</span></div>
-                                </div>
-                                <div class="db-group">
-                                    <div class="cylinder"><span>IDX</span></div>
-                                    <div class="cylinder alt"><span>IDX</span></div>
-                                </div>
-                            </div>
-                            <div class="cells cells-3">
-                                <div class="cell"><span class="cell-name">PostgreSQL + pgvector</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Redis Cache</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Artifact / Search Storage</span><span class="status partial">Partial</span></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="row">
-                        <div class="label">Runtime</div>
-                        <div class="layer layer-infra">
-                            <div class="layer-header">Deployment Environment</div>
-                            <div class="cells cells-2">
-                                <div class="cell"><span class="cell-name">Cloud VM / Containers</span><span class="status implemented">Implemented</span></div>
-                                <div class="cell"><span class="cell-name">Dedicated / On-Prem Node</span><span class="status partial">Deployment Option</span></div>
-                            </div>
-                        </div>
-                    </section>
+                <!-- Legend row -->
+                <div class="arch-legend">
+                    <span class="arch-legend-item"><span class="legend-shape legend-shape--pill"></span> Entry / Exit</span>
+                    <span class="arch-legend-item"><span class="legend-shape legend-shape--rect"></span> Service</span>
+                    <span class="arch-legend-item"><span class="legend-shape legend-shape--hex"></span> AI / ML</span>
+                    <span class="arch-legend-item"><span class="legend-shape legend-shape--cyl"></span> Storage</span>
+                    <span class="arch-legend-item"><span class="legend-shape legend-shape--shield"></span> Security</span>
+                    <span class="legend-sep"></span>
+                    <span class="arch-legend-item">&#9679; Implemented</span>
+                    <span class="arch-legend-item">&#9684; Partial</span>
+                    <span class="arch-legend-item">&#9675; Planned</span>
                 </div>
 
-                <aside class="sidebars">
-                    <div class="bar bar-observe">Audit &amp; Observability</div>
-                    <div class="bar bar-security">Security &amp; Access Control</div>
-                </aside>
-            </div>
-        </div>
+                <!-- L1 Presentation -->
+                <div class="arch-label" style="background:var(--layer-presentation)">L1<br>Present.</div>
+                <div class="arch-content" style="background:var(--layer-presentation)">
+                    <span class="chip chip--pill"><svg class="icon"><use href="#icon-service"/></svg> Browser UI</span>
+                    <span class="chip chip--pill"><svg class="icon"><use href="#icon-api"/></svg> REST API Client</span>
+                    <span class="chip chip--pill"><svg class="icon"><use href="#icon-cloud"/></svg> WebSocket</span>
+                    <span class="chip chip--pill"><svg class="icon"><use href="#icon-doc"/></svg> File Upload</span>
+                </div>
 
-        <section class="subflow-section">
-            <h2 class="section-title">B. As-Is vs Target Execution Views</h2>
-            <div class="dual-panel">
-                <article class="panel">
-                    <h3>As-Is: Production-Observed Access Pattern</h3>
-                    <div class="flow-grid">
-                        <div class="flow-step violet s-io">Frontend calls <code>/api/v1/workflow/query</code> as default orchestration path</div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-step sky s-service">IntentClassificationWorkflow is primary runner</div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-split-2">
-                            <div class="flow-step sand s-process">Agent dispatch returns templated response path</div>
-                            <div class="flow-step sand s-decision">Fallback orchestrator pipeline only on init failure</div>
+                <!-- L2 API Gateway -->
+                <div class="arch-label" style="background:var(--layer-gateway)">L2<br>Gateway</div>
+                <div class="arch-content" style="background:var(--layer-gateway)">
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-api"/></svg> FastAPI <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--sec"><svg class="icon"><use href="#icon-shield"/></svg> API Key + JWT <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--sec"><svg class="icon"><use href="#icon-shield"/></svg> Rate Limit 120/min <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--sec"><svg class="icon"><use href="#icon-shield"/></svg> Tenant Isolation <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--sec"><svg class="icon"><use href="#icon-shield"/></svg> Input Sanitization <span class="badge badge--impl">&#9679;</span></span>
+                </div>
+
+                <!-- L3 Intelligence -->
+                <div class="arch-label" style="background:var(--layer-intelligence)">L3<br>Intel.</div>
+                <div class="arch-content" style="background:var(--layer-intelligence)">
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-decision"/></svg> Intent Classification <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-blue"><svg class="icon"><use href="#icon-db"/></svg> Path A: Direct RAG <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-purple"><svg class="icon"><use href="#icon-decision"/></svg> Path B: 10-Node Workflow <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-green"><svg class="icon"><use href="#icon-memory"/></svg> Path C: Unified Agent (8 Tools) <span class="badge badge--partial">&#9684;</span></span>
+                </div>
+
+                <!-- L4 Service -->
+                <div class="arch-label" style="background:var(--layer-service)">L4<br>Service</div>
+                <div class="arch-content" style="background:var(--layer-service)">
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-local"/></svg> LLM Dispatch <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--sec"><svg class="icon"><use href="#icon-shield"/></svg> Safety Guard <span class="badge badge--partial">&#9684;</span></span>
+                    <span class="chip chip--store"><svg class="icon"><use href="#icon-memory"/></svg> 3-Layer Memory <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-blue"><svg class="icon"><use href="#icon-chart"/></svg> BGE Reranker <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-blue"><svg class="icon"><use href="#icon-chart"/></svg> RRF Fusion <span class="badge badge--impl">&#9679;</span></span>
+                </div>
+
+                <!-- L5 Data & Storage -->
+                <div class="arch-label" style="background:var(--layer-data)">L5<br>Data</div>
+                <div class="arch-content" style="background:var(--layer-data)">
+                    <span class="chip chip--store"><svg class="icon"><use href="#icon-db"/></svg> PostgreSQL + pgvector <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--store"><svg class="icon"><use href="#icon-db"/></svg> BM25 Index (NLTK) <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--store"><svg class="icon"><use href="#icon-doc"/></svg> Document Store <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--ai chip--ai-blue"><svg class="icon"><use href="#icon-memory"/></svg> nomic-embed-v1.5 (768d) <span class="badge badge--impl">&#9679;</span></span>
+                </div>
+
+                <!-- L6 Infrastructure -->
+                <div class="arch-label" style="background:var(--layer-infra)">L6<br>Infra</div>
+                <div class="arch-content" style="background:var(--layer-infra)">
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-cloud"/></svg> Ollama (Qwen2.5:7b) <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-local"/></svg> llama.cpp + Metal <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--cloud"><svg class="icon"><use href="#icon-cloud"/></svg> Zhipu AI Cloud <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-doc"/></svg> PaddleOCR <span class="badge badge--impl">&#9679;</span></span>
+                    <span class="chip chip--svc"><svg class="icon"><use href="#icon-local"/></svg> Docker Sandbox <span class="badge badge--partial">&#9684;</span></span>
+                </div>
+
+                <!-- Right sidebars -->
+                <div class="arch-bar arch-bar--security">Security</div>
+                <div class="arch-bar arch-bar--observability">Observability</div>
+
+            </div>
+        </section>
+
+        <!-- ============================================================
+             Section B — Query Paths Detail (3-column grid)
+             ============================================================ -->
+        <section>
+            <h2 class="section-title">Query Paths Detail <span>Internal processing stages for each routing path</span></h2>
+            <div class="paths-grid">
+
+                <!-- Column 1: RAG Pipeline -->
+                <article class="path-column">
+                    <div class="path-header path-header--blue">
+                        <svg class="icon" style="color:#fff"><use href="#icon-db"/></svg>
+                        Path A: RAG Pipeline
+                    </div>
+                    <div class="path-body">
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">1</span>
+                            <div>
+                                <div class="step-label">Query Received</div>
+                                <div class="step-detail">User query via REST API</div>
+                            </div>
                         </div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-split-3">
-                            <div class="flow-step mint s-io">RAG executes strongly via <code>/api/v1/rag/query</code></div>
-                            <div class="flow-step mint s-io">Cost ML executes strongly via <code>/api/v1/cost-estimation/*</code></div>
-                            <div class="flow-step mint s-io">Advanced analytics executes via <code>/api/v1/unified/query</code> and <code>/api/v1/data/analyze</code></div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">2</span>
+                            <div>
+                                <div class="step-label">Auth &amp; Validation</div>
+                                <div class="step-detail">API Key + JWT + tenant isolation</div>
+                            </div>
                         </div>
-                        <div class="evidence">
-                            Evidence refs: <code>frontend/src/lib/api-client.ts</code>, <code>backend/api/workflow_query_routes.py</code>, <code>backend/services/intent_classification/intent_workflow.py</code>, <code>backend/main.py</code>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">3</span>
+                            <div>
+                                <div class="step-label">Cache Check</div>
+                                <div class="step-detail">Semantic cache lookup</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">4</span>
+                            <div>
+                                <div class="step-label">Embedding</div>
+                                <div class="step-detail">nomic-embed-text-v1.5 (768-dim)</div>
+                            </div>
+                        </div>
+
+                        <div class="fork-container">
+                            <div class="fork-label">Parallel Retrieval</div>
+                            <div class="fork-branches">
+                                <div class="fork-branch">Vector Search<br><span style="font-size:0.65rem;color:var(--text-muted);font-weight:400">pgvector IVFFlat</span></div>
+                                <div class="fork-branch">BM25 Keyword<br><span style="font-size:0.65rem;color:var(--text-muted);font-weight:400">Token matching</span></div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">5</span>
+                            <div>
+                                <div class="step-label">RRF Fusion</div>
+                                <div class="step-detail">0.7 vector / 0.3 BM25 weights</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">6</span>
+                            <div>
+                                <div class="step-label">BGE Reranker</div>
+                                <div class="step-detail">bge-reranker-base cross-encoder</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">7</span>
+                            <div>
+                                <div class="step-label">LLM Generate</div>
+                                <div class="step-detail">Qwen2.5:7b via Ollama</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">8</span>
+                            <div>
+                                <div class="step-label">Safety Guard</div>
+                                <div class="step-detail">Response validation + citations</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--blue">9</span>
+                            <div>
+                                <div class="step-label">Response</div>
+                                <div class="step-detail">Structured JSON with sources</div>
+                            </div>
                         </div>
                     </div>
                 </article>
 
-                <article class="panel">
-                    <h3>Target: Single Unified Orchestrated Chain</h3>
-                    <div class="flow-grid">
-                        <div class="flow-step violet s-io">Single entry orchestration with explicit node contracts</div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-step sky s-service">Intent -> Route -> RAG / Cost ML / Dynamic Analytics in one executable graph</div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-split-3">
-                            <div class="flow-step sand s-decision">Online confidence gate + optional query rewrite pass</div>
-                            <div class="flow-step sand s-security">Standardized safety / redaction / egress controls</div>
-                            <div class="flow-step sand s-data">Unified response + provenance + cost metadata</div>
+                <!-- Column 2: 10-Node Workflow -->
+                <article class="path-column">
+                    <div class="path-header path-header--purple">
+                        <svg class="icon" style="color:#fff"><use href="#icon-decision"/></svg>
+                        Path B: 10-Node Workflow
+                    </div>
+                    <div class="path-body">
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">1</span>
+                            <div>
+                                <div class="step-label">intent_node</div>
+                                <div class="step-detail">Classify: general / cost / code / data</div>
+                            </div>
                         </div>
-                        <div class="arrow">↓</div>
-                        <div class="flow-step lime s-cloud">One trace path, one quality gate, one policy control plane</div>
-                        <div class="evidence">
-                            This panel is target-state planning. Use status tags (`Planned`) to avoid over-claim in defense.
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">2</span>
+                            <div>
+                                <div class="step-label">cost_estimation_node</div>
+                                <div class="step-detail">Construction cost calculations</div>
+                            </div>
+                        </div>
+
+                        <div class="shortcut">
+                            &#8627; shortcut_response &mdash; cost estimation fast path &#8594; node 10
+                        </div>
+
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">3</span>
+                            <div>
+                                <div class="step-label">retrieval_node</div>
+                                <div class="step-detail">Hybrid search (BM25 + vector)</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">4</span>
+                            <div>
+                                <div class="step-label">rerank_node</div>
+                                <div class="step-detail">BGE cross-encoder reranking</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">5</span>
+                            <div>
+                                <div class="step-label">prompt_node</div>
+                                <div class="step-detail">Context assembly + template</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">6</span>
+                            <div>
+                                <div class="step-label">groundedness_node</div>
+                                <div class="step-detail">Verify claims against sources</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">7</span>
+                            <div>
+                                <div class="step-label">route_node</div>
+                                <div class="step-detail">LLM dispatch (local / cloud / hybrid)</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">8</span>
+                            <div>
+                                <div class="step-label">code_exec_node</div>
+                                <div class="step-detail">Sandboxed code execution</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">9</span>
+                            <div>
+                                <div class="step-label">safety_node</div>
+                                <div class="step-detail">Construction safety validation</div>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="step-num step-num--purple">10</span>
+                            <div>
+                                <div class="step-label">response_node</div>
+                                <div class="step-detail">Final structured output</div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Column 3: Unified Agent -->
+                <article class="path-column">
+                    <div class="path-header path-header--green">
+                        <svg class="icon" style="color:#fff"><use href="#icon-memory"/></svg>
+                        Path C: Unified Agent
+                    </div>
+                    <div class="path-body">
+                        <div class="react-loop">
+                            <span class="react-loop-label">ReAct Loop</span>
+                            <div class="react-cycle">
+                                Observe <span class="arrow">&rarr;</span>
+                                Think <span class="arrow">&rarr;</span>
+                                Act <span class="arrow">&rarr;</span>
+                                Tool
+                            </div>
+                            <div style="text-align:center; font-size:0.65rem; color:var(--path-agent); margin-top:0.2rem">
+                                &#8635; Loop until answer is complete
+                            </div>
+                        </div>
+
+                        <div style="font-size:0.8rem; font-weight:700; margin-bottom:0.5rem; color:var(--text)">Available Tools</div>
+                        <div class="tools-grid">
+                            <div class="tool-chip">hybrid_retrieval_tool</div>
+                            <div class="tool-chip">rerank_tool</div>
+                            <div class="tool-chip">code_execution_tool</div>
+                            <div class="tool-chip">data_analysis_tool</div>
+                            <div class="tool-chip">visualization_tool</div>
+                            <div class="tool-chip">iterative_code_analysis_tool</div>
+                            <div class="tool-chip">self_healing_code_execution_tool</div>
+                            <div class="tool-chip">code_validation_tool</div>
+                        </div>
+
+                        <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--text-muted)">
+                            <strong>Agent capabilities:</strong> Multi-step reasoning, tool chaining, self-correction, iterative code analysis with automatic error recovery.
+                        </div>
+
+                        <div style="margin-top:0.75rem">
+                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap">
+                                <span class="badge badge--impl">&#9679; retrieval</span>
+                                <span class="badge badge--impl">&#9679; rerank</span>
+                                <span class="badge badge--impl">&#9679; code exec</span>
+                                <span class="badge badge--partial">&#9684; data analysis</span>
+                                <span class="badge badge--partial">&#9684; visualization</span>
+                                <span class="badge badge--partial">&#9684; self-healing</span>
+                            </div>
                         </div>
                     </div>
                 </article>
             </div>
         </section>
 
-        <section class="subflow-section">
-            <h2 class="section-title">C. Code-Aligned Complex Subprocess Diagrams</h2>
-            <div class="subflow-grid">
-                <article class="subflow">
-                    <h4>C1. Current RAG Execution (Code-Accurate)</h4>
-                    <div class="mindflow">
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step violet s-process">Client payload normalization</div></div>
-                            <div class="mind-core"><div class="flow-step violet s-io">Query -> <code>/api/v1/rag/query</code></div></div>
-                            <div class="mind-branch right"><div class="flow-step violet s-security">Auth + request schema checks</div></div>
+        <!-- ============================================================
+             Section C — Cross-Cutting Services (4-column grid)
+             ============================================================ -->
+        <section>
+            <h2 class="section-title">Cross-Cutting Services <span>Infrastructure shared across all query paths</span></h2>
+            <div class="services-grid">
+
+                <!-- Column 1: LLM Dispatch -->
+                <article class="service-column">
+                    <div class="service-header service-header--text">
+                        <svg class="icon" style="color:#fff"><use href="#icon-local"/></svg>
+                        LLM Dispatch
+                    </div>
+                    <div class="service-body">
+                        <div class="decision-tree">
+                            <div class="dt-root">
+                                <svg class="icon icon--sm" style="vertical-align:middle"><use href="#icon-decision"/></svg>
+                                LLM_BACKEND mode?
+                            </div>
+
+                            <div class="dt-branch">
+                                <div class="dt-item">
+                                    <span class="dt-arrow">&rarr;</span>
+                                    <div>
+                                        <span class="dt-label">local_only</span>
+                                        <div class="step-detail">llama.cpp / Ollama (Qwen2.5:7b)</div>
+                                        <div class="step-detail">Metal GPU acceleration on macOS</div>
+                                    </div>
+                                </div>
+                                <div class="dt-item">
+                                    <span class="dt-arrow">&rarr;</span>
+                                    <div>
+                                        <span class="dt-label">cloud_only</span>
+                                        <div class="step-detail">Zhipu AI (GLM-4-Plus)</div>
+                                    </div>
+                                </div>
+                                <div class="dt-item">
+                                    <span class="dt-arrow">&rarr;</span>
+                                    <div>
+                                        <span class="dt-label">hybrid_auto</span>
+                                        <div class="step-detail">Try local first</div>
+                                        <div class="step-detail">confidence &ge; 0.75? &rarr; return</div>
+                                        <div class="step-detail">confidence &lt; 0.75? &rarr; fallback cloud</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dt-note">
+                                <svg class="icon icon--sm" style="vertical-align:middle;color:var(--security)"><use href="#icon-shield"/></svg>
+                                PII redaction + egress guard applied before all cloud calls
+                            </div>
                         </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sky s-data">Vector recall path (pgvector)</div></div>
-                            <div class="mind-core"><div class="flow-step sky s-service">Hybrid Retrieval (Vector + BM25) with adaptive weights</div></div>
-                            <div class="mind-branch right"><div class="flow-step sky s-data">BM25 lexical recall path</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sand s-decision">Adaptive weight tuning by query intent</div></div>
-                            <div class="mind-core"><div class="flow-step sand s-process">Reranker (when enabled) -> context assembly</div></div>
-                            <div class="mind-branch right"><div class="flow-step sand s-process">Top-k trim + token budget control</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step mint s-security">Optional safety guard enhancement</div></div>
-                            <div class="mind-core"><div class="flow-step mint s-process">LLM generation with citation binding</div></div>
-                            <div class="mind-branch right"><div class="flow-step mint s-service">Workflow node can consume same RAG output</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch empty"></div>
-                            <div class="mind-core"><div class="flow-step lime s-data">Answer + sources + retrieved chunks + search weights</div></div>
-                            <div class="mind-branch empty"></div>
+                        <div style="margin-top:0.5rem">
+                            <span class="badge badge--impl">&#9679; Implemented</span>
                         </div>
                     </div>
-                    <div class="evidence">Evidence: <code>backend/services/rag_engine.py</code>, <code>backend/services/retrieval/hybrid_search.py</code></div>
                 </article>
 
-                <article class="subflow">
-                    <h4>C2. Current Cost ML Prediction Pipeline</h4>
-                    <div class="mindflow">
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step violet s-process">Training dataset + feature prep</div></div>
-                            <div class="mind-core"><div class="flow-step violet s-io">Train model via <code>/api/v1/cost-estimation/train</code></div></div>
-                            <div class="mind-branch right"><div class="flow-step violet s-decision">k-fold / holdout strategy settings</div></div>
+                <!-- Column 2: Memory System -->
+                <article class="service-column">
+                    <div class="service-header service-header--brown">
+                        <svg class="icon" style="color:#fff"><use href="#icon-memory"/></svg>
+                        Memory System
+                    </div>
+                    <div class="service-body">
+                        <div class="memory-stack">
+                            <div class="memory-layer memory-layer--short">
+                                <div class="memory-layer-title">Short-Term Memory</div>
+                                Sliding window: 6 messages<br>
+                                <span style="font-size:0.7rem;color:var(--text-muted)">Immediate conversation context</span>
+                            </div>
+                            <div style="text-align:center; font-size:0.7rem; color:var(--text-muted)">&darr; overflow triggers</div>
+                            <div class="memory-layer memory-layer--summary">
+                                <div class="memory-layer-title">Summary Memory</div>
+                                Auto-trigger at 4 messages<br>
+                                <span style="font-size:0.7rem;color:var(--text-muted)">LLM summarization of older context</span>
+                            </div>
+                            <div style="text-align:center; font-size:0.7rem; color:var(--text-muted)">&darr; persisted</div>
+                            <div class="memory-layer memory-layer--long">
+                                <div class="memory-layer-title">Long-Term Memory</div>
+                                Vector similarity search<br>
+                                <span style="font-size:0.7rem;color:var(--text-muted)">top_k=5, min_relevance=0.45</span>
+                            </div>
                         </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sky s-service">Ridge regressor fitting</div></div>
-                            <div class="mind-core"><div class="flow-step sky s-analytics">Ridge model + k-fold CV + interval quantiles artifact</div></div>
-                            <div class="mind-branch right"><div class="flow-step sky s-data">Evaluation metrics artifact persisted</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sand s-io">Inference request via <code>/predict</code></div></div>
-                            <div class="mind-core"><div class="flow-step sand s-service">Predict via <code>/predict</code> or workflow cost_estimation_node shortcut</div></div>
-                            <div class="mind-branch right"><div class="flow-step sand s-decision">Unknown category fallback handling</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step mint s-analytics">Uncertainty interval post-processing</div></div>
-                            <div class="mind-core"><div class="flow-step mint s-data">Return overrun%, predicted actual cost, confidence interval</div></div>
-                            <div class="mind-branch right"><div class="flow-step mint s-data">Model version + metadata trace</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch empty"></div>
-                            <div class="mind-core"><div class="flow-step lime s-decision">Consumer handles fallback flag for risk-aware decisions</div></div>
-                            <div class="mind-branch empty"></div>
+                        <div style="margin-top:0.5rem">
+                            <span class="badge badge--impl">&#9679; Implemented</span>
                         </div>
                     </div>
-                    <div class="evidence">Evidence: <code>backend/services/cost_estimation_service.py</code>, <code>backend/api/cost_estimation_routes.py</code>, <code>tests/integration/test_cost_estimation_api.py</code></div>
                 </article>
 
-                <article class="subflow">
-                    <h4>C3. Current LLM Governance Control Plane</h4>
-                    <div class="mindflow">
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step violet s-io">Caller selects <code>route_mode</code></div></div>
-                            <div class="mind-core"><div class="flow-step violet s-io">Dispatch request with route_mode (local_only / hybrid_auto / cloud_only)</div></div>
-                            <div class="mind-branch right"><div class="flow-step violet s-decision">Provider preference + locality constraints</div></div>
+                <!-- Column 3: Security -->
+                <article class="service-column">
+                    <div class="service-header service-header--red">
+                        <svg class="icon" style="color:#fff"><use href="#icon-shield"/></svg>
+                        Security
+                    </div>
+                    <div class="service-body">
+                        <div class="security-stack">
+                            <div class="sec-layer">
+                                <span class="sec-num">1</span>
+                                <div>
+                                    API Key Auth
+                                    <div class="sec-detail">X-API-Key header validation</div>
+                                </div>
+                            </div>
+                            <div class="sec-layer">
+                                <span class="sec-num">2</span>
+                                <div>
+                                    JWT Bearer Auth
+                                    <div class="sec-detail">User identity + role claims</div>
+                                </div>
+                            </div>
+                            <div class="sec-layer">
+                                <span class="sec-num">3</span>
+                                <div>
+                                    Tenant Isolation
+                                    <div class="sec-detail">X-Tenant-ID + rate limit 120/min</div>
+                                </div>
+                            </div>
+                            <div class="sec-layer">
+                                <span class="sec-num">4</span>
+                                <div>
+                                    Egress Guard
+                                    <div class="sec-detail">PII redaction before cloud, residual scan</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sky s-decision">Budget threshold policy</div></div>
-                            <div class="mind-core"><div class="flow-step sky s-decision">Budget policy + cloud rate limit + demo-mode policy checks</div></div>
-                            <div class="mind-branch right"><div class="flow-step sky s-decision">Cloud quota / cooldown checks</div></div>
+                        <div class="sec-extra">
+                            <svg class="icon icon--sm" style="vertical-align:middle"><use href="#icon-shield"/></svg>
+                            Memory Guard: 4096 MB process limit
                         </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sand s-process">PII detector + masking strategy</div></div>
-                            <div class="mind-core"><div class="flow-step sand s-security">PII redaction -> egress guard before cloud calls</div></div>
-                            <div class="mind-branch right"><div class="flow-step sand s-security">Allowlist + outbound policy tags</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step mint s-cloud">Local-model execution path</div></div>
-                            <div class="mind-core"><div class="flow-step mint s-cloud">Cloud/local execution with fallback and request metrics</div></div>
-                            <div class="mind-branch right"><div class="flow-step mint s-cloud">Cloud-model execution path with retry budget</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step lime s-data">Audit sink persistence</div></div>
-                            <div class="mind-core"><div class="flow-step lime s-data">Cost tracking + audit logs + decision annotations</div></div>
-                            <div class="mind-branch right"><div class="flow-step lime s-data">Observability traces + alert hooks</div></div>
+                        <div style="margin-top:0.5rem">
+                            <span class="badge badge--impl">&#9679; Auth</span>
+                            <span class="badge badge--impl">&#9679; Rate limit</span>
+                            <span class="badge badge--partial">&#9684; Egress</span>
                         </div>
                     </div>
-                    <div class="evidence">Evidence: <code>backend/services/llm_integration/dispatch_service.py</code>, <code>backend/services/security/redaction_service.py</code></div>
                 </article>
 
-                <article class="subflow">
-                    <h4>C4. Dynamic Advanced Analytics (Current + Gap)</h4>
-                    <div class="mindflow">
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step violet s-service">Unified agent core</div></div>
-                            <div class="mind-core"><div class="flow-step violet s-service">Unified agent and iterative tools are implemented</div></div>
-                            <div class="mind-branch right"><div class="flow-step violet s-process">Tool registry + planner contracts</div></div>
+                <!-- Column 4: Observability -->
+                <article class="service-column">
+                    <div class="service-header service-header--deep">
+                        <svg class="icon" style="color:#fff"><use href="#icon-chart"/></svg>
+                        Observability
+                    </div>
+                    <div class="service-body">
+                        <div class="obs-stack">
+                            <div class="obs-item">
+                                <strong>Prometheus</strong> <code>/metrics</code> endpoint
+                            </div>
+                            <div class="obs-item">
+                                <code>llm_requests_total</code>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">Labels: provider, route_mode, status</div>
+                            </div>
+                            <div class="obs-item">
+                                <code>llm_latency_seconds</code>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">Histogram with p50/p95/p99 buckets</div>
+                            </div>
+                            <div class="obs-item">
+                                <code>llm_fallback_total</code>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">Labels: reason (timeout, error, low_conf)</div>
+                            </div>
+                            <div class="obs-item">
+                                <strong>Per-node latency</strong>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">node_latency_ms for workflow pipeline</div>
+                            </div>
+                            <div class="obs-item">
+                                <strong>Structured JSON logging</strong>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">Correlation IDs, tenant context</div>
+                            </div>
+                            <div class="obs-item">
+                                <strong>Audit trail</strong>
+                                <div style="font-size:0.65rem;color:var(--text-muted)">Request/response logging for compliance</div>
+                            </div>
                         </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sky s-process">EDA: schema profile + data quality scan</div></div>
-                            <div class="mind-core"><div class="flow-step sky s-analytics">Supports iterative code repair, EDA, ML modeling, visual outputs</div></div>
-                            <div class="mind-branch right"><div class="flow-step sky s-analytics">Artifacts: charts, tables, model candidates</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step sand s-io">Endpoint path: <code>/api/v1/unified/query</code></div></div>
-                            <div class="mind-core"><div class="flow-step sand s-io">Currently accessed through dedicated endpoints / agent path</div></div>
-                            <div class="mind-branch right"><div class="flow-step sand s-io">Endpoint path: <code>/api/v1/data/analyze</code></div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch left"><div class="flow-step mint s-decision">Not default in <code>/api/v1/workflow/query</code></div></div>
-                            <div class="mind-core"><div class="flow-step mint s-decision">Not yet fully merged into default workflow/query runtime path</div></div>
-                            <div class="mind-branch right"><div class="flow-step mint s-process">Needs unified routing + runtime contracts</div></div>
-                        </div>
-                        <div class="mind-trunk-arrow">↓</div>
-                        <div class="mind-row">
-                            <div class="mind-branch empty"></div>
-                            <div class="mind-core"><div class="flow-step lime s-cloud">Target: promote into unified default execution graph</div></div>
-                            <div class="mind-branch empty"></div>
+                        <div style="margin-top:0.5rem">
+                            <span class="badge badge--impl">&#9679; Metrics</span>
+                            <span class="badge badge--impl">&#9679; Logging</span>
+                            <span class="badge badge--partial">&#9684; Audit</span>
                         </div>
                     </div>
-                    <div class="evidence">Evidence: <code>backend/agents/unified_agent.py</code>, <code>backend/tools/iterative_code_execution.py</code>, <code>backend/main.py</code></div>
                 </article>
             </div>
         </section>
 
-        <p class="note">Print tip: Use A3 landscape, 100% scale, and enable background graphics.</p>
-    </div>
+        <!-- ============================================================
+             Footer
+             ============================================================ -->
+        <footer class="footer">
+            <div class="footer-status">Implementation Status: <em>80-90% Production Ready</em></div>
+            <div class="footer-pills">
+                <span class="footer-pill">FastAPI 0.100+</span>
+                <span class="footer-pill">LangChain 1.0</span>
+                <span class="footer-pill">PostgreSQL 14+ / pgvector</span>
+                <span class="footer-pill">Ollama Qwen2.5:7b GGUF</span>
+                <span class="footer-pill">nomic-embed-text-v1.5 (768d)</span>
+                <span class="footer-pill">bge-reranker-base</span>
+                <span class="footer-pill">PaddleOCR</span>
+                <span class="footer-pill">llama-cpp-python 0.2.90</span>
+                <span class="footer-pill">Prometheus</span>
+                <span class="footer-pill">Python 3.13</span>
+            </div>
+            <div class="footer-files">
+                Key evidence files:
+                <code>backend/services/rag_engine.py</code> &middot;
+                <code>backend/services/intent_classification/intent_workflow.py</code> &middot;
+                <code>backend/services/retrieval/hybrid_search.py</code> &middot;
+                <code>backend/services/llm_integration/</code> &middot;
+                <code>backend/services/memory/</code> &middot;
+                <code>backend/security/</code> &middot;
+                <code>backend/observability/</code>
+            </div>
+        </footer>
+
+    </main>
 </body>
 </html>
