@@ -235,14 +235,17 @@ class GroundednessChecker:
         disclaimers = {
             SafetyLevel.SAFETY_CRITICAL: (
                 "\n\n---\n"
-                "⚠️ **EN**: ENAIEN,EN."
-                "ENAlberta OHS Act/Building CodeEN."
-                "EN."
+                "⚠️ **Safety Warning**: This AI-generated response is for informational purposes only. "
+                "Always verify safety-critical information with qualified professionals and applicable "
+                "codes such as the Alberta OHS Act and the National Building Code. "
+                "Do not rely solely on AI for safety decisions."
             ),
             SafetyLevel.ADVISORY: (
-                "\n\n---\n" "💡 **EN**: EN," "EN."
+                "\n\n---\n"
+                "💡 **Note**: This response is AI-generated. Please verify important details "
+                "with authoritative sources before making decisions."
             ),
-            SafetyLevel.INFORMATIONAL: "",  # EN
+            SafetyLevel.INFORMATIONAL: "",
         }
 
         disclaimer = disclaimers.get(safety_level, "")
@@ -263,18 +266,20 @@ class GroundednessChecker:
         Returns:
             (EN, EN)
         """
-        # EN,EN
         if confidence < self.confidence_threshold:
-            return True, ("EN,EN." "EN,EN.")
+            return True, (
+                "I don't have enough confidence in this answer to provide it reliably. "
+                "Please rephrase your question or consult an authoritative source."
+            )
 
-        # EN,EN
         if safety_level == SafetyLevel.SAFETY_CRITICAL and confidence < max(
             0.85, self.confidence_threshold + 0.05
         ):
             return True, (
-                "EN,EN."
-                "ENAlberta OHS ActEN."
-                "AIEN."
+                "This question involves safety-critical information and my confidence "
+                "is too low to provide a reliable answer. Please consult a qualified "
+                "professional or refer to the Alberta OHS Act and applicable building codes. "
+                "AI-generated answers should not be used for safety-critical decisions."
             )
 
         return False, None

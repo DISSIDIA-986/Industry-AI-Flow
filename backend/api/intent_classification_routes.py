@@ -13,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.context_manager import ContextManager
 from backend.services.intent_classification.intent_classifier import IntentClassifier
 from backend.services.intent_classification.intent_workflow import (
@@ -24,7 +25,7 @@ from backend.services.routing_decision import RoutingDecisionEngine
 logger = logging.getLogger(__name__)
 
 # Router
-router = APIRouter(prefix="/api/intent", tags=["Intent Classification"])
+router = APIRouter(prefix="/api/intent", tags=["Intent Classification"], dependencies=[Depends(secure_endpoint)])
 
 # Singleton workflow instance
 _intent_workflow: Optional[IntentClassificationWorkflow] = None

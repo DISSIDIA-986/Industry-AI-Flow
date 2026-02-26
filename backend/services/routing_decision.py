@@ -315,7 +315,7 @@ class RoutingDecisionEngine:
         intent_mapping = {
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
-            "cost_estimation": AgentType.DATA_ANALYSIS_AGENT,
+            "cost_estimation": AgentType.GENERAL_AGENT,
             "document_processing": AgentType.DOCUMENT_PROCESSING_AGENT,
             "code_execution": AgentType.CODE_EXECUTION_AGENT,
         }

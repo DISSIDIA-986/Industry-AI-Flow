@@ -13,6 +13,7 @@ import asyncpg
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.prompt_manager import (
     PromptInfo,
     PromptManager,
@@ -23,8 +24,7 @@ from backend.services.prompt_manager import (
 
 logger = logging.getLogger(__name__)
 
-# EN
-router = APIRouter(prefix="/api/prompts", tags=["prompts"])
+router = APIRouter(prefix="/api/prompts", tags=["prompts"], dependencies=[Depends(secure_endpoint)])
 
 
 # PydanticEN

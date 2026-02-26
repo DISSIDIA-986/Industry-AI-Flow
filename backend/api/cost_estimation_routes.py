@@ -9,10 +9,11 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from backend.config import settings
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.security.sanitizer import sanitize_identifier, sanitize_text
 from backend.services.cost_estimation_service import (
     CostEstimationError,
@@ -21,7 +22,7 @@ from backend.services.cost_estimation_service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"])
+router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"], dependencies=[Depends(secure_endpoint)])
 
 _service_lock = asyncio.Lock()
 _service: Optional[CostEstimationService] = None
