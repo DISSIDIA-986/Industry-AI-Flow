@@ -62,12 +62,46 @@ class DispatchService:
         text = answer.strip()
         if not text:
             return 0.0
+
+        # Very short responses get low confidence
+        if len(text) < 50:
+            return 0.3
+
         lowered = text.lower()
-        if "i don't know" in lowered or "EN" in text or "EN" in text:
+
+        # Check for uncertainty phrases
+        uncertainty_phrases = [
+            "i don't know",
+            "i'm not sure",
+            "i am not sure",
+            "i cannot",
+            "i'm unable",
+            "i am unable",
+            "no information",
+            "not enough context",
+        ]
+        if any(phrase in lowered for phrase in uncertainty_phrases):
+            return 0.4
+
+        # Check for placeholder tokens
+        if "EN" in text:
             return 0.55
+
+        # Check for repetition: split into sentences and look for duplicates
+        sentences = [s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()]
+        if len(sentences) >= 3:
+            unique_sentences = set(sentences)
+            repetition_ratio = 1.0 - (len(unique_sentences) / len(sentences))
+            if repetition_ratio > 0.5:
+                return 0.4
+
+        # Length component: contributes up to 0.25 (capped)
+        length_boost = min(len(text), 600) / 2400  # max 0.25
+
+        # Base confidence
         base = 0.55
-        length_boost = min(len(text), 600) / 1500
-        return round(min(0.95, base + length_boost), 4)
+
+        return round(min(0.90, base + length_boost), 4)
 
     @staticmethod
     def _resolve_model_name(client, fallback: str) -> str:
@@ -439,7 +473,7 @@ class DispatchService:
 
             return DispatchResponse(
                 success=False,
-                text="",
+                text="I'm sorry, I'm unable to generate a response at this time. Please try again later.",
                 provider=provider,
                 model=model,
                 route_mode=route_mode,  # type: ignore[arg-type]
