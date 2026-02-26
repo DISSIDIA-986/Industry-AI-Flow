@@ -331,11 +331,23 @@ class SimpleRAG:
         if self.memory_manager is None:
             return
 
-        # Snapshot the history to avoid race conditions with background thread
+        # Snapshot session data so the background thread doesn't access
+        # the live (and potentially mutating) session object.
         history_snapshot = list(session.interaction_history)
+        session_snapshot = _MemorySession(
+            session_id=session.session_id,
+            user_id=session.user_id,
+            language_preference=session.language_preference,
+            interaction_history=history_snapshot,
+            summary_memory=session.summary_memory,
+            last_summary_time=session.last_summary_time,
+            last_summary_record_index=session.last_summary_record_index,
+            long_term_memory_refs=list(session.long_term_memory_refs),
+        )
+        memory_manager = self.memory_manager
 
         async def _update_memory():
-            await self.memory_manager.process_interaction(session, record)
+            await memory_manager.process_interaction(session_snapshot, record)
 
         try:
             asyncio.get_running_loop()
