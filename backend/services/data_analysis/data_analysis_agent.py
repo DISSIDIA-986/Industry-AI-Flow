@@ -181,14 +181,22 @@ class DataAnalysisAgent:
                     "null_count": int(df[col].isnull().sum()),
                 }
 
-                # EN
                 if df[col].dtype in ["int64", "float64"]:
+                    # Guard against all-NaN columns: mean/min/max/std return NaN
+                    # which breaks json.dumps() serialization
+                    def _safe_float(val, default=0.0):
+                        try:
+                            f = float(val)
+                            return default if (f != f) else f  # NaN != NaN
+                        except (TypeError, ValueError):
+                            return default
+
                     col_info.update(
                         {
-                            "mean": float(df[col].mean()) if not df[col].empty else 0,
-                            "min": float(df[col].min()) if not df[col].empty else 0,
-                            "max": float(df[col].max()) if not df[col].empty else 0,
-                            "std": float(df[col].std()) if not df[col].empty else 0,
+                            "mean": _safe_float(df[col].mean()),
+                            "min": _safe_float(df[col].min()),
+                            "max": _safe_float(df[col].max()),
+                            "std": _safe_float(df[col].std()),
                         }
                     )
 

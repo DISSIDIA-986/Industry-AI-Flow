@@ -22,7 +22,7 @@ class ConversationSummarizer:
             self.client = LLMClientFactory.create_client(backend=backend)
             self.available = True
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("EN LLM,EN: %s", exc)
+            logger.warning("Summary LLM client unavailable: %s", exc)
             self.client = None
             self.available = False
 
@@ -30,31 +30,30 @@ class ConversationSummarizer:
         self,
         existing_summary: str,
         interactions: Iterable[dict],
-        language: str = "zh",
+        language: str = "en",
     ) -> str:
         """Combine the existing summary with new interactions."""
         if not self.available or not interactions:
             return existing_summary
 
         interactions_text = "\n".join(
-            f"EN: {item['user']}\nEN: {item['assistant']}\n---" for item in interactions
+            f"User: {item['user']}\nAssistant: {item['assistant']}\n---" for item in interactions
         )
 
-        prompt = f"""
-EN,EN200EN.
+        prompt = f"""You are a conversation summarizer. Update the existing summary with the new interactions below. Keep the summary concise (under 200 words).
 
-EN:
-{existing_summary or '(EN)'}
+Existing summary:
+{existing_summary or '(No previous summary)'}
 
-EN:
+New interactions:
 {interactions_text}
 
-EN,EN:
-1. EN
-2. EN
-3. EN
+Write an updated summary that:
+1. Preserves key facts and decisions from the existing summary
+2. Incorporates important new information from the interactions
+3. Removes outdated or superseded details
 
-EN:{language}
+Language: {language}
 """
 
         try:
@@ -65,7 +64,7 @@ EN:{language}
             )
             return summary.strip()
         except Exception as exc:  # pragma: no cover - LLM failure
-            logger.error("EN: %s", exc)
+            logger.error("Summary generation failed: %s", exc)
             return existing_summary
 
     @staticmethod
