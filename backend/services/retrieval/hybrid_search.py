@@ -267,19 +267,20 @@ class HybridRetriever:
         # 3. EN (Reciprocal Rank Fusion - RRF)
         fused_scores = {}
 
-        # EN(EN)
+        # EN(EN) — RRF with k=60
+        rrf_k = 60
         for rank, result in enumerate(vector_results, 1):
             chunk_id = result.get("chunk_id")
             if chunk_id is None:
                 continue
             fused_scores[chunk_id] = (
-                fused_scores.get(chunk_id, 0) + vector_weight / rank
+                fused_scores.get(chunk_id, 0) + vector_weight / (rrf_k + rank)
             )
 
-        # BM25 EN
+        # BM25 EN — RRF with k=60
         for rank, (chunk_index, score) in enumerate(bm25_top, 1):
             chunk_id = self.doc_chunks[chunk_index]["id"]
-            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / rank
+            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / (rrf_k + rank)
 
         # 4. EN top_k EN
         sorted_chunks = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[

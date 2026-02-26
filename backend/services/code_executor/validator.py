@@ -86,15 +86,16 @@ class CodeValidator:
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
         r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__)\b",  # Dangerous dunder attribute access
-        r"globals\(",  # Global scope access
-        r"locals\(",  # Local scope access
-        r"vars\(",  # Variable introspection
-        r"dir\(",  # Directory listing
-        r"getattr\(",  # Dynamic attribute access
-        r"setattr\(",  # Dynamic attribute modification
-        r"delattr\(",  # Attribute deletion
-        r"\.system\(",  # System calls
-        r"\.popen\(",  # Process execution
+        r"globals\s*\(",  # Global scope access
+        r"locals\s*\(",  # Local scope access
+        r"vars\s*\(",  # Variable introspection
+        r"dir\s*\(",  # Directory listing
+        r"getattr\s*\(",  # Dynamic attribute access
+        r"setattr\s*\(",  # Dynamic attribute modification
+        r"delattr\s*\(",  # Attribute deletion
+        r"\.system\s*\(",  # System calls
+        r"\.popen\s*\(",  # Process execution
+        r"\bbreakpoint\s*\(",  # Debugger invocation
     ]
 
     BLOCKED_CALL_NAMES = {
@@ -105,6 +106,7 @@ class CodeValidator:
         "__import__",
         "input",
         "raw_input",
+        "breakpoint",
     }
     BLOCKED_ATTRIBUTE_CALLS = {
         ("builtins", "open"),
@@ -269,6 +271,12 @@ class CodeValidator:
                     return ValidationResult(
                         is_valid=False,
                         error=f"Blocked function call: {node.func.id}",
+                    )
+                # Block type() used as metaclass constructor (3-arg form)
+                if func_name == "type" and len(node.args) >= 3:
+                    return ValidationResult(
+                        is_valid=False,
+                        error="Blocked function call: type() metaclass creation",
                     )
                 continue
 

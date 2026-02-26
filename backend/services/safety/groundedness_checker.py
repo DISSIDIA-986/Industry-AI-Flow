@@ -102,21 +102,24 @@ class GroundednessChecker:
         llm_client=None,
     ) -> Tuple[float, bool]:
         """
-        EN(ENNLIEN)
+        Check groundedness of an answer against retrieved context.
+
+        Uses bag-of-words overlap with numeric-aware comparison:
+        numbers in the answer that differ from context numbers incur
+        a penalty proportional to the magnitude difference.
 
         Args:
-            answer: LLMEN
-            context: EN
-            llm_client: LLMEN(ENNLIEN)
+            answer: LLM-generated answer
+            context: Retrieved context passages
+            llm_client: LLM client (reserved for future NLI-based checking)
 
         Returns:
-            (EN, EN)
+            (confidence_score, passed_threshold)
         """
         if not context:
             logger.warning("No context provided for groundedness check")
             return 0.0, False
 
-        # EN:EN split() EN(EN)
         answer_tokens = self._tokenize(answer)
         context_tokens = self._tokenize(" ".join(context))
 
@@ -127,17 +130,18 @@ class GroundednessChecker:
         context_vocab = set(context_tokens)
         overlap = answer_vocab & context_vocab
 
-        # EN:ENtokenEN(EN)
         support_ratio = len(overlap) / len(answer_vocab)
-        # EN:EN,EN
         context_hit_ratio = len(overlap) / len(context_vocab)
 
-        # EN,EN
         length_penalty = 0.0
         if len(answer_tokens) > len(context_tokens) * 2:
             length_penalty = min(
                 0.20, (len(answer_tokens) - len(context_tokens) * 2) / 100.0
             )
+
+        # Numeric mismatch penalty: numbers in the answer that are NOT
+        # in the context may indicate hallucinated or wrong figures.
+        numeric_penalty = self._numeric_mismatch_penalty(answer_tokens, context_tokens)
 
         confidence = max(
             0.0,
@@ -145,19 +149,70 @@ class GroundednessChecker:
                 1.0,
                 support_ratio * 0.95
                 + min(0.05, context_hit_ratio * 0.10)
-                - length_penalty,
+                - length_penalty
+                - numeric_penalty,
             ),
         )
 
         passed = confidence >= self.confidence_threshold
 
         logger.info(
-            "Groundedness check: confidence=%.2f, passed=%s",
+            "Groundedness check: confidence=%.2f, passed=%s, numeric_penalty=%.2f",
             confidence,
             passed,
+            numeric_penalty,
         )
 
         return confidence, passed
+
+    @staticmethod
+    def _numeric_mismatch_penalty(
+        answer_tokens: list[str], context_tokens: list[str]
+    ) -> float:
+        """Penalize numeric tokens in the answer that differ from context numbers."""
+        import re as _re
+
+        _num_re = _re.compile(r"^\d+(?:\.\d+)?$")
+        answer_nums = {t for t in answer_tokens if _num_re.match(t)}
+        context_nums = {t for t in context_tokens if _num_re.match(t)}
+
+        if not answer_nums:
+            return 0.0
+
+        mismatched = answer_nums - context_nums
+        if not mismatched:
+            return 0.0
+
+        # For each mismatched number, check if there is a close context number
+        penalty = 0.0
+        for num_str in mismatched:
+            try:
+                num_val = float(num_str)
+            except ValueError:
+                continue
+            # Find closest context number
+            best_ratio = float("inf")
+            for ctx_str in context_nums:
+                try:
+                    ctx_val = float(ctx_str)
+                except ValueError:
+                    continue
+                if ctx_val == 0:
+                    continue
+                ratio = abs(num_val - ctx_val) / max(abs(ctx_val), 1.0)
+                best_ratio = min(best_ratio, ratio)
+
+            if best_ratio == float("inf"):
+                # Number not in context at all — moderate penalty
+                penalty += 0.10
+            elif best_ratio > 0.5:
+                # Large magnitude difference (e.g., 500 vs 50)
+                penalty += 0.15
+            elif best_ratio > 0.1:
+                # Moderate difference
+                penalty += 0.05
+
+        return min(0.50, penalty)
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:

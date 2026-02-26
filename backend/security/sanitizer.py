@@ -22,8 +22,6 @@ SQL_PATTERN = re.compile(
     r"|truncate\s+table"
     r"|\bexec(ute)?\b\s*\("
     r"|\bxp_"
-    r"|--"
-    r"|;"
     r")",
     re.IGNORECASE,
 )

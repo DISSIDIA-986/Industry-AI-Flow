@@ -140,7 +140,8 @@ class VectorStore:
             has_pgvector = cur.fetchone()[0]
 
             if has_pgvector:
-                # EN pgvector EN
+                # Set IVFFlat probes for better recall (default=1 misses most vectors)
+                cur.execute("SET ivfflat.probes = 10")
                 embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
                 cur.execute(
                     """

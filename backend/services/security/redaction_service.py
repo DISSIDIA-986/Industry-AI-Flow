@@ -69,11 +69,11 @@ class RedactionService:
                 replacements=replacements,
             )
         except Exception as e:
-            # EN:EN
-            logger.warning(f"Redaction failed: {e}, returning original text")
+            # Fail-closed: return empty text to prevent PII leakage to cloud
+            logger.warning("Redaction failed: %s, blocking text to prevent PII leakage", e)
             return RedactionResult(
-                text=text,
+                text="",
                 hit_count=0,
-                categories=[],
-                replacements={}
+                categories=["redaction_error"],
+                replacements={},
             )

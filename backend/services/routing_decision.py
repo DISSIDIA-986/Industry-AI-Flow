@@ -249,8 +249,13 @@ class RoutingDecisionEngine:
             # EN
             routing_path = self._determine_routing_path(confidence, intent_result)
 
-            # EN
-            if self.routing_rules.get("enable_load_balancing", True):
+            # Load balancing: only apply when confidence is below high threshold
+            # to avoid overriding high-confidence intent routing decisions.
+            high_threshold = self.confidence_thresholds.get("high", 0.8)
+            if (
+                self.routing_rules.get("enable_load_balancing", True)
+                and confidence < high_threshold
+            ):
                 candidates = [primary_agent] + fallback_agents
                 selected_agent = (
                     self.system_status.get_least_loaded_agent(candidates)
