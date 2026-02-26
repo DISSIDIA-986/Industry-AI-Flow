@@ -8,7 +8,7 @@ from langchain_core.tools import tool
 from backend.config import settings
 from backend.services.code_executor import (
     CodeExecutionError,
-    code_executor,
+    get_code_executor,
     get_code_execution_manager,
     validate_code,
 )
@@ -79,9 +79,10 @@ def code_execution_tool(
     """
 
     manager = get_code_execution_manager()
+    executor = get_code_executor()
 
     # 检查代码执行器是否可用
-    if code_executor is None and manager is None:
+    if executor is None and manager is None:
         return {
             "success": False,
             "error": "Code executor unavailable. Please verify the Docker environment.",
@@ -110,7 +111,7 @@ def code_execution_tool(
             )
         else:
             # 回退到历史执行器实现（仅docker）
-            result = code_executor.execute_code(
+            result = executor.execute_code(
                 code=code, data_files=data_files, timeout=timeout
             )
 
@@ -166,7 +167,8 @@ def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dic
         >>> print(f"代码有效: {result['valid']}")
     """
 
-    if code_executor is None:
+    executor = get_code_executor()
+    if executor is None:
         from backend.services.code_executor import validate_code
 
         validation_result = validate_code(code, strict_mode=True)
@@ -187,7 +189,7 @@ def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dic
 
     try:
         # 使用执行器的验证功能
-        validation_errors = code_executor._validate_code(code)
+        validation_errors = executor._validate_code(code)
 
         # 分类错误
         syntax_errors = []
@@ -297,14 +299,15 @@ def get_execution_environment_info() -> Dict[str, Any]:
         docker_available = bool(docker_state.get("healthy", False))
         code_execution_available = bool(health_snapshot.get("healthy", False))
     else:
+        _executor = get_code_executor()
         health_snapshot = {
-            "healthy": bool(code_executor is not None),
+            "healthy": bool(_executor is not None),
             "mode": settings.code_execution_provider,
             "selected_provider": "docker",
-            "providers": {"docker": {"healthy": bool(code_executor is not None)}},
+            "providers": {"docker": {"healthy": bool(_executor is not None)}},
         }
-        docker_available = bool(code_executor is not None)
-        code_execution_available = bool(code_executor is not None)
+        docker_available = bool(_executor is not None)
+        code_execution_available = bool(_executor is not None)
 
     return {
         "docker_available": docker_available,

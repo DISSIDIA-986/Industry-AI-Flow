@@ -12,7 +12,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 
 from backend.config import settings
-from backend.services.code_executor import code_executor
+from backend.services.code_executor import get_code_executor
 from backend.services.data_transfer import data_transfer
 from backend.tools.code_execution import code_execution_tool
 
@@ -527,7 +527,10 @@ EN:
 
         try:
             # EN
-            result = code_executor.execute_code(
+            executor = get_code_executor()
+            if executor is None:
+                raise RuntimeError("Code executor unavailable: Docker is not running")
+            result = executor.execute_code(
                 code=state["current_code"],
                 data_files=data_files,
                 timeout=settings.code_execution_timeout,
