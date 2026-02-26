@@ -63,7 +63,15 @@ class DispatchService:
         if not text:
             return 0.0
         lowered = text.lower()
-        if "i don't know" in lowered or "EN" in text or "EN" in text:
+        uncertainty_phrases = [
+            "i don't know",
+            "i'm not sure",
+            "i cannot determine",
+            "i'm unable to",
+            "i do not have enough information",
+            "insufficient information",
+        ]
+        if any(phrase in lowered for phrase in uncertainty_phrases):
             return 0.55
         base = 0.55
         length_boost = min(len(text), 600) / 1500
