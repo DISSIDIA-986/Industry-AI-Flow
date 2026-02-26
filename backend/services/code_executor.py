@@ -327,9 +327,20 @@ class DockerCodeExecutor:
         return visualizations
 
 
-# EN
-try:
-    code_executor = DockerCodeExecutor()
-except CodeExecutionError:
-    logger.warning("Docker EN,EN")
-    code_executor = None
+# Lazy initialization: avoid blocking import when Docker is unavailable.
+_code_executor = None
+
+
+def get_code_executor():
+    global _code_executor
+    if _code_executor is None:
+        try:
+            _code_executor = DockerCodeExecutor()
+        except (CodeExecutionError, Exception) as exc:
+            logger.warning("Docker unavailable for code execution: %s", exc)
+            _code_executor = None
+    return _code_executor
+
+
+# Backward-compatible alias; prefer get_code_executor() for lazy init.
+code_executor = None
