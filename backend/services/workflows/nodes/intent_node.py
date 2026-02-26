@@ -39,6 +39,8 @@ def _heuristic_intent(query: str) -> str:
             "project cost",
             "cost forecast",
             "cost prediction",
+            "how much",
+            "price",
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"
@@ -92,17 +94,21 @@ def _extract_intent_value(raw: Any) -> Optional[str]:
 
 
 async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
+    import inspect
+
     if hasattr(classifier, "classify_intent"):
-        for payload in (
-            {"query": query, "context": metadata},
-            {"query": query, "metadata": metadata},
-            {"query": query},
-        ):
-            try:
-                result = classifier.classify_intent(**payload)
-                return await result if hasattr(result, "__await__") else result
-            except TypeError:
-                continue
+        sig = inspect.signature(classifier.classify_intent)
+        params = set(sig.parameters.keys()) - {"self"}
+        if {"query", "context"} <= params:
+            result = classifier.classify_intent(query=query, context=metadata)
+        elif {"query", "metadata"} <= params:
+            result = classifier.classify_intent(query=query, metadata=metadata)
+        elif "query" in params:
+            result = classifier.classify_intent(query=query)
+        else:
+            result = None
+        if result is not None:
+            return await result if hasattr(result, "__await__") else result
 
     if hasattr(classifier, "classify"):
         result = classifier.classify(query=query, metadata=metadata)

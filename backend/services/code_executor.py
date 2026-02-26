@@ -100,6 +100,7 @@ class DockerCodeExecutor:
             "execfile",
             "compile",
             "reload",
+            "getattr",
         ]
 
         try:
@@ -122,11 +123,11 @@ class DockerCodeExecutor:
                 # EN
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name in ["os", "subprocess", "sys"]:
+                        if alias.name in ["os", "subprocess", "sys", "importlib"]:
                             errors.append(f"EN: {alias.name}")
 
                 if isinstance(node, ast.ImportFrom):
-                    if node.module in ["os", "subprocess", "sys"]:
+                    if node.module in ["os", "subprocess", "sys", "importlib"]:
                         errors.append(f"EN: {node.module}")
 
         except SyntaxError as e:

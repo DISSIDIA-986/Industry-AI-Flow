@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
+import os
 import re
 from threading import Lock
 from typing import Dict, List
@@ -17,21 +19,51 @@ from backend.security.auth import build_identity
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
+
+def _hash_password(password: str) -> str:
+    salt = os.urandom(16).hex()
+    h = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"{salt}${h}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    if "$" not in stored:
+        return False
+    salt, h = stored.split("$", 1)
+    return hashlib.sha256((salt + password).encode()).hexdigest() == h
+
+
 _users_lock = Lock()
 _users: Dict[str, Dict[str, str | List[str]]] = {
     "demo@example.com": {
         "id": "user-demo",
         "name": "Demo User",
         "email": "demo@example.com",
-        "password": "demo123",
+        "password": _hash_password("demo123"),
         "roles": ["user"],
     }
 }
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+_EPHEMERAL_JWT_SECRET: str | None = None
+
+
 def _jwt_secret() -> str:
-    return settings.auth_jwt_secret or "industry-ai-flow-dev-secret"
+    global _EPHEMERAL_JWT_SECRET
+    secret = settings.auth_jwt_secret
+    if secret:
+        return secret
+    if _EPHEMERAL_JWT_SECRET is None:
+        import secrets as _secrets
+
+        _EPHEMERAL_JWT_SECRET = _secrets.token_urlsafe(32)
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "AUTH_JWT_SECRET not configured — using ephemeral random secret."
+        )
+    return _EPHEMERAL_JWT_SECRET
 
 
 def _create_access_token(user: Dict[str, str | List[str]]) -> str:
@@ -98,7 +130,7 @@ async def login(payload: LoginRequest) -> AuthResponse:
     with _users_lock:
         user = _users.get(payload.email.lower())
 
-    if not user or user.get("password") != payload.password:
+    if not user or not _verify_password(payload.password, user.get("password", "")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -120,7 +152,7 @@ async def register(payload: RegisterRequest) -> AuthResponse:
             "id": f"user-{uuid4().hex[:8]}",
             "name": payload.name,
             "email": key,
-            "password": payload.password,
+            "password": _hash_password(payload.password),
             "roles": ["user"],
         }
         _users[key] = user

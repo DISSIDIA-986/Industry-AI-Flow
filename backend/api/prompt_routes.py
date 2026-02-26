@@ -715,7 +715,8 @@ async def search_prompts(
     try:
         async with prompt_manager.db_pool.acquire() as conn:
             # EN(P0EN:EN)
-            params = [f"%{q}%"]  # $1: EN
+            escaped_q = q.replace('%', r'\%').replace('_', r'\_')
+            params = [f"%{escaped_q}%"]  # $1: EN
             conditions = ["(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"]
 
             if category:
