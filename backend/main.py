@@ -1048,17 +1048,17 @@ async def rag_query(
         )
         raise
     except Exception as e:
+        logger.exception("RAG query failed: %s", e)
         log_audit(
             action="rag.query",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "error": str(e),
-            "question": request.question,
-            "answer": "Unable to process this query due to an internal error.",
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/unified/query")
@@ -1086,18 +1086,17 @@ async def unified_query(
         )
         return result
     except Exception as e:
+        logger.exception("Unified query failed: %s", e)
         log_audit(
             action="unified.query",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {
-            "success": False,
-            "error": str(e),
-            "question": request.question,
-            "intent": "unknown",
-        }
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/code/execute")
@@ -1125,13 +1124,17 @@ async def execute_code(
         )
         return result
     except Exception as e:
+        logger.exception("Code execution failed: %s", e)
         log_audit(
             action="code.execute",
             tenant=tenant,
             status="error",
             detail={"error": str(e)},
         )
-        return {"success": False, "error": str(e), "stdout": "", "stderr": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred. Please try again.",
+        )
 
 
 @app.post("/api/v1/code/validate")
