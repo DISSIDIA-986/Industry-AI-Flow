@@ -1,14 +1,13 @@
 """
-EN:EN
+Groundedness Checker and Safety Guard
 
-EN:
-- NLIEN
-- EN
-- EN
-- EN
+Features:
+- NLI-based groundedness checking
+- Safety level classification
+- Disclaimer injection
 
-EN: 2026-02-09
-EN: P0 (Week 2EN)
+Date: 2026-02-09
+Priority: P0 (Week 2 deliverable)
 """
 
 import logging
@@ -20,43 +19,43 @@ logger = logging.getLogger(__name__)
 
 
 class SafetyLevel(Enum):
-    """EN"""
+    """Safety level classification for LLM responses."""
 
-    INFORMATIONAL = "informational"  # EN(EN)
-    ADVISORY = "advisory"  # EN(EN)
-    SAFETY_CRITICAL = "safety_critical"  # EN(EN)
+    INFORMATIONAL = "informational"  # General information (low risk)
+    ADVISORY = "advisory"  # Advisory content (moderate risk)
+    SAFETY_CRITICAL = "safety_critical"  # Safety-critical content (high risk)
 
 
 class GroundednessChecker:
     """
-    EN:EN
+    Groundedness checker for LLM-generated responses.
 
-    EN:
-    - EN
-    - EN
-    - EN
+    Features:
+    - Token overlap-based groundedness scoring
+    - Safety level classification
+    - Disclaimer injection for safety-critical content
     """
 
     def __init__(self, confidence_threshold: float = 0.80):
         """
         Args:
-            confidence_threshold: EN(EN0.80)
+            confidence_threshold: Minimum confidence threshold (default 0.80)
         """
         self.confidence_threshold = confidence_threshold
 
     def check_safety_level(self, answer: str) -> SafetyLevel:
         """
-        EN
+        Classify the safety level of an LLM response.
 
         Args:
-            answer: LLMEN
+            answer: The LLM-generated response text
 
         Returns:
-            SafetyLevelEN
+            SafetyLevel classification
         """
         answer_lower = answer.lower()
 
-        # EN
+        # Safety-critical keywords
         safety_critical_keywords = [
             "ohs",
             "occupational health and safety",
@@ -74,7 +73,7 @@ class GroundednessChecker:
             "hazardous",
         ]
 
-        # EN
+        # Advisory keywords
         advisory_keywords = [
             "recommend",
             "suggest",
@@ -83,12 +82,12 @@ class GroundednessChecker:
             "guideline",
         ]
 
-        # EN
+        # Check safety-critical keywords first
         for keyword in safety_critical_keywords:
             if keyword in answer_lower:
                 return SafetyLevel.SAFETY_CRITICAL
 
-        # EN
+        # Then check advisory keywords
         for keyword in advisory_keywords:
             if keyword in answer_lower:
                 return SafetyLevel.ADVISORY
@@ -102,21 +101,22 @@ class GroundednessChecker:
         llm_client=None,
     ) -> Tuple[float, bool]:
         """
-        EN(ENNLIEN)
+        Check how well the answer is grounded in the provided context
+        using token overlap (with optional NLI enhancement).
 
         Args:
-            answer: LLMEN
-            context: EN
-            llm_client: LLMEN(ENNLIEN)
+            answer: The LLM-generated response text
+            context: List of retrieved context passages
+            llm_client: Optional LLM client for NLI-based checking
 
         Returns:
-            (EN, EN)
+            (confidence_score, passed)
         """
         if not context:
             logger.warning("No context provided for groundedness check")
             return 0.0, False
 
-        # EN:EN split() EN(EN)
+        # Simple approach: use token overlap for scoring
         answer_tokens = self._tokenize(answer)
         context_tokens = self._tokenize(" ".join(context))
 
@@ -127,12 +127,12 @@ class GroundednessChecker:
         context_vocab = set(context_tokens)
         overlap = answer_vocab & context_vocab
 
-        # EN:ENtokenEN(EN)
+        # Support ratio: fraction of answer tokens found in context
         support_ratio = len(overlap) / len(answer_vocab)
-        # EN:EN,EN
+        # Context hit ratio: fraction of context tokens referenced
         context_hit_ratio = len(overlap) / len(context_vocab)
 
-        # EN,EN
+        # Length penalty for excessively long answers
         length_penalty = 0.0
         if len(answer_tokens) > len(context_tokens) * 2:
             length_penalty = min(
@@ -168,26 +168,30 @@ class GroundednessChecker:
 
     def add_disclaimer(self, answer: str, safety_level: SafetyLevel) -> str:
         """
-        EN
+        Append a safety disclaimer to the answer based on safety level.
 
         Args:
-            answer: EN
-            safety_level: EN
+            answer: The original answer text
+            safety_level: The classified safety level
 
         Returns:
-            EN
+            Answer text with appropriate disclaimer appended
         """
         disclaimers = {
             SafetyLevel.SAFETY_CRITICAL: (
                 "\n\n---\n"
-                "⚠️ **EN**: ENAIEN,EN."
-                "ENAlberta OHS Act/Building CodeEN."
-                "EN."
+                "⚠️ **Important**: This response contains safety-related information. "
+                "Always verify against applicable codes and standards "
+                "(e.g., Alberta OHS Act, National Building Code) and consult a "
+                "qualified professional before making safety-critical decisions."
             ),
             SafetyLevel.ADVISORY: (
-                "\n\n---\n" "💡 **EN**: EN," "EN."
+                "\n\n---\n"
+                "💡 **Note**: This information is provided for reference only. "
+                "Please consult relevant standards and professionals for your "
+                "specific situation."
             ),
-            SafetyLevel.INFORMATIONAL: "",  # EN
+            SafetyLevel.INFORMATIONAL: "",  # No disclaimer needed
         }
 
         disclaimer = disclaimers.get(safety_level, "")
@@ -199,27 +203,33 @@ class GroundednessChecker:
         safety_level: SafetyLevel,
     ) -> Tuple[bool, Optional[str]]:
         """
-        EN
+        Determine whether the system should refuse to answer.
 
         Args:
-            confidence: EN
-            safety_level: EN
+            confidence: Groundedness confidence score
+            safety_level: The classified safety level
 
         Returns:
-            (EN, EN)
+            (should_refuse, refusal_message)
         """
-        # EN,EN
+        # Low confidence: refuse regardless of safety level
         if confidence < self.confidence_threshold:
-            return True, ("EN,EN." "EN,EN.")
+            return True, (
+                "I cannot provide a confident answer to this question based on "
+                "the available documents. Please consult a qualified professional "
+                "or refer to the relevant standards for accurate information."
+            )
 
-        # EN,EN
+        # Safety-critical with borderline confidence: refuse with specific guidance
         if safety_level == SafetyLevel.SAFETY_CRITICAL and confidence < max(
             0.85, self.confidence_threshold + 0.05
         ):
             return True, (
-                "EN,EN."
-                "ENAlberta OHS ActEN."
-                "AIEN."
+                "I cannot provide a confident answer to this safety-related "
+                "question based on the available documents. Please consult the "
+                "Alberta OHS Act or a qualified safety professional. "
+                "AI-generated responses should not be relied upon for "
+                "safety-critical decisions."
             )
 
         return False, None
@@ -231,23 +241,23 @@ class GroundednessChecker:
         llm_client=None,
     ) -> str:
         """
-        EN:EN -> EN -> EN
+        Full pipeline: check groundedness -> classify safety -> add disclaimer or refuse.
 
         Args:
-            answer: LLMEN
-            context: EN
-            llm_client: LLMEN(EN)
+            answer: The LLM-generated response text
+            context: List of retrieved context passages
+            llm_client: Optional LLM client for enhanced checking
 
         Returns:
-            EN(EN)
+            Enhanced answer with disclaimer, or a refusal message
         """
-        # 1. EN
+        # 1. Classify safety level
         safety_level = self.check_safety_level(answer)
 
-        # 2. EN
+        # 2. Check groundedness
         confidence, _ = self.check_groundedness(answer, context, llm_client)
 
-        # 3. EN
+        # 3. Determine if we should refuse
         should_refuse, refusal_message = self.should_refuse_to_answer(
             confidence,
             safety_level,
@@ -257,7 +267,7 @@ class GroundednessChecker:
             logger.warning("Refusing to answer due to low confidence")
             return refusal_message
 
-        # 4. EN
+        # 4. Add disclaimer
         enhanced_answer = self.add_disclaimer(answer, safety_level)
 
         return enhanced_answer
@@ -265,9 +275,9 @@ class GroundednessChecker:
 
 class SafetyGuard:
     """
-    EN:EN
+    High-level safety guard combining groundedness checking and disclaimers.
 
-    EN:
+    Usage:
     ```python
     safety_guard = SafetyGuard(confidence_threshold=0.80)
     answer = safety_guard.check_and_enhance_answer(
@@ -281,7 +291,7 @@ class SafetyGuard:
     def __init__(self, confidence_threshold: float = 0.80):
         """
         Args:
-            confidence_threshold: EN(EN0.80)
+            confidence_threshold: Minimum confidence threshold (default 0.80)
         """
         self.groundedness_checker = GroundednessChecker(confidence_threshold)
         logger.info(
@@ -296,30 +306,25 @@ class SafetyGuard:
         llm_client=None,
     ) -> Dict[str, Any]:
         """
-        ENLLMEN,EN
+        Process an LLM response through safety checks and enhancement.
 
         Args:
-            answer: LLMEN
-            context: EN
-            llm_client: LLMEN(EN,ENNLIEN)
+            answer: The LLM-generated response text
+            context: List of retrieved context passages
+            llm_client: Optional LLM client for NLI-based checking
 
         Returns:
-            EN {
-                "enhanced_answer": str,
-                "safety_level": SafetyLevel,
-                "confidence": float,
-                "passed_checks": bool,
-            }
+            Dict with enhanced_answer, safety_level, confidence, passed_checks
         """
-        # EN
+        # Classify safety level
         safety_level = self.groundedness_checker.check_safety_level(answer)
 
-        # EN
+        # Check groundedness
         confidence, passed = self.groundedness_checker.check_groundedness(
             answer, context, llm_client
         )
 
-        # EN
+        # Determine if we should refuse
         (
             should_refuse,
             refusal_message,
@@ -334,7 +339,7 @@ class SafetyGuard:
                 "refused": True,
             }
 
-        # EN
+        # Add disclaimer
         enhanced_answer = self.groundedness_checker.add_disclaimer(answer, safety_level)
 
         return {
@@ -346,22 +351,22 @@ class SafetyGuard:
         }
 
 
-# EN
+# Factory function
 def create_safety_guard(confidence_threshold: float = 0.80) -> SafetyGuard:
-    """EN"""
+    """Create a SafetyGuard instance with the given confidence threshold."""
     return SafetyGuard(confidence_threshold)
 
 
 if __name__ == "__main__":
-    # EN
+    # Demo / self-test
     logging.basicConfig(level=logging.INFO)
 
-    print("🛡️ EN")
+    print("Safety Guard Demo")
     print("=" * 60)
 
     safety_guard = create_safety_guard()
 
-    # EN1:EN
+    # Test 1: Safety-critical response with good context
     answer1 = (
         "According to Alberta OHS Part 23, scaffolding above 3 meters requires "
         "guardrails on all open sides and toe boards at least 89mm high."
@@ -372,19 +377,19 @@ if __name__ == "__main__":
     ]
 
     result1 = safety_guard.process_response(answer1, context1)
-    print("\nEN1:EN")
-    print(f"EN: {answer1[:80]}...")
-    print(f"EN: {result1['safety_level'].value}")
-    print(f"EN: {result1['confidence']:.2f}")
-    print(f"EN:\n{result1['enhanced_answer']}")
+    print("\nTest 1: Safety-critical with context")
+    print(f"Answer: {answer1[:80]}...")
+    print(f"Safety level: {result1['safety_level'].value}")
+    print(f"Confidence: {result1['confidence']:.2f}")
+    print(f"Result:\n{result1['enhanced_answer']}")
 
-    # EN2:EN
-    answer2 = "The concrete strength should be around 30-40 MPa."  # EN
-    context2 = []  # EN
+    # Test 2: Safety-critical response without context
+    answer2 = "The concrete strength should be around 30-40 MPa."
+    context2 = []  # No context
 
     result2 = safety_guard.process_response(answer2, context2)
-    print("\nEN2:EN")
-    print(f"EN: {answer2}")
-    print(f"EN: {result2['confidence']:.2f}")
-    print(f"EN: {result2['refused']}")
-    print(f"EN: {result2['enhanced_answer']}")
+    print("\nTest 2: Safety-critical without context")
+    print(f"Answer: {answer2}")
+    print(f"Confidence: {result2['confidence']:.2f}")
+    print(f"Refused: {result2['refused']}")
+    print(f"Result: {result2['enhanced_answer']}")
