@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
 from typing import Optional
 
 from fastapi import Header, HTTPException, Request, status
@@ -34,6 +36,61 @@ def _is_public_path(path: str) -> bool:
     return path.startswith(_PUBLIC_PATH_PREFIXES)
 
 
+def _normalize_forwarded_ip(value: str) -> Optional[str]:
+    token = (value or "").strip().strip('"')
+    if not token or token.lower() == "unknown":
+        return None
+
+    # RFC 7239 can encode IPv6 as for="[2001:db8::1]:1234"
+    if token.startswith("["):
+        end = token.find("]")
+        if end > 1:
+            token = token[1:end]
+    # Common X-Forwarded-For form for IPv4: "203.0.113.1:53210"
+    elif ":" in token and "." in token:
+        maybe_ip, maybe_port = token.rsplit(":", 1)
+        if maybe_port.isdigit():
+            token = maybe_ip
+
+    try:
+        return str(ipaddress.ip_address(token))
+    except ValueError:
+        return None
+
+
+def _resolve_proxy_forwarded_ip(request: Request) -> Optional[str]:
+    x_forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if x_forwarded_for:
+        for part in x_forwarded_for.split(","):
+            ip = _normalize_forwarded_ip(part)
+            if ip:
+                return ip
+
+    x_real_ip = _normalize_forwarded_ip(request.headers.get("X-Real-IP", ""))
+    if x_real_ip:
+        return x_real_ip
+
+    forwarded = request.headers.get("Forwarded", "")
+    if forwarded:
+        match = re.search(r"for=(?:\"?)([^;,\"\\s]+)", forwarded, re.IGNORECASE)
+        if match:
+            ip = _normalize_forwarded_ip(match.group(1))
+            if ip:
+                return ip
+
+    return None
+
+
+def _resolve_client_host(request: Request) -> str:
+    direct_host = request.client.host if request.client else "unknown"
+    if not settings.trust_proxy_headers:
+        return direct_host
+    if direct_host not in settings.trusted_proxy_ip_set:
+        return direct_host
+    forwarded_ip = _resolve_proxy_forwarded_ip(request)
+    return forwarded_ip or direct_host
+
+
 async def secure_endpoint(
     request: Request,
     api_key: Optional[str] = Header(
@@ -50,7 +107,7 @@ async def secure_endpoint(
     - Lightweight rate limiting per tenant/IP
     """
 
-    client_host = request.client.host if request.client else "unknown"
+    client_host = _resolve_client_host(request)
     user_identity: Optional[UserIdentity] = None
     path = request.url.path
     is_public = _is_public_path(path)

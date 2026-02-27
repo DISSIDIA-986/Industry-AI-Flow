@@ -22,6 +22,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 22    | 2026-02-27 | 5         | 0  | 0  | 5     | 0           | 1           |
 | 23    | 2026-02-27 | 4         | 0  | 0  | 4     | 0           | 1           |
 | 24    | 2026-02-27 | 1         | 0  | 0  | 1     | 0           | 1           |
+| 28    | 2026-02-27 | 2         | 0  | 2  | 2     | 3           | 2           |
 
 ## Convergence
 
@@ -42,6 +43,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 25: 8 test-hygiene/runtime-compatibility findings (0 P0 + 0 P1) fixed while continuing post-R24 stabilization. Changes: removed 5 obsolete Chinese-specific legacy suites from active test paths (`tests/integration|unit|performance`) for the English-only project profile, refactored script-style unit probes (`test_code_execution.py`, `test_document_processing.py`) into pytest-native assert/skip contracts with `tmp_path`-based isolation, converted remaining `datetime.utcnow()` usages in shared/runtime-touched paths (`memory/manager.py`, prompt demo script, prompt API integration test), and quarantined manual local environment diagnostics behind module-level skip marks. Full-suite result after fixes: `560 passed, 27 skipped, 8 xfailed, 1 xpassed`; warning count reduced further (`116 → 79`).
 - Round 26: 1 warning-signal hygiene finding (0 P0 + 0 P1) fixed by adding precise `filterwarnings` marks to two legacy dynamic-code bug-repro suites that emit unavoidable `<string>:5` `utcnow` deprecation noise during simulated execution. Full-suite result remained green (`560 passed, 27 skipped, 8 xfailed, 1 xpassed`) and warning count dropped to near-clean baseline (`79 → 4`), leaving only benign `PytestCollectionWarning` dataclass collection notices.
 - Round 27: 2 hardening findings fixed in continued post-gate audit (0 P0 + 1 P1 + 1 hygiene). P1 fix: eliminated absolute-path disclosure from `/api/v1/cost-estimation/train` missing-file error path (`404` now returns generic `"path does not exist"`), with new integration regression coverage to prevent reintroduction. Hygiene fix: removed final dataclass/class collection warnings by marking helper data containers as non-tests (`__test__ = False`) in legacy script-style suites. Full-suite result after fixes: `561 passed, 27 skipped, 8 xfailed, 1 xpassed` with zero warning output.
+- Round 28: 2 security findings fixed (0 P0 + 2 P1) via targeted re-audit of deferred xfail items. Fixes: trusted-proxy-aware client IP resolution for rate limiting (`X-Forwarded-For` / `X-Real-IP` / `Forwarded` only when direct peer is trusted), and SQL identifier hardening for memory-store table names using explicit `TABLE_NAME_PATTERN` validation before interpolation. Deferred xfail debt reduced (`8 → 6`) and suite stayed green with improved signal (`487 passed, 20 skipped, 6 xfailed`).
 
 ## New Patterns Discovered
 
@@ -69,6 +71,10 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 
 ### Round 27
 - **Validation-path filesystem disclosure**: returning resolved absolute paths in client-visible 404 details (`path does not exist: /abs/path`) leaks host filesystem topology and should be replaced with generic user-safe errors plus server-side logging if needed.
+
+### Round 28
+- **Proxy-aware rate-limit keying requires trust boundary**: forwarded headers should influence client identity only when the immediate peer is a trusted proxy; otherwise spoofed headers can evade or distort per-client quotas.
+- **Constant SQL identifiers still need explicit guardrails**: class constants used in SQL identifier interpolation should be validated by a strict identifier pattern to prevent unsafe subclass/override drift.
 
 ### Round 19
 - **Phantom module import degradation**: `from backend.services.intent_classification.models import QueryContext` imports a nonexistent module — silently falls back to passing raw dict where dataclass expected

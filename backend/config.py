@@ -203,6 +203,12 @@ class Settings(BaseSettings):
     api_keys_raw: str = os.getenv("API_KEYS", "")
     api_key_header: str = os.getenv("API_KEY_HEADER", "X-API-Key")
     tenant_header: str = os.getenv("TENANT_HEADER", "X-Tenant-ID")
+    trust_proxy_headers: bool = (
+        os.getenv("TRUST_PROXY_HEADERS", "false").lower() == "true"
+    )
+    trusted_proxy_ips_raw: str = os.getenv(
+        "TRUSTED_PROXY_IPS", "127.0.0.1,::1"
+    )
     multi_tenant_mode: bool = os.getenv("MULTI_TENANT_MODE", "true").lower() == "true"
     default_tenant_id: str = os.getenv("DEFAULT_TENANT_ID", "public")
     allow_anonymous_tenants: bool = (
@@ -336,6 +342,17 @@ class Settings(BaseSettings):
             ]
             self._default_roles = roles or ["user"]
         return self._default_roles
+
+    @property
+    def trusted_proxy_ip_set(self) -> Set[str]:
+        if not hasattr(self, "_trusted_proxy_ip_cache"):
+            tokens = {
+                token.strip()
+                for token in self.trusted_proxy_ips_raw.split(",")
+                if token.strip()
+            }
+            self._trusted_proxy_ip_cache = tokens or {"127.0.0.1", "::1"}
+        return self._trusted_proxy_ip_cache
 
     @property
     def secret_manager(self):
