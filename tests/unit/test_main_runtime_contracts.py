@@ -360,7 +360,7 @@ async def test_rag_query_rejects_chinese_input():
     ) as client:
         resp = await client.post(
             "/api/v1/rag/query",
-            json={"question": "Please summarize the tender documents", "top_k": 3},
+            json={"question": "请总结这份招标文件的关键内容", "top_k": 3},
         )
 
     assert resp.status_code == 400

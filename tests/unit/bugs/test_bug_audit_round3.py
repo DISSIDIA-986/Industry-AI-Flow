@@ -50,40 +50,39 @@ class TestAudit3_2_HybridScoreNormalization:
 
 
 # ---------------------------------------------------------------------------
-# AUDIT3-3: threading.Lock in async handler
+# AUDIT3-3: lock type regression guard
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
 class TestAudit3_3_ServiceLockType:
-    """cost_estimation_routes uses threading.Lock (line 25) inside async
-    handlers.  This blocks the event loop when contended."""
+    """Regression guard: cost_estimation_routes should use asyncio.Lock in
+    async handlers to avoid blocking the event loop."""
 
-    def test_lock_type_is_threading_lock(self):
-        """Verify the lock type — documents the risk."""
-        import threading
+    def test_lock_type_is_asyncio_lock(self):
+        """Verify lock remains asyncio-based and non-blocking."""
+        import asyncio
 
         from backend.api.cost_estimation_routes import _service_lock
 
-        assert isinstance(_service_lock, threading.Lock), (
-            "AUDIT3-3: _service_lock should be noted as a threading.Lock "
-            "that can block the async event loop"
+        assert isinstance(_service_lock, asyncio.Lock), (
+            "AUDIT3-3 regression: _service_lock should remain asyncio.Lock "
+            "for async handlers."
         )
 
 
 # ---------------------------------------------------------------------------
-# AUDIT3-6: groundedness_node is a placeholder
+# AUDIT3-6: groundedness scoring regression guard
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
 class TestAudit3_6_GroundednessPlaceholder:
-    """groundedness_node computes score = min(1.0, context_count * 0.2).
-    With 5+ contexts it always yields score=1.0 regardless of actual
-    groundedness quality."""
+    """Regression guard: groundedness should not give perfect scores based
+    only on context count."""
 
     @pytest.mark.asyncio
-    async def test_five_contexts_always_yields_perfect_score(self):
+    async def test_many_contexts_without_answer_do_not_score_perfect(self):
         from backend.services.workflows.nodes.groundedness_node import (
             groundedness_node,
         )
@@ -94,11 +93,11 @@ class TestAudit3_6_GroundednessPlaceholder:
         }
         result = await groundedness_node(state, SimpleNamespace())
 
-        assert result["metadata"]["groundedness_score"] == 1.0, (
-            "AUDIT3-6: 5 contexts produce a perfect groundedness score "
-            "regardless of actual content relevance"
+        assert result["metadata"]["groundedness_score"] == 0.0, (
+            "AUDIT3-6 regression: empty answer should not get groundedness credit "
+            "even with many contexts"
         )
-        assert result["metadata"]["groundedness_passed"] is True
+        assert result["metadata"]["groundedness_passed"] is False
 
     @pytest.mark.asyncio
     async def test_zero_contexts_yields_zero_score(self):

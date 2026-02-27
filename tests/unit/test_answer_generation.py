@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Set, Tuple
 @dataclass
 class TestCase:
     """EN"""
+    __test__ = False
 
     test_id: str
     question: str

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -113,7 +113,7 @@ class _FakePromptManager:
 
     async def create_prompt(self, **kwargs):
         pid = uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         prompt = _PromptDTO(
             id=pid,
             name=kwargs["name"],
@@ -144,7 +144,7 @@ class _FakePromptManager:
             prompt.content = kwargs["content"]
         if kwargs.get("updated_by") is not None:
             prompt.updated_by = kwargs["updated_by"]
-        prompt.updated_at = datetime.utcnow()
+        prompt.updated_at = datetime.now(UTC)
         return prompt
 
     async def _get_prompt_by_id(self, prompt_id):

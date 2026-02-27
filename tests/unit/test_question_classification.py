@@ -30,6 +30,7 @@ class QuestionType(Enum):
 @dataclass
 class TestCase:
     """EN"""
+    __test__ = False
 
     question_id: str
     question_type: QuestionType

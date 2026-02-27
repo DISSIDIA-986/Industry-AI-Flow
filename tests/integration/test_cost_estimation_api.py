@@ -84,6 +84,7 @@ def _build_dataset(rows: int = 220, seed: int = 19) -> pd.DataFrame:
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     model_path = tmp_path / "latest.json"
     monkeypatch.setenv("COST_ESTIMATION_MODEL_PATH", str(model_path))
+    monkeypatch.setenv("ADMIN_KEY", "integration-admin-key")
     cost_estimation_routes._service = None
 
     app = FastAPI()
@@ -132,6 +133,7 @@ def test_cost_estimation_api_train_predict_batch_health(client: TestClient, tmp_
             "folds": 4,
             "random_seed": 11,
         },
+        headers={"X-Admin-Key": "integration-admin-key"},
     )
     assert train_resp.status_code == 200
     train_payload = train_resp.json()
@@ -198,7 +200,7 @@ def test_cost_estimation_predict_requires_loaded_model(client: TestClient) -> No
         },
     )
     assert resp.status_code == 400
-    assert "not loaded" in resp.json()["detail"]
+    assert "Prediction request invalid" in resp.json()["detail"]
 
 
 def test_cost_estimation_train_rejects_disallowed_path(client: TestClient) -> None:
@@ -207,6 +209,22 @@ def test_cost_estimation_train_rejects_disallowed_path(client: TestClient) -> No
         json={
             "dataset_path": "/etc/passwd",
         },
+        headers={"X-Admin-Key": "integration-admin-key"},
     )
     assert resp.status_code == 400
     assert "project workspace" in resp.json()["detail"]
+
+
+def test_cost_estimation_train_missing_dataset_does_not_leak_abs_path(
+    client: TestClient, tmp_path: Path
+) -> None:
+    missing_path = tmp_path / "missing_training.csv"
+    resp = client.post(
+        "/api/v1/cost-estimation/train",
+        json={
+            "dataset_path": str(missing_path),
+        },
+        headers={"X-Admin-Key": "integration-admin-key"},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "path does not exist"

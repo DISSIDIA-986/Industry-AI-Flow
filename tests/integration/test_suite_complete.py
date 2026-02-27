@@ -30,6 +30,8 @@ RESET = "\033[0m"
 
 
 class TestResult:
+    __test__ = False
+
     def __init__(
         self,
         test_id: str,

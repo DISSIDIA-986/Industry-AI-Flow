@@ -22,6 +22,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:datetime\\.datetime\\.utcnow\\(\\) is deprecated.*:DeprecationWarning"
+)
+
 
 # ---------------------------------------------------------------------------
 # R4-1 (High): _extract_dataset_info encoding crash
