@@ -449,7 +449,8 @@ async def query_health_check():
             health_status["llm_connection"] = "healthy"
             health_status["available_models"] = len(models)
         except Exception as e:
-            health_status["llm_connection"] = f"unhealthy: {str(e)}"
+            logger.warning("LLM health check failed: %s", e)
+            health_status["llm_connection"] = "unhealthy"
 
         # EN
         try:
@@ -457,7 +458,8 @@ async def query_health_check():
             health_status["vectorstore_connection"] = "healthy"
             health_status["document_count"] = doc_count
         except Exception as e:
-            health_status["vectorstore_connection"] = f"unhealthy: {str(e)}"
+            logger.warning("Vectorstore health check failed: %s", e)
+            health_status["vectorstore_connection"] = "unhealthy"
 
         return health_status
 

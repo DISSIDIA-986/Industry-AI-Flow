@@ -16,6 +16,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 16    | 2026-02-26 | 46        | 1  | 18 | 19    | 22          | 19          |
 | 17    | 2026-02-26 | 37        | 1  | 13 | 14    | 16          | 8           |
 | 18    | 2026-02-27 | 14        | 1  | 9  | 10    | 12          | 3           |
+| 19    | 2026-02-27 | 67        | 3  | 31 | 13    | 14          | 12          |
 
 ## Convergence
 
@@ -27,8 +28,23 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 16: 46 bugs (1 P0 + 18 P1 + 17 P2 + 10 P3) across 4 parallel audit agents. All 19 P0/P1 fixed and verified. 22 tests added. P0 count: 1 (same as R15). P1 count: 18 (up from 10 — deeper audit into previously unexamined areas: code validator whitelisted-library escapes, groundedness tokenizer inconsistency, BM25 dotted-standard splitting, numeric penalty for derived arithmetic, Jinja2 HTML-escaping of LLM prompts, CRLF code extraction, error dict propagation). 27 P2/P3 deferred. Not convergent — auditors continue finding novel patterns in unexplored areas.
 - Round 17: 37 bugs (1 P0 + 13 P1 + 17 P2 + 6 P3) across 4 parallel audit agents. All 14 P0/P1 fixed and verified. 16 tests added. P0 count: 1 (same as R15/R16 — clarification loop). P1 count: 13 (down from 18). Focus areas: infinite clarification loop (P0), budget force_local bypass, keyword priority misrouting, broken preprocessing regex, BM25 dotted token loss, document replacement rollback, unbounded chunk growth, timing-safe password comparison, metaclass hook validator bypass, atexit/_thread blacklist, QueryRequest validation, A/B cache defeat, unified agent EN placeholder contamination (keywords + system prompt). 23 P2/P3 deferred. Trending down (P1: 18→13). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
 - Round 18: 14 bugs (1 P0 + 9 P1 + 4 P2) via manual audit. All 10 P0/P1 fixed and verified. 12 tests added. P0 count: 1 (workflow_query_routes response key mismatch — fallback runner sets "response" but handler reads "agent_response"). P1 count: 9 (down from 13). Focus areas: f-string validator bypass, bleach sanitization on un-decoded input, intent routing precision ("analyze costs" misroute, "analyze" too broad), hardcoded 4096 context window, __reduce__/__reduce_ex__ pickle exploit, response_builder None fallthrough, error detail leakage, missing embedding quality signal. 4 P2 deferred. Trending down (P0+P1: 14→10). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
+- Round 19: 67 bugs (3 P0 + 31 P1 + 26 P2 + 7 P3) across 4 parallel audit agents. 13 P0/P1 fixed and verified, 14 tests added. Broadest audit yet with 4 deep-dive agents. P0 count: 3 (phantom module import in intent_node, partial state corruption on timeout, file_path disclosure in uploads). P1 count: 31 (across security/validator: functools string bypass, walrus operator alias, df.pipe/apply/agg callable dispatch, while-1 detection, scipy.io.loadmat; intent: heuristic preamble pollution, SimpleIntentClassifier broad keywords; cost estimation: num_units regex false positives; prompt: A/B cache pollution; data analysis: template column selection). 54 P2/P3 deferred. Bug count up because deepest audit coverage yet (4 dedicated agents exploring every file). Not convergent — continue TDI.
 
 ## New Patterns Discovered
+
+### Round 19
+- **Phantom module import degradation**: `from backend.services.intent_classification.models import QueryContext` imports a nonexistent module — silently falls back to passing raw dict where dataclass expected
+- **functools.reduce(str.__add__) string construction**: Whitelisted `functools` enables `reduce(str.__add__, ["e","x","e","c"])` to build "exec" bypassing chr/bytes/bytearray blocklist
+- **Walrus operator (ast.NamedExpr) alias bypass**: `(fn := open)('test.txt')` creates alias via NamedExpr not tracked by ast.Assign-based alias detection
+- **df.pipe()/df.apply()/df.agg() callable dispatch**: Pandas methods that accept arbitrary callables were not in BLOCKED_METHOD_NAMES
+- **while 1: vs while True detection**: `_check_loops` used `is True` identity check, missing the most common Python infinite loop idiom `while 1:`
+- **Upload response file_path disclosure**: Both document and data upload endpoints returned full server filesystem paths in JSON response payloads
+- **Heuristic prompt preamble pollution**: `_simulate_llm_response` searched keywords in the full classification prompt including "cost_estimation" in the intent list preamble, causing universal false match
+- **Overly broad SimpleIntentClassifier keywords**: Bare words "run", "process", "batch", "function", "compute" in CODE_EXECUTION keywords match common construction terminology
+- **num_units regex false positive**: Bare `units?` alternation extracts "unit cost of 500" as num_units=500 and "homes for 200 people" as num_units=200
+- **A/B experiment cache write pollution (incomplete R17 fix)**: R17 fixed the cache read path but the write path still caches experiment variants under the generic key, polluting non-experiment reads
+- **Template column selection inconsistency**: `_template_count` and `_template_percentage` always pick `categorical_cols[0]` while `_template_average` uses `_pick_relevant_column` with the user question
+- **Health check error detail leakage**: `/query/health` endpoint exposes raw `str(e)` in unhealthy status values
 
 ### Round 18
 - **Workflow response key mismatch**: graph.py fallback runner sets `state["response"]` but `workflow_query_routes.py` reads `result.get("agent_response")` — user gets None response when fallback orchestrator is used

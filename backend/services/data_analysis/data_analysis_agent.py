@@ -536,7 +536,23 @@ else:
         else:
             return self._template_describe(filename, metadata)
 
-    def _template_count(self, filename: str, metadata: Dict) -> str:
+    def _pick_relevant_categorical_column(
+        self, categorical_cols: list, question: str = ""
+    ) -> str:
+        """Pick the most relevant categorical column based on the user question."""
+        if not question or not categorical_cols:
+            return categorical_cols[0] if categorical_cols else ""
+        question_lower = question.lower()
+        for col in categorical_cols:
+            col_lower = col.lower()
+            if col_lower in question_lower:
+                return col
+            col_parts = re.split(r"[_\-\s]+", col_lower)
+            if any(part in question_lower for part in col_parts if len(part) > 2):
+                return col
+        return categorical_cols[0]
+
+    def _template_count(self, filename: str, metadata: Dict, question: str = "") -> str:
         """Generate code to count values in categorical columns."""
         categorical_cols = [
             col["name"]
@@ -546,7 +562,9 @@ else:
 
         read_call = self._read_data_code(filename)
         if categorical_cols:
-            target_col = self._sanitize_column_name(categorical_cols[0])
+            target_col = self._sanitize_column_name(
+                self._pick_relevant_categorical_column(categorical_cols, question)
+            )
             return f"""import pandas as pd
 
 df = {read_call}
@@ -561,7 +579,7 @@ df = {read_call}
 print(f"Total rows: {{len(df)}}")
 """
 
-    def _template_percentage(self, filename: str, metadata: Dict) -> str:
+    def _template_percentage(self, filename: str, metadata: Dict, question: str = "") -> str:
         """Generate code to calculate percentage distribution of categorical columns."""
         categorical_cols = [
             col["name"]
@@ -570,7 +588,9 @@ print(f"Total rows: {{len(df)}}")
         ]
 
         if categorical_cols:
-            target_col = self._sanitize_column_name(categorical_cols[0])
+            target_col = self._sanitize_column_name(
+                self._pick_relevant_categorical_column(categorical_cols, question)
+            )
             read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 

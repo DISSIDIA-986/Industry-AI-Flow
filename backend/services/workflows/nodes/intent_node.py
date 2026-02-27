@@ -109,7 +109,7 @@ async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
     import inspect
 
     try:
-        from backend.services.intent_classification.models import QueryContext
+        from backend.services.intent_classification.intent_classifier import QueryContext
         if isinstance(metadata, dict):
             valid_fields = set(QueryContext.__dataclass_fields__) if hasattr(QueryContext, '__dataclass_fields__') else set()
             context_obj = QueryContext(**{k: v for k, v in metadata.items() if k in valid_fields}) if valid_fields else metadata
