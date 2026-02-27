@@ -240,6 +240,7 @@ async def _initialize_fallback_runner() -> WorkflowRunner:
             enable_feedback=settings.enable_feedback_system,
         )
         services.retriever = _RAGRetrieverAdapter(rag)
+        logger.warning("Fallback runner initialized without reranker — retrieval quality may be degraded")
     except Exception as exc:
         logger.warning("Fallback runner without RAG retriever: %s", exc)
 

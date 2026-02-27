@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -23,6 +24,8 @@ from backend.services.workflows.state import WorkflowState
 
 async def run_prompt_stage(state: WorkflowState, services: Any) -> WorkflowState:
     """Run the prompt selection/render stage."""
+    if getattr(services, "prompt_manager", None) is None:
+        return state
     return await prompt_node(state, services)
 
 
@@ -63,34 +66,50 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
         ("retrieval_node", retrieval_node),
         ("rerank_node", rerank_node),
         ("prompt_node", prompt_node),
-        ("groundedness_node", groundedness_node),
         ("route_node", route_node),
         ("code_exec_node", code_exec_node),
         ("response_node", response_node),
+        ("groundedness_node", groundedness_node),
     ]
 
-    # Clear stale shortcut flag from previous turns
-    metadata = state.setdefault("metadata", {})
-    metadata.pop("shortcut_response", None)
-
-    for node_name, handler in pipeline:
-        if state.get("error"):
-            break
-
+    async def _execute_pipeline() -> WorkflowState:
+        nonlocal state
+        # Clear stale shortcut flag from previous turns
         metadata = state.setdefault("metadata", {})
-        if metadata.get("shortcut_response", False) and node_name not in {
-            "safety_node",
-            "response_node",
-        }:
-            continue
+        metadata.pop("shortcut_response", None)
 
-        if node_name == "prompt_node" and getattr(services, "prompt_manager", None) is None:
-            continue
+        for node_name, handler in pipeline:
+            if state.get("error"):
+                break
 
-        state = await _run_node(node_name=node_name, handler=handler, state=state, services=services)
+            metadata = state.setdefault("metadata", {})
+            if metadata.get("shortcut_response", False) and node_name not in {
+                "safety_node",
+                "response_node",
+            }:
+                # Annotate skipped groundedness node so downstream consumers
+                # see a deterministic status instead of a missing key.
+                if node_name == "groundedness_node":
+                    metadata["groundedness_status"] = "skipped"
+                    metadata["groundedness_passed"] = True
+                continue
 
-    if not state.get("response"):
-        state = await response_node(state, services)
-    if state.get("error") and not state.get("response"):
-        state["response"] = "An error occurred while processing your request. Please try again."
-    return state
+            if node_name == "prompt_node" and getattr(services, "prompt_manager", None) is None:
+                continue
+
+            state = await _run_node(node_name=node_name, handler=handler, state=state, services=services)
+
+        if not state.get("response"):
+            state = await _run_node("response_node", response_node, state, services)
+        if state.get("error") and not state.get("response"):
+            state["response"] = "An error occurred while processing your request. Please try again."
+        metadata = state.setdefault("metadata", {})
+        metadata["pipeline_status"] = "error" if state.get("error") else "completed"
+        return state
+
+    try:
+        return await asyncio.wait_for(_execute_pipeline(), timeout=120.0)
+    except asyncio.TimeoutError:
+        state["error"] = "Request timed out. Please try again."
+        state["response"] = "Request timed out. Please try again."
+        return state

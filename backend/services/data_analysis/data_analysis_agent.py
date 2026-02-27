@@ -5,6 +5,7 @@ ENCodeExecutorEN,EN
 
 import json
 import logging
+import math
 import os
 import re
 import threading
@@ -91,6 +92,17 @@ class DataAnalysisAgent:
                     "answer": "The analysis code could not be generated for this request.",
                 }
 
+            # Validate generated code before execution
+            from backend.services.code_executor.validator import validate_code
+
+            validation = validate_code(analysis_code, strict_mode=True)
+            if not validation.is_valid:
+                return {
+                    "success": False,
+                    "error": f"Generated code failed validation: {validation.error}",
+                    "answer": "The generated analysis code did not pass security validation.",
+                }
+
             # 4. EN
             if not self.code_execution_manager and not self.code_executor:
                 return {
@@ -175,6 +187,8 @@ class DataAnalysisAgent:
                     return {"error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."}
             elif file_path.endswith((".xlsx", ".xls")):
                 df = pd.read_excel(file_path)
+            elif file_path.endswith(".json"):
+                df = pd.read_json(file_path)
             else:
                 return {"error": "Unsupported data file format."}
 
@@ -195,7 +209,9 @@ class DataAnalysisAgent:
                     def _safe_float(val, default=0.0):
                         try:
                             f = float(val)
-                            return default if (f != f) else f  # NaN != NaN
+                            if not math.isfinite(f):
+                                return default
+                            return f
                         except (TypeError, ValueError):
                             return default
 
@@ -286,7 +302,7 @@ class DataAnalysisAgent:
         clean_question = question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
         columns_desc = "\n".join(
             [
-                f"  - {col['name']} ({col['type']})"
+                f"  - {col['name'].replace('{', '').replace('}', '').replace('`', '')} ({col['type']})"
                 for col in dataset_metadata.get("columns_info", [])
             ]
         )
@@ -395,9 +411,10 @@ Return ONLY Python code. Wrap the code in ```python and ``` markers."""
 
     def _template_describe(self, filename: str, metadata: Dict) -> str:
         """Generate code for descriptive statistics overview."""
+        read_call = self._read_data_code(filename)
         return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
+df = {read_call}
 print("Dataset Overview:")
 print(f"Total rows: {{len(df)}}")
 print(f"Total columns: {{len(df.columns)}}")
@@ -406,6 +423,13 @@ print(df.dtypes)
 print("\\nStatistical summary:")
 print(df.describe())
 """
+
+    @staticmethod
+    def _read_data_code(filename: str) -> str:
+        """Return pandas read call appropriate for the file extension."""
+        if filename.endswith(('.xlsx', '.xls')):
+            return f"pd.read_excel('/workspace/{filename}')"
+        return f"pd.read_csv('/workspace/{filename}')"
 
     @staticmethod
     def _pick_relevant_column(numeric_cols: list[str], question: str) -> str:
@@ -433,9 +457,10 @@ print(df.describe())
 
         if numeric_cols:
             target_col = self._pick_relevant_column(numeric_cols, question)
+            read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
+df = {read_call}
 avg_value = df['{target_col}'].mean()
 print(f"Average of '{target_col}': {{avg_value:.2f}}")
 """
@@ -450,13 +475,18 @@ print(f"Average of '{target_col}': {{avg_value:.2f}}")
 
         if numeric_cols:
             target_col = self._pick_relevant_column(numeric_cols, question)
+            read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
-max_value = df['{target_col}'].max()
-max_row = df[df['{target_col}'] == max_value].iloc[0]
-print(f"Maximum of '{target_col}': {{max_value}}")
-print(f"Row with max value: {{max_row.to_dict()}}")
+df = {read_call}
+col_data = df['{target_col}'].dropna()
+if len(col_data) == 0:
+    print("No non-null values found in '{target_col}'")
+else:
+    max_value = col_data.max()
+    max_row = df[df['{target_col}'] == max_value].iloc[0]
+    print(f"Maximum of '{target_col}': {{max_value}}")
+    print(f"Row with max value: {{max_row.to_dict()}}")
 """
         else:
             return self._template_describe(filename, metadata)
@@ -469,13 +499,18 @@ print(f"Row with max value: {{max_row.to_dict()}}")
 
         if numeric_cols:
             target_col = self._pick_relevant_column(numeric_cols, question)
+            read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
-min_value = df['{target_col}'].min()
-min_row = df[df['{target_col}'] == min_value].iloc[0]
-print(f"Minimum of '{target_col}': {{min_value}}")
-print(f"Row with min value: {{min_row.to_dict()}}")
+df = {read_call}
+col_data = df['{target_col}'].dropna()
+if len(col_data) == 0:
+    print("No non-null values found in '{target_col}'")
+else:
+    min_value = col_data.min()
+    min_row = df[df['{target_col}'] == min_value].iloc[0]
+    print(f"Minimum of '{target_col}': {{min_value}}")
+    print(f"Row with min value: {{min_row.to_dict()}}")
 """
         else:
             return self._template_describe(filename, metadata)
@@ -488,11 +523,12 @@ print(f"Row with min value: {{min_row.to_dict()}}")
             if col.get("unique_values", 0) > 0 and col.get("unique_values", 0) < 100
         ]
 
+        read_call = self._read_data_code(filename)
         if categorical_cols:
             target_col = categorical_cols[0]
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
+df = {read_call}
 value_counts = df['{target_col}'].value_counts()
 print(f"Value counts for '{target_col}':")
 print(value_counts)
@@ -500,7 +536,7 @@ print(value_counts)
         else:
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
+df = {read_call}
 print(f"Total rows: {{len(df)}}")
 """
 
@@ -514,9 +550,10 @@ print(f"Total rows: {{len(df)}}")
 
         if categorical_cols:
             target_col = categorical_cols[0]
+            read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
-df = pd.read_csv('/workspace/{filename}')
+df = {read_call}
 value_counts = df['{target_col}'].value_counts()
 percentages = (value_counts / len(df) * 100).round(2)
 print(f"Percentage distribution for '{target_col}':")

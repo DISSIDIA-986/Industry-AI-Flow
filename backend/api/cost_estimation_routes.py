@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 import os
 from pathlib import Path
@@ -84,8 +85,8 @@ async def _get_service() -> CostEstimationService:
 def _require_admin(request: Request) -> None:
     """Verify the caller has admin privileges via the X-Admin-Key header."""
     admin_key = request.headers.get("X-Admin-Key", "")
-    expected = str(getattr(settings, "ADMIN_KEY", "capstone-admin-2026") or "capstone-admin-2026")
-    if admin_key != expected:
+    expected = os.getenv("ADMIN_KEY", "")
+    if not expected or not hmac.compare_digest(admin_key, expected):
         raise HTTPException(status_code=403, detail="Admin access required")
 
 

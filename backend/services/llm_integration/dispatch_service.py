@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from collections import defaultdict, deque
 from typing import Optional
@@ -42,6 +43,7 @@ class DispatchService:
         self.egress_guard = egress_guard or EgressGuard(self.redactor)
         self.cost_tracker = tracker or cost_tracker
         self._cloud_call_windows = defaultdict(deque)
+        self._rate_limit_lock = threading.Lock()
 
     def _get_local_client(self):
         if self._local_client is None:
@@ -123,13 +125,24 @@ class DispatchService:
             if unique_ratio < 0.4:
                 hedging_penalty += 0.10
 
+        # Penalize lack of domain relevance — construction domain terms
+        domain_terms = {
+            "concrete", "steel", "foundation", "beam", "column", "rebar",
+            "sqft", "cost", "load", "structural", "building", "code",
+            "spec", "safety", "inspection", "permit", "excavation",
+            "hvac", "plumbing", "electrical", "insulation",
+        }
+        domain_hit_count = sum(1 for t in domain_terms if t in lowered)
+        if domain_hit_count == 0:
+            hedging_penalty += 0.10  # No domain relevance signal
+
         confidence = base + length_boost - hedging_penalty
         return round(max(0.0, min(0.95, confidence)), 4)
 
     @staticmethod
     def _truncate_prompt(prompt: str, max_tokens: int, context_window: int = 4096) -> str:
         reserved_output = max_tokens or 512
-        max_input_chars = (context_window - reserved_output) * 3
+        max_input_chars = max(1, (context_window - reserved_output) * 3)
         if len(prompt) > max_input_chars:
             return prompt[:max_input_chars]
         return prompt
@@ -326,9 +339,9 @@ class DispatchService:
 
         if not demo_mode_service.cloud_calls_allowed():
             latency_ms = int((time.time() - started) * 1000)
-            if route_mode == "hybrid_auto":
+            if route_mode == "hybrid_auto" and fallback_from_local is not None:
                 record_llm_fallback(reason="demo_mode_force_local")
-                return self._run_local(req, route_mode="hybrid_auto", soft_fail=True)
+                return fallback_from_local
             return DispatchResponse(
                 success=False,
                 text="Cloud provider is disabled by current demo mode.",
@@ -343,34 +356,38 @@ class DispatchService:
 
         rate_limit = max(1, settings.max_cloud_calls_per_minute)
         cloud_window = self._cloud_call_windows[req.tenant_id]
-        now = time.time()
-        while cloud_window and now - cloud_window[0] > 60:
-            cloud_window.popleft()
-        if len(cloud_window) >= rate_limit:
-            latency_ms = int((time.time() - started) * 1000)
-            if route_mode == "hybrid_auto":
-                record_llm_fallback(reason="cloud_rate_limit")
-                return self._run_local(req, route_mode="hybrid_auto", soft_fail=True)
-            return DispatchResponse(
-                success=False,
-                text="Cloud provider rate limit reached for this tenant.",
-                provider=provider,
-                model=model,
-                route_mode=route_mode,  # type: ignore[arg-type]
-                trace_id=req.trace_id,
-                latency_ms=latency_ms,
-                policy_decision="rate_limit",
-                error="max_cloud_calls_per_minute exceeded",
-            )
+        with self._rate_limit_lock:
+            now = time.time()
+            while cloud_window and now - cloud_window[0] > 60:
+                cloud_window.popleft()
+            if len(cloud_window) >= rate_limit:
+                latency_ms = int((time.time() - started) * 1000)
+                if route_mode == "hybrid_auto" and fallback_from_local is not None:
+                    record_llm_fallback(reason="cloud_rate_limit")
+                    return fallback_from_local
+                return DispatchResponse(
+                    success=False,
+                    text="Cloud provider rate limit reached for this tenant.",
+                    provider=provider,
+                    model=model,
+                    route_mode=route_mode,  # type: ignore[arg-type]
+                    trace_id=req.trace_id,
+                    latency_ms=latency_ms,
+                    policy_decision="rate_limit",
+                    error="max_cloud_calls_per_minute exceeded",
+                )
 
-        budget_eval = self.cost_tracker.evaluate_budget(req.tenant_id)
+        estimated_cost = 0.0
+        if hasattr(self.cost_tracker, "estimate_request_cost"):
+            estimated_cost = self.cost_tracker.estimate_request_cost(req.max_tokens or 512)
+        budget_eval = self.cost_tracker.evaluate_budget(req.tenant_id, additional_cost_usd=estimated_cost)
         if not budget_eval.get("allowed", True):
             latency_ms = int((time.time() - started) * 1000)
             policy_decision = str(budget_eval.get("decision") or "block_cloud")
-            if route_mode == "hybrid_auto":
-                # Fallback to local-only when policy blocks cloud.
+            if route_mode == "hybrid_auto" and fallback_from_local is not None:
+                # Return previously-computed local result when policy blocks cloud.
                 record_llm_fallback(reason="budget_policy")
-                return self._run_local(req, route_mode="hybrid_auto", soft_fail=True)
+                return fallback_from_local
             return DispatchResponse(
                 success=False,
                 text="Cloud provider is blocked by budget policy.",
@@ -425,6 +442,7 @@ class DispatchService:
                 max_tokens=req.max_tokens,
                 top_p=req.top_p,
             )
+            now = time.time()
             cloud_window.append(now)
             latency_ms = int((time.time() - started) * 1000)
             usage = self.cost_tracker.estimate_usage(prompt_text, text)
@@ -498,11 +516,8 @@ class DispatchService:
 
             if route_mode == "hybrid_auto" and settings.fallback_on_error:
                 record_llm_fallback(reason="cloud_error")
-                local_res = self._run_local(
-                    req, route_mode="hybrid_auto", soft_fail=True
-                )
-                if local_res.success:
-                    return local_res
+                if fallback_from_local is not None:
+                    return fallback_from_local
 
             return DispatchResponse(
                 success=False,
@@ -524,10 +539,13 @@ class DispatchService:
 
 
 _dispatch_service: Optional[DispatchService] = None
+_dispatch_service_lock = threading.Lock()
 
 
 def get_dispatch_service() -> DispatchService:
     global _dispatch_service
     if _dispatch_service is None:
-        _dispatch_service = DispatchService()
+        with _dispatch_service_lock:
+            if _dispatch_service is None:
+                _dispatch_service = DispatchService()
     return _dispatch_service

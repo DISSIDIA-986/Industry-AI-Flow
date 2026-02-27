@@ -109,6 +109,7 @@ async def cost_estimation_node(state: WorkflowState, services: Any) -> WorkflowS
     metadata["cost_estimation_status"] = "ok"
     metadata["cost_estimation_prediction"] = prediction
     state["response"] = _render_cost_estimation_response(prediction)
+    state["provider_used"] = "cost_estimation_model"
     metadata["shortcut_response"] = True
     metrics["cost_estimation_executed"] = True
     return state

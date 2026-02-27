@@ -52,16 +52,33 @@ class Reranker:
 
         pairs = [[query, doc.get("content", "")] for doc in documents]
 
-        with self._torch.no_grad():
-            inputs = self.tokenizer(
-                pairs,
-                padding=True,
-                truncation=True,
-                return_tensors="pt",
-                max_length=512,
-            ).to(self.device)
-            logits = self.model(**inputs, return_dict=True).logits.view(-1).float()
-            scores = self._torch.sigmoid(logits).cpu().numpy()
+        # Warn when query+content pairs may be truncated by the 512-token limit
+        for i, pair in enumerate(pairs):
+            combined_len = len(pair[0]) + len(pair[1])
+            if combined_len > 1800:  # ~512 tokens at ~3.5 chars/token
+                logger.warning(
+                    "Reranker input pair %d truncated: %d chars (query=%d, content=%d)",
+                    i, combined_len, len(pair[0]), len(pair[1]),
+                )
+
+        try:
+            with self._torch.no_grad():
+                inputs = self.tokenizer(
+                    pairs,
+                    padding=True,
+                    truncation=True,
+                    return_tensors="pt",
+                    max_length=512,
+                ).to(self.device)
+                logits = self.model(**inputs, return_dict=True).logits.view(-1).float()
+                scores = self._torch.sigmoid(logits).cpu().numpy()
+        except Exception as exc:
+            logger.warning("Reranker inference failed, falling back to retrieval order: %s", exc)
+            sliced = documents[:top_k]
+            for rank, doc in enumerate(sliced):
+                if isinstance(doc, dict) and "rerank_score" not in doc:
+                    doc["rerank_score"] = float(max(0, len(sliced) - rank))
+            return sliced
 
         for doc, score in zip(documents, scores):
             if isinstance(doc, dict):

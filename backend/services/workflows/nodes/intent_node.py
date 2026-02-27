@@ -49,10 +49,10 @@ def _heuristic_intent(query: str) -> str:
         for token in (
             "python",
             "script",
-            "execute",
+            "execute code",
             "run code",
             "code execution",
-            "program",
+            "python program",
         )
     ):
         return "code_execution"
@@ -127,6 +127,19 @@ async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
     return None
 
 
+def _extract_code_from_query(query: str) -> Optional[str]:
+    """Extract code blocks from user query for code_execution intent."""
+    # Try fenced code blocks first
+    match = re.search(r"```(?:python)?\s*\n(.+?)```", query, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    # Try inline code
+    match = re.search(r"`(.+?)`", query, re.DOTALL)
+    if match and "\n" in match.group(1):
+        return match.group(1).strip()
+    return None
+
+
 async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
     metadata = state.setdefault("metadata", {})
     query = state.get("query", "")
@@ -136,10 +149,7 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
         state["intent"] = _heuristic_intent(query)
         metadata["intent_source"] = "heuristic"
         metadata["intent_confidence"] = 0.85
-        return state
-
-    result = await _call_classifier(classifier, query, metadata)
-    if result is not None:
+    elif (result := await _call_classifier(classifier, query, metadata)) is not None:
         if isinstance(result, dict):
             extracted = _extract_intent_value(result.get("intent"))
             state["intent"] = extracted or _heuristic_intent(query)
@@ -153,9 +163,15 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
         else:
             state["intent"] = _extract_intent_value(result) or _heuristic_intent(query)
         metadata["intent_source"] = "classifier"
-        return state
+    else:
+        state["intent"] = _heuristic_intent(query)
+        metadata["intent_source"] = "heuristic"
+        metadata["intent_confidence"] = 0.85
 
-    state["intent"] = _heuristic_intent(query)
-    metadata["intent_source"] = "heuristic"
-    metadata["intent_confidence"] = 0.85
+    # Extract code from query when intent is code_execution
+    if state.get("intent") == "code_execution" and not metadata.get("code_to_execute"):
+        code = _extract_code_from_query(query)
+        if code:
+            metadata["code_to_execute"] = code
+
     return state

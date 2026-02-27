@@ -106,6 +106,7 @@ class SimpleRAG:
         self.memory_manager: Optional[ConversationMemoryManager] = None
         self._memory_sessions: dict[str, _MemorySession] = {}
         self._memory_lock = threading.Lock()
+        self._max_sessions = 1000
         if getattr(settings, "enable_conversation_memory", False):
             try:
                 self.memory_manager = ConversationMemoryManager()
@@ -305,6 +306,10 @@ class SimpleRAG:
         with self._memory_lock:
             session = self._memory_sessions.get(resolved_session_id)
             if session is None:
+                # Evict oldest sessions if at capacity
+                if len(self._memory_sessions) >= self._max_sessions:
+                    oldest_key = next(iter(self._memory_sessions))
+                    del self._memory_sessions[oldest_key]
                 session = _MemorySession(session_id=resolved_session_id, user_id=user_id)
                 self._memory_sessions[resolved_session_id] = session
             elif user_id and not session.user_id:
@@ -323,30 +328,39 @@ class SimpleRAG:
             processing_time_ms=0,
             success=bool(answer and answer.strip()),
         )
-        session.interaction_history.append(record)
-        if len(session.interaction_history) > 50:
-            session.interaction_history = session.interaction_history[-50:]
+        with self._memory_lock:
+            session.interaction_history.append(record)
+            if len(session.interaction_history) > 50:
+                session.interaction_history = session.interaction_history[-50:]
 
         if self.memory_manager is None:
             return
 
         # Snapshot session data so the background thread doesn't access
         # the live (and potentially mutating) session object.
-        history_snapshot = list(session.interaction_history)
-        session_snapshot = _MemorySession(
-            session_id=session.session_id,
-            user_id=session.user_id,
-            language_preference=session.language_preference,
-            interaction_history=history_snapshot,
-            summary_memory=session.summary_memory,
-            last_summary_time=session.last_summary_time,
-            last_summary_record_index=session.last_summary_record_index,
-            long_term_memory_refs=list(session.long_term_memory_refs),
-        )
+        with self._memory_lock:
+            history_snapshot = list(session.interaction_history)
+            session_snapshot = _MemorySession(
+                session_id=session.session_id,
+                user_id=session.user_id,
+                language_preference=session.language_preference,
+                interaction_history=history_snapshot,
+                summary_memory=session.summary_memory,
+                last_summary_time=session.last_summary_time,
+                last_summary_record_index=session.last_summary_record_index,
+                long_term_memory_refs=list(session.long_term_memory_refs),
+            )
         memory_manager = self.memory_manager
+        live_session = session
 
         async def _update_memory():
             await memory_manager.process_interaction(session_snapshot, record)
+            # Propagate summary updates back to live session
+            with self._memory_lock:
+                live_session.summary_memory = session_snapshot.summary_memory
+                live_session.last_summary_record_index = session_snapshot.last_summary_record_index
+                live_session.last_summary_time = session_snapshot.last_summary_time
+                live_session.long_term_memory_refs = list(session_snapshot.long_term_memory_refs)
 
         try:
             loop = asyncio.get_running_loop()

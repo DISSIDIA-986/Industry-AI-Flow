@@ -33,6 +33,13 @@ async def response_node(state: WorkflowState, services: Any) -> WorkflowState:
     if state.get("response"):
         return state
 
+    # On error, use default response without wasting an LLM call
+    if state.get("error"):
+        state["response"] = _build_default_response(state)
+        metrics = state.setdefault("metrics", {})
+        metrics["response_length"] = len(state.get("response") or "")
+        return state
+
     builder = getattr(services, "response_builder", None)
     if builder is not None:
         result = builder(state=state)

@@ -5,7 +5,7 @@ Enhanced query API routes
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.config import settings
@@ -127,7 +127,7 @@ async def enhanced_query(
         raise
     except Exception as e:
         logger.error(f"Error processing query: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/query/config")
@@ -154,11 +154,11 @@ async def get_current_llm_config():
 
     except Exception as e:
         logger.error(f"Error getting LLM config: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/query/config")
-async def update_llm_config(request: LLMConfigUpdateRequest):
+async def update_llm_config(request: LLMConfigUpdateRequest, raw_request: Request):
     """
     ENLLM
 
@@ -168,6 +168,11 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
     Returns:
         EN
     """
+    # TODO: admin role check required
+    admin_key = raw_request.headers.get("X-Admin-Key", "")
+    if not admin_key:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     try:
         # EN
         if request.temperature is not None and not (0.0 <= request.temperature <= 1.0):
@@ -212,7 +217,7 @@ async def update_llm_config(request: LLMConfigUpdateRequest):
         raise
     except Exception as e:
         logger.error(f"Error updating LLM config: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/query/models")
@@ -235,11 +240,11 @@ async def list_available_models():
 
     except Exception as e:
         logger.error(f"Error listing models: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/query/switch-model")
-async def switch_model(model_name: str = Body(..., embed=True)):
+async def switch_model(model_name: str = Body(..., embed=True), request: Request = None):
     """
     ENLLM
 
@@ -249,6 +254,11 @@ async def switch_model(model_name: str = Body(..., embed=True)):
     Returns:
         EN
     """
+    # TODO: admin role check required
+    admin_key = request.headers.get("X-Admin-Key", "") if request else ""
+    if not admin_key:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     try:
         rag = get_rag_instance()
 
@@ -279,7 +289,7 @@ async def switch_model(model_name: str = Body(..., embed=True)):
         raise
     except Exception as e:
         logger.error(f"Error switching model: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/query/search-weights")
@@ -308,7 +318,7 @@ async def get_adaptive_search_weights():
 
     except Exception as e:
         logger.error(f"Error getting search weights: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/query/chat")
@@ -386,7 +396,7 @@ async def chat_completion(
         raise
     except Exception as e:
         logger.error(f"Error processing chat completion: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/query/health")
@@ -430,4 +440,4 @@ async def query_health_check():
 
     except Exception as e:
         logger.error(f"Error during health check: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
