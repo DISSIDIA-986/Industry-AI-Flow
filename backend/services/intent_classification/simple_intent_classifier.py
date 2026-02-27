@@ -228,7 +228,9 @@ class SimpleIntentClassifier:
             },
             IntentType.CODE_EXECUTION: {
                 "keywords": [
-                    # EN — strong code-execution signals
+                    # Strong multi-word code-execution signals only.
+                    # Single-word keywords like "run", "process", "batch"
+                    # are too broad and match construction terminology.
                     "run code",
                     "execute code",
                     "run script",
@@ -237,26 +239,18 @@ class SimpleIntentClassifier:
                     "execute program",
                     "run python",
                     "python script",
-                    # EN — general keywords
-                    "run",
+                    "python code",
+                    "code execution",
                     "execute",
-                    "code",
                     "script",
-                    "program",
-                    "compute",
-                    "calculation",
                     "algorithm",
-                    "function",
-                    "implement",
-                    "process",
-                    "batch",
                     "automation",
                 ],
                 "patterns": [
                     r"(run|execute)\s+(code|script|program)",
                     r"(run|execute)\s+.*python",
                     r"python\s+script",
-                    r"implement\s+",
+                    r"implement\s+.*\b(code|algorithm|function)\b",
                 ],
                 "priority": 1,
             },

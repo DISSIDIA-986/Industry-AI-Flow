@@ -180,8 +180,10 @@ class PromptManager:
         if not prompt_info:
             raise ValueError(f"ENPrompt: {category}/{name}")
 
-        # EN
-        self._cache[cache_key] = (prompt_info, datetime.now())
+        # Only cache when NOT using experiments — experiment requests must go
+        # through allocation logic each time to maintain correct traffic split.
+        if not enable_experiments:
+            self._cache[cache_key] = (prompt_info, datetime.now())
 
         # EN
         rendered_content = self._render_template(prompt_info.content, variables)

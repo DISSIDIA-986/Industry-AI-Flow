@@ -883,7 +883,7 @@ async def upload_document(
             "status": "success",
             "filename": file.filename,
             "sanitized_filename": safe_name,
-            "file_path": file_path,
+            "file_id": safe_name,
             "size": len(content),
             "message": "Document uploaded successfully.",
         }
@@ -930,7 +930,7 @@ async def upload_document(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Document upload failed. Please try again.")
 
 
 @app.get("/api/v1/documents")
@@ -955,7 +955,7 @@ async def list_documents(tenant: TenantContext = Depends(get_current_tenant)):
             detail={"error": str(exc)},
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to list documents: {exc}"
+            status_code=500, detail="Failed to list documents. Please try again."
         ) from exc
 
 
@@ -978,7 +978,7 @@ async def upload_data_file(
         payload = {
             "status": "success",
             "filename": file.filename,
-            "file_path": file_path,
+            "file_id": safe_name,
             "sanitized_filename": safe_name,
             "size": len(content),
             "file_type": os.path.splitext(file.filename)[1].lower(),
@@ -1006,7 +1006,7 @@ async def upload_data_file(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"Data upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Data upload failed. Please try again.")
 
 
 @app.post("/api/v1/rag/query")
@@ -1421,7 +1421,7 @@ async def get_visualization_file(
             detail={"filename": filename, "error": str(e)},
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve visualization: {str(e)}"
+            status_code=500, detail="Failed to retrieve visualization. Please try again."
         )
 
 

@@ -118,7 +118,8 @@ _NUMERIC_PATTERNS: Dict[str, List[str]] = {
         r"(?:floors?|storeys?|stories|levels?)\s*[:=]?\s*([0-9]+)",
     ],
     "num_units": [
-        r"(?:units?|num\s*units|apartments?|homes?)\s*[:=]?\s*([0-9]+)",
+        r"(?:num\s*units|number\s+of\s+(?:units|apartments?|homes?))\s*[:=]?\s*([0-9]+)",
+        r"([0-9]+)\s+(?:units|apartments|homes)\b",
     ],
     "planned_duration_weeks": [
         r"(?:planned\s*duration|duration)\s*[:=]?\s*([0-9][0-9,.]*[0-9]|[0-9])\s*(?:weeks?)?",

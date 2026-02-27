@@ -455,8 +455,18 @@ class IntentClassifier:
         Returns:
             str: A simulated LLM response as a JSON string.
         """
-        # Extract query text for keyword matching
-        query_lower = prompt.lower()
+        # Extract only the user query text — NOT the full prompt (which contains
+        # intent names in the preamble that would cause false keyword matches).
+        query_text = prompt
+        query_marker = "Query:\n"
+        marker_idx = prompt.find(query_marker)
+        if marker_idx >= 0:
+            query_text = prompt[marker_idx + len(query_marker):]
+            # Truncate at the next section boundary
+            end_idx = query_text.find("\n\n")
+            if end_idx >= 0:
+                query_text = query_text[:end_idx]
+        query_lower = query_text.lower()
 
         # Match intent based on keywords.
         # Cost estimation is checked BEFORE knowledge retrieval because

@@ -87,7 +87,6 @@ class CodeValidator:
         "re",
         "collections",
         "itertools",
-        "functools",
         "warnings",
     }
 
@@ -139,6 +138,11 @@ class CodeValidator:
     BLOCKED_METHOD_NAMES = {
         "query",  # DataFrame.query() evaluates arbitrary expressions
         "eval",   # DataFrame.eval() evaluates arbitrary expressions
+        "pipe",   # DataFrame.pipe() passes arbitrary callables
+        "apply",  # DataFrame.apply() runs arbitrary functions per element
+        "agg",    # DataFrame.agg() accepts arbitrary callables
+        "transform",  # DataFrame.transform() accepts arbitrary callables
+        "map",    # Series.map() accepts arbitrary callables
     }
 
     def __init__(self, strict_mode: bool = True):
@@ -323,6 +327,15 @@ class CodeValidator:
                         )
 
         for node in ast.walk(tree):
+            # Track walrus operator aliases: (fn := exec) creates a NamedExpr
+            if isinstance(node, ast.NamedExpr):
+                if isinstance(node.target, ast.Name) and isinstance(node.value, ast.Name):
+                    if node.value.id.lower() in blocked_names:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked function alias via walrus operator: {node.target.id} := {node.value.id}",
+                        )
+
             if not isinstance(node, ast.Assign):
                 continue
             if len(node.targets) != 1:
@@ -418,8 +431,8 @@ class CodeValidator:
         """Check for potential infinite loops (basic heuristic)."""
         for node in ast.walk(tree):
             if isinstance(node, ast.While):
-                # Check if condition is constant True
-                if isinstance(node.test, ast.Constant) and node.test.value is True:
+                # Check if condition is a truthy constant (True, 1, non-zero int, etc.)
+                if isinstance(node.test, ast.Constant) and node.test.value:
                     return "Warning: Potential infinite loop detected (while True)"
 
             elif isinstance(node, ast.For):
