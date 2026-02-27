@@ -461,5 +461,11 @@ class SimpleIntentClassifier:
         }
 
 
-# EN
-simple_intent_classifier = SimpleIntentClassifier()
+_simple_intent_classifier: Optional[SimpleIntentClassifier] = None
+
+
+def get_simple_intent_classifier() -> SimpleIntentClassifier:
+    global _simple_intent_classifier
+    if _simple_intent_classifier is None:
+        _simple_intent_classifier = SimpleIntentClassifier()
+    return _simple_intent_classifier

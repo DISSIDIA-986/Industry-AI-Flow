@@ -118,9 +118,23 @@ class IntentClassificationWorkflow:
         # EN
         workflow.set_entry_point("input_preprocessing")
 
-        # EN
-        workflow.add_edge("input_preprocessing", "context_enrichment")
-        workflow.add_edge("context_enrichment", "intent_classification")
+        # Route preprocessing/enrichment failures to the dedicated error handler.
+        workflow.add_conditional_edges(
+            "input_preprocessing",
+            self._route_after_preprocessing,
+            {
+                "continue": "context_enrichment",
+                "error": "error_handling",
+            },
+        )
+        workflow.add_conditional_edges(
+            "context_enrichment",
+            self._route_after_context_enrichment,
+            {
+                "continue": "intent_classification",
+                "error": "error_handling",
+            },
+        )
         workflow.add_edge("intent_classification", "confidence_evaluation")
 
         # EN
@@ -522,12 +536,38 @@ class IntentClassificationWorkflow:
             # EN,EN
 
             # Check if the user actually provided new clarification input.
-            # Only retry classification if the query was updated with new info.
-            user_clarification = state.get("user_clarification_input")
+            # If so, enrich the current query and run a best-effort reclassification.
+            user_clarification = str(state.get("user_clarification_input") or "").strip()
             routing_decision = state.get("routing_decision")
             if user_clarification:
+                base_query = str(state.get("current_query") or "").strip()
+                if base_query:
+                    combined_query = f"{base_query}\nUser clarification: {user_clarification}"
+                else:
+                    combined_query = user_clarification
+                state["current_query"] = combined_query
+                state["metadata"]["clarification_input"] = user_clarification
+
+                # Reclassify immediately so retry routing has updated intent signal.
+                try:
+                    query_context = state.get("query_context")
+                    if query_context is not None:
+                        refreshed_intent = await self.intent_classifier.classify_intent(
+                            query=combined_query,
+                            context=query_context,
+                        )
+                        state["intent_result"] = refreshed_intent
+                        state["metadata"]["clarification_reclassified"] = True
+                        state["metadata"]["clarification_reclass_confidence"] = (
+                            refreshed_intent.confidence
+                        )
+                except Exception as exc:
+                    logger.warning("Clarification reclassification failed: %s", exc)
+                    state["metadata"]["clarification_reclassified"] = False
+
                 # User provided new input — retry classification on updated query
                 state["metadata"]["clarification_handled"] = True
+                state["metadata"]["awaiting_user_clarification"] = False
                 return state
             elif routing_decision and routing_decision.confidence < 0.7:
                 # Low confidence and no new user input — do NOT retry
@@ -697,6 +737,16 @@ class IntentClassificationWorkflow:
             return "low_confidence"
         else:
             return "high_confidence"
+
+    def _route_after_preprocessing(self, state: WorkflowState) -> str:
+        if state.get("error"):
+            return "error"
+        return "continue"
+
+    def _route_after_context_enrichment(self, state: WorkflowState) -> str:
+        if state.get("error"):
+            return "error"
+        return "continue"
 
     def _route_after_clarification(self, state: WorkflowState) -> str:
         """Route after clarification processing."""
@@ -1677,14 +1727,59 @@ class IntentClassificationWorkflow:
             runnable_workflow = self.workflow.compile(checkpointer=self.memory)
             config = {"configurable": {"thread_id": thread_id or session_id}}
 
+            existing_metadata: Dict[str, Any] = {}
+            existing_query_context: QueryContext = QueryContext(session_id=session_id)
+            existing_session_context: SessionContext = SessionContext(
+                session_id=session_id
+            )
+            try:
+                checkpoint = None
+                if hasattr(runnable_workflow, "aget_state"):
+                    checkpoint = await runnable_workflow.aget_state(config=config)
+                elif hasattr(runnable_workflow, "get_state"):
+                    checkpoint = runnable_workflow.get_state(config=config)
+
+                checkpoint_values = getattr(checkpoint, "values", None)
+                if checkpoint_values is None and isinstance(checkpoint, dict):
+                    checkpoint_values = checkpoint.get("values") or checkpoint
+
+                if isinstance(checkpoint_values, dict):
+                    metadata = checkpoint_values.get("metadata")
+                    if isinstance(metadata, dict):
+                        existing_metadata = dict(metadata)
+                    checkpoint_query_context = checkpoint_values.get("query_context")
+                    if isinstance(checkpoint_query_context, QueryContext):
+                        existing_query_context = checkpoint_query_context
+                    checkpoint_session_context = checkpoint_values.get(
+                        "session_context"
+                    )
+                    if isinstance(checkpoint_session_context, SessionContext):
+                        existing_session_context = checkpoint_session_context
+            except Exception as exc:
+                logger.debug(
+                    "Failed to fetch checkpoint state for workflow continuation: %s",
+                    exc,
+                )
+
+            merged_metadata: Dict[str, Any] = dict(existing_metadata)
+            merged_metadata.update(
+                {
+                    "continuation_timestamp": datetime.now().isoformat(),
+                    "workflow_runner": "intent_workflow",
+                    "prompt_experiments_enabled": bool(
+                        settings.prompt_experiments_enabled
+                    ),
+                }
+            )
+
             # EN
             state_update = WorkflowState(
                 messages=[HumanMessage(content=user_response)],
                 session_id=session_id,
                 user_id=None,
                 current_query=user_response,
-                query_context=QueryContext(session_id=session_id),
-                session_context=SessionContext(session_id=session_id),
+                query_context=existing_query_context,
+                session_context=existing_session_context,
                 intent_result=None,
                 routing_decision=None,
                 clarification_needed=False,
@@ -1694,13 +1789,7 @@ class IntentClassificationWorkflow:
                 error=None,
                 system_prompt=None,
                 prompt_meta=None,
-                metadata={
-                    "continuation_timestamp": datetime.now().isoformat(),
-                    "workflow_runner": "intent_workflow",
-                    "prompt_experiments_enabled": bool(
-                        settings.prompt_experiments_enabled
-                    ),
-                },
+                metadata=merged_metadata,
             )
 
             # EN
