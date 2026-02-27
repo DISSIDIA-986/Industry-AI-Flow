@@ -6,7 +6,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.security.context import TenantContext
@@ -37,11 +37,11 @@ def get_rag_instance():
 class QueryRequest(BaseModel):
     """Query schema."""
 
-    question: str
-    top_k: Optional[int] = None
-    temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
-    top_p: Optional[float] = None
+    question: str = Field(..., min_length=1, max_length=4000)
+    top_k: Optional[int] = Field(default=None, ge=1, le=50)
+    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=None, ge=1, le=8192)
+    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
 class QueryResponse(BaseModel):

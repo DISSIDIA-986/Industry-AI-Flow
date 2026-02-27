@@ -103,7 +103,11 @@ def chunk_text(
         # ENchunk + ENsplitENchunk_size,ENchunk
         if current_chunk and len(current_chunk) + len(split) > chunk_size:
             # Avoid splitting mid-reference (e.g. "CSA A23.1-14")
-            if _is_construction_reference(current_chunk[-50:]):
+            # but cap at 3x chunk_size to prevent unbounded growth
+            if (
+                _is_construction_reference(current_chunk[-50:])
+                and len(current_chunk) + len(split) <= chunk_size * 3
+            ):
                 # Extend chunk to include the split, then continue to
                 # the next iteration WITHOUT the unconditional append below.
                 current_chunk += split

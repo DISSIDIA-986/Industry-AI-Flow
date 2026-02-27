@@ -63,6 +63,9 @@ class CodeValidator:
         "types",
         "gc",
         "inspect",
+        "atexit",
+        "_thread",
+        "_io",
     }
 
     # Allowed modules for data analysis
@@ -94,7 +97,7 @@ class CodeValidator:
     # f-string abuse vectors.  A future improvement should walk the AST for
     # FormattedValue nodes and validate their contents.
     DANGEROUS_PATTERNS = [
-        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__)\b",  # Dangerous dunder attribute access
+        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__|__init_subclass__|__set_name__|__prepare__)\b",  # Dangerous dunder attribute access
         r"globals\s*\(",  # Global scope access
         r"locals\s*\(",  # Local scope access
         r"vars\s*\(",  # Variable introspection
@@ -198,6 +201,21 @@ class CodeValidator:
         call_result = self._validate_blocked_calls(tree)
         if not call_result.is_valid:
             return call_result
+
+        # Check for dangerous dunder method definitions (metaclass/descriptor hooks
+        # that execute at class definition time, not at call time).
+        dangerous_dunder_defs = {
+            "__init_subclass__",
+            "__set_name__",
+            "__prepare__",
+        }
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if node.name in dangerous_dunder_defs:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Dangerous metaclass/descriptor hook: {node.name}",
+                    )
 
         # Check for infinite loops (basic detection)
         loop_warning = self._check_loops(tree)

@@ -496,6 +496,7 @@ class DocumentManager:
                 embeddings = [embed_single_text(chunk) for chunk in chunks]
 
             except Exception as e:
+                conn.rollback()
                 logger.error(f"Failed to process replacement document: {e}")
                 self._log_operation(
                     doc_id,

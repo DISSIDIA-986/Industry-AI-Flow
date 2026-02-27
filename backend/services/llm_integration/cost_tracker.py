@@ -311,7 +311,7 @@ class CostTracker:
         if budget > 0 and ratio >= policy.hard_limit_ratio:
             decision = "block_cloud" if policy.policy_mode == "block" else "force_local"
             return {
-                "allowed": policy.policy_mode != "block",
+                "allowed": False,
                 "decision": decision,
                 "policy_mode": policy.policy_mode,
                 "monthly_spend_usd": round(monthly_spend, 6),

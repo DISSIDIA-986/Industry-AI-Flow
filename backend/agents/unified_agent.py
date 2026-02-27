@@ -71,57 +71,54 @@ def _get_llm():
 
 
 def _classify_user_intent(question: str) -> str:
-    """
-    EN
+    """Classify user intent for the unified agent.
 
     Args:
-        question: EN
+        question: The user's question text.
 
     Returns:
-        EN:'knowledge', 'data_analysis', 'mixed'
+        One of: 'knowledge', 'data_analysis', 'mixed'
     """
     question_lower = question.lower()
 
-    # EN
     data_analysis_keywords = [
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
+        "analyze",
+        "analysis",
+        "statistics",
+        "chart",
+        "graph",
+        "plot",
+        "visualize",
+        "visualization",
+        "dataset",
+        "data",
+        "trend",
+        "compare",
+        "correlation",
         "eda",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
+        "distribution",
+        "histogram",
+        "scatter",
+        "regression",
+        "average",
+        "mean",
+        "summary",
     ]
 
-    # EN
     knowledge_keywords = [
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
-        "EN",
+        "what is",
+        "how to",
+        "explain",
+        "define",
+        "describe",
+        "properties",
+        "requirements",
+        "standard",
+        "regulation",
+        "specification",
+        "code requirement",
+        "building code",
+        "construction",
     ]
 
     data_score = sum(
@@ -138,7 +135,7 @@ def _classify_user_intent(question: str) -> str:
     elif data_score == knowledge_score and data_score > 0:
         return "mixed"
     else:
-        return "knowledge"  # EN
+        return "knowledge"  # Default to knowledge retrieval
 
 
 def build_unified_agent():
@@ -159,98 +156,83 @@ def build_unified_agent():
     # 1. ENLLM
     llm = _get_llm()
 
-    # 2. EN
-    system_prompt = """EN,EN.
+    # 2. System prompt
+    system_prompt = """You are a construction industry AI assistant with access to specialized tools.
 
-**EN**:
-1. **EN**:EN
-2. **EN**:EN,EN
-3. **EN**:EN Python EN
-4. **EN**:EN
+**Core Capabilities**:
+1. **Knowledge Retrieval**: Answer questions about construction standards, regulations, and best practices using RAG.
+2. **Data Analysis**: Analyze construction datasets, generate statistics, charts, and insights.
+3. **Code Execution**: Run Python code for calculations, data processing, and analysis.
+4. **Visualization**: Create charts, graphs, and dashboards from construction data.
 
-**EN**:
-1. **EN**:EN,EN
-   - EN → EN RAG EN
-   - EN → EN
-   - EN → EN
+**Workflow**:
+1. **Understand the request**: Classify what the user needs:
+   - Knowledge question → Use RAG retrieval tools
+   - Data analysis → Use analysis and visualization tools
+   - Calculation → Use code execution tools
 
-2. **EN**:
-   - EN `hybrid_retrieval_tool` EN(EN top_k=10)
-   - EN `rerank_tool` EN top-5 EN
-   - EN
+2. **Knowledge retrieval**:
+   - Use `hybrid_retrieval_tool` to search the document database (default top_k=10)
+   - Use `rerank_tool` to select the top-5 most relevant results
+   - Always cite sources in your response
 
-3. **EN**:
-   - EN `iterative_code_analysis_tool` EN(EN)
-   - EN `self_healing_code_execution_tool` EN
-   - EN `data_analysis_tool` EN
-   - EN `visualization_tool` EN
-   - EN,EN `data_preprocessing_tool` EN
-   - EN,EN `code_execution_tool` EN
+3. **Data analysis**:
+   - Use `iterative_code_analysis_tool` for multi-step analysis (preferred)
+   - Use `self_healing_code_execution_tool` for error-resilient code execution
+   - Use `data_analysis_tool` for standard statistical analysis
+   - Use `visualization_tool` for creating charts
+   - For data quality issues, use `data_preprocessing_tool` first
+   - For simple scripts, use `code_execution_tool` directly
 
-4. **EN**:
-   - EN
-   - EN
-   - EN
+4. **Response quality**:
+   - Always provide clear, well-structured answers
+   - Include relevant citations and data sources
+   - If unsure, say so rather than guessing
 
-**EN**:
+**Available Tools**:
 
-**RAG EN**:
-- `hybrid_retrieval_tool`: EN
-- `rerank_tool`: EN
+**RAG Retrieval**:
+- `hybrid_retrieval_tool`: Search construction document database using hybrid BM25+vector retrieval
+- `rerank_tool`: Re-rank retrieved documents for relevance
 
-**EN**:
-- `code_execution_tool`: EN Python EN
-- `code_validation_tool`: EN
-- `get_execution_environment_info`: EN
+**Code Execution**:
+- `code_execution_tool`: Execute Python code in a sandboxed environment
+- `code_validation_tool`: Validate code before execution
+- `get_execution_environment_info`: Check available execution environment
 
-**EN(LangChain 1.0 EN)**:
-- `iterative_code_analysis_tool`: EN,EN
-  - EN,ENEDA,EN,EN
-  - EN,EN
-  - EN5EN,EN
-- `self_healing_code_execution_tool`: EN
-  - EN Python EN
-  - EN,EN,EN
-  - EN
+**Iterative Analysis (LangChain 1.0 Tools)**:
+- `iterative_code_analysis_tool`: Multi-step data analysis with automatic iteration
+  - Analyzes datasets, generates EDA reports, statistical summaries, and insights
+  - Automatically retries on errors with corrected code
+  - Runs up to 5 iterations for convergence
+- `self_healing_code_execution_tool`: Error-resilient code execution
+  - Executes Python code with automatic error detection
+  - On failure, analyzes the error, generates a fix, and retries
+  - Suitable for complex calculations
 
-**EN**:
-- `data_analysis_tool`: EN
-- `data_preprocessing_tool`: EN
+**Data Processing**:
+- `data_analysis_tool`: Statistical analysis on uploaded datasets
+- `data_preprocessing_tool`: Clean and transform data before analysis
 
-**EN**:
-- `visualization_tool`: EN
-- `advanced_visualization_tool`: EN
-- `dashboard_generation_tool`: EN
+**Visualization**:
+- `visualization_tool`: Create standard charts and plots
+- `advanced_visualization_tool`: Create complex multi-panel visualizations
+- `dashboard_generation_tool`: Generate interactive data dashboards
 
-**EN**:
-1. EN
-2. EN,EN"EN,EN"
-3. EN,EN,EN
-4. EN,EN
-5. EN,EN
-6. EN,EN,EN
+**Important Guidelines**:
+1. Always understand the user's intent before selecting tools
+2. For knowledge questions, always cite sources — never fabricate answers
+3. For data analysis, validate data quality before running complex analyses
+4. Handle errors gracefully and explain what went wrong
+5. Provide results in a clear, professional format
+6. When uncertain about the question, ask for clarification
 
-**EN**:
-EN:
-1. EN
-2. EN(EN)
-3. EN
-4. EN(EN)
-5. EN
-
-**EN(LangChain 1.0 EN)**:
-- **EN**: EN
-- **EN**: EN,EN
-- **EN**: EN5EN,EN
-- **EN**: EN
-- **EN**: EN
-
-**EN**:
-- EN Docker EN
-- EN {code_execution_timeout} EN
-- EN {code_execution_memory_limit}
-- EN
-- EN,EN
+**Security Constraints**:
+- Code runs in a Docker sandbox
+- Maximum execution time: {code_execution_timeout} seconds
+- Memory limit: {code_execution_memory_limit}
+- Network access is restricted
+- Only approved Python libraries are available
 """.format(
         code_execution_timeout=getattr(settings, "code_execution_timeout", 300),
         code_execution_memory_limit=getattr(

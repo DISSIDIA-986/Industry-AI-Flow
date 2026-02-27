@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 from datetime import UTC, datetime, timedelta
 import os
 import re
@@ -31,7 +32,9 @@ def _verify_password(password: str, stored: str) -> bool:
     if "$" not in stored:
         return False
     salt, h = stored.split("$", 1)
-    return hashlib.sha256((salt + password).encode()).hexdigest() == h
+    return hmac.compare_digest(
+        hashlib.sha256((salt + password).encode()).hexdigest(), h
+    )
 
 
 _users_lock = Lock()

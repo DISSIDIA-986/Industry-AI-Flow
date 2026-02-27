@@ -521,14 +521,21 @@ class IntentClassificationWorkflow:
             # EN
             # EN,EN
 
-            # EN:EN
+            # Check if the user actually provided new clarification input.
+            # Only retry classification if the query was updated with new info.
+            user_clarification = state.get("user_clarification_input")
             routing_decision = state.get("routing_decision")
-            if routing_decision and routing_decision.confidence < 0.7:
-                # EN,EN
+            if user_clarification:
+                # User provided new input — retry classification on updated query
                 state["metadata"]["clarification_handled"] = True
-                return state  # EN
+                return state
+            elif routing_decision and routing_decision.confidence < 0.7:
+                # Low confidence and no new user input — do NOT retry
+                # (retrying on the same unchanged query causes an infinite loop)
+                state["metadata"]["awaiting_user_clarification"] = True
+                return state
             else:
-                # EN
+                # Sufficient confidence — proceed with fallback routing
                 state["metadata"]["clarification_handled"] = True
                 return state
 

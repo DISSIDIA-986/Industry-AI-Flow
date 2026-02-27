@@ -160,8 +160,9 @@ class PromptManager:
         """
         cache_key = f"{category}:{name}"
 
-        # EN
-        if cache_key in self._cache:
+        # Skip cache when A/B experiments are enabled — each request must go
+        # through the allocation logic to maintain the correct traffic split.
+        if not enable_experiments and cache_key in self._cache:
             prompt_info, cached_at = self._cache[cache_key]
             if datetime.now() - cached_at < timedelta(seconds=self.cache_ttl):
                 logger.debug(f"ENPrompt: {cache_key}")

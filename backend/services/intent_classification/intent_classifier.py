@@ -317,7 +317,7 @@ class IntentClassifier:
         processed = re.sub(r"\s+", " ", query.strip())
 
         # Remove special characters (keep alphanumerics, CJK characters, and common punctuation)
-        processed = re.sub(r'[^\w\s\u4e00-\u9fff.,!?;:()[]{}"\'-]', "", processed)
+        processed = re.sub(r'[^\w\s\u4e00-\u9fff.,!?;:()\[\]{}"\'-]', "", processed)
 
         # Normalize punctuation
         processed = re.sub(
@@ -458,16 +458,11 @@ class IntentClassifier:
         # Extract query text for keyword matching
         query_lower = prompt.lower()
 
-        # Match intent based on keywords
-        if any(keyword in query_lower for keyword in [
-            "what is", "how to", "tell me", "explain", "define", "describe",
-            "properties of", "requirements for", "difference between",
-            "what are", "how does", "why is", "when should",
-        ]):
-            intent = "knowledge_retrieval"
-            confidence = 0.85
-            reasoning = "Query contains knowledge retrieval keywords"
-        elif any(
+        # Match intent based on keywords.
+        # Cost estimation is checked BEFORE knowledge retrieval because
+        # generic knowledge prefixes like "how to" overlap with cost queries
+        # (e.g., "how to estimate construction cost").
+        if any(
             keyword in query_lower
             for keyword in [
                 "cost estimate",
@@ -485,6 +480,14 @@ class IntentClassifier:
             intent = "cost_estimation"
             confidence = 0.91
             reasoning = "Query contains cost estimation keywords"
+        elif any(keyword in query_lower for keyword in [
+            "what is", "how to", "tell me", "explain", "define", "describe",
+            "properties of", "requirements for", "difference between",
+            "what are", "how does", "why is", "when should",
+        ]):
+            intent = "knowledge_retrieval"
+            confidence = 0.85
+            reasoning = "Query contains knowledge retrieval keywords"
         elif any(
             keyword in query_lower for keyword in [
                 "analyze", "analysis", "statistics", "chart", "data", "dataset",
