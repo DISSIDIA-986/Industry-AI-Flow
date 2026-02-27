@@ -168,9 +168,12 @@ async def update_llm_config(request: LLMConfigUpdateRequest, raw_request: Reques
     Returns:
         EN
     """
-    # TODO: admin role check required
+    import hmac
+    import os
+
     admin_key = raw_request.headers.get("X-Admin-Key", "")
-    if not admin_key:
+    expected = os.getenv("ADMIN_KEY", "")
+    if not expected or not hmac.compare_digest(admin_key, expected):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     try:
@@ -321,6 +324,10 @@ async def get_adaptive_search_weights():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+MAX_CHAT_MESSAGES = 50
+MAX_MESSAGE_LENGTH = 8000
+
+
 @router.post("/query/chat")
 async def chat_completion(
     messages: List[Dict[str, str]] = Body(...),
@@ -340,6 +347,19 @@ async def chat_completion(
     Returns:
         EN
     """
+    if len(messages) > MAX_CHAT_MESSAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_CHAT_MESSAGES} messages allowed",
+        )
+    for msg in messages:
+        content = msg.get("content", "")
+        if len(content) > MAX_MESSAGE_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Message content exceeds {MAX_MESSAGE_LENGTH} characters",
+            )
+
     try:
         rag = get_rag_instance()
 

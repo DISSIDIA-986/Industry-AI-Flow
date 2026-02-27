@@ -12,6 +12,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 12    | 2026-02-26 | 7         | 0  | 7  | 7     | 12          | 1           |
 | 13    | 2026-02-27 | 21        | 4  | 17 | 21    | 21          | 4           |
 | 14    | 2026-02-27 | 51        | 8  | 25 | 42    | 51          | 10          |
+| 15    | 2026-02-26 | 41        | 1  | 10 | 11    | 11          | 11          |
 
 ## Convergence
 
@@ -19,8 +20,22 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 12: 7 P1 (no P0). Trending down (13 → 7). Still above <3 threshold.
 - Round 13: 21 bugs (4 P0 + 17 P1). Deeper audit found new categories (memory management, dispatch governance, pipeline ordering). Bug count went UP because auditors explored previously unexamined areas (memory store, dispatch confidence, pipeline node ordering). Not convergent — continue TDI.
 - Round 14: 51 bugs (8 P0 + 25 P1 + 18 P2) across 4 parallel audit agents. 42 fixed, 9 deferred as xfail (architectural changes in LangGraph workflow, module-level singleton, thread-safety refactors). Broadest audit yet: security headers, CORS, validator bypasses, retrieval node double-execution, cost estimation routing, EN placeholder contamination, error disclosure, Docker symlinks, rate limiter races, regex precision. Not convergent — continue TDI.
+- Round 15: 41 bugs (1 P0 + 10 P1 + 20 P2 + 10 P3) across 4 parallel audit agents. All 11 P0/P1 fixed and verified. P0 count dropped from 8→1. P1 count dropped from 25→10. Focus areas: intent workflow dispatch crash, security admin key bypass, chunker content duplication, rate-limit TOCTOU, column-name injection in template code, module-level asyncio.Lock, dead clarification retry branch, unbounded chat payload. 30 P2/P3 deferred. Trending toward convergence but not yet <3 P0+P1 for two consecutive rounds.
 
 ## New Patterns Discovered
+
+### Round 15
+- **COST_ESTIMATION_AGENT stub dispatch crash**: Intentional `response=""` return from `_dispatch_to_agent` for cost estimation always triggers `RuntimeError("Agent returned empty response")` — two workflow systems (intent_workflow vs graph.py) have incompatible cost estimation paths
+- **Chunker construction-reference double-append**: When `_is_construction_reference()` fires at a chunk boundary, `split` is appended both inside the if-branch AND unconditionally at the end of the for-loop body — duplicating content
+- **Dead clarification retry_classification branch**: Graph edge `retry_classification → intent_classification` is registered but `_route_after_clarification` never returns `"retry_classification"`, making user clarification structurally ignored for re-classification
+- **Rate-limit window TOCTOU**: `cloud_window.append(now)` after cloud call executes outside `_rate_limit_lock`, allowing concurrent threads to both pass the rate check and both append
+- **hybrid_auto soft_fail gated by fallback_on_error**: `if soft_fail and settings.fallback_on_error:` — soft_fail was never sufficient alone; local failure propagates when `FALLBACK_ON_ERROR=false`
+- **Admin key presence-only check**: `if not admin_key:` grants admin access to any non-empty string — no `hmac.compare_digest` against a configured secret
+- **Restore endpoint tenant auth bypass**: `restore_document_version` manually reads X-Tenant-ID header instead of using `Depends(get_current_tenant)`, bypassing the standardized auth chain
+- **Unbounded chat message payload**: `messages: List[Dict[str, str]] = Body(...)` with no `max_items` or content length — enables OOM/DoS
+- **Module-level asyncio.Lock()**: `_workflow_lock = asyncio.Lock()` at module import time can bind to wrong event loop in multi-worker deployments
+- **prompt_node dead guard exposes internal message**: `state["error"] = "prompt_manager service is required"` leaks implementation detail to users
+- **Column name injection in template code**: CSV column names interpolated via f-string `df['{target_col}']` into executable Python without sanitization — full code injection vector
 
 ### Round 14
 - **String obfuscation via codecs**: `codecs.decode('bfrff','rot13')` reconstructs any string without triggering regex patterns — codecs module not in BLACKLISTED_IMPORTS enables bypassing all pattern-based security

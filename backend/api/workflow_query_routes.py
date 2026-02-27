@@ -23,7 +23,15 @@ router = APIRouter(prefix="/api/v1/workflow", tags=["workflow"])
 logger = logging.getLogger(__name__)
 
 _workflow_service = None
-_workflow_lock = asyncio.Lock()
+_workflow_lock: Optional[asyncio.Lock] = None
+
+
+def _get_workflow_lock() -> asyncio.Lock:
+    """Lazily create the asyncio.Lock inside the running event loop."""
+    global _workflow_lock
+    if _workflow_lock is None:
+        _workflow_lock = asyncio.Lock()
+    return _workflow_lock
 
 
 class WorkflowRunner(Protocol):
@@ -186,7 +194,7 @@ async def get_workflow_runner() -> WorkflowRunner:
     if _workflow_service is not None:
         return _workflow_service
 
-    async with _workflow_lock:
+    async with _get_workflow_lock():
         if _workflow_service is not None:
             return _workflow_service
         runner_mode = (settings.workflow_runner_mode or "auto").strip().lower()
