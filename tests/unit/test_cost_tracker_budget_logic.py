@@ -50,7 +50,7 @@ def test_budget_hard_limit_force_local():
     )
     tracker = _FakeTracker(policy=policy, monthly_spend=120)
     result = tracker.evaluate_budget("tenant-a")
-    assert result["allowed"] is True
+    assert result["allowed"] is False
     assert result["decision"] == "force_local"
 
 

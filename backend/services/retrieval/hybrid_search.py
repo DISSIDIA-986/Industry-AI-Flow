@@ -126,6 +126,14 @@ class HybridRetriever:
                             self.stemmer.stem(part) if self.stemmer else part
                         )
                 stemmed_tokens.append(token.lower())  # EN
+            # Dotted tokens (e.g. "nbc2020.4", "a23.1", "0.85")
+            elif "." in token:
+                stemmed_tokens.append(token)
+                for part in token.split("."):
+                    if part.isalnum():
+                        stemmed_tokens.append(
+                            self.stemmer.stem(part) if self.stemmer else part
+                        )
 
         return stemmed_tokens
 

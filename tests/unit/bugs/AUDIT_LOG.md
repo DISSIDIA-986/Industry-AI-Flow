@@ -14,6 +14,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 14    | 2026-02-27 | 51        | 8  | 25 | 42    | 51          | 10          |
 | 15    | 2026-02-26 | 41        | 1  | 10 | 11    | 11          | 11          |
 | 16    | 2026-02-26 | 46        | 1  | 18 | 19    | 22          | 19          |
+| 17    | 2026-02-26 | 37        | 1  | 13 | 14    | 16          | 8           |
 
 ## Convergence
 
@@ -23,8 +24,19 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 14: 51 bugs (8 P0 + 25 P1 + 18 P2) across 4 parallel audit agents. 42 fixed, 9 deferred as xfail (architectural changes in LangGraph workflow, module-level singleton, thread-safety refactors). Broadest audit yet: security headers, CORS, validator bypasses, retrieval node double-execution, cost estimation routing, EN placeholder contamination, error disclosure, Docker symlinks, rate limiter races, regex precision. Not convergent — continue TDI.
 - Round 15: 41 bugs (1 P0 + 10 P1 + 20 P2 + 10 P3) across 4 parallel audit agents. All 11 P0/P1 fixed and verified. P0 count dropped from 8→1. P1 count dropped from 25→10. Focus areas: intent workflow dispatch crash, security admin key bypass, chunker content duplication, rate-limit TOCTOU, column-name injection in template code, module-level asyncio.Lock, dead clarification retry branch, unbounded chat payload. 30 P2/P3 deferred. Trending toward convergence but not yet <3 P0+P1 for two consecutive rounds.
 - Round 16: 46 bugs (1 P0 + 18 P1 + 17 P2 + 10 P3) across 4 parallel audit agents. All 19 P0/P1 fixed and verified. 22 tests added. P0 count: 1 (same as R15). P1 count: 18 (up from 10 — deeper audit into previously unexamined areas: code validator whitelisted-library escapes, groundedness tokenizer inconsistency, BM25 dotted-standard splitting, numeric penalty for derived arithmetic, Jinja2 HTML-escaping of LLM prompts, CRLF code extraction, error dict propagation). 27 P2/P3 deferred. Not convergent — auditors continue finding novel patterns in unexplored areas.
+- Round 17: 37 bugs (1 P0 + 13 P1 + 17 P2 + 6 P3) across 4 parallel audit agents. All 14 P0/P1 fixed and verified. 16 tests added. P0 count: 1 (same as R15/R16 — clarification loop). P1 count: 13 (down from 18). Focus areas: infinite clarification loop (P0), budget force_local bypass, keyword priority misrouting, broken preprocessing regex, BM25 dotted token loss, document replacement rollback, unbounded chunk growth, timing-safe password comparison, metaclass hook validator bypass, atexit/_thread blacklist, QueryRequest validation, A/B cache defeat, unified agent EN placeholder contamination (keywords + system prompt). 23 P2/P3 deferred. Trending down (P1: 18→13). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
 
 ## New Patterns Discovered
+
+### Round 17
+- **Infinite clarification loop via unconditional clarification_handled**: `_clarification_processing_node` always sets `clarification_handled=True` in both branches, causing `_route_after_clarification` to always return `retry_classification` even without new user input — infinite loop capped only by LangGraph's recursion_limit (25 wasted LLM calls)
+- **Budget force_local returns allowed=True**: `evaluate_budget` returns `"allowed": policy.policy_mode != "block"` — for `local_only` mode, this evaluates to True, meaning dispatch_service proceeds with cloud calls despite the budget hard limit
+- **Keyword priority ordering in heuristic fallback**: `_simulate_llm_response` checks knowledge_retrieval keywords ("how to", "what is") before cost_estimation — queries like "how to estimate construction cost" misroute to RAG
+- **Broken _preprocess_input regex**: Unescaped `[]` in character class `[^\w\s\u4e00-\u9fff.,!?;:()[]{}"\'-]` prematurely closes the class — regex matches nothing, special characters never removed
+- **BM25 tokenizer drops dotted tokens**: Post-tokenization filter only keeps `isalnum()` or hyphenated tokens — dotted references like `nbc2020.4` fail both checks and are silently dropped from BM25 index
+- **Metaclass hooks bypass code validator**: `__init_subclass__`, `__set_name__`, `__prepare__` execute at class definition time, not at call time — neither regex patterns nor AST call validators detect them
+- **atexit/_thread not in BLACKLISTED_IMPORTS**: `atexit.register()` runs callbacks after sandbox timeout; `_thread` (low-level) bypasses the `threading` blacklist
+- **A/B experiment cache defeats traffic split**: `get_prompt` caches under generic `{category}:{name}` key regardless of experiment state — first caller's variant served to all subsequent callers until cache TTL expires
 
 ### Round 16
 - **pd.eval()/df.query() sandbox escape via whitelisted library**: Pandas is whitelisted for data analysis, but `pd.eval(engine='python')` and `df.query()` evaluate arbitrary Python expressions — dangerous payload hides inside string literals invisible to AST validation
