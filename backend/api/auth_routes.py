@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 def _hash_password(password: str) -> str:
+    # TODO: migrate to bcrypt/argon2id for production password hashing
     salt = os.urandom(16).hex()
     h = hashlib.sha256((salt + password).encode()).hexdigest()
     return f"{salt}${h}"
@@ -143,6 +144,10 @@ async def login(payload: LoginRequest) -> AuthResponse:
 async def register(payload: RegisterRequest) -> AuthResponse:
     key = payload.email.lower()
     with _users_lock:
+        if len(_users) >= 1000:
+            raise HTTPException(
+                status_code=429, detail="Registration limit reached"
+            )
         if key in _users:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -195,7 +200,7 @@ async def me(
     except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {exc}",
+            detail="Invalid token",
         ) from exc
 
     identity = build_identity(decoded)

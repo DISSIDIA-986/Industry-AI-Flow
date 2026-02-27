@@ -230,7 +230,7 @@ async def list_prompts(
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{prompt_id:uuid}", response_model=Dict[str, Any])
@@ -270,7 +270,7 @@ async def get_prompt(
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/", response_model=Dict[str, Any])
@@ -308,10 +308,10 @@ async def create_prompt(
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.put("/{prompt_id:uuid}", response_model=Dict[str, Any])
@@ -349,10 +349,10 @@ async def update_prompt(
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.delete("/{prompt_id:uuid}", response_model=Dict[str, Any])
@@ -374,7 +374,7 @@ async def delete_prompt(
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{prompt_id:uuid}/test", response_model=Dict[str, Any])
@@ -420,7 +420,7 @@ async def test_prompt(
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{prompt_id:uuid}/performance", response_model=Dict[str, Any])
@@ -479,7 +479,7 @@ async def get_prompt_performance(
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/usage-logs", response_model=Dict[str, Any])
@@ -512,7 +512,7 @@ async def record_usage_log(
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/experiments", response_model=Dict[str, Any])
@@ -533,10 +533,10 @@ async def create_experiment(
         )
         return {"success": True, "experiment": created}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/experiments", response_model=Dict[str, Any])
@@ -566,10 +566,10 @@ async def list_experiments(
             },
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/experiments/{experiment_id:uuid}", response_model=Dict[str, Any])
@@ -586,7 +586,7 @@ async def get_experiment(
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.patch("/experiments/{experiment_id:uuid}/traffic", response_model=Dict[str, Any])
@@ -605,12 +605,12 @@ async def update_experiment_traffic(
             raise HTTPException(status_code=404, detail="Experiment not found.")
         return {"success": True, "experiment": experiment}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.patch("/experiments/{experiment_id:uuid}/status", response_model=Dict[str, Any])
@@ -629,12 +629,12 @@ async def update_experiment_status(
             raise HTTPException(status_code=404, detail="Experiment not found.")
         return {"success": True, "experiment": experiment}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/categories/list", response_model=List[str])
@@ -652,7 +652,7 @@ async def list_categories(prompt_manager: PromptManager = Depends(get_prompt_man
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/tags/list", response_model=List[Dict[str, Any]])
@@ -678,7 +678,7 @@ async def list_tags(prompt_manager: PromptManager = Depends(get_prompt_manager))
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/metrics/summary", response_model=Dict[str, Any])
@@ -699,7 +699,7 @@ async def get_prompt_metrics_summary(
         )
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/search", response_model=List[PromptListResponse])  # P0EN:EN
@@ -761,7 +761,7 @@ async def search_prompts(
 
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{prompt_id:uuid}/clone", response_model=Dict[str, Any])
@@ -804,4 +804,4 @@ async def clone_prompt(
         raise
     except Exception as e:
         logger.error(f"Prompt API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

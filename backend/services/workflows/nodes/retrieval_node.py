@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from typing import Any
 
 from backend.services.workflows.state import WorkflowState
@@ -17,20 +18,25 @@ async def retrieval_node(state: WorkflowState, services: Any) -> WorkflowState:
     retriever = getattr(services, "retriever", None)
     contexts = state.get("retrieved_context") or []
 
+    # Skip retrieval for intents that don't need it
+    intent = state.get("intent", "")
+    if intent in ("cost_estimation", "code_execution"):
+        metadata["retrieval_status"] = "skipped"
+        state["retrieved_context"] = contexts
+        metrics["retrieved_count"] = len(contexts)
+        return state
+
     if retriever is not None:
         if hasattr(retriever, "retrieve"):
-            result = retriever.retrieve(query=query, top_k=top_k, metadata=metadata)
-            if hasattr(result, "__await__"):
-                contexts = await result
+            if inspect.iscoroutinefunction(retriever.retrieve):
+                contexts = await retriever.retrieve(query=query, top_k=top_k, metadata=metadata)
             else:
-                # Synchronous retriever — offload to thread pool
                 contexts = await asyncio.to_thread(
                     retriever.retrieve, query=query, top_k=top_k, metadata=metadata
                 )
         elif hasattr(retriever, "search"):
-            result = retriever.search(query=query, top_k=top_k)
-            if hasattr(result, "__await__"):
-                contexts = await result
+            if inspect.iscoroutinefunction(retriever.search):
+                contexts = await retriever.search(query=query, top_k=top_k)
             else:
                 contexts = await asyncio.to_thread(
                     retriever.search, query=query, top_k=top_k

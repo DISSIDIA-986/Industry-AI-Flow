@@ -251,6 +251,12 @@ class DockerExecutor:
 
     def _run_container(self, workspace: Path, timeout: Optional[int] = None) -> dict:
         """Run Docker container with security constraints."""
+        # Security: reject workspaces containing symlinks to prevent host escape
+        if any(p.is_symlink() for p in workspace.rglob("*")):
+            raise RuntimeError(
+                "Security error: workspace contains symbolic links"
+            )
+
         container = None
         try:
             # Container configuration
@@ -304,6 +310,10 @@ class DockerExecutor:
         finally:
             # Cleanup container
             if container:
+                try:
+                    container.stop(timeout=5)
+                except Exception:
+                    pass  # Ignore stop errors (container may have already exited)
                 try:
                     container.remove(force=True)
                 except Exception:

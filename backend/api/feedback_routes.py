@@ -5,8 +5,8 @@ Feedback API routes
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.security.dependencies import get_current_tenant, secure_endpoint
@@ -36,7 +36,7 @@ class FeedbackRequest(BaseModel):
     feedback_type: str  # "helpful", "not_helpful", "partially_helpful"
     user_comment: Optional[str] = None
     retrieved_chunks: Optional[List[Dict]] = None
-    feedback_weight: float = 1.0
+    feedback_weight: float = Field(default=1.0, ge=0.0, le=10.0)
 
 
 class FeedbackResponse(BaseModel):
@@ -94,11 +94,11 @@ async def submit_feedback(request: FeedbackRequest):
 
     except Exception as e:
         logger.error(f"Error submitting feedback: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/feedback/statistics", response_model=FeedbackStatisticsResponse)
-async def get_feedback_statistics(days: int = 7):
+async def get_feedback_statistics(days: int = Query(default=7, ge=1, le=365)):
     """
     EN
 
@@ -108,6 +108,7 @@ async def get_feedback_statistics(days: int = 7):
     Returns:
         EN
     """
+    days = max(1, min(days, 365))
     try:
         if not settings.enable_feedback_system:
             raise HTTPException(status_code=403, detail="Feedback system is disabled")
@@ -127,7 +128,7 @@ async def get_feedback_statistics(days: int = 7):
         raise
     except Exception as e:
         logger.error(f"Error getting feedback statistics: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/feedback/high-quality-documents")
@@ -160,7 +161,7 @@ async def get_high_quality_documents(min_score: float = 0.5, limit: int = 100):
         raise
     except Exception as e:
         logger.error(f"Error getting high quality documents: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/feedback/trigger-reranking")
@@ -198,4 +199,4 @@ async def trigger_manual_reranking(
 
     except Exception as e:
         logger.error(f"Error triggering manual reranking: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

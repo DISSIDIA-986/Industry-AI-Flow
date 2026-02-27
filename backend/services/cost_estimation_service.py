@@ -111,8 +111,8 @@ _LOCATION_KEYWORDS: List[str] = [
 
 _NUMERIC_PATTERNS: Dict[str, List[str]] = {
     "sqft": [
-        r"(?:sqft|square\s*feet|square\s*ft|area)\s*[:=]?\s*([0-9][0-9,.\s]*[0-9]|[0-9])\b",
-        r"([0-9][0-9,.\s]*[0-9]|[0-9])\s*(?:sqft|square\s*feet|square\s*ft)\b",
+        r"(?:sqft|square\s*feet|square\s*ft|area)\s*[:=]?\s*([0-9][0-9,.]*[0-9]|[0-9])\b",
+        r"([0-9][0-9,.]*[0-9]|[0-9])\s*(?:sqft|square\s*feet|square\s*ft)\b",
     ],
     "floors": [
         r"(?:floors?|storeys?|stories|levels?)\s*[:=]?\s*([0-9]+)",
@@ -121,7 +121,7 @@ _NUMERIC_PATTERNS: Dict[str, List[str]] = {
         r"(?:units?|num\s*units|apartments?|homes?)\s*[:=]?\s*([0-9]+)",
     ],
     "planned_duration_weeks": [
-        r"(?:planned\s*duration|duration|weeks?|timeline|schedule)\s*[:=]?\s*([0-9][0-9,.\s]*[0-9])",
+        r"(?:planned\s*duration|duration)\s*[:=]?\s*([0-9][0-9,.]*[0-9]|[0-9])\s*(?:weeks?)?",
     ],
     "estimated_cost_cad": [
         r"(?:estimated\s*cost|estimate|budget|project\s*cost|target\s*cost|cost)\s*[:=]?\s*\$?\s*([0-9][0-9,.]*[kmb]?)\b",
@@ -152,7 +152,7 @@ _NUMERIC_PATTERNS: Dict[str, List[str]] = {
         r"(?:budget\s*pressure|budget\s*stress)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "risk_score": [
-        r"(?:risk\s*score|overall\s*risk)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"(?:risk\s*score(?!\s*original)|overall\s*risk)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
     ],
     "risk_score_original": [
         r"(?:risk\s*score\s*original|baseline\s*risk\s*score)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",

@@ -262,7 +262,7 @@ class HybridRetriever:
         # EN BM25 EN [(chunk_index, score)]
         bm25_results = [(i, score) for i, score in enumerate(bm25_scores)]
         bm25_results.sort(key=lambda x: x[1], reverse=True)
-        bm25_top = bm25_results[: top_k * 2]
+        bm25_top = [(i, score) for i, score in bm25_results[:top_k * 2] if score > 0.0]
 
         # 3. EN (Reciprocal Rank Fusion - RRF)
         fused_scores = {}
@@ -325,9 +325,18 @@ class HybridRetriever:
         # (typically 0.05–0.7) from being displayed as misleading low
         # relevance percentages in the UI.
         if final_results:
-            max_score = max(r["score"] for r in final_results)
-            if max_score > 0:
+            scores = [r["score"] for r in final_results]
+            max_score = max(scores)
+            min_score = min(scores)
+            score_range = max_score - min_score
+            if score_range > 0:
                 for r in final_results:
+                    r["raw_score"] = r["score"]
+                    r["score"] = round((r["score"] - min_score) / score_range, 4)
+            elif max_score > 0:
+                # All scores identical — keep raw scores for downstream use
+                for r in final_results:
+                    r["raw_score"] = r["score"]
                     r["score"] = round(r["score"] / max_score, 4)
 
         return final_results

@@ -199,7 +199,7 @@ async def classify_intent(
         logger.error(f"Intent classification API error: {str(e)}")
         return ClassifyResponse(
             success=False,
-            error=f"Internal classification error: {str(e)}",
+            error="Internal classification error",
             agent_response="An internal error occurred while classifying the request.",
         )
 

@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from backend.config import settings
@@ -174,7 +174,7 @@ async def update_document(
             status="error",
             detail={"doc_id": doc_id, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.delete("/documents/{doc_id}")
@@ -249,7 +249,7 @@ async def delete_document(
             status="error",
             detail={"doc_id": doc_id, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/documents/replace")
@@ -336,7 +336,7 @@ async def replace_document(
             status="error",
             detail={"doc_id": doc_id, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get(
@@ -372,7 +372,7 @@ async def get_document_versions(doc_id: str):
 
     except Exception as e:
         logger.error(f"Error getting document versions: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/documents/operations/log")
@@ -387,6 +387,7 @@ async def get_operation_log(doc_id: str = None, limit: int = 50):
     Returns:
         EN
     """
+    limit = min(limit, 500)
     try:
         doc_manager = get_document_manager()
         logs = doc_manager.get_operation_log(doc_id=doc_id, limit=limit)
@@ -395,7 +396,7 @@ async def get_operation_log(doc_id: str = None, limit: int = 50):
 
     except Exception as e:
         logger.error(f"Error getting operation log: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/documents/statistics")
@@ -414,11 +415,11 @@ async def get_document_statistics():
 
     except Exception as e:
         logger.error(f"Error getting document statistics: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/documents/{doc_id}/restore/{version}")
-async def restore_document_version(doc_id: str, version: int, reason: str = None):
+async def restore_document_version(doc_id: str, version: int, reason: str = None, request: Request = None):
     """
     EN
 
@@ -430,6 +431,11 @@ async def restore_document_version(doc_id: str, version: int, reason: str = None
     Returns:
         EN
     """
+    # Tenant check: ensure request is associated with a tenant
+    tenant_id = request.headers.get("X-Tenant-ID", "") if request else ""
+    if not tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant identification required")
+
     try:
         doc_manager = get_document_manager()
         success = doc_manager.restore_document_version(
@@ -455,4 +461,4 @@ async def restore_document_version(doc_id: str, version: int, reason: str = None
 
     except Exception as e:
         logger.error(f"Error restoring document version: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

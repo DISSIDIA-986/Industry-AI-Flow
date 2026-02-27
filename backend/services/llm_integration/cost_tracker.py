@@ -53,6 +53,13 @@ class CostTracker:
         # Rough heuristic: ~4 ASCII chars/token, ~1 CJK char/token.
         return max(1, int(ascii_chars / 4) + non_ascii_chars)
 
+    def estimate_request_cost(self, max_tokens: int = 512) -> float:
+        """Estimate the cost of a cloud request based on max output tokens."""
+        # Use the most expensive cloud rate as a conservative estimate.
+        rate = self.rate_table.get("zhipu", {}).get("*", (2.0, 8.0))
+        output_rate_per_token = rate[1] / 1_000_000
+        return max_tokens * output_rate_per_token
+
     def estimate_usage(self, prompt: str, completion: str) -> UsageStats:
         prompt_tokens = self._estimate_tokens(prompt)
         completion_tokens = self._estimate_tokens(completion)
@@ -130,9 +137,9 @@ class CostTracker:
     def get_usage_summary(
         self, *, tenant_id: str, days: int = 30, provider: Optional[str] = None
     ) -> Dict[str, object]:
+        conn = self._connect()
+        cur = conn.cursor()
         try:
-            conn = self._connect()
-            cur = conn.cursor()
             params: List[object] = [tenant_id, max(1, days)]
             provider_filter = ""
             if provider:
@@ -158,11 +165,12 @@ class CostTracker:
                 tuple(params),
             )
             rows = fetchall_dicts(cur)
-            cur.close()
-            conn.close()
         except Exception as exc:
             logger.warning("Failed to query llm usage summary: %s", exc)
             rows = []
+        finally:
+            cur.close()
+            conn.close()
 
         totals = {
             "request_count": sum(int(r.get("request_count") or 0) for r in rows),
@@ -184,9 +192,9 @@ class CostTracker:
         }
 
     def get_budget_policy(self, tenant_id: str) -> Optional[BudgetPolicy]:
+        conn = self._connect()
+        cur = conn.cursor()
         try:
-            conn = self._connect()
-            cur = conn.cursor()
             cur.execute(
                 """
                 SELECT tenant_id, monthly_budget_usd, soft_limit_ratio,
@@ -197,8 +205,6 @@ class CostTracker:
                 (tenant_id,),
             )
             row = fetchone_dict(cur)
-            cur.close()
-            conn.close()
             if not row:
                 return None
             return BudgetPolicy(
@@ -211,6 +217,9 @@ class CostTracker:
         except Exception as exc:
             logger.warning("Failed to load budget policy: %s", exc)
             return None
+        finally:
+            cur.close()
+            conn.close()
 
     def upsert_budget_policy(self, policy: BudgetPolicy) -> BudgetPolicy:
         policy.soft_limit_ratio = max(0.0, min(policy.soft_limit_ratio, 1.0))
@@ -221,9 +230,9 @@ class CostTracker:
             else "local_only"
         )
 
+        conn = self._connect()
+        cur = conn.cursor()
         try:
-            conn = self._connect()
-            cur = conn.cursor()
             cur.execute(
                 """
                 INSERT INTO llm_budget_policies (
@@ -246,10 +255,11 @@ class CostTracker:
                 ),
             )
             conn.commit()
-            cur.close()
-            conn.close()
         except Exception as exc:
             logger.warning("Failed to persist budget policy: %s", exc)
+        finally:
+            cur.close()
+            conn.close()
         return policy
 
     def get_monthly_spend(
@@ -257,9 +267,9 @@ class CostTracker:
     ) -> float:
         when = when or datetime.now(timezone.utc)
         month_start = datetime(when.year, when.month, 1, tzinfo=timezone.utc)
+        conn = self._connect()
+        cur = conn.cursor()
         try:
-            conn = self._connect()
-            cur = conn.cursor()
             cur.execute(
                 """
                 SELECT COALESCE(SUM(estimated_cost_usd), 0)
@@ -270,12 +280,13 @@ class CostTracker:
                 (tenant_id, month_start),
             )
             amount = float(cur.fetchone()[0] or 0.0)
-            cur.close()
-            conn.close()
             return amount
         except Exception as exc:
             logger.warning("Failed to query monthly spend: %s", exc)
             return 0.0
+        finally:
+            cur.close()
+            conn.close()
 
     def evaluate_budget(
         self, tenant_id: str, additional_cost_usd: float = 0.0

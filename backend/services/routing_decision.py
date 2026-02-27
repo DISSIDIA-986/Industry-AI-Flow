@@ -32,6 +32,7 @@ class AgentType(str, Enum):
     DATA_ANALYSIS_AGENT = "data_analysis_agent"
     DOCUMENT_PROCESSING_AGENT = "document_processing_agent"
     CODE_EXECUTION_AGENT = "code_execution_agent"
+    COST_ESTIMATION_AGENT = "cost_estimation_agent"
     GENERAL_AGENT = "general_agent"
     CLARIFICATION_AGENT = "clarification_agent"
 
@@ -163,6 +164,12 @@ class RoutingDecisionEngine:
                         "computation",
                         "algorithm_testing",
                     ],
+                },
+                AgentType.COST_ESTIMATION_AGENT: {
+                    "max_response_time": 30,
+                    "retry_count": 2,
+                    "priority": 2,
+                    "capabilities": ["cost_estimation", "budget_forecasting"],
                 },
                 AgentType.GENERAL_AGENT: {
                     "max_response_time": 45,
@@ -315,7 +322,7 @@ class RoutingDecisionEngine:
         intent_mapping = {
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
-            "cost_estimation": AgentType.GENERAL_AGENT,
+            "cost_estimation": AgentType.COST_ESTIMATION_AGENT,
             "document_processing": AgentType.DOCUMENT_PROCESSING_AGENT,
             "code_execution": AgentType.CODE_EXECUTION_AGENT,
         }
@@ -337,6 +344,10 @@ class RoutingDecisionEngine:
             ],
             AgentType.CODE_EXECUTION_AGENT: [
                 AgentType.DATA_ANALYSIS_AGENT,
+                AgentType.GENERAL_AGENT,
+            ],
+            AgentType.COST_ESTIMATION_AGENT: [
+                AgentType.RAG_AGENT,
                 AgentType.GENERAL_AGENT,
             ],
             AgentType.GENERAL_AGENT: [],

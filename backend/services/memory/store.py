@@ -53,6 +53,22 @@ class LongTermMemoryStore:
                 f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_memory_type ON {self.TABLE_NAME} (memory_type);"
             )
             conn.commit()
+            # IVFFlat vector index for cosine similarity searches.
+            # Requires at least `lists` rows to exist; wrap in try/except
+            # so the table creation succeeds even when the table is empty.
+            try:
+                cur.execute(
+                    f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_embedding "
+                    f"ON {self.TABLE_NAME} USING ivfflat (embedding vector_cosine_ops) "
+                    f"WITH (lists = 10);"
+                )
+                conn.commit()
+            except Exception as idx_exc:
+                logger.info(
+                    "Skipping IVFFlat index creation (likely too few rows): %s",
+                    idx_exc,
+                )
+                conn.rollback()
         except Exception as exc:
             logger.warning("EN: %s", exc)
         finally:
@@ -126,6 +142,7 @@ class LongTermMemoryStore:
         cur = conn.cursor()
 
         try:
+            cur.execute("SET ivfflat.probes = 10")
             session_filter = ""
             params: List[Any] = [embedding_str]
             if session_id:

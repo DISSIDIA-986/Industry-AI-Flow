@@ -58,6 +58,11 @@ class CodeValidator:
         "pickle",
         "shelve",
         "webbrowser",
+        "codecs",
+        "builtins",
+        "types",
+        "gc",
+        "inspect",
     }
 
     # Allowed modules for data analysis
@@ -84,8 +89,12 @@ class CodeValidator:
     }
 
     # Dangerous patterns
+    # NOTE: f-string expressions (ast.FormattedValue / JoinedStr) can evaluate
+    # arbitrary code at runtime.  Pattern-based checks below do NOT cover all
+    # f-string abuse vectors.  A future improvement should walk the AST for
+    # FormattedValue nodes and validate their contents.
     DANGEROUS_PATTERNS = [
-        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__)\b",  # Dangerous dunder attribute access
+        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__)\b",  # Dangerous dunder attribute access
         r"globals\s*\(",  # Global scope access
         r"locals\s*\(",  # Local scope access
         r"vars\s*\(",  # Variable introspection
@@ -107,6 +116,7 @@ class CodeValidator:
         "input",
         "raw_input",
         "breakpoint",
+        "chr",
     }
     BLOCKED_ATTRIBUTE_CALLS = {
         ("builtins", "open"),
@@ -265,6 +275,14 @@ class CodeValidator:
                         return ValidationResult(
                             is_valid=False,
                             error=f"Blocked function reference in dict: {val.id}",
+                        )
+
+            if isinstance(node, ast.Lambda):
+                for child in ast.walk(node.body):
+                    if isinstance(child, ast.Name) and child.id.lower() in blocked_names:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked function reference in lambda: {child.id}",
                         )
 
         for node in ast.walk(tree):

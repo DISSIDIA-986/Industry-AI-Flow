@@ -1269,7 +1269,9 @@ class IntentClassificationWorkflow:
                 or metadata.get("source")
                 or doc_id
             ).strip()
-            source_key = f"{doc_id}:{doc_name}"
+            chunk_id = str(chunk.get("chunk_id") or chunk.get("id") or "").strip()
+            content_hash = str(chunk.get("content", ""))[:120]
+            source_key = f"{doc_id}:{doc_name}:{chunk_id or content_hash}"
             if not doc_name and not doc_id:
                 continue
             if source_key in seen_sources:
@@ -1519,8 +1521,13 @@ class IntentClassificationWorkflow:
         route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """ENAgentEN,EN."""
-        del system_prompt, prompt_meta, route_mode
         normalized_params = parameters if isinstance(parameters, dict) else {}
+        if system_prompt:
+            normalized_params["system_prompt"] = system_prompt
+        if prompt_meta:
+            normalized_params["prompt_meta"] = prompt_meta
+        if route_mode:
+            normalized_params["route_mode"] = route_mode
 
         if agent_type in {AgentType.RAG_AGENT, AgentType.GENERAL_AGENT}:
             return await self._dispatch_rag_query(
@@ -1528,6 +1535,14 @@ class IntentClassificationWorkflow:
                 context=context,
                 parameters=normalized_params,
             )
+        if agent_type == AgentType.COST_ESTIMATION_AGENT:
+            # Cost estimation is handled by the dedicated cost_estimation_node
+            # in the workflow pipeline. Return a marker so the pipeline node
+            # picks it up instead of falling through to RAG.
+            return {
+                "response": "",
+                "metadata": {"routed_to": "cost_estimation_node"},
+            }
         if agent_type == AgentType.DATA_ANALYSIS_AGENT:
             return await self._dispatch_data_analysis_query(query=query, context=context)
         if agent_type == AgentType.DOCUMENT_PROCESSING_AGENT:
