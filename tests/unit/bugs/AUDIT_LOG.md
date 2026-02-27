@@ -17,6 +17,11 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 17    | 2026-02-26 | 37        | 1  | 13 | 14    | 16          | 8           |
 | 18    | 2026-02-27 | 14        | 1  | 9  | 10    | 12          | 3           |
 | 19    | 2026-02-27 | 67        | 3  | 31 | 13    | 14          | 12          |
+| 20    | 2026-02-27 | 10        | 0  | 8  | 10    | 3           | 4           |
+| 21    | 2026-02-27 | 3         | 0  | 0  | 3     | 0           | 0           |
+| 22    | 2026-02-27 | 5         | 0  | 0  | 5     | 0           | 1           |
+| 23    | 2026-02-27 | 4         | 0  | 0  | 4     | 0           | 1           |
+| 24    | 2026-02-27 | 1         | 0  | 0  | 1     | 0           | 1           |
 
 ## Convergence
 
@@ -29,8 +34,41 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 17: 37 bugs (1 P0 + 13 P1 + 17 P2 + 6 P3) across 4 parallel audit agents. All 14 P0/P1 fixed and verified. 16 tests added. P0 count: 1 (same as R15/R16 — clarification loop). P1 count: 13 (down from 18). Focus areas: infinite clarification loop (P0), budget force_local bypass, keyword priority misrouting, broken preprocessing regex, BM25 dotted token loss, document replacement rollback, unbounded chunk growth, timing-safe password comparison, metaclass hook validator bypass, atexit/_thread blacklist, QueryRequest validation, A/B cache defeat, unified agent EN placeholder contamination (keywords + system prompt). 23 P2/P3 deferred. Trending down (P1: 18→13). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
 - Round 18: 14 bugs (1 P0 + 9 P1 + 4 P2) via manual audit. All 10 P0/P1 fixed and verified. 12 tests added. P0 count: 1 (workflow_query_routes response key mismatch — fallback runner sets "response" but handler reads "agent_response"). P1 count: 9 (down from 13). Focus areas: f-string validator bypass, bleach sanitization on un-decoded input, intent routing precision ("analyze costs" misroute, "analyze" too broad), hardcoded 4096 context window, __reduce__/__reduce_ex__ pickle exploit, response_builder None fallthrough, error detail leakage, missing embedding quality signal. 4 P2 deferred. Trending down (P0+P1: 14→10). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
 - Round 19: 67 bugs (3 P0 + 31 P1 + 26 P2 + 7 P3) across 4 parallel audit agents. 13 P0/P1 fixed and verified, 14 tests added. Broadest audit yet with 4 deep-dive agents. P0 count: 3 (phantom module import in intent_node, partial state corruption on timeout, file_path disclosure in uploads). P1 count: 31 (across security/validator: functools string bypass, walrus operator alias, df.pipe/apply/agg callable dispatch, while-1 detection, scipy.io.loadmat; intent: heuristic preamble pollution, SimpleIntentClassifier broad keywords; cost estimation: num_units regex false positives; prompt: A/B cache pollution; data analysis: template column selection). 54 P2/P3 deferred. Bug count up because deepest audit coverage yet (4 dedicated agents exploring every file). Not convergent — continue TDI.
+- Round 20: 10 findings (0 P0 + 8 P1 + 2 regression-test drift) discovered via full unit gate walk with iterative `-x` triage. All 10 fixed and verified. Key fixes: optional dependency import hardening (`uvicorn`/`Pillow`/`fitz`), stale Round3 regression assertions updated to current secure behavior, DataAnalysisAgent compatibility hook restored for historical monkeypatch contract, spaced-number area parsing (`5 000 square feet`), budget phrase extraction (`budget 120m`), and workflow error-first response behavior when stale responses exist. Unit gate advanced from first failure at ~38% to >61% before next independent failure class, with all targeted and regression bundles passing.
+- Round 21: 3 regression-test drift findings (0 P0 + 0 P1) discovered in continued `tests/unit -x` sweep. All 3 fixed and verified by restoring correct test payload semantics: two Chinese-input rejection tests were using English text, and one intent-node test retained `EN` placeholders from i18n migration. Post-fix gate result: `tests/unit` passed end-to-end (`507 passed, 8 xfailed, 1 xpassed`).
+- Round 22: 5 test-contract compatibility findings (0 P0 + 0 P1) discovered while extending sweep to `tests/integration`, full `tests`, and `test-release-gate`. All 5 fixed and verified. Fixes covered: admin-key enforcement drift on cost-estimation training integration tests, sanitized prediction error-detail assertions, missing async marker for EDA integration test, prompt-node no-op contract update (no internal error leakage), and Python 3.13 event-loop API compatibility (`asyncio.run` replacing `get_event_loop().run_until_complete`). Gate results: `tests` full pass (`592 passed, 1 skipped, 8 xfailed, 1 xpassed`) and `make test-release-gate` pass.
+- Round 23: 4 test-hygiene/compatibility findings (0 P0 + 0 P1) discovered in continued full-suite sweeps. All 4 fixed and verified: registered missing `cache` marker at runtime pytest config layer, removed unhandled thread-exception warning in RAG thread-leak regression test, normalized EDA/performance probe tests to pytest-native semantics (assert/skip wrappers instead of returning values), and cleaned transient generated probe artifacts from repo root. Full-suite result after fixes: `586 passed, 7 skipped, 8 xfailed, 1 xpassed`.
+- Round 24: 1 high-fanout runtime-compatibility finding (0 P0 + 0 P1) fixed in shared logging path: replaced deprecated `datetime.utcfromtimestamp()` usage with timezone-aware `datetime.fromtimestamp(..., UTC)` in JSON logging formatter. Full-suite result remained green (`586 passed, 7 skipped, 8 xfailed, 1 xpassed`) while warnings dropped sharply (`422 → 116`).
+- Round 25: 8 test-hygiene/runtime-compatibility findings (0 P0 + 0 P1) fixed while continuing post-R24 stabilization. Changes: removed 5 obsolete Chinese-specific legacy suites from active test paths (`tests/integration|unit|performance`) for the English-only project profile, refactored script-style unit probes (`test_code_execution.py`, `test_document_processing.py`) into pytest-native assert/skip contracts with `tmp_path`-based isolation, converted remaining `datetime.utcnow()` usages in shared/runtime-touched paths (`memory/manager.py`, prompt demo script, prompt API integration test), and quarantined manual local environment diagnostics behind module-level skip marks. Full-suite result after fixes: `560 passed, 27 skipped, 8 xfailed, 1 xpassed`; warning count reduced further (`116 → 79`).
+- Round 26: 1 warning-signal hygiene finding (0 P0 + 0 P1) fixed by adding precise `filterwarnings` marks to two legacy dynamic-code bug-repro suites that emit unavoidable `<string>:5` `utcnow` deprecation noise during simulated execution. Full-suite result remained green (`560 passed, 27 skipped, 8 xfailed, 1 xpassed`) and warning count dropped to near-clean baseline (`79 → 4`), leaving only benign `PytestCollectionWarning` dataclass collection notices.
+- Round 27: 2 hardening findings fixed in continued post-gate audit (0 P0 + 1 P1 + 1 hygiene). P1 fix: eliminated absolute-path disclosure from `/api/v1/cost-estimation/train` missing-file error path (`404` now returns generic `"path does not exist"`), with new integration regression coverage to prevent reintroduction. Hygiene fix: removed final dataclass/class collection warnings by marking helper data containers as non-tests (`__test__ = False`) in legacy script-style suites. Full-suite result after fixes: `561 passed, 27 skipped, 8 xfailed, 1 xpassed` with zero warning output.
 
 ## New Patterns Discovered
+
+### Round 20
+- **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.
+- **Regression test drift as hidden failure class**: legacy bug-repro tests can fail on fixed behavior and block discovery of real regressions.
+- **Feature extraction locale formatting gap**: space-grouped numerics (`5 000`) may parse in helper functions but still fail at regex capture layer.
+- **Error-path stale response masking**: pipeline fallback conditions and node early-return ordering can silently preserve stale success responses after failures.
+
+### Round 22
+- **Runtime-policy test drift after security hardening**: integration tests asserting raw internal error/details or unauthenticated training paths can fail after secure contracts are tightened.
+
+### Round 23
+- **Probe-style tests returning non-None values mask intent and pollute signal**: script-like tests that return booleans/tuples instead of asserting/skip semantics create `PytestReturnNotNoneWarning` noise and can hide real pass/fail meaning.
+
+### Round 24
+- **High-fanout deprecation hotspot in shared observability path**: a single deprecated timestamp API (`utcfromtimestamp`) inside centralized log formatter can multiply into hundreds of warnings across otherwise unrelated suites.
+
+### Round 25
+- **Legacy script-style tests in active pytest paths create false confidence**: tests returning booleans/paths and relying on print output can appear "green" while bypassing assertion semantics; these should be converted to assert/skip or removed from automated suites.
+- **Language-profile drift in test inventory**: historical Chinese visualization/OCR suites can silently persist in English-only delivery profiles, inflating maintenance surface and introducing irrelevant runtime dependencies.
+
+### Round 26
+- **Deprecation-noise dominance in simulation-heavy repro tests**: dynamic `exec`-style bug-repro suites can emit repetitive third-party/runtime deprecations that overwhelm warning signal; targeted per-module filters are preferable to global suppression.
+
+### Round 27
+- **Validation-path filesystem disclosure**: returning resolved absolute paths in client-visible 404 details (`path does not exist: /abs/path`) leaks host filesystem topology and should be replaced with generic user-safe errors plus server-side logging if needed.
 
 ### Round 19
 - **Phantom module import degradation**: `from backend.services.intent_classification.models import QueryContext` imports a nonexistent module — silently falls back to passing raw dict where dataclass expected
