@@ -239,7 +239,7 @@ class DispatchService:
         provider = settings.resolved_local_backend
         try:
             client = self._get_local_client()
-            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512, context_window=4096)
+            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512, context_window=settings.llama_context_size)
             text = client.generate(
                 prompt,
                 temperature=req.temperature,

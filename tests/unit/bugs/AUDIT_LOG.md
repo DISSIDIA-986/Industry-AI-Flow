@@ -15,6 +15,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 15    | 2026-02-26 | 41        | 1  | 10 | 11    | 11          | 11          |
 | 16    | 2026-02-26 | 46        | 1  | 18 | 19    | 22          | 19          |
 | 17    | 2026-02-26 | 37        | 1  | 13 | 14    | 16          | 8           |
+| 18    | 2026-02-27 | 14        | 1  | 9  | 10    | 12          | 3           |
 
 ## Convergence
 
@@ -25,8 +26,14 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 15: 41 bugs (1 P0 + 10 P1 + 20 P2 + 10 P3) across 4 parallel audit agents. All 11 P0/P1 fixed and verified. P0 count dropped from 8→1. P1 count dropped from 25→10. Focus areas: intent workflow dispatch crash, security admin key bypass, chunker content duplication, rate-limit TOCTOU, column-name injection in template code, module-level asyncio.Lock, dead clarification retry branch, unbounded chat payload. 30 P2/P3 deferred. Trending toward convergence but not yet <3 P0+P1 for two consecutive rounds.
 - Round 16: 46 bugs (1 P0 + 18 P1 + 17 P2 + 10 P3) across 4 parallel audit agents. All 19 P0/P1 fixed and verified. 22 tests added. P0 count: 1 (same as R15). P1 count: 18 (up from 10 — deeper audit into previously unexamined areas: code validator whitelisted-library escapes, groundedness tokenizer inconsistency, BM25 dotted-standard splitting, numeric penalty for derived arithmetic, Jinja2 HTML-escaping of LLM prompts, CRLF code extraction, error dict propagation). 27 P2/P3 deferred. Not convergent — auditors continue finding novel patterns in unexplored areas.
 - Round 17: 37 bugs (1 P0 + 13 P1 + 17 P2 + 6 P3) across 4 parallel audit agents. All 14 P0/P1 fixed and verified. 16 tests added. P0 count: 1 (same as R15/R16 — clarification loop). P1 count: 13 (down from 18). Focus areas: infinite clarification loop (P0), budget force_local bypass, keyword priority misrouting, broken preprocessing regex, BM25 dotted token loss, document replacement rollback, unbounded chunk growth, timing-safe password comparison, metaclass hook validator bypass, atexit/_thread blacklist, QueryRequest validation, A/B cache defeat, unified agent EN placeholder contamination (keywords + system prompt). 23 P2/P3 deferred. Trending down (P1: 18→13). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
+- Round 18: 14 bugs (1 P0 + 9 P1 + 4 P2) via manual audit. All 10 P0/P1 fixed and verified. 12 tests added. P0 count: 1 (workflow_query_routes response key mismatch — fallback runner sets "response" but handler reads "agent_response"). P1 count: 9 (down from 13). Focus areas: f-string validator bypass, bleach sanitization on un-decoded input, intent routing precision ("analyze costs" misroute, "analyze" too broad), hardcoded 4096 context window, __reduce__/__reduce_ex__ pickle exploit, response_builder None fallthrough, error detail leakage, missing embedding quality signal. 4 P2 deferred. Trending down (P0+P1: 14→10). Not yet <3 P0+P1 for two consecutive rounds — continue TDI.
 
 ## New Patterns Discovered
+
+### Round 18
+- **Workflow response key mismatch**: graph.py fallback runner sets `state["response"]` but `workflow_query_routes.py` reads `result.get("agent_response")` — user gets None response when fallback orchestrator is used
+- **f-string expression validator bypass**: `f"{__import__('os').getcwd()}"` and `f"{eval('1+1')}"` bypass all validator checks because dangerous calls inside `ast.FormattedValue` nodes are invisible to both regex patterns and top-level AST call walking
+- **bleach.clean on un-decoded input**: `sanitize_text` URL-decodes iteratively for pattern checks but passes original `stripped` (not `decoded`) to `bleach.clean` — double-encoded HTML entities survive sanitization
 
 ### Round 17
 - **Infinite clarification loop via unconditional clarification_handled**: `_clarification_processing_node` always sets `clarification_handled=True` in both branches, causing `_route_after_clarification` to always return `retry_classification` even without new user input — infinite loop capped only by LangGraph's recursion_limit (25 wasted LLM calls)

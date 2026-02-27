@@ -43,7 +43,8 @@ async def response_node(state: WorkflowState, services: Any) -> WorkflowState:
     builder = getattr(services, "response_builder", None)
     if builder is not None:
         result = builder(state=state)
-        state["response"] = await result if hasattr(result, "__await__") else result
+        result = await result if hasattr(result, "__await__") else result
+        state["response"] = result if result is not None else _build_default_response(state)
     else:
         state["response"] = _build_default_response(state)
 

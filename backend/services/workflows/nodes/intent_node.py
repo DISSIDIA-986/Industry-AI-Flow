@@ -33,6 +33,7 @@ def _heuristic_intent(query: str) -> str:
             "budget estimate",
             "cost overrun",
             "construction cost",
+            "construction costs",
             "budget overrun",
             "cost risk",
             "project budget",
@@ -43,6 +44,8 @@ def _heuristic_intent(query: str) -> str:
             "how much will it cost",
             "price estimate",
             "price prediction",
+            "analyze cost",
+            "analyze costs",
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"
@@ -61,13 +64,20 @@ def _heuristic_intent(query: str) -> str:
     if any(
         token in text
         for token in (
-            "analyze",
-            "analysis",
             "dataset",
             "csv",
             "dataframe",
             "data frame",
+            "data analysis",
+            "analyze data",
+            "analyze the data",
+            "analyze the dataset",
+            "analyze this dataset",
+            "statistical analysis",
         )
+    ) or (
+        any(w in text for w in ("analyze", "analysis"))
+        and any(w in text for w in ("data", "dataset", "csv", "table", "spreadsheet", "chart", "plot", "graph", "statistics", "column", "row"))
     ):
         return "data_analysis"
     if any(
