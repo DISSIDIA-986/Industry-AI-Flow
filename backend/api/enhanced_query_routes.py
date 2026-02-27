@@ -257,9 +257,12 @@ async def switch_model(model_name: str = Body(..., embed=True), request: Request
     Returns:
         EN
     """
-    # TODO: admin role check required
+    import hmac
+    import os
+
     admin_key = request.headers.get("X-Admin-Key", "") if request else ""
-    if not admin_key:
+    expected = os.getenv("ADMIN_KEY", "")
+    if not expected or not hmac.compare_digest(admin_key, expected):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     try:

@@ -39,8 +39,10 @@ def _heuristic_intent(query: str) -> str:
             "project cost",
             "cost forecast",
             "cost prediction",
-            "how much",
-            "price",
+            "how much does it cost",
+            "how much will it cost",
+            "price estimate",
+            "price prediction",
         )
     ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
         return "cost_estimation"

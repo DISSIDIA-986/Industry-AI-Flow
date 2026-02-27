@@ -253,7 +253,7 @@ async def continue_workflow(
         logger.error(f"Intent continuation API error: {str(e)}")
         return ClassifyResponse(
             success=False,
-            error=f"Internal continuation error: {str(e)}",
+            error="Internal continuation error",
             agent_response="An internal error occurred while continuing the workflow.",
         )
 
@@ -294,7 +294,7 @@ async def get_session_context(
 
     except Exception as e:
         logger.error(f"Failed to get session context: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Session context error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Session context error")
 
 
 @router.get("/session/{session_id}/patterns")
@@ -319,7 +319,7 @@ async def analyze_session_patterns(
     except Exception as e:
         logger.error(f"Failed to analyze session patterns: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Session pattern analysis error: {str(e)}"
+            status_code=500, detail="Session pattern analysis error"
         )
 
 
@@ -356,7 +356,7 @@ async def get_workflow_statistics(
     except Exception as e:
         logger.error(f"Failed to get workflow statistics: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Workflow statistics error: {str(e)}"
+            status_code=500, detail="Workflow statistics error"
         )
 
 
@@ -398,7 +398,7 @@ async def test_intent_classification(
         logger.error(f"Classification test failed: {str(e)}")
         return {
             "success": False,
-            "error": str(e),
+            "error": "Classification test failed",
             "test_timestamp": datetime.now().isoformat(),
         }
 
@@ -439,7 +439,7 @@ async def health_check(
         return {
             "status": "unhealthy",
             "timestamp": datetime.now().isoformat(),
-            "error": str(e),
+            "error": "Health check failed",
         }
 
 

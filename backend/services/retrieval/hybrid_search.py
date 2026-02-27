@@ -76,8 +76,12 @@ class HybridRetriever:
 
     @staticmethod
     def _regex_tokenize(text: str) -> list[str]:
-        """Fallback tokenizer when NLTK resources are unavailable."""
-        return re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", text)
+        """Fallback tokenizer when NLTK resources are unavailable.
+
+        Preserves dotted construction standard identifiers (e.g. A23.1, NBC2020.4)
+        as single tokens to maintain BM25 precision for standard references.
+        """
+        return re.findall(r"[a-z0-9]+(?:[.-][a-z0-9]+)*", text)
 
     def _tokenize_english(self, text: str) -> list[str]:
         """EN(ENjieba)
@@ -330,9 +334,12 @@ class HybridRetriever:
             min_score = min(scores)
             score_range = max_score - min_score
             if score_range > 0:
+                # Scale to [0.1, 1.0] to avoid misleading 0.0 scores for
+                # results that still had non-zero fusion relevance.
                 for r in final_results:
                     r["raw_score"] = r["score"]
-                    r["score"] = round((r["score"] - min_score) / score_range, 4)
+                    normalized = (r["score"] - min_score) / score_range
+                    r["score"] = round(0.1 + normalized * 0.9, 4)
             elif max_score > 0:
                 # All scores identical — keep raw scores for downstream use
                 for r in final_results:

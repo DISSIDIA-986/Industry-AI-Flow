@@ -185,7 +185,12 @@ class GroundednessChecker:
     def _numeric_mismatch_penalty(
         answer_tokens: list[str], context_tokens: list[str]
     ) -> float:
-        """Penalize numeric tokens in the answer that differ from context numbers."""
+        """Penalize numeric tokens in the answer that differ from context numbers.
+
+        Tolerates numbers that can be derived from context numbers via simple
+        arithmetic (multiplication, addition, subtraction) to avoid penalizing
+        correct calculations like "30000 sqft * $50/sqft = $1,500,000".
+        """
         import re as _re
 
         _num_re = _re.compile(r"^\d+(?:\.\d+)?$")
@@ -199,20 +204,46 @@ class GroundednessChecker:
         if not mismatched:
             return 0.0
 
-        # For each mismatched number, check if there is a close context number
+        # Pre-compute context number values for arithmetic checks
+        ctx_values = []
+        for ctx_str in context_nums:
+            try:
+                ctx_values.append(float(ctx_str))
+            except ValueError:
+                continue
+
+        # Check if a number could be derived from context numbers
+        def _is_derivable(val: float) -> bool:
+            if not ctx_values:
+                return False
+            for i, a in enumerate(ctx_values):
+                for j, b in enumerate(ctx_values):
+                    if i == j:
+                        continue
+                    # Check common arithmetic: a*b, a+b, a-b, a/b
+                    for derived in (a * b, a + b, abs(a - b)):
+                        if derived > 0 and abs(val - derived) / max(derived, 1.0) < 0.01:
+                            return True
+                    if b != 0:
+                        derived = a / b
+                        if derived > 0 and abs(val - derived) / max(derived, 1.0) < 0.01:
+                            return True
+            return False
+
         penalty = 0.0
         for num_str in mismatched:
             try:
                 num_val = float(num_str)
             except ValueError:
                 continue
+
+            # Skip penalty for numbers derivable from context
+            if _is_derivable(num_val):
+                continue
+
             # Find closest context number
             best_ratio = float("inf")
-            for ctx_str in context_nums:
-                try:
-                    ctx_val = float(ctx_str)
-                except ValueError:
-                    continue
+            for ctx_val in ctx_values:
                 if ctx_val == 0:
                     continue
                 ratio = abs(num_val - ctx_val) / max(abs(ctx_val), 1.0)

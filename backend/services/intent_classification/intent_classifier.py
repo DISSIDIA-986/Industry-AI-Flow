@@ -769,7 +769,9 @@ class IntentClassifier:
                 },
             )
 
-            # Use simulated clarification as fallback
+            # Use prompt_manager content if available, otherwise simulate
+            if prompt_content:
+                return prompt_content
             return await self._simulate_clarification_response(query, result)
 
         except Exception as e:
@@ -861,7 +863,7 @@ Please select the option that best matches your intent, or provide more details.
         agent_mapping = {
             IntentType.KNOWLEDGE_RETRIEVAL: "RAGAgent",
             IntentType.DATA_ANALYSIS: "DataAnalysisAgent",
-            IntentType.COST_ESTIMATION: "DataAnalysisAgent",
+            IntentType.COST_ESTIMATION: "CostEstimationAgent",
             IntentType.DOCUMENT_PROCESSING: "OCRAgent",
             IntentType.CODE_EXECUTION: "CodeExecutorAgent",
             IntentType.UNCLEAR_INTENT: "ClarificationAgent",

@@ -126,7 +126,7 @@ class PromptManager:
         self.cache_ttl = cache_ttl
         self._cache: Dict[str, Tuple[PromptInfo, datetime]] = {}
         self._jinja_env = SandboxedEnvironment(
-            autoescape=True,
+            autoescape=False,
             trim_blocks=True,
             lstrip_blocks=True,
         )

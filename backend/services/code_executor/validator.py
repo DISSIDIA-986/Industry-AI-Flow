@@ -117,6 +117,8 @@ class CodeValidator:
         "raw_input",
         "breakpoint",
         "chr",
+        "bytes",
+        "bytearray",
     }
     BLOCKED_ATTRIBUTE_CALLS = {
         ("builtins", "open"),
@@ -125,6 +127,19 @@ class CodeValidator:
         ("subprocess", "popen"),
         ("subprocess", "run"),
         ("subprocess", "call"),
+        # Whitelisted-library methods that can execute arbitrary code
+        ("pd", "eval"),
+        ("pandas", "eval"),
+        ("np", "load"),
+        ("numpy", "load"),
+        ("pd", "read_pickle"),
+        ("pandas", "read_pickle"),
+    }
+
+    # Attribute calls blocked on any object (e.g., df.query(), df.eval())
+    BLOCKED_METHOD_NAMES = {
+        "query",  # DataFrame.query() evaluates arbitrary expressions
+        "eval",   # DataFrame.eval() evaluates arbitrary expressions
     }
 
     def __init__(self, strict_mode: bool = True):
@@ -247,6 +262,7 @@ class CodeValidator:
             (base.lower(), attr.lower()) for base, attr in self.BLOCKED_ATTRIBUTE_CALLS
         }
         blocked_names = {name.lower() for name in self.BLOCKED_CALL_NAMES}
+        blocked_methods = {name.lower() for name in self.BLOCKED_METHOD_NAMES}
         alias_names: set[str] = set()
 
         # Block references to blocked names inside containers (lists, dicts, tuples, sets).
@@ -326,16 +342,21 @@ class CodeValidator:
                     )
                 continue
 
-            if isinstance(node.func, ast.Attribute) and isinstance(
-                node.func.value, ast.Name
-            ):
-                base = node.func.value.id.lower()
+            if isinstance(node.func, ast.Attribute):
                 attr = node.func.attr.lower()
-                if (base, attr) in blocked_attr_calls:
+                # Block dangerous method calls on any object (e.g., df.query(), df.eval())
+                if attr in blocked_methods:
                     return ValidationResult(
                         is_valid=False,
-                        error=f"Blocked function call: {node.func.value.id}.{node.func.attr}",
+                        error=f"Blocked method call: .{node.func.attr}()",
                     )
+                if isinstance(node.func.value, ast.Name):
+                    base = node.func.value.id.lower()
+                    if (base, attr) in blocked_attr_calls:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked function call: {node.func.value.id}.{node.func.attr}",
+                        )
 
         return ValidationResult(is_valid=True)
 
