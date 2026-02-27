@@ -1,0 +1,85 @@
+{
+  "project": {
+    "name": "Industry AI Flow",
+    "description": "Enterprise-grade AI workflow platform with LangChain 1.0, RAG, and multi-tenant support",
+    "type": "python",
+    "version": "1.0.0"
+  },
+  "python": {
+    "version": "3.13",
+    "venv": ".venv",
+    "formatter": "black",
+    "linter": "flake8",
+    "typeChecker": "mypy",
+    "testFramework": "pytest"
+  },
+  "codeStyle": {
+    "indentSize": 4,
+    "maxLineLength": 88,
+    "importOrganization": "isort",
+    "docstringStyle": "google",
+    "typeHints": "required"
+  },
+  "projectStructure": {
+    "backend": {
+      "agents": "LangChain 1.0 agent implementations",
+      "services": {
+        "retrieval": "RAG and vector search components",
+        "intent_classification": "Query intent routing",
+        "document_processing": "OCR, PDF parsing, chunking",
+        "code_executor": "Sandboxed code execution",
+        "data_analysis": "Data processing and visualization",
+        "memory": "Conversation memory (short/summary/long-term)",
+        "llm_integration": "LLM providers (llama.cpp, Ollama)"
+      },
+      "tools": "LangChain tool implementations",
+      "api": "FastAPI route handlers",
+      "security": "Authentication, authorization, rate limiting",
+      "observability": "Prometheus metrics, logging"
+    },
+    "tests": {
+      "unit": "Unit tests for individual components",
+      "integration": "Integration tests for system workflows"
+    }
+  },
+  "frameworks": {
+    "langchain": "1.0",
+    "fastapi": "latest",
+    "postgresql": "16+",
+    "pgvector": "0.7.0+"
+  },
+  "keyDependencies": {
+    "paddleocr": "3.0.0b0+ (Python 3.13 Nightly)",
+    "paddlepaddle": "3.0.0b0+ (Python 3.13 Nightly)",
+    "opencv-python": "4.8.0.76",
+    "numpy": "1.24.3",
+    "pandas": "1.5.3"
+  },
+  "developmentGuidelines": {
+    "versionManagement": "Use advanced_version_manager.py for compatibility checks",
+    "agentPattern": "LangChain 1.0 State Graph with tools and memory",
+    "ragPattern": "Hybrid retrieval (BM25 + vector + rerank)",
+    "multiTenant": "Always include tenant_id in queries and filters",
+    "asyncPatterns": "Use async/await for I/O operations",
+    "errorHandling": "Log errors, return structured responses",
+    "testing": "Write unit tests for new components"
+  },
+  "claude": {
+    "contextPaths": [
+      "backend/agents",
+      "backend/services",
+      "backend/tools",
+      "backend/api",
+      "advanced_version_manager.py",
+      "README.md",
+      "docs/"
+    ],
+    "autoImportSuggestions": true,
+    "preferredPatterns": {
+      "agent": "LangChain State Graph with async tools",
+      "retriever": "Hybrid search with pgvector",
+      "tool": "LangChain BaseTool with type hints",
+      "api": "FastAPI with dependency injection"
+    }
+  }
+}
