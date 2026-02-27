@@ -419,20 +419,27 @@ async def get_document_statistics():
 
 
 @router.post("/documents/{doc_id}/restore/{version}")
-async def restore_document_version(doc_id: str, version: int, reason: str = None, request: Request = None):
+async def restore_document_version(
+    doc_id: str,
+    version: int,
+    reason: str = None,
+    request: Request = None,
+    tenant: "TenantContext" = Depends(get_current_tenant),
+):
     """
-    EN
+    Restore a document to a specific version.
 
     Args:
-        doc_id: ENID
-        version: EN
-        reason: EN
+        doc_id: Document ID
+        version: Target version number
+        reason: Reason for restore
 
     Returns:
-        EN
+        Restore result
     """
-    # Tenant check: ensure request is associated with a tenant
-    tenant_id = request.headers.get("X-Tenant-ID", "") if request else ""
+    tenant_id = tenant.tenant_id if tenant else (
+        request.headers.get("X-Tenant-ID", "") if request else ""
+    )
     if not tenant_id:
         raise HTTPException(status_code=403, detail="Tenant identification required")
 

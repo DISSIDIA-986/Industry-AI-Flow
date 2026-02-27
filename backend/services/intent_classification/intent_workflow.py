@@ -692,11 +692,15 @@ class IntentClassificationWorkflow:
             return "high_confidence"
 
     def _route_after_clarification(self, state: WorkflowState) -> str:
-        """EN"""
+        """Route after clarification processing."""
         if state.get("metadata", {}).get("awaiting_user_clarification", False):
             return "await_user_input"
 
-        # EN:EN
+        # If clarification was handled (user provided a response), re-run
+        # intent classification on the updated query so the new input is used.
+        if state.get("metadata", {}).get("clarification_handled", False):
+            return "retry_classification"
+
         return "proceed_with_fallback"
 
     async def _generate_clarification_with_prompt(
@@ -1537,10 +1541,10 @@ class IntentClassificationWorkflow:
             )
         if agent_type == AgentType.COST_ESTIMATION_AGENT:
             # Cost estimation is handled by the dedicated cost_estimation_node
-            # in the workflow pipeline. Return a marker so the pipeline node
-            # picks it up instead of falling through to RAG.
+            # in the workflow pipeline. Return a non-empty marker so the caller
+            # does not treat this as an empty-response error.
             return {
-                "response": "",
+                "response": "Routing to cost estimation service...",
                 "metadata": {"routed_to": "cost_estimation_node"},
             }
         if agent_type == AgentType.DATA_ANALYSIS_AGENT:

@@ -13,7 +13,8 @@ async def prompt_node(state: WorkflowState, services: Any) -> WorkflowState:
     selector = getattr(services, "template_selector", None) or TemplateSelector()
     prompt_manager = getattr(services, "prompt_manager", None)
     if prompt_manager is None:
-        state["error"] = "prompt_manager service is required"
+        # Skip silently — graph.py already guards against calling this node
+        # without a prompt_manager. If reached directly, do nothing.
         return state
 
     template_name, template_category = selector.select(state)

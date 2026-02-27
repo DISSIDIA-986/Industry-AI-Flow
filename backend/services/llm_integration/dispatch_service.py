@@ -310,7 +310,7 @@ class DispatchService:
                 status="error",
                 latency_seconds=max(0.0, (time.time() - started)),
             )
-            if soft_fail and settings.fallback_on_error:
+            if soft_fail:
                 return DispatchResponse(
                     success=False,
                     text="",
@@ -443,7 +443,8 @@ class DispatchService:
                 top_p=req.top_p,
             )
             now = time.time()
-            cloud_window.append(now)
+            with self._rate_limit_lock:
+                cloud_window.append(now)
             latency_ms = int((time.time() - started) * 1000)
             usage = self.cost_tracker.estimate_usage(prompt_text, text)
             cost = self.cost_tracker.estimate_cost(

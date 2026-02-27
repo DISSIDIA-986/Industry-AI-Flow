@@ -432,6 +432,15 @@ print(df.describe())
         return f"pd.read_csv('/workspace/{filename}')"
 
     @staticmethod
+    def _sanitize_column_name(col: str) -> str:
+        """Sanitize a column name for safe interpolation into generated Python code.
+
+        Escapes single quotes and backslashes to prevent code injection via
+        malicious CSV column names.
+        """
+        return col.replace("\\", "\\\\").replace("'", "\\'")
+
+    @staticmethod
     def _pick_relevant_column(numeric_cols: list[str], question: str) -> str:
         """Pick the most relevant numeric column based on question keywords."""
         question_lower = question.lower() if question else ""
@@ -456,7 +465,9 @@ print(df.describe())
         ]
 
         if numeric_cols:
-            target_col = self._pick_relevant_column(numeric_cols, question)
+            target_col = self._sanitize_column_name(
+                self._pick_relevant_column(numeric_cols, question)
+            )
             read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
@@ -474,7 +485,9 @@ print(f"Average of '{target_col}': {{avg_value:.2f}}")
         ]
 
         if numeric_cols:
-            target_col = self._pick_relevant_column(numeric_cols, question)
+            target_col = self._sanitize_column_name(
+                self._pick_relevant_column(numeric_cols, question)
+            )
             read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
@@ -498,7 +511,9 @@ else:
         ]
 
         if numeric_cols:
-            target_col = self._pick_relevant_column(numeric_cols, question)
+            target_col = self._sanitize_column_name(
+                self._pick_relevant_column(numeric_cols, question)
+            )
             read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
@@ -525,7 +540,7 @@ else:
 
         read_call = self._read_data_code(filename)
         if categorical_cols:
-            target_col = categorical_cols[0]
+            target_col = self._sanitize_column_name(categorical_cols[0])
             return f"""import pandas as pd
 
 df = {read_call}
@@ -549,7 +564,7 @@ print(f"Total rows: {{len(df)}}")
         ]
 
         if categorical_cols:
-            target_col = categorical_cols[0]
+            target_col = self._sanitize_column_name(categorical_cols[0])
             read_call = self._read_data_code(filename)
             return f"""import pandas as pd
 
