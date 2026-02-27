@@ -43,9 +43,9 @@ async def test_intent_node_supports_classify_intent_interface():
 
 
 @pytest.mark.asyncio
-async def test_intent_node_detects_chinese_reverse_order_cost_phrase():
+async def test_intent_node_detects_reverse_order_cost_phrase():
     state = {
-        "query": "EN,EN",
+        "query": "Can you estimate the budget and overrun risk for this project?",
         "metadata": {},
     }
 
@@ -58,7 +58,7 @@ async def test_intent_node_detects_chinese_reverse_order_cost_phrase():
 @pytest.mark.asyncio
 async def test_intent_node_does_not_route_generic_cost_governance_to_estimation():
     state = {
-        "query": "EN",
+        "query": "Please explain cost control strategy and risk governance framework.",
         "metadata": {},
     }
 

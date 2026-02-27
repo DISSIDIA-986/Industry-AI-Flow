@@ -22,6 +22,7 @@ bug_reports = []
 
 class TestResult:
     """Test result container"""
+    __test__ = False
 
     def __init__(
         self,

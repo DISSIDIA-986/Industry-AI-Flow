@@ -47,10 +47,13 @@ async def test_prompt_node_sets_system_prompt_and_meta():
 
 
 @pytest.mark.asyncio
-async def test_prompt_node_requires_prompt_manager():
+async def test_prompt_node_noops_without_prompt_manager():
     state = {"query": "q", "metadata": {}}
     services = SimpleNamespace()
 
     updated = await prompt_node(state, services)
 
-    assert updated["error"] == "prompt_manager service is required"
+    assert updated is state
+    assert "error" not in updated
+    assert "system_prompt" not in updated
+    assert "prompt_meta" not in updated

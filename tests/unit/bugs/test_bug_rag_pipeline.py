@@ -20,6 +20,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:datetime\\.datetime\\.utcnow\\(\\) is deprecated.*:DeprecationWarning"
+)
+
 
 @pytest.mark.unit
 class TestBug5MemoryInteractionThreadLeak:
@@ -65,7 +69,11 @@ class TestBug5MemoryInteractionThreadLeak:
 
                 def run_in_loop():
                     asyncio.set_event_loop(loop)
-                    loop.run_until_complete(asyncio.sleep(2))
+                    try:
+                        loop.run_until_complete(asyncio.sleep(2))
+                    except RuntimeError as exc:
+                        if "Event loop stopped before Future completed." not in str(exc):
+                            raise
 
                 loop_thread = threading.Thread(target=run_in_loop, daemon=True)
                 loop_thread.start()

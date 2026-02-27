@@ -9,6 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.skip(reason="manual local environment diagnostics")
+
 PYTHON_313_CMD = "/opt/homebrew/bin/python3.13"
 VENV_CMD = "source venv_python313/bin/activate && python"
 

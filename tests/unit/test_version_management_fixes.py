@@ -10,6 +10,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.skip(reason="manual local environment diagnostics")
+
 
 def run_command(cmd, description, capture_output=True):
     """EN"""
@@ -140,7 +144,6 @@ def analyze_test_files():
         "test_ocr_simple.py",
         "test_paddleocr_v5.py",
         "test_architecture_construction_industry.py",
-        "test_ocr_chinese_viz.py",
     ]
 
     analysis_results = {}

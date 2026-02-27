@@ -212,9 +212,7 @@ class TestR10_07_LoadBalancingOverridesIntent:
             "reasoning": "User wants data analysis",
         }
 
-        decision = asyncio.get_event_loop().run_until_complete(
-            engine.make_routing_decision(intent_result, {})
-        )
+        decision = asyncio.run(engine.make_routing_decision(intent_result, {}))
 
         # With confidence 0.95, the primary agent (DATA_ANALYSIS_AGENT) should be selected
         # not overridden by load balancing

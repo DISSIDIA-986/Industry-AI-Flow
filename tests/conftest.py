@@ -77,6 +77,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
     config.addinivalue_line("markers", "performance: mark test as a performance test")
+    config.addinivalue_line("markers", "cache: mark cache behavior/integration tests")
     config.addinivalue_line("markers", "slow: mark test as slow running")
     config.addinivalue_line(
         "markers", "legacy_chinese: historical Chinese-language or Chinese-font suites"
@@ -121,12 +122,9 @@ collect_ignore: list[str] = []
 if _missing_module("matplotlib"):
     collect_ignore.extend(
         [
-            "integration/test_chinese_visualization.py",
             "integration/test_complete_analysis.py",
-            "integration/test_integrated_chinese_analysis.py",
             "integration/test_simple.py",
             "performance/test_temp_analysis.py",
-            "performance/load/test_chinese_docker.py",
         ]
     )
 
