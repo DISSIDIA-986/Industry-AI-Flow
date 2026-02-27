@@ -9,44 +9,44 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface-2: #22262f;
-            --surface-3: #2a2e3a;
-            --border: #333844;
-            --border-light: #444b5a;
-            --text: #e8ecf1;
-            --text-muted: #8b95a5;
-            --text-dim: #6b7585;
+            --bg: #f8f9fb;
+            --surface: #ffffff;
+            --surface-2: #f1f3f6;
+            --surface-3: #e8ebf0;
+            --border: #d4d9e2;
+            --border-light: #bcc3d0;
+            --text: #1a1d27;
+            --text-muted: #5b6577;
+            --text-dim: #7b8598;
 
             /* Stage Colors */
-            --stage-user: #3b82f6;
-            --stage-user-bg: rgba(59, 130, 246, 0.08);
-            --stage-user-border: rgba(59, 130, 246, 0.25);
+            --stage-user: #2563eb;
+            --stage-user-bg: rgba(37, 99, 235, 0.06);
+            --stage-user-border: rgba(37, 99, 235, 0.25);
 
-            --stage-gateway: #f59e0b;
-            --stage-gateway-bg: rgba(245, 158, 11, 0.08);
-            --stage-gateway-border: rgba(245, 158, 11, 0.25);
+            --stage-gateway: #d97706;
+            --stage-gateway-bg: rgba(217, 119, 6, 0.06);
+            --stage-gateway-border: rgba(217, 119, 6, 0.25);
 
-            --stage-orch: #ec4899;
-            --stage-orch-bg: rgba(236, 72, 153, 0.08);
-            --stage-orch-border: rgba(236, 72, 153, 0.25);
+            --stage-orch: #c026d3;
+            --stage-orch-bg: rgba(192, 38, 211, 0.06);
+            --stage-orch-border: rgba(192, 38, 211, 0.25);
 
-            --stage-ai: #10b981;
-            --stage-ai-bg: rgba(16, 185, 129, 0.08);
-            --stage-ai-border: rgba(16, 185, 129, 0.25);
+            --stage-ai: #059669;
+            --stage-ai-bg: rgba(5, 150, 105, 0.06);
+            --stage-ai-border: rgba(5, 150, 105, 0.25);
 
-            --stage-data: #8b5cf6;
-            --stage-data-bg: rgba(139, 92, 246, 0.08);
-            --stage-data-border: rgba(139, 92, 246, 0.25);
+            --stage-data: #7c3aed;
+            --stage-data-bg: rgba(124, 58, 237, 0.06);
+            --stage-data-border: rgba(124, 58, 237, 0.25);
 
-            --panel-security: #ef4444;
-            --panel-observe: #06b6d4;
+            --panel-security: #dc2626;
+            --panel-observe: #0891b2;
 
-            --arrow: #4b5563;
-            --arrow-head: #6b7585;
-            --dot-active: #22c55e;
-            --dot-warn: #f59e0b;
+            --arrow: #9ca3af;
+            --arrow-head: #6b7280;
+            --dot-active: #16a34a;
+            --dot-warn: #d97706;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,7 +76,7 @@
             font-size: 28px;
             font-weight: 800;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #c026d3);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -103,6 +103,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
         .flow {
@@ -187,8 +188,8 @@
             flex-shrink: 0;
         }
 
-        .dot-active { background: var(--dot-active); box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
-        .dot-warn { background: var(--dot-warn); box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+        .dot-active { background: var(--dot-active); box-shadow: 0 0 6px rgba(22, 163, 74, 0.4); }
+        .dot-warn { background: var(--dot-warn); box-shadow: 0 0 6px rgba(217, 119, 6, 0.4); }
 
         .comp-icon {
             font-size: 14px;
@@ -203,8 +204,8 @@
         }
 
         .comp-highlight {
-            border-color: rgba(59, 130, 246, 0.4);
-            background: rgba(59, 130, 246, 0.06);
+            border-color: rgba(37, 99, 235, 0.4);
+            background: rgba(37, 99, 235, 0.06);
         }
 
         /* Separator within stages */
@@ -226,23 +227,23 @@
 
         /* Stage-specific colors */
         .stage-user { background: var(--stage-user-bg); border: 1px solid var(--stage-user-border); }
-        .stage-user .stage-icon { background: rgba(59, 130, 246, 0.2); color: var(--stage-user); }
+        .stage-user .stage-icon { background: rgba(37, 99, 235, 0.15); color: var(--stage-user); }
         .stage-user .stage-label { color: var(--stage-user); }
 
         .stage-gateway { background: var(--stage-gateway-bg); border: 1px solid var(--stage-gateway-border); }
-        .stage-gateway .stage-icon { background: rgba(245, 158, 11, 0.2); color: var(--stage-gateway); }
+        .stage-gateway .stage-icon { background: rgba(217, 119, 6, 0.15); color: var(--stage-gateway); }
         .stage-gateway .stage-label { color: var(--stage-gateway); }
 
         .stage-orch { background: var(--stage-orch-bg); border: 1px solid var(--stage-orch-border); }
-        .stage-orch .stage-icon { background: rgba(236, 72, 153, 0.2); color: var(--stage-orch); }
+        .stage-orch .stage-icon { background: rgba(192, 38, 211, 0.15); color: var(--stage-orch); }
         .stage-orch .stage-label { color: var(--stage-orch); }
 
         .stage-ai { background: var(--stage-ai-bg); border: 1px solid var(--stage-ai-border); }
-        .stage-ai .stage-icon { background: rgba(16, 185, 129, 0.2); color: var(--stage-ai); }
+        .stage-ai .stage-icon { background: rgba(5, 150, 105, 0.15); color: var(--stage-ai); }
         .stage-ai .stage-label { color: var(--stage-ai); }
 
         .stage-data { background: var(--stage-data-bg); border: 1px solid var(--stage-data-border); }
-        .stage-data .stage-icon { background: rgba(139, 92, 246, 0.2); color: var(--stage-data); }
+        .stage-data .stage-icon { background: rgba(124, 58, 237, 0.15); color: var(--stage-data); }
         .stage-data .stage-label { color: var(--stage-data); }
 
         /* ── Flow Arrows ── */
@@ -269,6 +270,7 @@
             border-radius: 10px;
             padding: 16px;
             flex: 1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
         .panel-header {
@@ -299,17 +301,17 @@
         }
 
         .panel-security {
-            background: rgba(239, 68, 68, 0.06);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: rgba(220, 38, 38, 0.04);
+            border: 1px solid rgba(220, 38, 38, 0.2);
         }
-        .panel-security .panel-icon { background: rgba(239, 68, 68, 0.2); color: var(--panel-security); }
+        .panel-security .panel-icon { background: rgba(220, 38, 38, 0.12); color: var(--panel-security); }
         .panel-security .panel-label { color: var(--panel-security); }
 
         .panel-observe {
-            background: rgba(6, 182, 212, 0.06);
-            border: 1px solid rgba(6, 182, 212, 0.2);
+            background: rgba(8, 145, 178, 0.04);
+            border: 1px solid rgba(8, 145, 178, 0.2);
         }
-        .panel-observe .panel-icon { background: rgba(6, 182, 212, 0.2); color: var(--panel-observe); }
+        .panel-observe .panel-icon { background: rgba(8, 145, 178, 0.12); color: var(--panel-observe); }
         .panel-observe .panel-label { color: var(--panel-observe); }
 
         .panel-components {
@@ -374,6 +376,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
         .subprocess h3 {
@@ -403,33 +406,33 @@
         }
 
         .sub-node-primary {
-            background: rgba(139, 92, 246, 0.15);
-            border-color: rgba(139, 92, 246, 0.3);
-            color: #c4b5fd;
+            background: rgba(124, 58, 237, 0.10);
+            border-color: rgba(124, 58, 237, 0.30);
+            color: #6d28d9;
         }
 
         .sub-node-info {
-            background: rgba(59, 130, 246, 0.12);
-            border-color: rgba(59, 130, 246, 0.25);
-            color: #93c5fd;
+            background: rgba(37, 99, 235, 0.08);
+            border-color: rgba(37, 99, 235, 0.25);
+            color: #1d4ed8;
         }
 
         .sub-node-warm {
-            background: rgba(245, 158, 11, 0.12);
-            border-color: rgba(245, 158, 11, 0.25);
-            color: #fcd34d;
+            background: rgba(217, 119, 6, 0.08);
+            border-color: rgba(217, 119, 6, 0.25);
+            color: #b45309;
         }
 
         .sub-node-success {
-            background: rgba(16, 185, 129, 0.12);
-            border-color: rgba(16, 185, 129, 0.25);
-            color: #6ee7b7;
+            background: rgba(5, 150, 105, 0.08);
+            border-color: rgba(5, 150, 105, 0.25);
+            color: #047857;
         }
 
         .sub-node-result {
-            background: rgba(34, 197, 94, 0.12);
-            border-color: rgba(34, 197, 94, 0.25);
-            color: #86efac;
+            background: rgba(22, 163, 74, 0.08);
+            border-color: rgba(22, 163, 74, 0.25);
+            color: #15803d;
         }
 
         .sub-node-default {
@@ -499,6 +502,7 @@
             align-items: center;
             justify-content: center;
             gap: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
         .deploy-bar .deploy-label {
@@ -569,8 +573,8 @@
 
         <!-- Header -->
         <div class="header">
-            <h1>Industry AI Flow — System Architecture</h1>
-            <p>Left-to-right request lifecycle · from user interaction to persistent storage</p>
+            <h1>Industry AI Flow &mdash; System Architecture</h1>
+            <p>Left-to-right request lifecycle &middot; from user interaction to persistent storage</p>
         </div>
 
         <!-- Main Layout -->
@@ -583,7 +587,7 @@
                     <!-- ━━ STAGE 1: User Interaction ━━ -->
                     <div class="stage stage-user">
                         <div class="stage-header">
-                            <div class="stage-icon">👤</div>
+                            <div class="stage-icon">&#x1F464;</div>
                             <div>
                                 <div class="stage-label">Stage 1</div>
                             </div>
@@ -593,23 +597,18 @@
                         <div class="stage-components">
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🖥️</span>
-                                <span class="comp-text">Streamlit Web UI</span>
+                                <span class="comp-icon">&#x1F310;</span>
+                                <span class="comp-text">Next.js Web UI (App Router)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">⚙️</span>
+                                <span class="comp-icon">&#x2699;&#xFE0F;</span>
                                 <span class="comp-text">Prompt Admin UI</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔌</span>
-                                <span class="comp-text">External API Client</span>
-                            </div>
-                            <div class="comp comp-highlight">
-                                <span class="comp-dot dot-warn"></span>
-                                <span class="comp-icon">🔗</span>
-                                <span class="comp-text">Third-Party Integration</span>
+                                <span class="comp-icon">&#x1F50C;</span>
+                                <span class="comp-text">REST API Client</span>
                             </div>
                         </div>
                     </div>
@@ -625,7 +624,7 @@
                     <!-- ━━ STAGE 2: API Gateway ━━ -->
                     <div class="stage stage-gateway">
                         <div class="stage-header">
-                            <div class="stage-icon">🚪</div>
+                            <div class="stage-icon">&#x1F6AA;</div>
                             <div>
                                 <div class="stage-label">Stage 2</div>
                             </div>
@@ -635,23 +634,28 @@
                         <div class="stage-components">
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">⚡</span>
-                                <span class="comp-text">FastAPI Routers</span>
+                                <span class="comp-icon">&#x26A1;</span>
+                                <span class="comp-text">FastAPI Routers (10 route groups)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔐</span>
-                                <span class="comp-text">Authentication + RBAC</span>
+                                <span class="comp-icon">&#x1F510;</span>
+                                <span class="comp-text">JWT + API Key Authentication</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">✅</span>
-                                <span class="comp-text">Input Validation</span>
+                                <span class="comp-icon">&#x2705;</span>
+                                <span class="comp-text">Input Sanitization (XSS/SQLi)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">💾</span>
-                                <span class="comp-text">Request Cache (Redis)</span>
+                                <span class="comp-icon">&#x1F6E1;&#xFE0F;</span>
+                                <span class="comp-text">Security Headers + CORS</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x23F1;&#xFE0F;</span>
+                                <span class="comp-text">Per-Tenant Rate Limiting</span>
                             </div>
                         </div>
                     </div>
@@ -667,54 +671,56 @@
                     <!-- ━━ STAGE 3: Orchestration ━━ -->
                     <div class="stage stage-orch">
                         <div class="stage-header">
-                            <div class="stage-icon">🎯</div>
+                            <div class="stage-icon">&#x1F3AF;</div>
                             <div>
                                 <div class="stage-label">Stage 3</div>
                             </div>
                         </div>
                         <div class="stage-title">Orchestration</div>
-                        <div class="stage-sub">Business Services</div>
+                        <div class="stage-sub">10-Node Workflow Pipeline</div>
                         <div class="stage-components">
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔀</span>
-                                <span class="comp-text">Workflow Orchestrator</span>
+                                <span class="comp-icon">&#x1F500;</span>
+                                <span class="comp-text">Workflow Pipeline (graph.py)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🧠</span>
-                                <span class="comp-text">Intent Classifier</span>
+                                <span class="comp-icon">&#x1F9E0;</span>
+                                <span class="comp-text">Intent Classifier (keyword/regex)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📝</span>
-                                <span class="comp-text">Prompt Selector</span>
+                                <span class="comp-icon">&#x1F4DD;</span>
+                                <span class="comp-text">Prompt Selector (versioned)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🛤️</span>
-                                <span class="comp-text">Routing + Budget Policy</span>
+                                <span class="comp-icon">&#x1F6E4;&#xFE0F;</span>
+                                <span class="comp-text">Route Node + Budget Policy</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">11-Node LangGraph StateGraph</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F504;</span>
+                                <span class="comp-text">Intent Workflow (LLM-backed)</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F4AC;</span>
+                                <span class="comp-text">Confidence + Clarification Loop</span>
                             </div>
                             <div class="stage-divider"></div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">💰</span>
-                                <span class="comp-text">Cost Governance</span>
+                                <span class="comp-icon">&#x1F4B0;</span>
+                                <span class="comp-text">Cost Governance (CostTracker)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🏢</span>
-                                <span class="comp-text">Tenant Isolation Logic</span>
-                            </div>
-                            <div class="comp comp-highlight">
-                                <span class="comp-dot dot-warn"></span>
-                                <span class="comp-icon">🚀</span>
-                                <span class="comp-text">Rapid Business Module Extension</span>
-                            </div>
-                            <div class="comp">
-                                <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📡</span>
-                                <span class="comp-text">Service Coordination</span>
+                                <span class="comp-icon">&#x1F3E2;</span>
+                                <span class="comp-text">Tenant Isolation (X-Tenant-ID)</span>
                             </div>
                         </div>
                     </div>
@@ -730,7 +736,7 @@
                     <!-- ━━ STAGE 4: AI Services ━━ -->
                     <div class="stage stage-ai">
                         <div class="stage-header">
-                            <div class="stage-icon">🤖</div>
+                            <div class="stage-icon">&#x1F916;</div>
                             <div>
                                 <div class="stage-label">Stage 4</div>
                             </div>
@@ -740,23 +746,45 @@
                         <div class="stage-components">
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📚</span>
-                                <span class="comp-text">RAG Engine</span>
+                                <span class="comp-icon">&#x1F4DA;</span>
+                                <span class="comp-text">RAG Engine (BM25 + Vector + RRF)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🧩</span>
-                                <span class="comp-text">LLM Dispatch Service</span>
+                                <span class="comp-icon">&#x1F9E9;</span>
+                                <span class="comp-text">LLM Dispatch (local/hybrid/cloud)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">▶️</span>
-                                <span class="comp-text">Code Execution Manager</span>
+                                <span class="comp-icon">&#x1F50D;</span>
+                                <span class="comp-text">Reranker (bge-reranker-base)</span>
                             </div>
-                            <div class="comp comp-highlight">
-                                <span class="comp-dot dot-warn"></span>
-                                <span class="comp-icon">📊</span>
-                                <span class="comp-text">Cost Estimation Service</span>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x25B6;&#xFE0F;</span>
+                                <span class="comp-text">Code Executor (Docker sandbox)</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F4CA;</span>
+                                <span class="comp-text">Cost Estimation (Ridge regression)</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">LLM Backends</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F999;</span>
+                                <span class="comp-text">Ollama (Qwen2.5:7b)</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F34E;</span>
+                                <span class="comp-text">llama.cpp (Metal acceleration)</span>
+                            </div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x2601;&#xFE0F;</span>
+                                <span class="comp-text">Zhipu AI Cloud (GLM-4-plus)</span>
                             </div>
                         </div>
                     </div>
@@ -772,72 +800,74 @@
                     <!-- ━━ STAGE 5: Data & Storage ━━ -->
                     <div class="stage stage-data">
                         <div class="stage-header">
-                            <div class="stage-icon">🗄️</div>
+                            <div class="stage-icon">&#x1F5C4;&#xFE0F;</div>
                             <div>
                                 <div class="stage-label">Stage 5</div>
                             </div>
                         </div>
-                        <div class="stage-title">Data & Storage</div>
-                        <div class="stage-sub">Data Services</div>
+                        <div class="stage-title">Data &amp; Storage</div>
+                        <div class="stage-sub">Primary Database</div>
                         <div class="stage-components">
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔗</span>
-                                <span class="comp-text">Data Access API</span>
+                                <span class="comp-icon">&#x1F418;</span>
+                                <span class="comp-text">PostgreSQL 16 + pgvector</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔄</span>
-                                <span class="comp-text">Transaction Management</span>
+                                <span class="comp-icon">&#x1F4D0;</span>
+                                <span class="comp-text">Vector Embeddings (768-dim, IVFFlat)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📖</span>
-                                <span class="comp-text">Read / Write Split</span>
+                                <span class="comp-icon">&#x1F4CB;</span>
+                                <span class="comp-text">Prompts + Versions (scoring)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">⏱️</span>
-                                <span class="comp-text">TTL + Expiration Control</span>
-                            </div>
-                            <div class="stage-divider"></div>
-                            <div class="stage-sub">Storage Systems</div>
-                            <div class="comp">
-                                <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🐘</span>
-                                <span class="comp-text">PostgreSQL + pgvector</span>
+                                <span class="comp-icon">&#x1F4B3;</span>
+                                <span class="comp-text">LLM Usage Logs (cost tracking)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">⚡</span>
-                                <span class="comp-text">Redis</span>
-                            </div>
-                            <div class="comp">
-                                <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔍</span>
-                                <span class="comp-text">Search + Artifact Store</span>
+                                <span class="comp-icon">&#x1F9E0;</span>
+                                <span class="comp-text">Conversation Memories (3-layer)</span>
                             </div>
                             <div class="stage-divider"></div>
-                            <div class="stage-sub">Persistence Ops</div>
+                            <div class="stage-sub">In-Memory Cache</div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📁</span>
-                                <span class="comp-text">File I/O</span>
+                                <span class="comp-icon">&#x26A1;</span>
+                                <span class="comp-text">TTLCache (256 entries, 120s TTL)</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">File Storage</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F4C1;</span>
+                                <span class="comp-text">Document Uploads (local filesystem)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">🔃</span>
-                                <span class="comp-text">Data Synchronization</span>
+                                <span class="comp-icon">&#x1F4C8;</span>
+                                <span class="comp-text">Visualization Artifacts</span>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-sub">Ingestion Pipeline</div>
+                            <div class="comp">
+                                <span class="comp-dot dot-active"></span>
+                                <span class="comp-icon">&#x1F4C4;</span>
+                                <span class="comp-text">OCR (PaddleOCR) + Text Extraction</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">📐</span>
-                                <span class="comp-text">Vector Upsert Pipeline</span>
+                                <span class="comp-icon">&#x2702;&#xFE0F;</span>
+                                <span class="comp-text">Chunking (512 char, 128 overlap)</span>
                             </div>
                             <div class="comp">
                                 <span class="comp-dot dot-active"></span>
-                                <span class="comp-icon">💿</span>
-                                <span class="comp-text">Backup + Recovery</span>
+                                <span class="comp-icon">&#x1F50D;</span>
+                                <span class="comp-text">nomic-embed-text-v1.5 + pgvector Upsert</span>
                             </div>
                         </div>
                     </div>
@@ -850,66 +880,66 @@
 
                 <div class="panel-box panel-security">
                     <div class="panel-header">
-                        <div class="panel-icon">🛡️</div>
-                        <div class="panel-label">Security &<br>Access Control</div>
+                        <div class="panel-icon">&#x1F6E1;&#xFE0F;</div>
+                        <div class="panel-label">Security &amp;<br>Access Control</div>
                     </div>
                     <div class="panel-components">
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🔑</span>
+                            <span class="panel-comp-icon">&#x1F511;</span>
                             JWT + API Key Auth
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">👥</span>
-                            RBAC Enforcement
+                            <span class="panel-comp-icon">&#x1F3E2;</span>
+                            Tenant Isolation (X-Tenant-ID)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🏢</span>
-                            Tenant Isolation
+                            <span class="panel-comp-icon">&#x1F9F9;</span>
+                            Input Sanitization (bleach)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🧹</span>
-                            Input Sanitization
+                            <span class="panel-comp-icon">&#x1F6AB;</span>
+                            Sliding Window Rate Limiter
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🚫</span>
-                            Rate Limiting
+                            <span class="panel-comp-icon">&#x1F512;</span>
+                            PII Redaction (cloud egress)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🔒</span>
-                            PII Redaction
+                            <span class="panel-comp-icon">&#x1F310;</span>
+                            CORS + Security Headers
                         </div>
                     </div>
                 </div>
 
                 <div class="panel-box panel-observe">
                     <div class="panel-header">
-                        <div class="panel-icon">📡</div>
-                        <div class="panel-label">Audit &<br>Observability</div>
+                        <div class="panel-icon">&#x1F4E1;</div>
+                        <div class="panel-label">Audit &amp;<br>Observability</div>
                     </div>
                     <div class="panel-components">
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">📋</span>
-                            Request Tracing
+                            <span class="panel-comp-icon">&#x1F4CA;</span>
+                            Prometheus Metrics (HTTP + LLM)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">📊</span>
-                            Cost Tracking
+                            <span class="panel-comp-icon">&#x1F4B0;</span>
+                            LLM Cost Tracking (per-tenant)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">📈</span>
-                            Performance Metrics
+                            <span class="panel-comp-icon">&#x23F1;&#xFE0F;</span>
+                            Node Latency + DB Query Duration
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">🔔</span>
-                            Alerting Pipeline
+                            <span class="panel-comp-icon">&#x1F4DD;</span>
+                            Audit Log (JSONL file sink)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">📝</span>
-                            Audit Log Sink
+                            <span class="panel-comp-icon">&#x2764;&#xFE0F;</span>
+                            Health Checks (/health)
                         </div>
                         <div class="panel-comp">
-                            <span class="panel-comp-icon">❤️</span>
-                            Health Checks
+                            <span class="panel-comp-icon">&#x1F50D;</span>
+                            Trace ID Propagation
                         </div>
                     </div>
                 </div>
@@ -922,10 +952,16 @@
             <div class="deploy-label">Deployment</div>
             <div class="deploy-items">
                 <div class="deploy-item">
-                    <span>☁️</span> Cloud VM / Container Platform
+                    <span>&#x1F34E;</span> Mac Studio (M1 Max, 32 GB)
                 </div>
                 <div class="deploy-item">
-                    <span>🏠</span> Dedicated Server / On-Prem Node
+                    <span>&#x1F418;</span> Docker: pgvector (port 5433)
+                </div>
+                <div class="deploy-item">
+                    <span>&#x1F4E6;</span> Docker: Code Sandbox (isolated)
+                </div>
+                <div class="deploy-item">
+                    <span>&#x2601;&#xFE0F;</span> Zhipu AI Cloud API
                 </div>
             </div>
         </div>
@@ -933,83 +969,87 @@
         <!-- ━━ Subprocess Section ━━ -->
         <section class="subprocess-section">
             <div class="subprocess-header">
-                <h2>Complex Subprocess Diagrams</h2>
-                <p>Detailed internal flows for core processing pipelines</p>
+                <h2>Core Processing Pipelines</h2>
+                <p>Detailed internal flows for the three primary capabilities</p>
             </div>
 
             <div class="subprocess-grid">
 
-                <!-- A. Intent Routing and Resilience -->
+                <!-- A. Intent Classification & Dispatch -->
                 <article class="subprocess">
-                    <h3>A. Intent Routing and Resilience</h3>
+                    <h3>A. Intent Classification &amp; Dispatch</h3>
                     <div class="sub-flow">
-                        <div class="sub-node sub-node-primary">Request Intake (Context + Session + Prompt Version)</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-info">Intent + Risk Classifier</div>
-                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-primary">User Query + Session Context</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-info">Intent Classifier (keyword/regex scoring)</div>
+                        <div class="sub-arrow">&darr;</div>
                         <div class="sub-split">
-                            <div class="sub-side-tag">Budget Guard</div>
-                            <div class="sub-node sub-node-warm">Policy Decision Hub</div>
-                            <div class="sub-side-tag">Model Health Probe</div>
+                            <div class="sub-side-tag">Budget<br>Check</div>
+                            <div class="sub-node sub-node-warm">Confidence Evaluation (&ge; 0.8 threshold)</div>
+                            <div class="sub-side-tag">Dispatch<br>Mode</div>
                         </div>
-                        <div class="sub-arrow">↓</div>
+                        <div class="sub-arrow">&darr;</div>
                         <div class="sub-row sub-row-3">
                             <div class="sub-node sub-node-default">RAG Path</div>
-                            <div class="sub-node sub-node-default">Direct LLM Path</div>
-                            <div class="sub-node sub-node-default">Hybrid Path</div>
+                            <div class="sub-node sub-node-default">Cost Estimation</div>
+                            <div class="sub-node sub-node-default">Data Analysis</div>
                         </div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-success">Retry + Fallback Controller</div>
-                        <div class="sub-loop">On timeout/error: degrade to lower-cost model and return partial-safe answer.</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-result">Final Answer Composer + Trace ID</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-success">LLM Dispatch (local &rarr; cloud fallback)</div>
+                        <div class="sub-loop">Low confidence (&lt; 0.8): clarification loop via LangGraph StateGraph before routing.</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-result">Response + Groundedness Score + Trace ID</div>
                     </div>
                 </article>
 
-                <!-- B. RAG Quality Control Loop -->
+                <!-- B. RAG Retrieval Pipeline -->
                 <article class="subprocess">
-                    <h3>B. RAG Quality Control Loop</h3>
+                    <h3>B. RAG Retrieval Pipeline</h3>
                     <div class="sub-flow">
-                        <div class="sub-node sub-node-primary">Chunked Knowledge Base + Embedding Index</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-info">Hybrid Retrieval (Vector + BM25)</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-warm">Rerank + Freshness + Permission Filter</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-default">Confidence Gate</div>
-                        <div class="sub-row sub-row-2">
-                            <div class="sub-node sub-node-success">Pass: Context Packager</div>
-                            <div class="sub-node sub-node-default">Fail: Query Rewrite</div>
-                        </div>
-                        <div class="sub-loop">Rewrite branch triggers second retrieval pass before packing context.</div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-result">Grounded Answer + Citation Builder</div>
+                        <div class="sub-node sub-node-primary">Document Chunks + nomic-embed-text Embeddings</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-info">Hybrid Retrieval (BM25 + Vector + RRF Fusion)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-warm">Cross-Encoder Reranking (bge-reranker-base)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-default">Top-K Context Selection (default K=8)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-info">Prompt Assembly ([Reference N] citations)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-success">LLM Generation (via Dispatch Service)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-warm">Groundedness Check (token-overlap scoring)</div>
+                        <div class="sub-loop">Overlap score &ge; 0.4 = pass. Result recorded in metadata; no automatic retry.</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-result">Grounded Answer + Source doc_ids</div>
                     </div>
                 </article>
 
-                <!-- C. Cost and Safe Execution Control -->
+                <!-- C. Dynamic Data Analysis Pipeline -->
                 <article class="subprocess">
-                    <h3>C. Cost and Safe Execution Control</h3>
+                    <h3>C. Dynamic Data Analysis Pipeline</h3>
                     <div class="sub-flow">
-                        <div class="sub-node sub-node-primary">Tenant Budget Profile + SLA Tier</div>
-                        <div class="sub-arrow">↓</div>
+                        <div class="sub-node sub-node-primary">User-Uploaded Dataset (CSV/Excel)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-info">Metadata Extraction (columns, types, stats)</div>
+                        <div class="sub-loop">Privacy by design: only metadata sent to cloud LLM, never raw data.</div>
+                        <div class="sub-arrow">&darr;</div>
                         <div class="sub-split">
-                            <div class="sub-side-tag">PII Redaction</div>
-                            <div class="sub-node sub-node-info">Token Estimator + Plan Generator</div>
-                            <div class="sub-side-tag">Rate Limits</div>
+                            <div class="sub-side-tag">PII<br>Redact</div>
+                            <div class="sub-node sub-node-warm">Cloud LLM Code Generation</div>
+                            <div class="sub-side-tag">Code<br>Validate</div>
                         </div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-row sub-row-3">
-                            <div class="sub-node sub-node-default">Cache Hit</div>
-                            <div class="sub-node sub-node-default">LLM Execution</div>
-                            <div class="sub-node sub-node-default">Sandbox Code Run</div>
-                        </div>
-                        <div class="sub-arrow">↓</div>
-                        <div class="sub-node sub-node-warm">Cost Reconciler (Estimated vs Actual)</div>
-                        <div class="sub-arrow">↓</div>
+                        <div class="sub-arrow">&darr;</div>
                         <div class="sub-row sub-row-2">
-                            <div class="sub-node sub-node-success">Alert + Audit Sink</div>
-                            <div class="sub-node sub-node-result">Response with Cost Metadata</div>
+                            <div class="sub-node sub-node-default">AST Validation</div>
+                            <div class="sub-node sub-node-default">Blocklist Check</div>
+                        </div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-node sub-node-success">Docker Sandbox Execution (network-isolated)</div>
+                        <div class="sub-arrow">&darr;</div>
+                        <div class="sub-row sub-row-2">
+                            <div class="sub-node sub-node-result">Results + Visualizations</div>
+                            <div class="sub-node sub-node-default">Cost + Usage Log</div>
                         </div>
                     </div>
                 </article>
@@ -1017,7 +1057,7 @@
             </div>
         </section>
 
-        <p class="footer">Print tip: Browser → A3 landscape → 100% scale → enable background graphics</p>
+        <p class="footer">Print tip: Browser &rarr; A3 landscape &rarr; 100% scale &rarr; enable background graphics</p>
 
     </div>
 </body>
