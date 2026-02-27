@@ -181,6 +181,13 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "cache: marks tests for cache behavior/integration",
+    "performance: marks performance and load tests",
+    "docker: marks tests that require Docker",
+    "llm: marks tests that require LLM dependencies",
+    "asyncio: marks async tests",
+    "e2e: marks end-to-end tests",
+    "fast: marks fast tests",
     "gpu: marks tests that require GPU",
     "ocr: marks tests that require OCR dependencies",
 ]

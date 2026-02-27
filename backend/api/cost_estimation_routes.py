@@ -64,7 +64,7 @@ def _resolve_allowed_path(path_value: str, *, must_exist: bool) -> Path:
         )
 
     if must_exist and not candidate.exists():
-        raise HTTPException(status_code=404, detail=f"path does not exist: {candidate}")
+        raise HTTPException(status_code=404, detail="path does not exist")
 
     return candidate
 

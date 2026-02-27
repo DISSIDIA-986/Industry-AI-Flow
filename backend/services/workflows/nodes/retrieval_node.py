@@ -18,9 +18,10 @@ async def retrieval_node(state: WorkflowState, services: Any) -> WorkflowState:
     retriever = getattr(services, "retriever", None)
     contexts = state.get("retrieved_context") or []
 
-    # Skip retrieval for intents that don't need it
+    # Skip retrieval only for intents that have dedicated structured pipelines.
+    # code_execution may still need retrieved context for grounded explanations.
     intent = state.get("intent", "")
-    if intent in ("cost_estimation", "code_execution"):
+    if intent == "cost_estimation":
         metadata["retrieval_status"] = "skipped"
         state["retrieved_context"] = contexts
         metrics["retrieved_count"] = len(contexts)

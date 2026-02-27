@@ -21,9 +21,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
-import numpy as np
-from PIL import Image
-
 logger = logging.getLogger(__name__)
 
 

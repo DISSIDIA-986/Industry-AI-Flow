@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Dict, Optional
 
 from backend.config import settings
@@ -69,7 +69,7 @@ class ConversationMemoryManager:
         if new_summary:
             session.summary_memory = new_summary
             session.last_summary_record_index = history_size
-            session.last_summary_time = datetime.utcnow()
+            session.last_summary_time = datetime.now(UTC)
             logger.debug("Summary updated for session: %s", session.session_id)
 
     async def _extract_long_term_memory(self, session) -> None:

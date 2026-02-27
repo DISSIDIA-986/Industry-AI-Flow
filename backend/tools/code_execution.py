@@ -15,6 +15,16 @@ from backend.services.code_executor import (
 
 logger = logging.getLogger(__name__)
 
+# Backward-compatibility hook for tests/legacy callers that monkeypatch
+# backend.tools.code_execution.code_executor directly.
+code_executor: Any | None = None
+
+
+def _resolve_executor() -> Any | None:
+    if code_executor is not None:
+        return code_executor
+    return get_code_executor()
+
 
 def _validation_failure_payload(validation_error: str, warnings: list[str]) -> Dict[str, Any]:
     return {
@@ -79,7 +89,7 @@ def code_execution_tool(
     """
 
     manager = get_code_execution_manager()
-    executor = get_code_executor()
+    executor = _resolve_executor()
 
     # 检查代码执行器是否可用
     if executor is None and manager is None:
@@ -167,7 +177,7 @@ def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dic
         >>> print(f"代码有效: {result['valid']}")
     """
 
-    executor = get_code_executor()
+    executor = _resolve_executor()
     if executor is None:
         from backend.services.code_executor import validate_code
 
@@ -299,7 +309,7 @@ def get_execution_environment_info() -> Dict[str, Any]:
         docker_available = bool(docker_state.get("healthy", False))
         code_execution_available = bool(health_snapshot.get("healthy", False))
     else:
-        _executor = get_code_executor()
+        _executor = _resolve_executor()
         health_snapshot = {
             "healthy": bool(_executor is not None),
             "mode": settings.code_execution_provider,
