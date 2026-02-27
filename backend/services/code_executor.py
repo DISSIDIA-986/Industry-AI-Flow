@@ -250,7 +250,7 @@ class DockerCodeExecutor:
                     "exit_code": exit_code,
                     "execution_time": execution_time,
                     "visualizations": visualizations,
-                    "workspace_path": workspace_path,
+                    "workspace_id": os.path.basename(workspace_path),
                 }
 
             except ContainerError as e:
@@ -263,7 +263,7 @@ class DockerCodeExecutor:
                     "exit_code": e.exit_status,
                     "execution_time": execution_time,
                     "visualizations": [],
-                    "workspace_path": workspace_path,
+                    "workspace_id": os.path.basename(workspace_path),
                 }
 
             except subprocess.TimeoutExpired:
@@ -275,7 +275,7 @@ class DockerCodeExecutor:
                     "exit_code": -1,
                     "execution_time": timeout,
                     "visualizations": [],
-                    "workspace_path": workspace_path,
+                    "workspace_id": os.path.basename(workspace_path),
                 }
 
         except Exception as e:
@@ -288,7 +288,7 @@ class DockerCodeExecutor:
                 "exit_code": -1,
                 "execution_time": 0,
                 "visualizations": [],
-                "workspace_path": workspace_path,
+                "workspace_id": os.path.basename(workspace_path),
             }
 
         finally:

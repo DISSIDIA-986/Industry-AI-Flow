@@ -13,6 +13,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 13    | 2026-02-27 | 21        | 4  | 17 | 21    | 21          | 4           |
 | 14    | 2026-02-27 | 51        | 8  | 25 | 42    | 51          | 10          |
 | 15    | 2026-02-26 | 41        | 1  | 10 | 11    | 11          | 11          |
+| 16    | 2026-02-26 | 46        | 1  | 18 | 19    | 22          | 19          |
 
 ## Convergence
 
@@ -21,8 +22,30 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 13: 21 bugs (4 P0 + 17 P1). Deeper audit found new categories (memory management, dispatch governance, pipeline ordering). Bug count went UP because auditors explored previously unexamined areas (memory store, dispatch confidence, pipeline node ordering). Not convergent — continue TDI.
 - Round 14: 51 bugs (8 P0 + 25 P1 + 18 P2) across 4 parallel audit agents. 42 fixed, 9 deferred as xfail (architectural changes in LangGraph workflow, module-level singleton, thread-safety refactors). Broadest audit yet: security headers, CORS, validator bypasses, retrieval node double-execution, cost estimation routing, EN placeholder contamination, error disclosure, Docker symlinks, rate limiter races, regex precision. Not convergent — continue TDI.
 - Round 15: 41 bugs (1 P0 + 10 P1 + 20 P2 + 10 P3) across 4 parallel audit agents. All 11 P0/P1 fixed and verified. P0 count dropped from 8→1. P1 count dropped from 25→10. Focus areas: intent workflow dispatch crash, security admin key bypass, chunker content duplication, rate-limit TOCTOU, column-name injection in template code, module-level asyncio.Lock, dead clarification retry branch, unbounded chat payload. 30 P2/P3 deferred. Trending toward convergence but not yet <3 P0+P1 for two consecutive rounds.
+- Round 16: 46 bugs (1 P0 + 18 P1 + 17 P2 + 10 P3) across 4 parallel audit agents. All 19 P0/P1 fixed and verified. 22 tests added. P0 count: 1 (same as R15). P1 count: 18 (up from 10 — deeper audit into previously unexamined areas: code validator whitelisted-library escapes, groundedness tokenizer inconsistency, BM25 dotted-standard splitting, numeric penalty for derived arithmetic, Jinja2 HTML-escaping of LLM prompts, CRLF code extraction, error dict propagation). 27 P2/P3 deferred. Not convergent — auditors continue finding novel patterns in unexplored areas.
 
 ## New Patterns Discovered
+
+### Round 16
+- **pd.eval()/df.query() sandbox escape via whitelisted library**: Pandas is whitelisted for data analysis, but `pd.eval(engine='python')` and `df.query()` evaluate arbitrary Python expressions — dangerous payload hides inside string literals invisible to AST validation
+- **bytes()/bytearray() name construction**: `bytes([101,118,97,108]).decode()` builds "eval" at runtime — neither `bytes` nor `bytearray` were in BLOCKED_CALL_NAMES
+- **Groundedness node tokenizer divergence**: Workflow groundedness_node used `.split()` while GroundednessChecker used proper regex tokenizer — inconsistent scoring with punctuation-attached tokens
+- **BM25 dotted standard splitting**: Regex tokenizer `[a-z0-9]+(?:-[a-z0-9]+)*` splits "CSA A23.1" at the period, destroying precision for construction standard references
+- **Min-max normalization zero floor**: Scaling to [0, 1] always gives worst result 0.0 even when it had positive fusion score — misleads reranker and UI
+- **Numeric penalty on derived arithmetic**: Groundedness checker penalizes numbers derived from context via multiplication (e.g., 30000 * 50 = 1500000)
+- **Jinja2 autoescape HTML-mangles LLM prompts**: `autoescape=True` escapes `<`, `>`, `&` in prompts sent to LLMs — domain mismatch (HTML escaping for non-HTML output)
+- **CRLF code extraction failure**: `code_pattern = r"```python\n"` requires Unix LF — cloud LLMs frequently return CRLF
+- **Error dict truthy propagation**: `_extract_dataset_info` returns `{"error": "..."}` which is truthy, passes `if not dataset_metadata`, and silently becomes metadata for code generation
+- **COST_ESTIMATION→DataAnalysisAgent mapping**: IntentClassifier._get_agent_type had wrong agent for cost estimation (different from routing_decision.py fix in R14)
+- **Clarification prompt discards prompt_manager content**: `get_clarification_prompt` fetches prompt but unconditionally returns simulated response
+- **Bare "how much"/"price" false positive**: Matches non-cost queries like "how much water does concrete curing require?"
+- **Hardcoded 4096 context window for all backends**: Cloud backends with 128K context unnecessarily truncated
+- **Bare "cost" regex in estimated_cost_cad**: Matches "cost overrun 10%" extracting 10 as estimated_cost_cad
+- **switch_model admin key presence-only check**: Same pattern as R15 admin key bypass, in a different endpoint
+- **Error detail leakage in 6 intent classification endpoints**: `str(e)` returned in error responses
+- **Legacy executor workspace_path disclosure**: Full server paths exposed in API responses
+- **DocumentVersionResponse filepath disclosure**: Server filesystem paths in version response schema
+- **np.load(allow_pickle=True) deserialization**: NumPy whitelisted but np.load can deserialize pickle payloads
 
 ### Round 15
 - **COST_ESTIMATION_AGENT stub dispatch crash**: Intentional `response=""` return from `_dispatch_to_agent` for cost estimation always triggers `RuntimeError("Agent returned empty response")` — two workflow systems (intent_workflow vs graph.py) have incompatible cost estimation paths

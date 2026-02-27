@@ -80,7 +80,7 @@ class DocumentVersionResponse(BaseModel):
     doc_id: str
     version: int
     filename: str
-    filepath: str
+    filepath: Optional[str] = None  # Redacted: server paths not exposed to clients
     chunk_count: int
     created_at: str
     operation: str
@@ -361,7 +361,7 @@ async def get_document_versions(doc_id: str):
                 doc_id=version.doc_id,
                 version=version.version,
                 filename=version.filename,
-                filepath=version.filepath,
+                filepath=None,  # Server path redacted for security
                 chunk_count=version.chunk_count,
                 created_at=version.created_at.isoformat(),
                 operation=version.operation.value,

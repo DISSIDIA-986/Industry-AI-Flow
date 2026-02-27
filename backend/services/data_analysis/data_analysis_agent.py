@@ -79,6 +79,12 @@ class DataAnalysisAgent:
             # 2. EN
             if not dataset_metadata:
                 dataset_metadata = self._extract_dataset_info(data_file_path)
+            if isinstance(dataset_metadata, dict) and dataset_metadata.get("error"):
+                return {
+                    "success": False,
+                    "error": dataset_metadata["error"],
+                    "answer": dataset_metadata.get("error", "Failed to extract dataset metadata."),
+                }
 
             # 3. EN
             analysis_code = self._generate_analysis_code(
@@ -347,7 +353,7 @@ Return ONLY Python code. Wrap the code in ```python and ``` markers."""
     def _extract_code_from_response(self, response: str) -> Optional[str]:
         """ENLLMEN"""
         # EN
-        code_pattern = r"```python\n(.*?)```"
+        code_pattern = r"```[Pp]ython[ \t]*\r?\n(.*?)```"
         matches = re.findall(code_pattern, response, re.DOTALL)
 
         if matches:

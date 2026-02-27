@@ -124,7 +124,7 @@ _NUMERIC_PATTERNS: Dict[str, List[str]] = {
         r"(?:planned\s*duration|duration)\s*[:=]?\s*([0-9][0-9,.]*[0-9]|[0-9])\s*(?:weeks?)?",
     ],
     "estimated_cost_cad": [
-        r"(?:estimated\s*cost|estimate|budget|project\s*cost|target\s*cost|cost)\s*[:=]?\s*\$?\s*([0-9][0-9,.]*[kmb]?)\b",
+        r"(?:estimated\s*cost|budget\s*estimate|project\s*cost|target\s*cost|total\s*cost)\s*[:=]?\s*\$?\s*([0-9][0-9,.]*[kmb]?)\b",
         r"\$\s*([0-9][0-9,.]*[kmb]?)\b",
     ],
     "contractor_rating": [

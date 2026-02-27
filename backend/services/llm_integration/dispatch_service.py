@@ -239,7 +239,7 @@ class DispatchService:
         provider = settings.resolved_local_backend
         try:
             client = self._get_local_client()
-            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512)
+            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512, context_window=4096)
             text = client.generate(
                 prompt,
                 temperature=req.temperature,
@@ -435,7 +435,7 @@ class DispatchService:
         try:
             client = self._get_cloud_client()
             model = self._resolve_model_name(client, provider)
-            prompt_text = self._truncate_prompt(redaction.text, req.max_tokens or 512)
+            prompt_text = self._truncate_prompt(redaction.text, req.max_tokens or 512, context_window=128000)
             text = client.generate(
                 prompt_text,
                 temperature=req.temperature,
