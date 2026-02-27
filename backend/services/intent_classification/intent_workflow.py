@@ -440,8 +440,8 @@ class IntentClassificationWorkflow:
                         else str(intent_result.intent)
                     ],
                     "clarification_questions": [
-                        f"EN'{intent_result.intent}',EN?",
-                        "EN?",
+                        f"It seems like you may want '{intent_result.intent}'. Could you provide more details?",
+                        "Could you clarify what you'd like help with?",
                     ],
                     "user_context": {
                         "current_query": state["current_query"],
@@ -702,38 +702,36 @@ class IntentClassificationWorkflow:
     async def _generate_clarification_with_prompt(
         self, prompt_content: str, context: Dict[str, Any]
     ) -> str:
-        """ENPromptEN"""
+        """Generate a clarification message using prompt content."""
         try:
-            # ENLLMEN
-            # EN,EN
             questions = context.get("clarification_questions", [])
             possible_intents = context.get("possible_intents", [])
 
             if questions:
-                clarification = f"EN.EN:\n\n"
+                clarification = "I'd like to better understand your request. Here are some clarifying questions:\n\n"
                 for i, question in enumerate(questions, 1):
                     clarification += f"{i}. {question}\n"
-                clarification += "\nEN,EN."
+                clarification += "\nPlease provide more details so I can assist you better."
             else:
-                clarification = "EN,EN."
+                clarification = "Could you please provide more details about your request?"
 
             return clarification
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
-            return "EN,EN."
+            logger.error(f"Failed to generate clarification with prompt: {str(e)}")
+            return "Could you please provide more details about your request?"
 
     def _generate_default_clarification(self, context: Dict[str, Any]) -> str:
-        """EN"""
+        """Generate a default clarification message."""
         questions = context.get("clarification_questions", [])
         possible_intents = context.get("possible_intents", [])
 
         if questions:
-            clarification = f"EN.EN:\n\n"
+            clarification = "I'd like to better understand your request. Here are some clarifying questions:\n\n"
             for i, question in enumerate(questions, 1):
                 clarification += f"{i}. {question}\n"
-            clarification += "\nEN,EN."
+            clarification += "\nPlease provide more details so I can assist you better."
         else:
-            clarification = "EN,EN."
+            clarification = "Could you please provide more details about your request?"
 
         return clarification
 

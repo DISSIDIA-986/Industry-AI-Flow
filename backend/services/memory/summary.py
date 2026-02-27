@@ -22,7 +22,7 @@ class ConversationSummarizer:
             self.client = LLMClientFactory.create_client(backend=backend)
             self.available = True
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Failed to initialize summary LLM client: %s", exc)
+            logger.warning("Summary LLM client unavailable: %s", exc)
             self.client = None
             self.available = False
 
@@ -41,8 +41,7 @@ class ConversationSummarizer:
             for item in interactions
         )
 
-        prompt = f"""
-Summarize the following conversation history into a concise summary of no more than 200 words.
+        prompt = f"""You are a conversation summarizer. Update the existing summary with the new interactions below. Keep the summary concise (under 200 words).
 
 Existing summary:
 {existing_summary or '(No previous summary)'}
@@ -50,10 +49,10 @@ Existing summary:
 New interactions:
 {interactions_text}
 
-Instructions:
-1. Preserve key facts, decisions, and user preferences from the conversation
-2. Merge the existing summary with the new interactions into a single coherent summary
-3. Focus on information that would be useful for future interactions
+Write an updated summary that:
+1. Preserves key facts and decisions from the existing summary
+2. Incorporates important new information from the interactions
+3. Removes outdated or superseded details
 
 Language: {language}
 """

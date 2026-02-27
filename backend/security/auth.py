@@ -38,13 +38,14 @@ def _parse_authorization_header(header: str) -> str:
 
 def _decode_jwt(token: str) -> Dict[str, Any]:
     try:
-        options = {"verify_aud": bool(settings.auth_jwt_audience)}
+        audience = settings.auth_jwt_audience or None
+        options = {"verify_aud": audience is not None}
         decoded = jwt.decode(
             token,
             settings.auth_jwt_secret,
             algorithms=[settings.auth_jwt_algorithm],
             issuer=settings.auth_jwt_issuer or None,
-            audience=settings.auth_jwt_audience or None,
+            audience=audience,
             options=options,
         )
         return decoded

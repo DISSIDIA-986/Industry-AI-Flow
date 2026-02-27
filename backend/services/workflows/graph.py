@@ -58,13 +58,13 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     """
     pipeline = [
         ("intent_node", intent_node),
+        ("safety_node", safety_node),
         ("cost_estimation_node", cost_estimation_node),
         ("retrieval_node", retrieval_node),
         ("rerank_node", rerank_node),
         ("prompt_node", prompt_node),
         ("groundedness_node", groundedness_node),
         ("route_node", route_node),
-        ("safety_node", safety_node),
         ("code_exec_node", code_exec_node),
         ("response_node", response_node),
     ]
@@ -89,8 +89,8 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
 
         state = await _run_node(node_name=node_name, handler=handler, state=state, services=services)
 
-    if not state.get("response") and not state.get("error"):
+    if not state.get("response"):
         state = await response_node(state, services)
-    elif state.get("error") and not state.get("response"):
+    if state.get("error") and not state.get("response"):
         state["response"] = "An error occurred while processing your request. Please try again."
     return state

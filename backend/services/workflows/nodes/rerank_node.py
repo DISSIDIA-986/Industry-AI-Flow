@@ -31,9 +31,8 @@ async def rerank_node(state: WorkflowState, services: Any) -> WorkflowState:
     if reranker is not None and hasattr(reranker, "rerank"):
         result = reranker.rerank(
             query=state.get("query", ""),
-            contexts=contexts,
+            documents=contexts,
             top_k=top_k,
-            metadata=metadata,
         )
         ranked = await result if hasattr(result, "__await__") else result
         if isinstance(ranked, list):

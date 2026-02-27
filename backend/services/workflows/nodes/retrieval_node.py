@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from backend.services.workflows.state import WorkflowState
@@ -19,10 +20,21 @@ async def retrieval_node(state: WorkflowState, services: Any) -> WorkflowState:
     if retriever is not None:
         if hasattr(retriever, "retrieve"):
             result = retriever.retrieve(query=query, top_k=top_k, metadata=metadata)
-            contexts = await result if hasattr(result, "__await__") else result
+            if hasattr(result, "__await__"):
+                contexts = await result
+            else:
+                # Synchronous retriever — offload to thread pool
+                contexts = await asyncio.to_thread(
+                    retriever.retrieve, query=query, top_k=top_k, metadata=metadata
+                )
         elif hasattr(retriever, "search"):
             result = retriever.search(query=query, top_k=top_k)
-            contexts = await result if hasattr(result, "__await__") else result
+            if hasattr(result, "__await__"):
+                contexts = await result
+            else:
+                contexts = await asyncio.to_thread(
+                    retriever.search, query=query, top_k=top_k
+                )
 
     if not isinstance(contexts, list):
         contexts = []
