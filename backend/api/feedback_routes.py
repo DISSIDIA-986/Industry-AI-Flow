@@ -5,14 +5,15 @@ Feedback API routes
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.config import settings
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.rag_engine import SimpleRAG
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
 # Feedback-enabled RAG singleton
 rag_instance = None

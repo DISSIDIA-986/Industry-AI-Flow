@@ -320,7 +320,7 @@ class FeedbackManager:
                 SELECT COUNT(*) FROM query_feedback
                 WHERE feedback_type = 'not_helpful'
                 AND question % %s  -- ENPostgreSQLEN
-                AND created_at > NOW() - INTERVAL '24 hours'
+                AND created_at > NOW() - INTERVAL '24 hours'  -- fixed literal, no parameterization needed
             """,
                 (feedback.question,),
             )
@@ -374,7 +374,7 @@ class FeedbackManager:
                     COUNT(CASE WHEN feedback_type = 'partially_helpful' THEN 1 END) as partially_helpful,
                     AVG(feedback_weight) as avg_weight
                 FROM query_feedback
-                WHERE created_at > NOW() - INTERVAL '%s days'
+                WHERE created_at > NOW() - INTERVAL '1 day' * %s
             """,
                 (days,),
             )

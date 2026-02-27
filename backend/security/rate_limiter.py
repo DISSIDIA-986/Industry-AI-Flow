@@ -53,4 +53,14 @@ class SlidingWindowRateLimiter:
             window.append(now)
             remaining = max(allowed - len(window), 0)
             reset_in = self.interval_seconds - (now - window[0]) if window else 0.0
+
+            # Periodically clean stale keys to prevent unbounded memory growth.
+            if len(self._hits) > 0:
+                stale_keys = [
+                    k for k, dq in self._hits.items()
+                    if k != key and dq and now - dq[-1] > self.interval_seconds
+                ]
+                for k in stale_keys:
+                    del self._hits[k]
+
             return RateLimitResult(remaining=remaining, reset_in=max(reset_in, 0.0))

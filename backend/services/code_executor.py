@@ -123,11 +123,11 @@ class DockerCodeExecutor:
                 # EN
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name in ["os", "subprocess", "sys", "importlib"]:
+                        if alias.name in ["os", "subprocess", "sys", "importlib", "ctypes", "socket", "http", "requests", "urllib"]:
                             errors.append(f"EN: {alias.name}")
 
                 if isinstance(node, ast.ImportFrom):
-                    if node.module in ["os", "subprocess", "sys", "importlib"]:
+                    if node.module in ["os", "subprocess", "sys", "importlib", "ctypes", "socket", "http", "requests", "urllib"]:
                         errors.append(f"EN: {node.module}")
 
         except SyntaxError as e:
@@ -218,6 +218,7 @@ class DockerCodeExecutor:
                     stdout=True,
                     stderr=True,
                     user="1000:1000",  # ENrootEN
+                    timeout=timeout,
                 )
 
                 execution_time = time.time() - start_time
@@ -301,7 +302,7 @@ class DockerCodeExecutor:
         workspace = Path(workspace_path)
 
         # EN
-        viz_extensions = [".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf"]
+        viz_extensions = [".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf", ".gif", ".webp"]
 
         for file_path in workspace.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in viz_extensions:

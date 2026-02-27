@@ -159,7 +159,7 @@ class SimpleRAG:
         # Format each chunk with document numbering
         context_parts = []
         for i, chunk in enumerate(similar_chunks, 1):
-            context_parts.append(f"[Document {i}]\n{chunk['content']}")
+            context_parts.append(f"[Reference {i}]\n{chunk['content']}")
         context = "\n\n".join(context_parts)
 
         memory_payload = {}
@@ -241,26 +241,25 @@ class SimpleRAG:
         context: str,
         memory_payload: Optional[dict] = None,
     ) -> str:
-        """Build the LLM prompt with context, memory, and question."""
+        """Build the RAG prompt with context, memory, and instructions."""
         memory_context = self._format_memory_payload(memory_payload or {})
-        return f"""You are a professional construction industry knowledge assistant. Answer the user's question based ONLY on the reference documents provided below.
+        return f"""You are a knowledgeable construction industry assistant. Answer the question based strictly on the provided context.
 
-**Important instructions**:
-1. Read all reference documents carefully
-2. Use ONLY information from the documents to answer
-3. If the documents do not contain relevant information, clearly state "I don't have enough information to answer this question based on the available documents"
-4. Be accurate, concise, and professional
-5. When citing specific data or standards, reference which document it comes from
+**Instructions**:
+1. Answer based only on the provided reference documents below.
+2. Cite which reference document(s) support your answer.
+3. If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
+4. Be precise with numbers, units, and technical specifications. Do not guess or fabricate values.
 
-**Conversation context**:
+**Conversation History**:
 {memory_context}
 
-**Reference documents**:
+**Reference Documents**:
 {context}
 
-**User question**: {question}
+**Question**: {question}
 
-**Your answer**:"""
+**Answer**:"""
 
     @staticmethod
     def _format_memory_payload(memory_payload: dict) -> str:
@@ -269,14 +268,14 @@ class SimpleRAG:
         long_term = memory_payload.get("long_term") or []
 
         if not short_term and not summary and not long_term:
-            return "No conversation history."
+            return "No prior conversation history."
 
         lines: list[str] = []
         if summary:
-            lines.append(f"- Session summary: {summary}")
+            lines.append(f"- Conversation summary: {summary}")
 
         if short_term:
-            lines.append("- Recent conversation:")
+            lines.append("- Recent dialogue:")
             for entry in short_term[-6:]:
                 role = entry.get("role", "unknown")
                 content = str(entry.get("content", "")).strip()
@@ -284,7 +283,7 @@ class SimpleRAG:
                     lines.append(f"  - {role}: {content[:240]}")
 
         if long_term:
-            lines.append("- Related long-term memory:")
+            lines.append("- Long-term memory:")
             for item in long_term[:3]:
                 content = item.get("content")
                 if isinstance(content, dict):
@@ -350,18 +349,14 @@ class SimpleRAG:
             await memory_manager.process_interaction(session_snapshot, record)
 
         try:
-            asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
+            # No running event loop — safe to call synchronously.
             asyncio.run(_update_memory())
             return
 
-        def _run_in_thread():
-            try:
-                asyncio.run(_update_memory())
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("Async memory update failed: %s", exc)
-
-        threading.Thread(target=_run_in_thread, daemon=True).start()
+        # Schedule onto the existing event loop without spawning a thread.
+        asyncio.ensure_future(_update_memory())
 
     def submit_feedback(
         self,

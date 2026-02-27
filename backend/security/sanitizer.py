@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Optional
+from urllib.parse import unquote
 
 import bleach
 from fastapi import HTTPException, status
@@ -13,9 +14,21 @@ SCRIPT_PATTERN = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 SQL_PATTERN = re.compile(
-    r"(drop\s+table|union\s+select|union\s*/\*.*?\*/\s*select|--|;"
-    r"|'\s*or\s+.*?=|'\s*or\s+'"
-    r"|delete\s+from|insert\s+into|update\s+.*?\s+set)",
+    r"("
+    r"drop\s+table"
+    r"|union\s+(all\s+)?select"
+    r"|union\s*/\*.*?\*/\s*select"
+    r"|insert\s+into"
+    r"|update\s+\S+\s+set"
+    r"|delete\s+from"
+    r"|alter\s+table"
+    r"|create\s+table"
+    r"|truncate\s+table"
+    r"|\bexec(ute)?\b\s*\("
+    r"|\bxp_"
+    r"|'\s*or\s+.*?="
+    r"|'\s*or\s+'"
+    r")",
     re.IGNORECASE,
 )
 CONTROL_CHAR_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
@@ -37,12 +50,19 @@ def sanitize_text(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} exceeds max length of {max_length} characters.",
         )
-    if SCRIPT_PATTERN.search(stripped) or CONTROL_CHAR_PATTERN.search(stripped):
+    # URL-decode iteratively so double/triple encoding is fully resolved.
+    decoded = stripped
+    for _ in range(5):
+        next_decoded = unquote(decoded)
+        if next_decoded == decoded:
+            break
+        decoded = next_decoded
+    if SCRIPT_PATTERN.search(decoded) or CONTROL_CHAR_PATTERN.search(decoded):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} contains disallowed characters.",
         )
-    if SQL_PATTERN.search(stripped):
+    if SQL_PATTERN.search(decoded):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} appears to contain a prohibited pattern.",

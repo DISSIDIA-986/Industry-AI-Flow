@@ -8,10 +8,11 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from backend.config import settings
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.security.sanitizer import sanitize_identifier, sanitize_text
 from backend.services.cost_estimation_service import (
     CostEstimationError,
@@ -20,7 +21,7 @@ from backend.services.cost_estimation_service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"])
+router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"], dependencies=[Depends(secure_endpoint)])
 
 _service_lock = asyncio.Lock()
 _service: Optional[CostEstimationService] = None
@@ -74,7 +75,9 @@ async def _get_service() -> CostEstimationService:
 
     async with _service_lock:
         if _service is None:
-            _service = CostEstimationService(model_path=_default_model_path())
+            def _load():
+                return CostEstimationService(model_path=_default_model_path())
+            _service = await asyncio.to_thread(_load)
     return _service
 
 
@@ -169,7 +172,8 @@ async def train_cost_estimation(request: CostEstimationTrainRequest, raw_request
     )
 
     try:
-        result = train_cost_estimation_model(
+        result = await asyncio.to_thread(
+            train_cost_estimation_model,
             dataset_path=dataset_path,
             output_model_path=output_path,
             ridge_alpha=request.ridge_alpha,
@@ -189,7 +193,7 @@ async def train_cost_estimation(request: CostEstimationTrainRequest, raw_request
         ) from exc
 
     service = await _get_service()
-    service.load(output_path)
+    await asyncio.to_thread(service.load, output_path)
     return result
 
 
@@ -197,7 +201,8 @@ async def train_cost_estimation(request: CostEstimationTrainRequest, raw_request
 async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict[str, Any]:
     service = await _get_service()
     try:
-        prediction = service.predict_project(
+        prediction = await asyncio.to_thread(
+            service.predict_project,
             project=request.project.model_dump(),
             confidence_quantile=request.confidence_quantile,
         )
@@ -219,7 +224,8 @@ async def batch_predict_cost_estimation(
 ) -> Dict[str, Any]:
     service = await _get_service()
     try:
-        predictions = service.predict_batch(
+        predictions = await asyncio.to_thread(
+            service.predict_batch,
             projects=[item.model_dump() for item in request.projects],
             confidence_quantile=request.confidence_quantile,
         )

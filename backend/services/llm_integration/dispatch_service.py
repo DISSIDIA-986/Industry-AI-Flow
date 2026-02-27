@@ -69,7 +69,7 @@ class DispatchService:
 
         lowered = text.lower()
 
-        # Check for uncertainty phrases
+        # Uncertainty markers that indicate low confidence
         uncertainty_phrases = [
             "i don't know",
             "i'm not sure",
@@ -82,9 +82,24 @@ class DispatchService:
             "insufficient information",
             "no information",
             "not enough context",
+            "it depends",
+            "generally speaking",
+            "it is difficult to say",
+            "further analysis would be needed",
+            "i think",
+            "might be",
+            "could range",
         ]
-        if any(phrase in lowered for phrase in uncertainty_phrases):
-            return 0.4
+        uncertainty_count = sum(1 for phrase in uncertainty_phrases if phrase in lowered)
+        if uncertainty_count >= 3:
+            return 0.45
+
+        # Single strong uncertainty marker
+        if any(
+            phrase in lowered
+            for phrase in ("i don't know", "i cannot determine", "i'm not sure")
+        ):
+            return 0.55
 
         # Check for repetition: split into sentences and look for duplicates
         sentences = [s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()]
@@ -94,13 +109,22 @@ class DispatchService:
             if repetition_ratio > 0.5:
                 return 0.4
 
-        # Length component: contributes up to 0.25 (capped)
-        length_boost = min(len(text), 600) / 2400  # max 0.25
-
-        # Base confidence
+        # Base confidence from content quality signals
         base = 0.55
+        length_boost = min(len(text), 600) / 1500
 
-        return round(min(0.90, base + length_boost), 4)
+        # Penalize hedging / vague language
+        hedging_penalty = min(0.15, uncertainty_count * 0.05)
+
+        # Penalize highly repetitive text (low unique-word ratio)
+        words = lowered.split()
+        if len(words) > 20:
+            unique_ratio = len(set(words)) / len(words)
+            if unique_ratio < 0.4:
+                hedging_penalty += 0.10
+
+        confidence = base + length_boost - hedging_penalty
+        return round(max(0.0, min(0.95, confidence)), 4)
 
     @staticmethod
     def _truncate_prompt(prompt: str, max_tokens: int, context_window: int = 4096) -> str:

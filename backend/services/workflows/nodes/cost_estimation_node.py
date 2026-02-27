@@ -41,6 +41,10 @@ def _render_cost_estimation_response(prediction: Dict[str, Any]) -> str:
     if unknown:
         unknown_str = ", ".join(f"{k}={v}" for k, v in unknown.items())
         lines.append(f"- Unknown categories mapped with fallback: {unknown_str}")
+        lines.append(
+            "- WARNING: Reduced accuracy — the above categories were not seen "
+            "during training. Prediction confidence is degraded."
+        )
     return "\n".join(lines)
 
 

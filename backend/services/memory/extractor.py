@@ -11,15 +11,13 @@ from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
 
-EXTRACTION_PROMPT = """
-Analyze the following conversation and extract structured information into a JSON object with these categories:
-- user_profile: Information about the user (role, expertise, organization)
+EXTRACTION_PROMPT = """Analyze the following conversation and extract structured information into a JSON object with these keys:
+- user_profile: Key details about the user (role, expertise, organization)
 - preferences: User preferences and settings mentioned in conversation
-- tasks: Tasks, goals, or action items discussed
-- facts: Key factual information, decisions, or conclusions reached
+- tasks: Action items or tasks the user wants to accomplish
+- facts: Important factual information shared during the conversation
 
-Only include categories that have relevant content. If a category has no relevant information, omit it.
-Return valid JSON only, with no additional text.
+Only include fields with actual extracted content. Return valid JSON only, with no extra commentary.
 
 Conversation:
 {dialogue}
@@ -36,7 +34,7 @@ class StructuredMemoryExtractor:
             )
             self.available = True
         except Exception as exc:  # pragma: no cover
-            logger.warning("Failed to initialize memory extractor LLM client: %s", exc)
+            logger.warning("Memory extractor LLM client unavailable: %s", exc)
             self.client = None
             self.available = False
 

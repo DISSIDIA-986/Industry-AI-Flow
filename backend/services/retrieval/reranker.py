@@ -60,8 +60,8 @@ class Reranker:
                 return_tensors="pt",
                 max_length=512,
             ).to(self.device)
-            scores = self.model(**inputs, return_dict=True).logits.view(-1).float()
-            scores = scores.cpu().numpy()
+            logits = self.model(**inputs, return_dict=True).logits.view(-1).float()
+            scores = self._torch.sigmoid(logits).cpu().numpy()
 
         for doc, score in zip(documents, scores):
             if isinstance(doc, dict):

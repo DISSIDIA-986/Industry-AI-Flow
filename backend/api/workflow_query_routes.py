@@ -483,7 +483,9 @@ class _RAGRetrieverAdapter:
     async def retrieve(self, query: str, top_k: int, metadata: dict):
         del metadata
         if getattr(self.rag, "hybrid_retriever", None) is not None:
-            return self.rag.hybrid_retriever.search(query=query, top_k=top_k)
+            return await asyncio.to_thread(
+                self.rag.hybrid_retriever.search, query=query, top_k=top_k
+            )
         return []
 
 
@@ -491,7 +493,7 @@ class _DispatchResponseBuilder:
     def __init__(self, dispatch_service):
         self.dispatch_service = dispatch_service
 
-    def __call__(self, *, state: Dict[str, Any]) -> str:
+    async def __call__(self, *, state: Dict[str, Any]) -> str:
         try:
             from backend.services.llm_integration.types import DispatchRequest
 
@@ -524,7 +526,7 @@ class _DispatchResponseBuilder:
                 max_tokens=metadata.get("max_tokens"),
                 top_p=metadata.get("top_p"),
             )
-            response = self.dispatch_service.generate(request)
+            response = await asyncio.to_thread(self.dispatch_service.generate, request)
             metadata["dispatch"] = response.to_dict()
             state["provider_used"] = response.provider
             state["route_mode"] = response.route_mode

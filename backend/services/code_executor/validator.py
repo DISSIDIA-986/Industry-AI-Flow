@@ -49,11 +49,15 @@ class CodeValidator:
         "multiprocessing",
         "threading",
         "asyncio",
-        "__import__",
-        "eval",
-        "exec",
-        "compile",
-        "open",  # Use context-specific file operations only
+        "importlib",
+        "ctypes",
+        "code",
+        "pty",
+        "signal",
+        "pathlib",
+        "pickle",
+        "shelve",
+        "webbrowser",
     }
 
     # Allowed modules for data analysis
@@ -82,15 +86,16 @@ class CodeValidator:
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
         r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__)\b",  # Dangerous dunder attribute access
-        r"globals\(",  # Global scope access
-        r"locals\(",  # Local scope access
-        r"vars\(",  # Variable introspection
-        r"dir\(",  # Directory listing
-        r"getattr\(",  # Dynamic attribute access
-        r"setattr\(",  # Dynamic attribute modification
-        r"delattr\(",  # Attribute deletion
-        r"\.system\(",  # System calls
-        r"\.popen\(",  # Process execution
+        r"globals\s*\(",  # Global scope access
+        r"locals\s*\(",  # Local scope access
+        r"vars\s*\(",  # Variable introspection
+        r"dir\s*\(",  # Directory listing
+        r"getattr\s*\(",  # Dynamic attribute access
+        r"setattr\s*\(",  # Dynamic attribute modification
+        r"delattr\s*\(",  # Attribute deletion
+        r"\.system\s*\(",  # System calls
+        r"\.popen\s*\(",  # Process execution
+        r"\bbreakpoint\s*\(",  # Debugger invocation
     ]
 
     BLOCKED_CALL_NAMES = {
@@ -101,6 +106,7 @@ class CodeValidator:
         "__import__",
         "input",
         "raw_input",
+        "breakpoint",
     }
     BLOCKED_ATTRIBUTE_CALLS = {
         ("builtins", "open"),
@@ -226,12 +232,40 @@ class CodeValidator:
         return ValidationResult(is_valid=True)
 
     def _validate_blocked_calls(self, tree: ast.AST) -> ValidationResult:
-        """Validate dangerous function calls, including simple aliases."""
+        """Validate dangerous function calls, including simple aliases and container indirection."""
         blocked_attr_calls = {
             (base.lower(), attr.lower()) for base, attr in self.BLOCKED_ATTRIBUTE_CALLS
         }
         blocked_names = {name.lower() for name in self.BLOCKED_CALL_NAMES}
         alias_names: set[str] = set()
+
+        # Block references to blocked names inside containers (lists, dicts, tuples, sets).
+        # Patterns like [exec][0](...) or {"e": exec}["e"](...) hide blocked
+        # functions inside data structures to bypass direct-call detection.
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id.lower() in blocked_names:
+                # Allow import-target names (handled by _validate_imports)
+                # but block references inside containers or subscripts
+                # We check all Name nodes — any bare reference to a blocked
+                # builtin (exec, eval, compile, etc.) is suspicious
+                # except when it appears as a direct call (handled below)
+                pass  # Direct call checks below handle ast.Call cases
+
+            # Detect blocked names inside List, Dict, Tuple, Set literals
+            if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+                for elt in node.elts:
+                    if isinstance(elt, ast.Name) and elt.id.lower() in blocked_names:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked function reference in container: {elt.id}",
+                        )
+            if isinstance(node, ast.Dict):
+                for val in node.values:
+                    if isinstance(val, ast.Name) and val.id.lower() in blocked_names:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked function reference in dict: {val.id}",
+                        )
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Assign):
@@ -265,6 +299,12 @@ class CodeValidator:
                     return ValidationResult(
                         is_valid=False,
                         error=f"Blocked function call: {node.func.id}",
+                    )
+                # Block type() used as metaclass constructor (3-arg form)
+                if func_name == "type" and len(node.args) >= 3:
+                    return ValidationResult(
+                        is_valid=False,
+                        error="Blocked function call: type() metaclass creation",
                     )
                 continue
 
