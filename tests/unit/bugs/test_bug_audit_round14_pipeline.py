@@ -366,7 +366,6 @@ class TestR14P_P1_05_DataAnalysisJSONNotHandled:
         pytest.fail("Could not find _extract_dataset_info method")
 
 
-@pytest.mark.xfail(reason="R14P-P1-06: clarification processing is a no-op — architectural fix deferred")
 class TestR14P_P1_06_ClarificationProcessingNoOp:
     """P1: _clarification_processing_node is effectively a no-op.
 
@@ -437,7 +436,6 @@ class TestR14P_P1_07_DispatchToAgentDeletesSystemPrompt:
         pytest.fail("Could not find _dispatch_to_agent method")
 
 
-@pytest.mark.xfail(reason="R14P-P1-08: continue_workflow metadata overwrite — LangGraph architectural fix deferred")
 class TestR14P_P1_08_ContinueWorkflowOverwritesMetadata:
     """P1: continue_workflow creates a fresh metadata dict that overwrites
     the checkpointed metadata from the initial run.
@@ -476,7 +474,6 @@ class TestR14P_P1_08_ContinueWorkflowOverwritesMetadata:
         pytest.fail("Could not find continue_workflow method")
 
 
-@pytest.mark.xfail(reason="R14P-P1-09: context_enrichment unconditional edge — LangGraph architectural fix deferred")
 class TestR14P_P1_09_ContextEnrichmentErrorNotChecked:
     """P1: Graph has unconditional edge from context_enrichment to
     intent_classification, ignoring errors set by context_enrichment.
@@ -655,7 +652,6 @@ class TestR14P_P2_04_RunPromptStageNoGuard:
         pytest.fail("Could not find run_prompt_stage function")
 
 
-@pytest.mark.xfail(reason="R14P-P2-05: module-level singleton — refactor deferred")
 class TestR14P_P2_05_SimpleClassifierModuleSingleton:
     """P2: simple_intent_classifier.py creates a module-level singleton
     at import time, before settings are loaded.
@@ -709,7 +705,6 @@ class TestR14P_P2_06_NoPipelineCompletionStatus:
         pytest.fail("Could not find run_workflow_pipeline function")
 
 
-@pytest.mark.xfail(reason="R14P-P2-07: routing_stats not thread-safe — threading refactor deferred")
 class TestR14P_P2_07_RoutingStatsNotThreadSafe:
     """P2: RoutingDecisionEngine.routing_stats is mutated without a lock.
 
@@ -858,7 +853,6 @@ class TestR14P_P2_11_CostEstimationNodeNoResponseBuilder:
                 )
 
 
-@pytest.mark.xfail(reason="R14P-P2-12: input_preprocessing unconditional edge — LangGraph architectural fix deferred")
 class TestR14P_P2_12_InputPreprocessingErrorNoRecovery:
     """P2: _input_preprocessing_node can set state['error'] but the graph
     has an unconditional edge to context_enrichment.  The error propagates

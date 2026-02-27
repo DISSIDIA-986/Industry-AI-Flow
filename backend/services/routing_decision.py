@@ -6,6 +6,7 @@ EN,ENAgent
 import asyncio
 import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
@@ -204,6 +205,7 @@ class RoutingDecisionEngine:
             "fallback_routes": 0,
             "agent_usage": {agent: 0 for agent in AgentType},
         }
+        self._routing_stats_lock = threading.Lock()
 
         logger.info("EN")
 
@@ -509,15 +511,16 @@ class RoutingDecisionEngine:
 
     def _update_routing_stats(self, decision: RoutingDecision):
         """EN"""
-        self.routing_stats["total_routes"] += 1
-        self.routing_stats["agent_usage"][decision.selected_agent] += 1
+        with self._routing_stats_lock:
+            self.routing_stats["total_routes"] += 1
+            self.routing_stats["agent_usage"][decision.selected_agent] += 1
 
-        if decision.routing_path == RoutingPath.DIRECT_ROUTING:
-            self.routing_stats["direct_routes"] += 1
-        elif decision.routing_path == RoutingPath.CLARIFICATION:
-            self.routing_stats["clarification_routes"] += 1
-        elif decision.routing_path == RoutingPath.FALLBACK:
-            self.routing_stats["fallback_routes"] += 1
+            if decision.routing_path == RoutingPath.DIRECT_ROUTING:
+                self.routing_stats["direct_routes"] += 1
+            elif decision.routing_path == RoutingPath.CLARIFICATION:
+                self.routing_stats["clarification_routes"] += 1
+            elif decision.routing_path == RoutingPath.FALLBACK:
+                self.routing_stats["fallback_routes"] += 1
 
     def _create_fallback_decision(
         self, intent_result: Dict[str, Any], error: str
@@ -541,23 +544,36 @@ class RoutingDecisionEngine:
 
     def get_routing_statistics(self) -> Dict[str, Any]:
         """EN"""
-        total = self.routing_stats["total_routes"]
-        if total == 0:
-            return self.routing_stats
+        with self._routing_stats_lock:
+            total = self.routing_stats["total_routes"]
+            if total == 0:
+                return {
+                    "total_routes": 0,
+                    "direct_routes": 0,
+                    "clarification_routes": 0,
+                    "fallback_routes": 0,
+                    "agent_usage": dict(self.routing_stats["agent_usage"]),
+                }
 
-        # EN
-        stats = self.routing_stats.copy()
-        stats["direct_routing_rate"] = self.routing_stats["direct_routes"] / total
-        stats["clarification_rate"] = self.routing_stats["clarification_routes"] / total
-        stats["fallback_rate"] = self.routing_stats["fallback_routes"] / total
+            # EN
+            stats = {
+                "total_routes": total,
+                "direct_routes": self.routing_stats["direct_routes"],
+                "clarification_routes": self.routing_stats["clarification_routes"],
+                "fallback_routes": self.routing_stats["fallback_routes"],
+                "agent_usage": dict(self.routing_stats["agent_usage"]),
+            }
+            stats["direct_routing_rate"] = stats["direct_routes"] / total
+            stats["clarification_rate"] = stats["clarification_routes"] / total
+            stats["fallback_rate"] = stats["fallback_routes"] / total
 
-        # AgentEN
-        stats["agent_usage_rates"] = {
-            agent.value: count / total
-            for agent, count in self.routing_stats["agent_usage"].items()
-        }
+            # AgentEN
+            stats["agent_usage_rates"] = {
+                agent.value: count / total
+                for agent, count in stats["agent_usage"].items()
+            }
 
-        return stats
+            return stats
 
     def update_system_status(self, status_updates: Dict[str, Any]):
         """EN"""

@@ -23,6 +23,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 23    | 2026-02-27 | 4         | 0  | 0  | 4     | 0           | 1           |
 | 24    | 2026-02-27 | 1         | 0  | 0  | 1     | 0           | 1           |
 | 28    | 2026-02-27 | 2         | 0  | 2  | 2     | 3           | 2           |
+| 29    | 2026-02-27 | 6         | 0  | 3  | 6     | 0           | 3           |
 
 ## Convergence
 
@@ -44,6 +45,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 26: 1 warning-signal hygiene finding (0 P0 + 0 P1) fixed by adding precise `filterwarnings` marks to two legacy dynamic-code bug-repro suites that emit unavoidable `<string>:5` `utcnow` deprecation noise during simulated execution. Full-suite result remained green (`560 passed, 27 skipped, 8 xfailed, 1 xpassed`) and warning count dropped to near-clean baseline (`79 → 4`), leaving only benign `PytestCollectionWarning` dataclass collection notices.
 - Round 27: 2 hardening findings fixed in continued post-gate audit (0 P0 + 1 P1 + 1 hygiene). P1 fix: eliminated absolute-path disclosure from `/api/v1/cost-estimation/train` missing-file error path (`404` now returns generic `"path does not exist"`), with new integration regression coverage to prevent reintroduction. Hygiene fix: removed final dataclass/class collection warnings by marking helper data containers as non-tests (`__test__ = False`) in legacy script-style suites. Full-suite result after fixes: `561 passed, 27 skipped, 8 xfailed, 1 xpassed` with zero warning output.
 - Round 28: 2 security findings fixed (0 P0 + 2 P1) via targeted re-audit of deferred xfail items. Fixes: trusted-proxy-aware client IP resolution for rate limiting (`X-Forwarded-For` / `X-Real-IP` / `Forwarded` only when direct peer is trusted), and SQL identifier hardening for memory-store table names using explicit `TABLE_NAME_PATTERN` validation before interpolation. Deferred xfail debt reduced (`8 → 6`) and suite stayed green with improved signal (`487 passed, 20 skipped, 6 xfailed`).
+- Round 29: 6 deferred pipeline findings closed (0 P0 + 3 P1 + 3 P2). Fixes: converted `intent_workflow` preprocessing/context-enrichment transitions to error-aware conditional routing, implemented meaningful clarification processing with query enrichment + best-effort reclassification, preserved checkpoint metadata during `continue_workflow` via merge instead of replacement, replaced module-level simple-intent singleton with lazy getter, and added lock-based synchronization for routing statistics updates/reads. Deferred xfail backlog cleared (`6 → 0`). Unit suite result: `493 passed, 20 skipped`.
 
 ## New Patterns Discovered
 
@@ -75,6 +77,11 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 ### Round 28
 - **Proxy-aware rate-limit keying requires trust boundary**: forwarded headers should influence client identity only when the immediate peer is a trusted proxy; otherwise spoofed headers can evade or distort per-client quotas.
 - **Constant SQL identifiers still need explicit guardrails**: class constants used in SQL identifier interpolation should be validated by a strict identifier pattern to prevent unsafe subclass/override drift.
+
+### Round 29
+- **Early-node failures need explicit edge-level routing**: if preprocessing/enrichment nodes can set `state["error"]`, unconditional graph edges silently continue execution and bury the original fault.
+- **Workflow continuation must merge checkpoint metadata**: continuation updates that replace `metadata` wholesale can erase prior intent/routing context and degrade follow-up behavior.
+- **Shared routing telemetry requires synchronization**: per-request stats mutation without a lock can lose counters under concurrent traffic.
 
 ### Round 19
 - **Phantom module import degradation**: `from backend.services.intent_classification.models import QueryContext` imports a nonexistent module — silently falls back to passing raw dict where dataclass expected
