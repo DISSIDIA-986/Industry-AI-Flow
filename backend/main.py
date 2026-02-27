@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import psutil
-import uvicorn
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -1426,4 +1425,6 @@ async def get_visualization_file(
 
 
 if __name__ == "__main__":
+    import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

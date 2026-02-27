@@ -22,6 +22,10 @@ from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
 
+# Backward-compatibility hook for legacy tests/callers that monkeypatch
+# backend.services.data_analysis.data_analysis_agent.code_executor directly.
+code_executor: Any | None = None
+
 
 class DataAnalysisAgent:
     """ENAgent - EN"""
@@ -45,7 +49,9 @@ class DataAnalysisAgent:
                 self.llm_client = None
 
         self.code_execution_manager = get_code_execution_manager()
-        self.code_executor = get_code_executor()
+        self.code_executor = (
+            code_executor if code_executor is not None else get_code_executor()
+        )
 
         if not self.code_execution_manager and not self.code_executor:
             logger.warning("Code execution provider unavailable, data analysis is degraded")

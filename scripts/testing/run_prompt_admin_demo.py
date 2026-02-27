@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Dict, Optional
 
 import requests
@@ -54,7 +54,7 @@ def run_demo(base_url: str, api_key: Optional[str], execute_experiment: bool) ->
 
     summary: Dict[str, Any] = {
         "base_url": base_url,
-        "checked_at": datetime.utcnow().isoformat() + "Z",
+        "checked_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "steps": [],
     }
 
@@ -101,7 +101,7 @@ def run_demo(base_url: str, api_key: Optional[str], execute_experiment: bool) ->
         return summary
 
     prompt_a, prompt_b = pair
-    exp_name = f"demo_{prompt_a['name']}_{int(datetime.utcnow().timestamp())}"
+    exp_name = f"demo_{prompt_a['name']}_{int(datetime.now(UTC).timestamp())}"
     created = _request(
         session,
         base_url,

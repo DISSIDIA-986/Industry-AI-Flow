@@ -1,12 +1,11 @@
 """
 EN:EN PDF,TXT,EN (Phase 2: EN OCR EN)
 """
+import importlib
 import logging
 import os
 from pathlib import Path
 from typing import Optional, Union
-
-import fitz  # PyMuPDF
 
 from backend.config import settings
 
@@ -19,6 +18,16 @@ try:
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
+
+
+def _get_fitz():
+    """Lazily import PyMuPDF so module import does not hard-require it."""
+    try:
+        return importlib.import_module("fitz")
+    except Exception as exc:
+        raise RuntimeError(
+            "PyMuPDF (fitz) is required for PDF loading but is not installed."
+        ) from exc
 
 
 class EnhancedDocumentLoader:
@@ -90,6 +99,7 @@ class EnhancedDocumentLoader:
         1. EN
         2. EN OCR,EN OCR EN
         """
+        fitz = _get_fitz()
         doc = fitz.open(file_path)
         text_content = []
 
@@ -155,6 +165,7 @@ class EnhancedDocumentLoader:
 # Phase 1 EN(EN)
 def load_pdf(file_path: str) -> str:
     """ENPDFEN(ENPyMuPDF)"""
+    fitz = _get_fitz()
     doc = fitz.open(file_path)
     text = "\n".join(page.get_text() for page in doc)
     doc.close()

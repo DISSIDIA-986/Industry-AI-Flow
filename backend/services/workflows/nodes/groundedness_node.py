@@ -27,20 +27,28 @@ async def groundedness_node(state: WorkflowState, services: Any) -> WorkflowStat
 
     metadata = state.setdefault("metadata", {})
     metrics = state.setdefault("metrics", {})
+    intent = str(state.get("intent") or "")
     contexts = state.get("retrieved_context") or []
     answer = state.get("response") or state.get("answer") or ""
 
     context_count = len(contexts) if isinstance(contexts, list) else 0
     threshold = float(metadata.get("groundedness_threshold", 0.4))
 
-    if not answer or context_count == 0:
+    # Groundedness overlap scoring is not meaningful for deterministic
+    # execution/cost outputs; treat as not applicable and pass by default.
+    if intent in {"code_execution", "cost_estimation"}:
+        score = 1.0
+        metadata["groundedness_status"] = "not_applicable"
+    elif not answer or context_count == 0:
         score = 0.0
+        metadata["groundedness_status"] = "evaluated"
     else:
         answer_tokens = _tokenize(answer)
         context_text = " ".join(_extract_context_text(c) for c in contexts)
         context_tokens = _tokenize(context_text)
         overlap = answer_tokens & context_tokens
         score = len(overlap) / max(len(answer_tokens), 1)
+        metadata["groundedness_status"] = "evaluated"
 
     metrics["groundedness_score"] = score
     metadata["groundedness_score"] = score
