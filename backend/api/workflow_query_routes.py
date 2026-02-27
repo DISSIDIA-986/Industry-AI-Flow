@@ -446,7 +446,7 @@ async def workflow_query(
         intent=intent_result.get("intent"),
         route_mode=str(route_mode),
         provider_used=provider_used,
-        response=result.get("agent_response"),
+        response=result.get("response") or result.get("agent_response"),
         sources=sources,
         prompt_meta=prompt_meta if isinstance(prompt_meta, dict) else None,
         metadata=metadata,

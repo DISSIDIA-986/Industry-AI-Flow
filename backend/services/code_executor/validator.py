@@ -92,10 +92,6 @@ class CodeValidator:
     }
 
     # Dangerous patterns
-    # NOTE: f-string expressions (ast.FormattedValue / JoinedStr) can evaluate
-    # arbitrary code at runtime.  Pattern-based checks below do NOT cover all
-    # f-string abuse vectors.  A future improvement should walk the AST for
-    # FormattedValue nodes and validate their contents.
     DANGEROUS_PATTERNS = [
         r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__|__init_subclass__|__set_name__|__prepare__)\b",  # Dangerous dunder attribute access
         r"globals\s*\(",  # Global scope access
@@ -208,6 +204,8 @@ class CodeValidator:
             "__init_subclass__",
             "__set_name__",
             "__prepare__",
+            "__reduce__",
+            "__reduce_ex__",
         }
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -216,6 +214,11 @@ class CodeValidator:
                         is_valid=False,
                         error=f"Dangerous metaclass/descriptor hook: {node.name}",
                     )
+
+        # Check f-string expressions for dangerous calls (ast.JoinedStr / FormattedValue)
+        fstring_result = self._validate_fstring_expressions(tree)
+        if not fstring_result.is_valid:
+            return fstring_result
 
         # Check for infinite loops (basic detection)
         loop_warning = self._check_loops(tree)
@@ -376,6 +379,39 @@ class CodeValidator:
                             error=f"Blocked function call: {node.func.value.id}.{node.func.attr}",
                         )
 
+        return ValidationResult(is_valid=True)
+
+    def _validate_fstring_expressions(self, tree: ast.AST) -> ValidationResult:
+        """Validate that f-string expressions don't contain dangerous calls."""
+        blocked_names = {name.lower() for name in self.BLOCKED_CALL_NAMES}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.JoinedStr):
+                continue
+            # Walk all sub-expressions inside the f-string
+            for child in ast.walk(node):
+                if isinstance(child, ast.Call):
+                    func = child.func
+                    if isinstance(func, ast.Name) and func.id.lower() in blocked_names:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=f"Blocked call inside f-string: {func.id}",
+                        )
+                    if isinstance(func, ast.Attribute):
+                        attr = func.attr.lower()
+                        if attr in {m.lower() for m in self.BLOCKED_METHOD_NAMES}:
+                            return ValidationResult(
+                                is_valid=False,
+                                error=f"Blocked method call inside f-string: .{func.attr}()",
+                            )
+                        if isinstance(func.value, ast.Name):
+                            base = func.value.id.lower()
+                            if (base, attr) in {
+                                (b.lower(), a.lower()) for b, a in self.BLOCKED_ATTRIBUTE_CALLS
+                            }:
+                                return ValidationResult(
+                                    is_valid=False,
+                                    error=f"Blocked call inside f-string: {func.value.id}.{func.attr}",
+                                )
         return ValidationResult(is_valid=True)
 
     def _check_loops(self, tree: ast.AST) -> Optional[str]:

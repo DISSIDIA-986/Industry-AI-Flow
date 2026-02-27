@@ -67,7 +67,7 @@ def sanitize_text(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} appears to contain a prohibited pattern.",
         )
-    cleaned = bleach.clean(stripped, tags=[], attributes={}, strip=True)
+    cleaned = bleach.clean(decoded, tags=[], attributes={}, strip=True)
     return cleaned
 
 

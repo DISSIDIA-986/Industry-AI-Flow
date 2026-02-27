@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from backend.config import settings
-from backend.services.core.embedder import embed_query_text
+from backend.services.core.embedder import embed_query_text, embedding_backend_status
 from backend.services.core.vectorstore import VectorStore
 from backend.services.feedback_system.feedback_manager import (
     FeedbackManager,
@@ -203,6 +203,7 @@ class SimpleRAG:
             self._record_memory_interaction(memory_session, question, answer)
 
         # 5. Build and return response
+        embed_status = embedding_backend_status()
         return {
             "query_id": query_id,
             "question": question,
@@ -214,6 +215,7 @@ class SimpleRAG:
                 "bm25_weight": bm25_weight,
             },
             "safety": safety_result,
+            "embedding_backend": embed_status.get("backend", "unknown"),
         }
 
     def _get_adaptive_search_weights(self) -> tuple:
@@ -423,7 +425,7 @@ class SimpleRAG:
             }
         except Exception as e:
             logger.error(f"Failed to get feedback statistics: {e}")
-            return {"error": str(e)}
+            return {"error": "Failed to retrieve feedback statistics"}
 
     def get_high_quality_documents(
         self, min_score: float = 0.5, limit: int = 100
