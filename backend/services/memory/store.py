@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from typing import Any, Dict, List, Optional
 
@@ -21,11 +22,22 @@ class LongTermMemoryStore:
     """Handles persistence and retrieval of conversation memories."""
 
     TABLE_NAME = "conversation_memories"
+    TABLE_NAME_PATTERN = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 
     def __init__(self) -> None:
         self.database_url = settings.database_url
         self.embedding_dim = settings.embedding_dim
+        self._table_name = self._validated_table_name()
         self._ensure_table()
+
+    @classmethod
+    def _validated_table_name(cls) -> str:
+        table_name = str(cls.TABLE_NAME or "").strip()
+        if not cls.TABLE_NAME_PATTERN.match(table_name):
+            raise ValueError(
+                "Invalid TABLE_NAME format; expected lowercase SQL identifier."
+            )
+        return table_name
 
     def _ensure_table(self) -> None:
         try:
@@ -34,7 +46,7 @@ class LongTermMemoryStore:
             register_pgvector(conn)
             cur.execute(
                 f"""
-                CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
+                CREATE TABLE IF NOT EXISTS {self._table_name} (
                     id UUID PRIMARY KEY,
                     session_id TEXT NOT NULL,
                     user_id TEXT,
@@ -47,10 +59,10 @@ class LongTermMemoryStore:
                 """
             )
             cur.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_session ON {self.TABLE_NAME} (session_id);"
+                f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_session ON {self._table_name} (session_id);"
             )
             cur.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_memory_type ON {self.TABLE_NAME} (memory_type);"
+                f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_memory_type ON {self._table_name} (memory_type);"
             )
             conn.commit()
             # IVFFlat vector index for cosine similarity searches.
@@ -58,8 +70,8 @@ class LongTermMemoryStore:
             # so the table creation succeeds even when the table is empty.
             try:
                 cur.execute(
-                    f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_embedding "
-                    f"ON {self.TABLE_NAME} USING ivfflat (embedding vector_cosine_ops) "
+                    f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_embedding "
+                    f"ON {self._table_name} USING ivfflat (embedding vector_cosine_ops) "
                     f"WITH (lists = 10);"
                 )
                 conn.commit()
@@ -101,7 +113,7 @@ class LongTermMemoryStore:
 
             cur.execute(
                 f"""
-                INSERT INTO {self.TABLE_NAME}
+                INSERT INTO {self._table_name}
                 (id, session_id, user_id, memory_type, content, embedding, metadata)
                 VALUES (%s, %s, %s, %s, %s, %s::vector, %s)
                 """,
@@ -161,7 +173,7 @@ class LongTermMemoryStore:
                     metadata,
                     1 - (embedding <=> %s::vector) AS similarity,
                     created_at
-                FROM {self.TABLE_NAME}
+                FROM {self._table_name}
                 WHERE embedding IS NOT NULL {session_filter}
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s

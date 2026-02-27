@@ -752,7 +752,6 @@ class TestR14_INP03_FeedbackDaysUnbounded:
 # =============================================================================
 
 
-@pytest.mark.xfail(reason="R14-RL01: rate limit proxy bypass — infrastructure fix deferred")
 class TestR14_RL01_RateLimitBypassViaIPSpoofing:
     """P1: Rate limiting key is f"{tenant_id}:{client_host}" where
     client_host comes from request.client.host. Behind a reverse proxy,
@@ -787,7 +786,6 @@ class TestR14_RL01_RateLimitBypassViaIPSpoofing:
 # =============================================================================
 
 
-@pytest.mark.xfail(reason="R14-SQL01: f-string SQL TABLE_NAME — safe constant but pattern deferred")
 class TestR14_SQL01_MemoryStoreTableNameInterpolation:
     """P1: LongTermMemoryStore uses f-string interpolation for TABLE_NAME
     in SQL queries:

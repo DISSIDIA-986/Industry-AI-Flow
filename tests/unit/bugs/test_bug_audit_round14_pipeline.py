@@ -184,7 +184,6 @@ class TestR14P_P0_03_ENPlaceholderKeywordsFalsePositive:
 # =============================================================================
 
 
-@pytest.mark.xfail(reason="R14P-P1-01: clarification retry route is dead code — architectural fix deferred")
 class TestR14P_P1_01_ClarificationRetryNeverReached:
     """P1: _route_after_clarification never returns 'retry_classification',
     making the retry edge dead code.
