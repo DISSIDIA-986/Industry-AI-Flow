@@ -26,6 +26,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 29    | 2026-02-27 | 6         | 0  | 3  | 6     | 0           | 3           |
 | 30    | 2026-02-27 | 2         | 0  | 1  | 2     | 3           | 2           |
 | 31    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 3           |
+| 32    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
 
 ## Convergence
 
@@ -50,6 +51,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 29: 6 deferred pipeline findings closed (0 P0 + 3 P1 + 3 P2). Fixes: converted `intent_workflow` preprocessing/context-enrichment transitions to error-aware conditional routing, implemented meaningful clarification processing with query enrichment + best-effort reclassification, preserved checkpoint metadata during `continue_workflow` via merge instead of replacement, replaced module-level simple-intent singleton with lazy getter, and added lock-based synchronization for routing statistics updates/reads. Deferred xfail backlog cleared (`6 → 0`). Unit suite result: `493 passed, 20 skipped`.
 - Round 30: 2 findings fixed (0 P0 + 1 P1 + 1 test-isolation hygiene). P1 fix: blocked higher-order callable reference bypasses in `CodeValidator` (`map(eval, ...)`, `sorted(..., key=eval)`, `(lambda fn: fn(...))(eval)`) by validating blocked callable references in call arguments/kwargs. Hygiene fix: removed global `sys.modules` package stubbing in `test_bug_audit_round18` that poisoned later workflow imports (`... is not a package`). Validation: `tests/unit/bugs` passed (`296 passed`) and targeted code-execution regression suite remained green.
 - Round 31: 1 P1 security finding fixed in `CodeValidator` alias tracking. New bypasses validated and blocked: expression aliases (`fn = eval if True else ...`), default-argument carriers (`def run(fn=eval)`), and class-attribute alias calls (`X.fn(...)`). Added 3 regression tests and extended validator checks to detect blocked callable references in assignment expressions, default arguments, and attribute-based alias calls. Validation: `tests/unit/bugs` passed (`299 passed`) and code-execution regression tests remained green.
+- Round 32: 1 P1 security finding fixed in `CodeValidator` builtin-namespace guarding. New bypasses validated and blocked: `__builtins__['eval'](...)`, `__builtins__['exec'](...)`, and `__builtins__.__getitem__('eval')(...)`. Added 3 regression tests and hardened AST validation to reject direct `__builtins__` namespace access before call-path analysis. Validation: `tests/unit/bugs` passed (`302 passed`) and code-execution regression tests remained green.
 
 ## New Patterns Discovered
 
@@ -61,6 +63,10 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - **Expression-level alias bypass**: blocking only direct-name aliases (`fn = eval`) misses alias construction via conditional/bool expressions (`fn = eval if ... else ...`).
 - **Default-argument carrier bypass**: blocked callables can be smuggled through function defaults (`def run(fn=eval)`), avoiding direct call checks.
 - **Attribute alias invocation gap**: class/object attribute aliases (`X.fn = eval; X.fn(...)`) require attribute-call alias checks, not just name-call checks.
+
+### Round 32
+- **Builtin namespace lookup bypass**: blocked callables can be recovered via `__builtins__` subscript/lookup paths even when direct calls are denied.
+- **Call-target-only filtering is insufficient**: validating only direct `ast.Name/ast.Attribute` call targets misses indirect namespace retrieval (`__getitem__` / subscript-then-call) unless namespace access itself is denied.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.
