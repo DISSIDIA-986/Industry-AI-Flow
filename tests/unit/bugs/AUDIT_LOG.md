@@ -24,6 +24,8 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 24    | 2026-02-27 | 1         | 0  | 0  | 1     | 0           | 1           |
 | 28    | 2026-02-27 | 2         | 0  | 2  | 2     | 3           | 2           |
 | 29    | 2026-02-27 | 6         | 0  | 3  | 6     | 0           | 3           |
+| 30    | 2026-02-27 | 2         | 0  | 1  | 2     | 3           | 2           |
+| 31    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 3           |
 
 ## Convergence
 
@@ -46,8 +48,19 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 27: 2 hardening findings fixed in continued post-gate audit (0 P0 + 1 P1 + 1 hygiene). P1 fix: eliminated absolute-path disclosure from `/api/v1/cost-estimation/train` missing-file error path (`404` now returns generic `"path does not exist"`), with new integration regression coverage to prevent reintroduction. Hygiene fix: removed final dataclass/class collection warnings by marking helper data containers as non-tests (`__test__ = False`) in legacy script-style suites. Full-suite result after fixes: `561 passed, 27 skipped, 8 xfailed, 1 xpassed` with zero warning output.
 - Round 28: 2 security findings fixed (0 P0 + 2 P1) via targeted re-audit of deferred xfail items. Fixes: trusted-proxy-aware client IP resolution for rate limiting (`X-Forwarded-For` / `X-Real-IP` / `Forwarded` only when direct peer is trusted), and SQL identifier hardening for memory-store table names using explicit `TABLE_NAME_PATTERN` validation before interpolation. Deferred xfail debt reduced (`8 → 6`) and suite stayed green with improved signal (`487 passed, 20 skipped, 6 xfailed`).
 - Round 29: 6 deferred pipeline findings closed (0 P0 + 3 P1 + 3 P2). Fixes: converted `intent_workflow` preprocessing/context-enrichment transitions to error-aware conditional routing, implemented meaningful clarification processing with query enrichment + best-effort reclassification, preserved checkpoint metadata during `continue_workflow` via merge instead of replacement, replaced module-level simple-intent singleton with lazy getter, and added lock-based synchronization for routing statistics updates/reads. Deferred xfail backlog cleared (`6 → 0`). Unit suite result: `493 passed, 20 skipped`.
+- Round 30: 2 findings fixed (0 P0 + 1 P1 + 1 test-isolation hygiene). P1 fix: blocked higher-order callable reference bypasses in `CodeValidator` (`map(eval, ...)`, `sorted(..., key=eval)`, `(lambda fn: fn(...))(eval)`) by validating blocked callable references in call arguments/kwargs. Hygiene fix: removed global `sys.modules` package stubbing in `test_bug_audit_round18` that poisoned later workflow imports (`... is not a package`). Validation: `tests/unit/bugs` passed (`296 passed`) and targeted code-execution regression suite remained green.
+- Round 31: 1 P1 security finding fixed in `CodeValidator` alias tracking. New bypasses validated and blocked: expression aliases (`fn = eval if True else ...`), default-argument carriers (`def run(fn=eval)`), and class-attribute alias calls (`X.fn(...)`). Added 3 regression tests and extended validator checks to detect blocked callable references in assignment expressions, default arguments, and attribute-based alias calls. Validation: `tests/unit/bugs` passed (`299 passed`) and code-execution regression tests remained green.
 
 ## New Patterns Discovered
+
+### Round 30
+- **Higher-order callable reference bypass in validator**: blocking direct `eval(...)`/`open(...)` calls is insufficient when blocked callables are passed as first-class values (`map(eval, ...)`, `key=eval`, lambda argument injection). Validator must inspect call arguments/kwargs recursively for blocked references.
+- **Global `sys.modules` poisoning from tests**: injecting placeholder modules for package names without teardown can downgrade real packages into plain modules and trigger cascading `ModuleNotFoundError` failures in unrelated suites.
+
+### Round 31
+- **Expression-level alias bypass**: blocking only direct-name aliases (`fn = eval`) misses alias construction via conditional/bool expressions (`fn = eval if ... else ...`).
+- **Default-argument carrier bypass**: blocked callables can be smuggled through function defaults (`def run(fn=eval)`), avoiding direct call checks.
+- **Attribute alias invocation gap**: class/object attribute aliases (`X.fn = eval; X.fn(...)`) require attribute-call alias checks, not just name-call checks.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.
