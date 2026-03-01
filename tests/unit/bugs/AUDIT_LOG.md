@@ -29,6 +29,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 32    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
 | 33    | 2026-02-28 | 1         | 0  | 1  | 1     | 2           | 2           |
 | 34    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
+| 35    | 2026-02-28 | 2         | 0  | 2  | 2     | 2           | 3           |
 
 ## Convergence
 
@@ -56,6 +57,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 32: 1 P1 security finding fixed in `CodeValidator` builtin-namespace guarding. New bypasses validated and blocked: `__builtins__['eval'](...)`, `__builtins__['exec'](...)`, and `__builtins__.__getitem__('eval')(...)`. Added 3 regression tests and hardened AST validation to reject direct `__builtins__` namespace access before call-path analysis. Validation: `tests/unit/bugs` passed (`302 passed`) and code-execution regression tests remained green.
 - Round 33: 1 P1 security finding fixed in `CodeValidator` dunder-bound builtins access. New bypasses validated and blocked: `print.__self__.open(...)` and `abs.__self__.exec(...)`. Added 2 regression tests and hardened validator by classifying `.__self__` as dangerous plus blocking dangerous callable names when invoked as object attributes (not only direct names). Validation: `tests/unit/bugs` passed (`304 passed`) and targeted code-execution suites stayed green.
 - Round 34: 1 P1 security finding fixed in `CodeValidator` subscript-indirection handling. New bypasses validated and blocked: `d['x']=eval; d['x'](...)`, alias-to-list subscript calls (`a=[f]; a[0](...)`), and list-comprehension subscript call pivots (`[g for g in [f]][0](...)`). Added 3 regression tests and hardened validator to reject blocked callables assigned into subscript targets and blocked callables invoked via subscript call expressions. Validation: `tests/unit/bugs` passed (`307 passed`) and targeted code-execution suites remained green.
+- Round 35: 2 P1 runtime-stability findings fixed in document loading/import chain. Fixes: guarded `PaddleOCR` constructor failure with graceful OCR disable fallback, and replaced eager module-level `DocumentLoader()` singleton with lazy proxy to prevent `backend.main` import-time crashes in environments lacking `paddle` runtime. Added 2 regression tests (`test_bug_audit_round35.py`) and normalized PaddleOCR smoke test to skip when runtime is unavailable. Validation: targeted suites passed (`16 passed, 1 skipped`), no NEW unit failures vs baseline, and previous collection blockers were resolved.
 
 ## New Patterns Discovered
 
@@ -79,6 +81,11 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 ### Round 34
 - **Subscript indirection bypass**: blocked callables can be smuggled into container elements and executed via subscript call targets (`d['k'](...)`, `a[0](...)`) if validators only inspect direct name/attribute call forms.
 - **Assignment-path blind spot**: allowing blocked callables to be assigned into subscript targets (`d['k'] = eval`) creates delayed execution channels that evade call-site-only checks.
+
+### Round 35
+- **Optional dependency false-positive availability**: importing `paddleocr` can succeed while constructor-time dependency (`paddle`) is missing, causing runtime crash unless initialization is exception-guarded.
+- **Module import side-effect singleton**: eager module-level service instantiation (`document_loader = DocumentLoader()`) can crash unrelated API imports; runtime-heavy services should be lazy-initialized.
+- **Optional-runtime smoke test contract drift**: tests that only `importorskip("paddleocr")` can still hard-fail during object construction; smoke tests must guard both package presence and runtime backend availability.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.
