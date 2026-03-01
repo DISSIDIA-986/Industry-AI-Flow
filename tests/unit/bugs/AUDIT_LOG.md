@@ -27,6 +27,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 30    | 2026-02-27 | 2         | 0  | 1  | 2     | 3           | 2           |
 | 31    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 3           |
 | 32    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
+| 33    | 2026-02-28 | 1         | 0  | 1  | 1     | 2           | 2           |
 
 ## Convergence
 
@@ -52,6 +53,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 30: 2 findings fixed (0 P0 + 1 P1 + 1 test-isolation hygiene). P1 fix: blocked higher-order callable reference bypasses in `CodeValidator` (`map(eval, ...)`, `sorted(..., key=eval)`, `(lambda fn: fn(...))(eval)`) by validating blocked callable references in call arguments/kwargs. Hygiene fix: removed global `sys.modules` package stubbing in `test_bug_audit_round18` that poisoned later workflow imports (`... is not a package`). Validation: `tests/unit/bugs` passed (`296 passed`) and targeted code-execution regression suite remained green.
 - Round 31: 1 P1 security finding fixed in `CodeValidator` alias tracking. New bypasses validated and blocked: expression aliases (`fn = eval if True else ...`), default-argument carriers (`def run(fn=eval)`), and class-attribute alias calls (`X.fn(...)`). Added 3 regression tests and extended validator checks to detect blocked callable references in assignment expressions, default arguments, and attribute-based alias calls. Validation: `tests/unit/bugs` passed (`299 passed`) and code-execution regression tests remained green.
 - Round 32: 1 P1 security finding fixed in `CodeValidator` builtin-namespace guarding. New bypasses validated and blocked: `__builtins__['eval'](...)`, `__builtins__['exec'](...)`, and `__builtins__.__getitem__('eval')(...)`. Added 3 regression tests and hardened AST validation to reject direct `__builtins__` namespace access before call-path analysis. Validation: `tests/unit/bugs` passed (`302 passed`) and code-execution regression tests remained green.
+- Round 33: 1 P1 security finding fixed in `CodeValidator` dunder-bound builtins access. New bypasses validated and blocked: `print.__self__.open(...)` and `abs.__self__.exec(...)`. Added 2 regression tests and hardened validator by classifying `.__self__` as dangerous plus blocking dangerous callable names when invoked as object attributes (not only direct names). Validation: `tests/unit/bugs` passed (`304 passed`) and targeted code-execution suites stayed green.
 
 ## New Patterns Discovered
 
@@ -67,6 +69,10 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 ### Round 32
 - **Builtin namespace lookup bypass**: blocked callables can be recovered via `__builtins__` subscript/lookup paths even when direct calls are denied.
 - **Call-target-only filtering is insufficient**: validating only direct `ast.Name/ast.Attribute` call targets misses indirect namespace retrieval (`__getitem__` / subscript-then-call) unless namespace access itself is denied.
+
+### Round 33
+- **Builtin function `__self__` pivot bypass**: bound builtins on builtin functions (`print.__self__`) can expose the full builtins namespace and re-enable blocked primitives (`open`, `exec`) if `__self__` access is not denied.
+- **Name-only callable blocking is incomplete**: sandbox validators must enforce blocked callable names even when they appear as attribute-call targets (`obj.open()`), not just direct `open(...)`.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.

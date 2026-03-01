@@ -92,7 +92,7 @@ class CodeValidator:
 
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
-        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__|__init_subclass__|__set_name__|__prepare__)\b",  # Dangerous dunder attribute access
+        r"\.(__class__|__subclasses__|__globals__|__builtins__|__import__|__loader__|__spec__|__getattribute__|__mro__|__bases__|__init__|__dict__|__reduce__|__reduce_ex__|__del__|__getattr__|__setattr__|__delattr__|__init_subclass__|__set_name__|__prepare__|__self__)\b",  # Dangerous dunder attribute access
         r"globals\s*\(",  # Global scope access
         r"locals\s*\(",  # Local scope access
         r"vars\s*\(",  # Variable introspection
@@ -469,6 +469,11 @@ class CodeValidator:
 
             if isinstance(node.func, ast.Attribute):
                 attr = node.func.attr.lower()
+                if attr in blocked_names:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked function call via attribute: .{node.func.attr}",
+                    )
                 if attr in alias_names or attr in alias_attribute_names:
                     return ValidationResult(
                         is_valid=False,
