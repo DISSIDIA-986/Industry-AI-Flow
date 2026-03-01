@@ -27,23 +27,9 @@ def _load_validator():
 
 
 def _load_heuristic_intent():
-    import sys
-    import types
-    # Pre-register packages so intent_node's "from backend.services.workflows.state"
-    # import resolves without triggering workflows/__init__.py (which needs pydantic_settings).
-    for pkg in [
-        "backend", "backend.services", "backend.services.workflows",
-        "backend.services.workflows.nodes",
-    ]:
-        if pkg not in sys.modules:
-            sys.modules[pkg] = types.ModuleType(pkg)
-    # Load state.py first (needed by intent_node)
-    state_mod = _load_module("backend.services.workflows.state",
-                             "backend/services/workflows/state.py")
-    sys.modules["backend.services.workflows.state"] = state_mod
-    intent_mod = _load_module("backend.services.workflows.nodes.intent_node",
-                              "backend/services/workflows/nodes/intent_node.py")
-    return intent_mod._heuristic_intent
+    from backend.services.workflows.nodes.intent_node import _heuristic_intent
+
+    return _heuristic_intent
 
 
 # ---------------------------------------------------------------------------

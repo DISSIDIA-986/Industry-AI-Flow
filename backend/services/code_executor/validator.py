@@ -289,6 +289,21 @@ class CodeValidator:
         blocked_names = {name.lower() for name in self.BLOCKED_CALL_NAMES}
         blocked_methods = {name.lower() for name in self.BLOCKED_METHOD_NAMES}
         alias_names: set[str] = set()
+        alias_attribute_names: set[str] = set()
+
+        def _find_blocked_callable_reference(expr: ast.AST) -> Optional[str]:
+            """Detect blocked callables passed around as first-class values."""
+            for child in ast.walk(expr):
+                if isinstance(child, ast.Name):
+                    candidate = child.id.lower()
+                    if candidate in blocked_names or candidate in alias_names:
+                        return child.id
+                if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
+                    base = child.value.id.lower()
+                    attr = child.attr.lower()
+                    if (base, attr) in blocked_attr_calls:
+                        return f"{child.value.id}.{child.attr}"
+            return None
 
         # Block references to blocked names inside containers (lists, dicts, tuples, sets).
         # Patterns like [exec][0](...) or {"e": exec}["e"](...) hide blocked
@@ -326,15 +341,72 @@ class CodeValidator:
                             error=f"Blocked function reference in lambda: {child.id}",
                         )
 
+        # Block blocked callables hidden in default arguments
+        # (e.g., def run(fn=eval): ...).
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                continue
+            defaults = list(node.args.defaults) + [
+                kw for kw in node.args.kw_defaults if kw is not None
+            ]
+            for default_value in defaults:
+                blocked_ref = _find_blocked_callable_reference(default_value)
+                if blocked_ref:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked callable in default argument: {blocked_ref}",
+                    )
+
+        # Track aliases created from blocked callable references, including
+        # expression-based assignments (ifexp/boolop/etc.).
+        def _record_alias_from_assignment(target: ast.AST, value: ast.AST) -> bool:
+            blocked_ref = _find_blocked_callable_reference(value)
+            if not blocked_ref:
+                return False
+            if isinstance(target, ast.Name):
+                key = target.id.lower()
+                if key not in alias_names:
+                    alias_names.add(key)
+                    return True
+            if isinstance(target, ast.Attribute):
+                key = target.attr.lower()
+                if key not in alias_attribute_names:
+                    alias_attribute_names.add(key)
+                    return True
+            return False
+
+        changed = True
+        while changed:
+            changed = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Assign):
+                    if len(node.targets) != 1:
+                        continue
+                    if _record_alias_from_assignment(node.targets[0], node.value):
+                        changed = True
+                elif isinstance(node, ast.AnnAssign):
+                    if node.value is None:
+                        continue
+                    if _record_alias_from_assignment(node.target, node.value):
+                        changed = True
+
         for node in ast.walk(tree):
             # Track walrus operator aliases: (fn := exec) creates a NamedExpr
             if isinstance(node, ast.NamedExpr):
-                if isinstance(node.target, ast.Name) and isinstance(node.value, ast.Name):
-                    if node.value.id.lower() in blocked_names:
-                        return ValidationResult(
-                            is_valid=False,
-                            error=f"Blocked function alias via walrus operator: {node.target.id} := {node.value.id}",
-                        )
+                blocked_ref = _find_blocked_callable_reference(node.value)
+                if blocked_ref:
+                    target_name = (
+                        node.target.id
+                        if isinstance(node.target, ast.Name)
+                        else getattr(node.target, "attr", "<expr>")
+                    )
+                    return ValidationResult(
+                        is_valid=False,
+                        error=(
+                            "Blocked function alias via walrus operator: "
+                            f"{target_name} := {blocked_ref}"
+                        ),
+                    )
 
             if not isinstance(node, ast.Assign):
                 continue
@@ -361,6 +433,19 @@ class CodeValidator:
             if not isinstance(node, ast.Call):
                 continue
 
+            # Block blocked callables passed as arguments/kwargs to higher-order
+            # functions (e.g., map(eval, ...), sorted(..., key=eval)).
+            argument_nodes = list(node.args) + [
+                kw.value for kw in node.keywords if kw.value is not None
+            ]
+            for arg_node in argument_nodes:
+                blocked_ref = _find_blocked_callable_reference(arg_node)
+                if blocked_ref:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked callable reference passed as argument: {blocked_ref}",
+                    )
+
             if isinstance(node.func, ast.Name):
                 func_name = node.func.id.lower()
                 if func_name in blocked_names or func_name in alias_names:
@@ -378,6 +463,11 @@ class CodeValidator:
 
             if isinstance(node.func, ast.Attribute):
                 attr = node.func.attr.lower()
+                if attr in alias_names or attr in alias_attribute_names:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=f"Blocked function call via attribute alias: .{node.func.attr}",
+                    )
                 # Block dangerous method calls on any object (e.g., df.query(), df.eval())
                 if attr in blocked_methods:
                     return ValidationResult(
