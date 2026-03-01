@@ -309,6 +309,12 @@ class CodeValidator:
         # Patterns like [exec][0](...) or {"e": exec}["e"](...) hide blocked
         # functions inside data structures to bypass direct-call detection.
         for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id == "__builtins__":
+                return ValidationResult(
+                    is_valid=False,
+                    error="Blocked builtin namespace access: __builtins__",
+                )
+
             if isinstance(node, ast.Name) and node.id.lower() in blocked_names:
                 # Allow import-target names (handled by _validate_imports)
                 # but block references inside containers or subscripts
