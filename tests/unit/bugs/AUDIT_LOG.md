@@ -28,6 +28,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 31    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 3           |
 | 32    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
 | 33    | 2026-02-28 | 1         | 0  | 1  | 1     | 2           | 2           |
+| 34    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
 
 ## Convergence
 
@@ -54,6 +55,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 31: 1 P1 security finding fixed in `CodeValidator` alias tracking. New bypasses validated and blocked: expression aliases (`fn = eval if True else ...`), default-argument carriers (`def run(fn=eval)`), and class-attribute alias calls (`X.fn(...)`). Added 3 regression tests and extended validator checks to detect blocked callable references in assignment expressions, default arguments, and attribute-based alias calls. Validation: `tests/unit/bugs` passed (`299 passed`) and code-execution regression tests remained green.
 - Round 32: 1 P1 security finding fixed in `CodeValidator` builtin-namespace guarding. New bypasses validated and blocked: `__builtins__['eval'](...)`, `__builtins__['exec'](...)`, and `__builtins__.__getitem__('eval')(...)`. Added 3 regression tests and hardened AST validation to reject direct `__builtins__` namespace access before call-path analysis. Validation: `tests/unit/bugs` passed (`302 passed`) and code-execution regression tests remained green.
 - Round 33: 1 P1 security finding fixed in `CodeValidator` dunder-bound builtins access. New bypasses validated and blocked: `print.__self__.open(...)` and `abs.__self__.exec(...)`. Added 2 regression tests and hardened validator by classifying `.__self__` as dangerous plus blocking dangerous callable names when invoked as object attributes (not only direct names). Validation: `tests/unit/bugs` passed (`304 passed`) and targeted code-execution suites stayed green.
+- Round 34: 1 P1 security finding fixed in `CodeValidator` subscript-indirection handling. New bypasses validated and blocked: `d['x']=eval; d['x'](...)`, alias-to-list subscript calls (`a=[f]; a[0](...)`), and list-comprehension subscript call pivots (`[g for g in [f]][0](...)`). Added 3 regression tests and hardened validator to reject blocked callables assigned into subscript targets and blocked callables invoked via subscript call expressions. Validation: `tests/unit/bugs` passed (`307 passed`) and targeted code-execution suites remained green.
 
 ## New Patterns Discovered
 
@@ -73,6 +75,10 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 ### Round 33
 - **Builtin function `__self__` pivot bypass**: bound builtins on builtin functions (`print.__self__`) can expose the full builtins namespace and re-enable blocked primitives (`open`, `exec`) if `__self__` access is not denied.
 - **Name-only callable blocking is incomplete**: sandbox validators must enforce blocked callable names even when they appear as attribute-call targets (`obj.open()`), not just direct `open(...)`.
+
+### Round 34
+- **Subscript indirection bypass**: blocked callables can be smuggled into container elements and executed via subscript call targets (`d['k'](...)`, `a[0](...)`) if validators only inspect direct name/attribute call forms.
+- **Assignment-path blind spot**: allowing blocked callables to be assigned into subscript targets (`d['k'] = eval`) creates delayed execution channels that evade call-site-only checks.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.
