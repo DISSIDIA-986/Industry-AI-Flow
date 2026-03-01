@@ -386,6 +386,19 @@ class CodeValidator:
             changed = False
             for node in ast.walk(tree):
                 if isinstance(node, ast.Assign):
+                    # Block assigning blocked callables into container slots
+                    # (e.g., d['x'] = eval) because later subscript calls can
+                    # execute them while bypassing Name/Attribute call checks.
+                    if any(isinstance(t, ast.Subscript) for t in node.targets):
+                        blocked_ref = _find_blocked_callable_reference(node.value)
+                        if blocked_ref:
+                            return ValidationResult(
+                                is_valid=False,
+                                error=(
+                                    "Blocked callable assigned via subscript target: "
+                                    f"{blocked_ref}"
+                                ),
+                            )
                     if len(node.targets) != 1:
                         continue
                     if _record_alias_from_assignment(node.targets[0], node.value):
@@ -393,6 +406,16 @@ class CodeValidator:
                 elif isinstance(node, ast.AnnAssign):
                     if node.value is None:
                         continue
+                    if isinstance(node.target, ast.Subscript):
+                        blocked_ref = _find_blocked_callable_reference(node.value)
+                        if blocked_ref:
+                            return ValidationResult(
+                                is_valid=False,
+                                error=(
+                                    "Blocked callable assigned via subscript target: "
+                                    f"{blocked_ref}"
+                                ),
+                            )
                     if _record_alias_from_assignment(node.target, node.value):
                         changed = True
 
@@ -438,6 +461,17 @@ class CodeValidator:
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
+
+            if isinstance(node.func, ast.Subscript):
+                blocked_ref = _find_blocked_callable_reference(node.func)
+                if blocked_ref:
+                    return ValidationResult(
+                        is_valid=False,
+                        error=(
+                            "Blocked function call via subscript expression: "
+                            f"{blocked_ref}"
+                        ),
+                    )
 
             # Block blocked callables passed as arguments/kwargs to higher-order
             # functions (e.g., map(eval, ...), sorted(..., key=eval)).
