@@ -10,6 +10,7 @@ import pytest
 @pytest.mark.unit
 def test_paddleocr_api_smoke():
     paddleocr = pytest.importorskip("paddleocr")
+    pytest.importorskip("paddle")
     from paddleocr import PaddleOCR
 
     assert hasattr(paddleocr, "__version__")
@@ -18,7 +19,10 @@ def test_paddleocr_api_smoke():
     if not image_path.exists():
         pytest.skip(f"sample image not found: {image_path}")
 
-    ocr = PaddleOCR(lang="en")
+    try:
+        ocr = PaddleOCR(lang="en")
+    except ModuleNotFoundError as exc:
+        pytest.skip(f"Paddle runtime unavailable: {exc}")
     result = ocr.predict(str(image_path))
 
     assert ocr is not None

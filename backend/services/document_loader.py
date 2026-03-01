@@ -49,11 +49,16 @@ class EnhancedDocumentLoader:
 
         # Phase 2 Step 4: EN PaddleOCR (3.3.1 ENAPI)
         if self.use_ocr:
-            self.ocr = PaddleOCR(
-                use_textline_orientation=True,  # EN (ENuse_angle_cls)
-                lang=ocr_lang,  # EN
-            )
-            logger.info("OCR EN (PaddleOCR 3.3.1, EN: %s)", ocr_lang)
+            try:
+                self.ocr = PaddleOCR(
+                    use_textline_orientation=True,  # EN (ENuse_angle_cls)
+                    lang=ocr_lang,  # EN
+                )
+                logger.info("OCR EN (PaddleOCR 3.3.1, EN: %s)", ocr_lang)
+            except Exception as exc:
+                self.ocr = None
+                self.use_ocr = False
+                logger.warning("PaddleOCR initialization failed, OCR disabled: %s", exc)
         else:
             self.ocr = None
             if use_ocr and not OCR_AVAILABLE:
@@ -226,5 +231,20 @@ class DocumentLoader:
             return []
 
 
-# EN,EN
-document_loader = DocumentLoader()
+class _LazyDocumentLoader:
+    """Lazy proxy to avoid import-time OCR initialization side effects."""
+
+    def __init__(self):
+        self._instance: Optional[DocumentLoader] = None
+
+    def _get_instance(self) -> DocumentLoader:
+        if self._instance is None:
+            self._instance = DocumentLoader()
+        return self._instance
+
+    def load_document(self, file_path: str) -> list:
+        return self._get_instance().load_document(file_path)
+
+
+# EN,EN (lazy)
+document_loader = _LazyDocumentLoader()
