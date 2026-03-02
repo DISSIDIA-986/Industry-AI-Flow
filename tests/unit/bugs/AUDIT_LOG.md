@@ -30,6 +30,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 | 33    | 2026-02-28 | 1         | 0  | 1  | 1     | 2           | 2           |
 | 34    | 2026-02-28 | 1         | 0  | 1  | 1     | 3           | 2           |
 | 35    | 2026-02-28 | 2         | 0  | 2  | 2     | 2           | 3           |
+| 36    | 2026-03-02 | 1         | 0  | 1  | 1     | 3           | 2           |
 
 ## Convergence
 
@@ -58,6 +59,7 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - Round 33: 1 P1 security finding fixed in `CodeValidator` dunder-bound builtins access. New bypasses validated and blocked: `print.__self__.open(...)` and `abs.__self__.exec(...)`. Added 2 regression tests and hardened validator by classifying `.__self__` as dangerous plus blocking dangerous callable names when invoked as object attributes (not only direct names). Validation: `tests/unit/bugs` passed (`304 passed`) and targeted code-execution suites stayed green.
 - Round 34: 1 P1 security finding fixed in `CodeValidator` subscript-indirection handling. New bypasses validated and blocked: `d['x']=eval; d['x'](...)`, alias-to-list subscript calls (`a=[f]; a[0](...)`), and list-comprehension subscript call pivots (`[g for g in [f]][0](...)`). Added 3 regression tests and hardened validator to reject blocked callables assigned into subscript targets and blocked callables invoked via subscript call expressions. Validation: `tests/unit/bugs` passed (`307 passed`) and targeted code-execution suites remained green.
 - Round 35: 2 P1 runtime-stability findings fixed in document loading/import chain. Fixes: guarded `PaddleOCR` constructor failure with graceful OCR disable fallback, and replaced eager module-level `DocumentLoader()` singleton with lazy proxy to prevent `backend.main` import-time crashes in environments lacking `paddle` runtime. Added 2 regression tests (`test_bug_audit_round35.py`) and normalized PaddleOCR smoke test to skip when runtime is unavailable. Validation: targeted suites passed (`16 passed, 1 skipped`), no NEW unit failures vs baseline, and previous collection blockers were resolved.
+- Round 36: 1 P1 sandbox-hardening finding fixed in `DockerExecutor.execute()` input file handling. Fix: enforce single-level safe filenames for `input_files` and reject absolute paths, parent traversal (`..`), nested paths, and backslash separators before any workspace write. Added 3 regression tests (`test_bug_audit_round36.py`). Validation: targeted bug suite passed (`3 passed`), impacted execution suites passed (`6 passed`), and full unit regression remained green with no NEW failures (`515 passed, 17 skipped`).
 
 ## New Patterns Discovered
 
@@ -86,6 +88,10 @@ Round-over-round metrics for Test-Driven Improvement cycles.
 - **Optional dependency false-positive availability**: importing `paddleocr` can succeed while constructor-time dependency (`paddle`) is missing, causing runtime crash unless initialization is exception-guarded.
 - **Module import side-effect singleton**: eager module-level service instantiation (`document_loader = DocumentLoader()`) can crash unrelated API imports; runtime-heavy services should be lazy-initialized.
 - **Optional-runtime smoke test contract drift**: tests that only `importorskip("paddleocr")` can still hard-fail during object construction; smoke tests must guard both package presence and runtime backend availability.
+
+### Round 36
+- **Workspace filename traversal via `input_files` keys**: `DockerExecutor.execute()` previously wrote `workspace / filename` directly, so values like `../escaped.txt` or absolute paths could escape the sandbox workspace before container startup.
+- **Public execute-path trust boundary gap**: even with `execute_code()` basename normalization, the lower-level `execute(..., input_files=...)` path is reused by provider adapters and must enforce filename constraints itself.
 
 ### Round 20
 - **Optional dependency import traps in app import chain**: importing `backend.main` can transitively require runtime-only packages if imports are top-level.

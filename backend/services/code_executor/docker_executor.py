@@ -9,7 +9,6 @@ Features:
 - Result extraction (stdout, files, plots)
 """
 
-import io
 import logging
 import os
 import tempfile
@@ -87,6 +86,32 @@ def _resolve_allowed_data_file(path_value: str) -> Path:
         raise ValueError(f"data file not found: {candidate}")
 
     return candidate
+
+
+def _normalize_workspace_filename(filename: str) -> str:
+    """Return a single safe filename for workspace writes."""
+    raw_name = (filename or "").strip()
+    if not raw_name:
+        raise ValueError("filename cannot be empty")
+    if "\x00" in raw_name:
+        raise ValueError("filename contains null byte")
+    if "\\" in raw_name:
+        raise ValueError("filename cannot contain backslashes")
+
+    candidate = Path(raw_name)
+    if candidate.is_absolute():
+        raise ValueError("absolute paths are not allowed")
+    if any(part == ".." for part in candidate.parts):
+        raise ValueError("parent traversal is not allowed")
+
+    normalized_parts = [part for part in candidate.parts if part not in ("", ".")]
+    if len(normalized_parts) != 1:
+        raise ValueError("nested paths are not allowed")
+
+    safe_name = normalized_parts[0]
+    if safe_name in {".", ".."}:
+        raise ValueError("invalid filename")
+    return safe_name
 
 
 class DockerExecutor:
@@ -206,7 +231,17 @@ class DockerExecutor:
             # Write input files
             if input_files:
                 for filename, content in input_files.items():
-                    file_path = workspace / filename
+                    try:
+                        safe_name = _normalize_workspace_filename(filename)
+                    except ValueError as exc:
+                        return ExecutionResult(
+                            success=False,
+                            stdout="",
+                            stderr="",
+                            error=f"Invalid input filename '{filename}': {exc}",
+                            execution_time=time.time() - start_time,
+                        )
+                    file_path = workspace / safe_name
                     file_path.write_bytes(content)
 
             try:
