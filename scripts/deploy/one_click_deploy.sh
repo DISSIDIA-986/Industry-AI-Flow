@@ -49,7 +49,7 @@ echo "✅ 数据库配置完成"
 echo -e "${BLUE}[4/6]${NC} 配置Ollama..."
 ollama serve > /dev/null 2>&1 &
 sleep 3
-ollama pull qwen2.5:7b || echo "模型已存在"
+ollama pull qwen3.5:9b || echo "模型已存在"
 echo "✅ Ollama配置完成"
 
 # 5. 部署应用

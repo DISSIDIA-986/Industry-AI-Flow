@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Ollama (备用后端)
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
 
     # llama.cpp (主要后端)
     llama_model_path: str = os.getenv(

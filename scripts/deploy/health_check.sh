@@ -118,7 +118,7 @@ echo -e "${BLUE}=== Ollama Models ===${NC}"
 if ollama list &> /dev/null; then
     echo "Installed models:"
     ollama list
-    ollama list 2>/dev/null | grep -q "qwen2.5:7b" && check_pass "qwen2.5:7b installed" || check_warning "qwen2.5:7b not installed"
+    ollama list 2>/dev/null | grep -q "qwen3.5:9b" && check_pass "qwen3.5:9b installed" || check_warning "qwen3.5:9b not installed"
 else
     check_fail "Cannot get Ollama model list"
 fi
