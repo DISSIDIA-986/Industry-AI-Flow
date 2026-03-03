@@ -7,7 +7,7 @@ POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 POSTGRES_DB="${POSTGRES_DB:-ai_workflow}"
 OLLAMA_HOST="${OLLAMA_HOST:-http://localhost:11434}"
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:7b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3.5:9b}"
 
 # 1) PostgreSQL readiness
 if command -v pg_isready >/dev/null 2>&1; then

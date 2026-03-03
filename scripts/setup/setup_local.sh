@@ -86,11 +86,11 @@ fi
 
 # 6. 检查并下载模型
 echo "📥 检查Ollama模型..."
-if ollama list | grep -q "qwen2.5:7b"; then
-    echo "✅ 模型qwen2.5:7b已下载"
+if ollama list | grep -q "qwen3.5:9b"; then
+    echo "✅ 模型qwen3.5:9b已下载"
 else
     echo "下载Qwen2.5-7B（约5GB，需5-10分钟）..."
-    ollama pull qwen2.5:7b
+    ollama pull qwen3.5:9b
 fi
 
 # 7. 安装Python依赖
@@ -108,7 +108,7 @@ echo "✅ 环境搭建完成!"
 echo ""
 echo "验证命令:"
 echo "  brew services list                 # 查看服务状态"
-echo "  ollama list                        # 应显示qwen2.5:7b"
+echo "  ollama list                        # 应显示qwen3.5:9b"
 echo "  psql ai_workflow -c 'SELECT 1;'    # 应返回1"
 echo "  redis-cli ping                     # 应返回PONG"
 echo ""
