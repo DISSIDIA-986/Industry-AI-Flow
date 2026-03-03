@@ -2,7 +2,11 @@ import os
 from pathlib import Path
 from typing import Optional, Set
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+# P0 修复: 加载 .env 文件
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -22,7 +26,9 @@ class Settings(BaseSettings):
 
     # Ollama (备用后端)
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3.5:4b")
+    ollama_connect_timeout_seconds: int = int(os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "10"))
+    ollama_request_timeout_seconds: int = int(os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "90"))
 
     # llama.cpp (主要后端)
     llama_model_path: str = os.getenv(
@@ -81,6 +87,13 @@ class Settings(BaseSettings):
 
     # RAG
     top_k: int = int(os.getenv("TOP_K", "8"))
+    max_context_length: int = int(os.getenv("MAX_CONTEXT_LENGTH", "2000"))
+    enable_rag_english_query: bool = (
+        os.getenv("ENABLE_RAG_ENGLISH_QUERY", "false").lower() == "true"
+    )
+    require_api_key: bool = (
+        os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
+    )
     enable_rag_query_rewrite: bool = (
         os.getenv("ENABLE_RAG_QUERY_REWRITE", "true").lower() == "true"
     )
@@ -94,6 +107,10 @@ class Settings(BaseSettings):
     workflow_suggested_questions_count: int = int(
         os.getenv("WORKFLOW_SUGGESTED_QUESTIONS_COUNT", "3")
     )
+
+    # Workflow 优化配置 (P0 修复)
+    workflow_dispatch_max_tokens: int = int(os.getenv("WORKFLOW_DISPATCH_MAX_TOKENS", "512"))
+    workflow_recursion_limit: int = int(os.getenv("WORKFLOW_RECURSION_LIMIT", "12"))
 
     # LLM Parameters
     default_temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
