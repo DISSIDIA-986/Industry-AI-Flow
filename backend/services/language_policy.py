@@ -19,7 +19,15 @@ def contains_han(text: str | None) -> bool:
 
 
 def ensure_rag_english_query(query: str, *, field: str) -> None:
-    """Block Chinese input for RAG query entrypoints."""
+    """Block Chinese input for RAG query entrypoints if ENABLE_RAG_ENGLISH_QUERY is true."""
+    from backend.config import settings
+
+    # P0 修复: 检查配置是否允许中文查询
+    if not settings.enable_rag_english_query:
+        # 配置为 false，允许中文查询
+        return
+
+    # 配置为 true，执行中文拦截
     if not contains_han(query):
         return
 
