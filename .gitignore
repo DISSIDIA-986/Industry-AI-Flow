@@ -211,3 +211,11 @@ chinese_visualization_output/
 # Keep Claude skill/command markdown files tracked even with global '*.md' ignore rules.
 !claude/commands/*.md
 !claude/skills/**/SKILL.md
+
+# Large model files
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+
+# Model cache
+models/**/.cache/
