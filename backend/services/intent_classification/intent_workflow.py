@@ -13,6 +13,7 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.errors import GraphRecursionError  # P0 修复: 捕获递归异常
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
@@ -49,6 +50,7 @@ class WorkflowState(TypedDict):
     routing_decision: Optional[RoutingDecision]  # EN
     clarification_needed: bool  # EN
     clarification_response: Optional[str]  # EN
+    clarification_round: int  # P0: Track clarification iterations to prevent infinite loops
     agent_response: Optional[str]  # AgentEN
     workflow_complete: bool  # EN
     error: Optional[str]  # EN
@@ -305,9 +307,25 @@ class IntentClassificationWorkflow:
             return state
 
     async def _confidence_evaluation_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """P0: Evaluate intent confidence and track clarification rounds."""
         try:
             logger.info("EN")
+
+            # P0: CRITICAL - Check max rounds BEFORE anything else to prevent recursion
+            clarification_round = state.get("clarification_round", 0)
+            MAX_CLARIFICATION_ROUNDS = 2  # P0: Reduced from 3 to prevent hitting 12-step limit
+
+            if clarification_round >= MAX_CLARIFICATION_ROUNDS:
+                logger.warning(
+                    "P0: Max clarification rounds (%d) reached in confidence_evaluation! Forcing high confidence. Session: %s",
+                    MAX_CLARIFICATION_ROUNDS,
+                    state.get("session_id", "unknown"),
+                )
+                # Force high confidence to exit clarification loop
+                state["clarification_needed"] = False
+                state["metadata"]["max_clarification_reached"] = True
+                state["metadata"]["confidence_evaluation"] = "high_confidence"
+                return state
 
             intent_result = state.get("intent_result")
             if not intent_result:
@@ -325,13 +343,21 @@ class IntentClassificationWorkflow:
                 evaluation_result = "high_confidence"
                 logger.info("EN,EN")
             elif confidence <= low_threshold:
+                # P0: Increment clarification round counter when entering clarification
+                state["clarification_round"] = clarification_round + 1
                 state["clarification_needed"] = True
                 evaluation_result = "low_confidence"
-                logger.info("EN,EN")
+                logger.info(
+                    "P0: Setting clarification_needed=True, round %d/%d",
+                    clarification_round + 1,
+                    MAX_CLARIFICATION_ROUNDS
+                )
             else:
                 # EN,EN
                 uncertainty_factors = intent_result.uncertainty_factors
                 if len(uncertainty_factors) > 2:
+                    # P0: Increment clarification round counter when entering clarification
+                    state["clarification_round"] = clarification_round + 1
                     state["clarification_needed"] = True
                     evaluation_result = "low_confidence"
                     logger.info("EN,EN")
@@ -518,9 +544,27 @@ class IntentClassificationWorkflow:
     async def _clarification_processing_node(
         self, state: WorkflowState
     ) -> WorkflowState:
-        """EN"""
+        """P0: Process clarification with max rounds escape hatch."""
         try:
             logger.info("EN")
+
+            # P0: CRITICAL CHECK - If max rounds reached, immediately force proceed
+            clarification_round = state.get("clarification_round", 0)
+            MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+
+            if clarification_round >= MAX_CLARIFICATION_ROUNDS:
+                logger.warning(
+                    "P0: Max clarification rounds (%d) reached in clarification_processing_node! Forcing proceed. Session: %s",
+                    clarification_round,
+                    state.get("session_id", "unknown"),
+                )
+                # Don't set clarification_handled - just end the workflow
+                # This will cause _route_after_clarification to return "proceed_with_fallback"
+                state["clarification_needed"] = False
+                state["metadata"]["max_clarification_reached"] = True
+                state["metadata"]["awaiting_user_clarification"] = False
+                state["metadata"]["clarification_handled"] = False
+                return state
 
             # EN,EN
             # EN,EN
@@ -702,7 +746,7 @@ class IntentClassificationWorkflow:
         processing_time_ms: int,
         success: bool,
     ) -> None:
-        """Best-effort interaction recording with timeout protection."""
+        """P0: Best-effort interaction recording with timeout protection (increased to 5s)."""
         try:
             await asyncio.wait_for(
                 self.context_manager.add_interaction_record(
@@ -714,7 +758,7 @@ class IntentClassificationWorkflow:
                     processing_time_ms=processing_time_ms,
                     success=success,
                 ),
-                timeout=2.0,
+                timeout=5.0,  # P0: Increased from 2.0 to 5.0 to reduce timeout warnings
             )
         except asyncio.TimeoutError:
             logger.warning(
@@ -729,11 +773,37 @@ class IntentClassificationWorkflow:
             )
 
     def _route_based_on_confidence(self, state: WorkflowState) -> str:
-        """EN"""
+        """P0: Route based on confidence, with escape hatch after max clarification rounds.
+
+        NOTE: In LangGraph, routing functions must NOT modify state - they only return
+        the next node name. State modifications happen in the nodes themselves.
+        """
         if state.get("error"):
             return "error"
 
+        # P0: Prevent infinite clarification loops - force proceed after 3 rounds
+        clarification_round = state.get("clarification_round", 0)
+        MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+
+        if clarification_round >= MAX_CLARIFICATION_ROUNDS:
+            logger.warning(
+                "P0: Max clarification rounds (%d) reached, forcing proceed to agent. "
+                "Session: %s, Query: %s",
+                MAX_CLARIFICATION_ROUNDS,
+                state.get("session_id", "unknown"),
+                state.get("current_query", "")[:50],
+            )
+            # Force routing to high_confidence (proceeds to routing_decision_step)
+            # The routing_decision_node will handle fallback routing
+            return "high_confidence"
+
         if state.get("clarification_needed", False):
+            logger.info(
+                "P0: Routing to clarification (round %d/%d) for session %s",
+                clarification_round,
+                MAX_CLARIFICATION_ROUNDS,
+                state.get("session_id", "unknown"),
+            )
             return "low_confidence"
         else:
             return "high_confidence"
@@ -749,15 +819,42 @@ class IntentClassificationWorkflow:
         return "continue"
 
     def _route_after_clarification(self, state: WorkflowState) -> str:
-        """Route after clarification processing."""
+        """P0: Route after clarification processing, with max rounds check."""
+        # P0: IMPORTANT: Check if max clarification rounds reached BEFORE any retry logic
+        clarification_round = state.get("clarification_round", 0)
+        MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+
+        logger.info(
+            "P0: _route_after_clarification called with clarification_round=%d, awaiting_user_clarification=%s",
+            clarification_round,
+            state.get("metadata", {}).get("awaiting_user_clarification", False),
+        )
+
+        # P0: CRITICAL: If max rounds reached, ALWAYS proceed to fallback, never retry
+        if clarification_round >= MAX_CLARIFICATION_ROUNDS:
+            logger.warning(
+                "P0: Max clarification rounds (%d) reached in _route_after_clarification! Forcing proceed_with_fallback. Session: %s",
+                clarification_round,
+                state.get("session_id", "unknown"),
+            )
+            # Force proceed to routing_decision instead of retrying
+            return "proceed_with_fallback"
+
         if state.get("metadata", {}).get("awaiting_user_clarification", False):
+            logger.info("P0: Awaiting user clarification, ending workflow")
             return "await_user_input"
 
         # If clarification was handled (user provided a response), re-run
         # intent classification on the updated query so the new input is used.
         if state.get("metadata", {}).get("clarification_handled", False):
+            logger.info(
+                "P0: Clarification handled, retrying classification (round %d/%d)",
+                clarification_round + 1,
+                MAX_CLARIFICATION_ROUNDS,
+            )
             return "retry_classification"
 
+        logger.info("P0: No clarification input, proceeding with fallback")
         return "proceed_with_fallback"
 
     async def _generate_clarification_with_prompt(
@@ -1637,7 +1734,7 @@ class IntentClassificationWorkflow:
             Dict[str, Any]: EN
         """
         try:
-            # EN
+            # P0: Initialize clarification_round counter to prevent infinite loops
             initial_state = WorkflowState(
                 messages=[],
                 session_id=session_id,
@@ -1649,6 +1746,7 @@ class IntentClassificationWorkflow:
                 routing_decision=None,
                 clarification_needed=False,
                 clarification_response=None,
+                clarification_round=0,  # P0: Start at round 0
                 agent_response=None,
                 workflow_complete=False,
                 error=None,
@@ -1668,7 +1766,10 @@ class IntentClassificationWorkflow:
             runnable_workflow = self.workflow.compile(checkpointer=self.memory)
 
             # EN
-            config = {"configurable": {"thread_id": thread_id or session_id}}
+            config = {
+                "configurable": {"thread_id": thread_id or session_id},
+                "recursion_limit": settings.workflow_recursion_limit,  # P0 修复: 设置递归限制
+            }
             result = await runnable_workflow.ainvoke(initial_state, config=config)
 
             # EN
@@ -1700,6 +1801,16 @@ class IntentClassificationWorkflow:
                 "error": result.get("error"),
             }
 
+        except GraphRecursionError as e:
+            # P0 修复: 捕获递归异常，返回受控错误
+            logger.error(f"Workflow recursion limit exceeded: {str(e)}")
+            return {
+                "success": False,
+                "error": "The workflow exceeded maximum processing steps. Please rephrase your query or provide more specific details.",
+                "agent_response": "I need more information to help you. Could you please rephrase your question or provide additional context?",
+                "clarification_needed": True,
+                "clarification_response": "Your request requires clarification. Please provide more specific details.",
+            }
         except Exception as e:
             logger.error(f"Intent workflow execution failed: {str(e)}")
             return {
@@ -1725,7 +1836,10 @@ class IntentClassificationWorkflow:
         try:
             # EN
             runnable_workflow = self.workflow.compile(checkpointer=self.memory)
-            config = {"configurable": {"thread_id": thread_id or session_id}}
+            config = {
+                "configurable": {"thread_id": thread_id or session_id},
+                "recursion_limit": settings.workflow_recursion_limit,  # P0 修复: 设置递归限制
+            }
 
             existing_metadata: Dict[str, Any] = {}
             existing_query_context: QueryContext = QueryContext(session_id=session_id)
@@ -1808,6 +1922,16 @@ class IntentClassificationWorkflow:
                 "error": result.get("error"),
             }
 
+        except GraphRecursionError as e:
+            # P0 修复: 捕获递归异常，返回受控错误
+            logger.error(f"Workflow recursion limit exceeded during continuation: {str(e)}")
+            return {
+                "success": False,
+                "error": "The workflow exceeded maximum processing steps. Please rephrase your query or provide more specific details.",
+                "agent_response": "I need more information to help you. Could you please rephrase your question or provide additional context?",
+                "clarification_needed": True,
+                "clarification_response": "Your request requires clarification. Please provide more specific details.",
+            }
         except Exception as e:
             logger.error(f"Intent workflow continuation failed: {str(e)}")
             return {
