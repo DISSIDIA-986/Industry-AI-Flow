@@ -32,7 +32,7 @@ class BaseConfig:
 
     # LLM settings
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
-    LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5:9b")
+    LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5:4b")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:11434")
     LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))

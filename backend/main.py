@@ -685,6 +685,7 @@ class DataAnalysisRequest(BaseModel):
     analysis_type: str = Field(default="eda", max_length=64)
     target_column: Optional[str] = None
     columns: Optional[List[str]] = None
+    instruction: Optional[str] = Field(default=None, max_length=2048)
 
     @field_validator("data_file", mode="before")
     @classmethod
@@ -708,6 +709,15 @@ class DataAnalysisRequest(BaseModel):
     def _sanitize_analysis_type(cls, value: str) -> str:
         return sanitize_identifier(value, "analysis_type", max_length=64)
 
+    @field_validator("instruction", mode="before")
+    @classmethod
+    def _sanitize_instruction(cls, value: Optional[str]) -> Optional[str]:
+        return (
+            sanitize_text(value, field_name="instruction", max_length=2048)
+            if value
+            else value
+        )
+
 
 class VisualizationRequest(BaseModel):
     data_file: str
@@ -716,13 +726,14 @@ class VisualizationRequest(BaseModel):
     y_column: Optional[str] = None
     color_column: Optional[str] = None
     title: Optional[str] = Field(default=None, max_length=256)
+    instruction: Optional[str] = Field(default=None, max_length=2048)
     save_format: str = "png"
     interactive: bool = False
 
     @field_validator("data_file", mode="before")
     @classmethod
     def _sanitize_viz_data_file(cls, value: str) -> str:
-        return sanitize_identifier(value, "data_file")
+        return sanitize_text(value, field_name="data_file", max_length=1024)
 
     @field_validator("x_column", "y_column", "color_column", mode="before")
     @classmethod
@@ -746,6 +757,15 @@ class VisualizationRequest(BaseModel):
     def _sanitize_title(cls, value: Optional[str]) -> Optional[str]:
         return (
             sanitize_text(value, field_name="title", max_length=256) if value else value
+        )
+
+    @field_validator("instruction", mode="before")
+    @classmethod
+    def _sanitize_instruction(cls, value: Optional[str]) -> Optional[str]:
+        return (
+            sanitize_text(value, field_name="instruction", max_length=2048)
+            if value
+            else value
         )
 
 
@@ -781,6 +801,16 @@ def _resolve_data_file_for_analysis(data_file: str) -> str:
     for path in candidates:
         if path.exists():
             return str(path.resolve())
+
+    uploaded_tmp_candidates = sorted(
+        tmp_root.glob(f"luncheon_data_*/{file_name}"),
+        key=lambda item: item.stat().st_mtime if item.exists() else 0,
+        reverse=True,
+    )
+    for path in uploaded_tmp_candidates:
+        if path.exists():
+            return str(path.resolve())
+
     return file_name
 
 
@@ -979,6 +1009,7 @@ async def upload_data_file(
             "filename": file.filename,
             "file_id": safe_name,
             "sanitized_filename": safe_name,
+            "file_path": file_path,
             "size": len(content),
             "file_type": os.path.splitext(file.filename)[1].lower(),
             "message": "Data file uploaded successfully.",
@@ -1209,6 +1240,7 @@ async def analyze_data(
                 "analysis_type": request.analysis_type,
                 "target_column": request.target_column,
                 "columns": request.columns,
+                "instruction": request.instruction,
             }
         )
         is_success = not isinstance(result, dict) or bool(result.get("success", True))
@@ -1288,14 +1320,16 @@ async def generate_visualization(
         from backend.tools.visualization import visualization_tool
 
         enforce_memory_guard("visualization.generate")
+        resolved_data_file = _resolve_data_file_for_analysis(request.data_file)
         result = visualization_tool.invoke(
             {
-                "data_file": request.data_file,
+                "data_file": resolved_data_file,
                 "chart_type": request.chart_type,
                 "x_column": request.x_column,
                 "y_column": request.y_column,
                 "color_column": request.color_column,
                 "title": request.title,
+                "instruction": request.instruction,
                 "save_format": request.save_format,
                 "interactive": request.interactive,
             }
@@ -1304,7 +1338,7 @@ async def generate_visualization(
             action="visualization.generate",
             tenant=tenant,
             status="success",
-            detail={"chart_type": request.chart_type, "data_file": request.data_file},
+            detail={"chart_type": request.chart_type, "data_file": resolved_data_file},
         )
         return result
     except Exception as e:

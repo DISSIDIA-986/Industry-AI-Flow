@@ -390,7 +390,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--ollama-model",
-        default=_env("OLLAMA_MODEL", "qwen3.5:9b"),
+        default=_env("OLLAMA_MODEL", "qwen3.5:4b"),
         help="Configured Ollama model name.",
     )
     parser.add_argument(

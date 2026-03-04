@@ -58,6 +58,9 @@ export default function DataAnalysisPage() {
   const [uploadedPath, setUploadedPath] = useState("");
   const [analysisType, setAnalysisType] = useState("eda");
   const [chartType, setChartType] = useState("line");
+  const [instruction, setInstruction] = useState(
+    "Run a concise analysis and summarize key findings."
+  );
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [viz, setViz] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,7 +99,9 @@ export default function DataAnalysisPage() {
     try {
       const payload = await uploadDataFile(config, file);
       setResult(payload);
-      const filePath = typeof payload.file_path === "string" ? payload.file_path : "";
+      const filePath =
+        (typeof payload.file_path === "string" && payload.file_path) ||
+        (typeof payload.file_id === "string" ? payload.file_id : "");
       setUploadedPath(filePath);
     } catch (err) {
       setError(normalizeError(err));
@@ -117,6 +122,7 @@ export default function DataAnalysisPage() {
       const payload = await runDataAnalysis(config, {
         data_file: uploadedPath,
         analysis_type: analysisType,
+        instruction,
       });
       setResult(payload);
     } catch (err) {
@@ -138,6 +144,7 @@ export default function DataAnalysisPage() {
       const payload = await generateVisualization(config, {
         data_file: uploadedPath,
         chart_type: chartType,
+        instruction,
       });
       setViz(payload);
     } catch (err) {
@@ -185,6 +192,14 @@ export default function DataAnalysisPage() {
               <option value="scatter">scatter</option>
               <option value="histogram">histogram</option>
             </select>
+          </label>
+          <label className="field-group">
+            Analysis Instruction
+            <input
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              placeholder="Describe what analysis or chart you want"
+            />
           </label>
         </div>
 
