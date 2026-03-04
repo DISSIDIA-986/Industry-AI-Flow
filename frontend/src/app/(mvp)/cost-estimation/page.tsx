@@ -100,6 +100,17 @@ export default function CostEstimationPage() {
     }
   }
 
+  function addCurrentProjectToBatch() {
+    setBatchRows((prev) => [project, ...prev]);
+    // Existing batch predictions no longer represent the new queue content.
+    setBatchResults([]);
+  }
+
+  function clearBatchQueue() {
+    setBatchRows([]);
+    setBatchResults([]);
+  }
+
   return (
     <section className="page-stack">
       <article className="hero-card">
@@ -167,7 +178,7 @@ export default function CostEstimationPage() {
           <button
             className="secondary-button"
             type="button"
-            onClick={() => setBatchRows((prev) => [project, ...prev])}
+            onClick={addCurrentProjectToBatch}
           >
             Add Current Project To Batch
           </button>
@@ -209,7 +220,7 @@ export default function CostEstimationPage() {
           >
             {loadingBatch ? "Running Batch..." : "Run Batch"}
           </button>
-          <button className="secondary-button" type="button" onClick={() => setBatchRows([])}>
+          <button className="secondary-button" type="button" onClick={clearBatchQueue}>
             Clear Queue
           </button>
         </div>

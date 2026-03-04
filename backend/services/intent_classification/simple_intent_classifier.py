@@ -257,7 +257,7 @@ class SimpleIntentClassifier:
         }
 
     def classify_intent(
-        self, query: str, context: Optional[Dict[str, Any]] = None
+        self, query: str, context: Optional[Any] = None
     ) -> SimpleIntentResult:
         """
         EN
@@ -289,7 +289,10 @@ class SimpleIntentClassifier:
 
             # EN
             if context:
-                intent_scores = self._adjust_scores_with_context(intent_scores, context)
+                normalized_context = self._normalize_context(context)
+                intent_scores = self._adjust_scores_with_context(
+                    intent_scores, normalized_context
+                )
 
             # EN
             if not intent_scores:
@@ -391,6 +394,18 @@ class SimpleIntentClassifier:
         score *= priority
 
         return score, matched_keywords
+
+    def _normalize_context(self, context: Any) -> Dict[str, Any]:
+        """Normalize heterogeneous context payloads to a mapping."""
+        if isinstance(context, dict):
+            return context
+
+        # Intent workflow may pass QueryContext dataclass instances.
+        return {
+            "uploaded_files": getattr(context, "uploaded_files", []) or [],
+            "session_topic": getattr(context, "session_topic", "") or "",
+            "recent_intents": getattr(context, "recent_intents", []) or [],
+        }
 
     def _adjust_scores_with_context(
         self, intent_scores: Dict[IntentType, Dict], context: Dict[str, Any]

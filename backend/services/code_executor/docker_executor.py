@@ -311,6 +311,13 @@ class DockerExecutor:
                 "user": "1000:1000",  # Non-root user
                 "read_only": True,
                 "tmpfs": {"/tmp": "rw,noexec,nosuid,size=64m"},
+                # Ensure plotting libraries write caches/config under writable tmpfs.
+                "environment": {
+                    "HOME": "/tmp",
+                    "MPLCONFIGDIR": "/tmp/matplotlib",
+                    "XDG_CONFIG_HOME": "/tmp/.config",
+                    "XDG_CACHE_HOME": "/tmp/.cache",
+                },
                 "security_opt": ["no-new-privileges"],
                 "detach": True,
                 "remove": False,  # Keep container for log extraction

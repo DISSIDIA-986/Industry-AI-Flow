@@ -207,3 +207,7 @@ chinese_visualization_output/
 !requirements/**/*.txt
 !test_resources/demo/
 !test_resources/demo/**/*.json
+
+# Keep Claude skill/command markdown files tracked even with global '*.md' ignore rules.
+!claude/commands/*.md
+!claude/skills/**/SKILL.md

@@ -173,7 +173,7 @@ setup_ollama() {
     
     # 下载模型
     log_info "下载Ollama模型..."
-    ollama pull qwen3.5:9b || log_warning "qwen3.5:9b下载失败"
+    ollama pull qwen3.5:4b || log_warning "qwen3.5:4b下载失败"
     ollama pull llama2:7b || log_warning "llama2:7b下载失败"
     
     log_success "Ollama配置完成"
