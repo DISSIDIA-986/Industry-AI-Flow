@@ -219,3 +219,5 @@ models/**/*.safetensors
 
 # Model cache
 models/**/.cache/
+# Allow Claude agent skills documentation
+!claude/*.md
