@@ -99,7 +99,7 @@
         <mxCell id="sec-icon" value="" style="shape=mxgraph.aws4.shield;fillColor=#FFFFFF;strokeColor=none;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="278" y="258" width="24" height="24" as="geometry"/>
         </mxCell>
-        <mxCell id="sec-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Security&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FEE2E2&quot;&gt;API Key Auth&lt;br&gt;Rate Limiting&lt;br&gt;Input Sanitizer&lt;br&gt;Tenant Isolation&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="sec-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Security Layer&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FEE2E2&quot;&gt;API Key Auth&lt;br&gt;Rate Limiting&lt;br&gt;Input Sanitization&lt;br&gt;Tenant Isolation&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="270" y="254" width="140" height="82" as="geometry"/>
         </mxCell>
 
@@ -107,7 +107,7 @@
         <mxCell id="rate-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F97316;strokeColor=#EA580C;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="270" y="380" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="rate-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Audit Logger&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FED7AA&quot;&gt;Tenant-aware logging&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="rate-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Audit Logger&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FED7AA&quot;&gt;Tenant-Aware Logging&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="270" y="380" width="140" height="60" as="geometry"/>
         </mxCell>
 
@@ -115,7 +115,7 @@
         <mxCell id="lang-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6366F1;strokeColor=#4F46E5;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="270" y="480" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="lang-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Language Policy&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#E0E7FF&quot;&gt;English-only enforce&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="lang-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Language Policy&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#E0E7FF&quot;&gt;English-Only Mode&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="270" y="480" width="140" height="60" as="geometry"/>
         </mxCell>
 
@@ -138,7 +138,7 @@
         <mxCell id="intent-icon" value="" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.machine_learning;fillColor=#FFFFFF;strokeColor=none;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="508" y="138" width="26" height="26" as="geometry"/>
         </mxCell>
-        <mxCell id="intent-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:13px&quot;&gt;Intent Classifier&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#EDE9FE&quot;&gt;LangGraph State Graph&lt;br&gt;11-node pipeline&lt;br&gt;confidence ≥ 0.8 → route&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="intent-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:13px&quot;&gt;Intent Classifier&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#EDE9FE&quot;&gt;LangGraph State Graph&lt;br&gt;11-Node Pipeline&lt;br&gt;Route if confidence &amp;ge; 0.8&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="500" y="135" width="180" height="80" as="geometry"/>
         </mxCell>
 
@@ -146,7 +146,7 @@
         <mxCell id="route-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#7C3AED;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="500" y="280" width="180" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="route-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Routing Decision&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#EDE9FE&quot;&gt;Agent type dispatch&lt;br&gt;RAG · Cost · Analysis&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="route-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Routing Decision&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#EDE9FE&quot;&gt;Agent Type Dispatch&lt;br&gt;RAG / Cost / Analysis&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="500" y="280" width="180" height="70" as="geometry"/>
         </mxCell>
 
@@ -154,7 +154,7 @@
         <mxCell id="mem-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#D97706;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="500" y="410" width="180" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="mem-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Memory Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FEF3C7&quot;&gt;3-layer store&lt;br&gt;Short · Summary · Long-term&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="mem-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Memory Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#FEF3C7&quot;&gt;3-Layer Storage&lt;br&gt;Short / Summary / Long&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="500" y="410" width="180" height="70" as="geometry"/>
         </mxCell>
 
@@ -162,7 +162,7 @@
         <mxCell id="prompt-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0EA5E9;strokeColor=#0284C7;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="500" y="530" width="180" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="prompt-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Prompt Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#E0F2FE&quot;&gt;Versioned prompts&lt;br&gt;A/B testing + scoring&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="prompt-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:12px&quot;&gt;Prompt Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#E0F2FE&quot;&gt;Versioned Prompts&lt;br&gt;A/B Testing + Scoring&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="500" y="530" width="180" height="70" as="geometry"/>
         </mxCell>
 
@@ -170,7 +170,7 @@
         <mxCell id="cache-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#14B8A6;strokeColor=#0D9488;strokeWidth=1;shadow=0;glass=0;gradientColor=none;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="500" y="650" width="180" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="cache-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Query Cache&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#CCFBF1&quot;&gt;Response caching layer&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="cache-label" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Query Cache&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#CCFBF1&quot;&gt;Response Cache Layer&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="500" y="650" width="180" height="60" as="geometry"/>
         </mxCell>
 
@@ -187,7 +187,7 @@
         <mxCell id="rag-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#93C5FD;strokeWidth=1.5;shadow=0;glass=0;gradientColor=none;arcSize=6;" vertex="1" parent="1">
           <mxGeometry x="740" y="100" width="720" height="170" as="geometry"/>
         </mxCell>
-        <mxCell id="rag-badge" value="&lt;b style=&quot;color:#1E40AF;font-size:12px&quot;&gt;PATH A — RAG Knowledge QA&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#2563EB;fontColor=#FFFFFF;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="rag-badge" value="&lt;b style=&quot;color:#1E40AF;font-size:12px&quot;&gt;Path A — RAG Knowledge QA&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#2563EB;fontColor=#FFFFFF;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="750" y="108" width="200" height="24" as="geometry"/>
         </mxCell>
         <mxCell id="rag-desc" value="&lt;font style=&quot;font-size:9px;color:#3B82F6&quot;&gt;Upload docs → vectorize → ask questions → cited answers&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
@@ -195,7 +195,7 @@
         </mxCell>
 
         <!-- Embed -->
-        <mxCell id="rag-embed" value="&lt;b style=&quot;font-size:11px&quot;&gt;Embed&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#1E40AF&quot;&gt;nomic-v1.5&lt;br&gt;768-dim&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#93C5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="rag-embed" value="&lt;b style=&quot;font-size:11px&quot;&gt;Embedding&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#1E40AF&quot;&gt;nomic-v1.5&lt;br&gt;768-dim&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#93C5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="760" y="150" width="100" height="56" as="geometry"/>
         </mxCell>
         <!-- Hybrid Search -->
@@ -203,15 +203,15 @@
           <mxGeometry x="890" y="150" width="110" height="56" as="geometry"/>
         </mxCell>
         <!-- Reranker -->
-        <mxCell id="rag-rerank" value="&lt;b style=&quot;font-size:11px&quot;&gt;Rerank&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#1E40AF&quot;&gt;BGE cross-&lt;br&gt;encoder&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#93C5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="rag-rerank" value="&lt;b style=&quot;font-size:11px&quot;&gt;Reranker&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#1E40AF&quot;&gt;BGE Cross-&lt;br&gt;Encoder&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#93C5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="1030" y="150" width="100" height="56" as="geometry"/>
         </mxCell>
         <!-- LLM Generate -->
-        <mxCell id="rag-llm" value="&lt;b style=&quot;font-size:11px&quot;&gt;LLM Gen&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#5B21B6&quot;&gt;Qwen 2.5:7b&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#C4B5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="rag-llm" value="&lt;b style=&quot;font-size:11px&quot;&gt;LLM Generate&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#5B21B6&quot;&gt;Qwen 2.5:7b&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#C4B5FD;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="1160" y="150" width="100" height="56" as="geometry"/>
         </mxCell>
         <!-- Safety / Groundedness -->
-        <mxCell id="rag-safety" value="&lt;b style=&quot;font-size:11px&quot;&gt;Safety&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#991B1B&quot;&gt;Groundedness&lt;br&gt;conf ≥ 0.8&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#FECACA;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="rag-safety" value="&lt;b style=&quot;font-size:11px&quot;&gt;Safety Check&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#991B1B&quot;&gt;Groundedness&lt;br&gt;Confidence ≥ 0.8&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#FECACA;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="1290" y="150" width="100" height="56" as="geometry"/>
         </mxCell>
 
@@ -237,10 +237,10 @@
         <mxCell id="cost-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#86EFAC;strokeWidth=1.5;shadow=0;glass=0;gradientColor=none;arcSize=6;" vertex="1" parent="1">
           <mxGeometry x="740" y="300" width="720" height="145" as="geometry"/>
         </mxCell>
-        <mxCell id="cost-badge" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;PATH B — Cost Estimation (ML)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#16A34A;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+        <mxCell id="cost-badge" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Path B — Cost Estimation (ML)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#16A34A;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
           <mxGeometry x="750" y="308" width="220" height="24" as="geometry"/>
         </mxCell>
-        <mxCell id="cost-desc" value="&lt;font style=&quot;font-size:9px;color:#16A34A&quot;&gt;Ridge regression on partner-provided construction cost dataset&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="cost-desc" value="&lt;font style=&quot;font-size:9px;color:#16A34A&quot;&gt;Ridge regression prediction on partner-provided construction cost dataset&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="980" y="308" width="380" height="24" as="geometry"/>
         </mxCell>
 
@@ -253,7 +253,7 @@
           <mxGeometry x="970" y="350" width="130" height="58" as="geometry"/>
         </mxCell>
         <!-- Cost Report -->
-        <mxCell id="cost-result" value="&lt;b style=&quot;font-size:11px&quot;&gt;Cost Report&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#15803D&quot;&gt;prediction +&lt;br&gt;confidence interval&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#86EFAC;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="cost-result" value="&lt;b style=&quot;font-size:11px&quot;&gt;Cost Report&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8px;color:#15803D&quot;&gt;Prediction +&lt;br&gt;Confidence Interval&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#86EFAC;strokeWidth=1;fontSize=10;arcSize=8;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="1170" y="350" width="130" height="58" as="geometry"/>
         </mxCell>
 
@@ -273,10 +273,10 @@
         <mxCell id="data-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF4FF;strokeColor=#E9D5FF;strokeWidth=1.5;shadow=0;glass=0;gradientColor=none;arcSize=6;" vertex="1" parent="1">
           <mxGeometry x="740" y="475" width="720" height="170" as="geometry"/>
         </mxCell>
-        <mxCell id="data-badge" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;PATH C — Dynamic Data Analysis&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#9333EA;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+        <mxCell id="data-badge" value="&lt;b style=&quot;color:#FFFFFF;font-size:11px&quot;&gt;Path C — Dynamic Data Analysis&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=#9333EA;align=center;verticalAlign=middle;rounded=1;arcSize=30;shadow=0;glass=0;gradientColor=none;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
           <mxGeometry x="750" y="483" width="230" height="24" as="geometry"/>
         </mxCell>
-        <mxCell id="data-desc" value="&lt;font style=&quot;font-size:9px;color:#9333EA&quot;&gt;Upload CSV → metadata → cloud LLM code gen → sandbox exec&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
+        <mxCell id="data-desc" value="&lt;font style=&quot;font-size:9px;color:#9333EA&quot;&gt;Upload CSV → metadata extract → cloud LLM code gen → sandbox exec&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;shadow=0;glass=0;gradientColor=none;" vertex="1" parent="1">
           <mxGeometry x="990" y="483" width="380" height="24" as="geometry"/>
         </mxCell>
 

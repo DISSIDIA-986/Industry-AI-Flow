@@ -22,48 +22,48 @@
 ```mermaid
 graph TB
     %% 用户层
-    User[建筑行业用户<br/>工程师/学生/管理者]
-    
+    User["建筑行业用户&lt;br/&gt;工程师/学生/管理者"]
+
     %% API网关层
-    API[FastAPI网关<br/>认证/限流/路由]
-    
+    API["FastAPI网关&lt;br/&gt;认证/限流/路由"]
+
     %% 查询路由层
-    Router[智能查询路由器<br/>意图识别 + 路由决策]
+    Router["智能查询路由器&lt;br/&gt;意图识别 + 路由决策"]
     
     %% 处理路径
     SimplePath[简单查询路径]
     ComplexPath[复杂工作流路径]
     
     %% 简单路径组件
-    MistralEmbed[Mistral Embed<br/>文本向量化]
-    PgVector[pgvector HNSW<br/>向量检索]
-    HybridRetriever[混合检索器<br/>BM25 + 向量 + RRF]
-    Reranker[多阶段重排序<br/>Cohere → BGE → Cross-Encoder]
-    Ollama[Ollama Qwen2.5<br/>答案生成]
+    MistralEmbed["Mistral Embed&lt;br/&gt;文本向量化"]
+    PgVector["pgvector HNSW&lt;br/&gt;向量检索"]
+    HybridRetriever["混合检索器&lt;br/&gt;BM25 + 向量 + RRF"]
+    Reranker["多阶段重排序&lt;br/&gt;Cohere - BGE - Cross-Encoder"]
+    Ollama["Ollama Qwen2.5&lt;br/&gt;答案生成"]
     
     %% 复杂路径组件
-    DifyOrchestrator[Dify编排器<br/>工作流管理]
+    DifyOrchestrator["Dify编排器&lt;br/&gt;工作流管理"]
     QueryAnalyzer[查询分析代理]
     DocRetriever[文档检索代理]
     DataAnalyzer[数据分析代理]
     AnswerSynthesizer[答案合成代理]
     
     %% 数据存储层
-    Postgres[(PostgreSQL<br/>文档元数据)]
-    PgVectorDB[(pgvector<br/>向量存储)]
-    Cache[(Redis缓存<br/>查询/结果缓存)]
-    FileStore[文件存储<br/>图纸/文档/图片]
+    Postgres[("PostgreSQL&lt;br/&gt;文档元数据")]
+    PgVectorDB[("pgvector&lt;br/&gt;向量存储")]
+    Cache[("Redis缓存&lt;br/&gt;查询/结果缓存")]
+    FileStore["文件存储&lt;br/&gt;图纸/文档/图片"]
     
     %% 监控层
-    Monitor[监控系统<br/>Prometheus + Grafana]
-    Logging[日志系统<br/>结构化日志]
+    Monitor["监控系统&lt;br/&gt;Prometheus + Grafana"]
+    Logging["日志系统&lt;br/&gt;结构化日志"]
     
     %% 数据流
     User --> API
     API --> Router
     
-    Router -->|简单查询| SimplePath
-    Router -->|复杂工作流| ComplexPath
+    Router -->|"简单查询"| SimplePath
+    Router -->|"复杂工作流"| ComplexPath
     
     SimplePath --> MistralEmbed
     MistralEmbed --> PgVector
