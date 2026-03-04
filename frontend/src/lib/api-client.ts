@@ -6,6 +6,10 @@ const WORKFLOW_QUERY_TIMEOUT = resolveTimeoutMs(
   process.env.NEXT_PUBLIC_WORKFLOW_QUERY_TIMEOUT_MS,
   240000,
 )
+const DATA_ANALYSIS_TIMEOUT = resolveTimeoutMs(
+  process.env.NEXT_PUBLIC_DATA_ANALYSIS_TIMEOUT_MS,
+  120000,
+)
 
 function resolveTimeoutMs(value: string | number | undefined, fallback: number): number {
   const parsed = Number(value)
@@ -631,6 +635,7 @@ export async function runDataAnalysis(
     method: 'POST',
     config,
     body: payload,
+    timeoutMs: DATA_ANALYSIS_TIMEOUT,
   })
 }
 
@@ -646,6 +651,7 @@ export async function generateVisualization(
     method: 'POST',
     config,
     body: payload,
+    timeoutMs: DATA_ANALYSIS_TIMEOUT,
   })
 }
 

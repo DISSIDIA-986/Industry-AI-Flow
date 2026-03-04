@@ -1,11 +1,196 @@
 """可视化工具 - 自动化图表生成和可视化功能"""
 
+import json
 import logging
+from pathlib import Path
+import re
 from typing import Annotated, Any, Dict, List, Optional
 
+from backend.config import settings
+from backend.tools.dataset_metadata import (
+    build_metadata_audit_report,
+    build_prompt_metadata,
+    extract_dataset_metadata,
+)
 from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
+
+_ALLOWED_VIZ_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".svg",
+    ".html",
+    ".pdf",
+    ".gif",
+    ".webp",
+}
+
+
+def _next_available_path(directory: Path, base_name: str) -> Path:
+    candidate = directory / base_name
+    if not candidate.exists():
+        return candidate
+    stem = Path(base_name).stem or "artifact"
+    suffix = Path(base_name).suffix
+    index = 1
+    while True:
+        next_candidate = directory / f"{stem}_{index}{suffix}"
+        if not next_candidate.exists():
+            return next_candidate
+        index += 1
+
+
+def _persist_visualization_artifacts(output_files: Dict[str, Any]) -> List[Dict[str, str]]:
+    if not isinstance(output_files, dict) or not output_files:
+        return []
+
+    output_dir = Path(getattr(settings, "temp_data_dir", "/tmp/luncheon_data")).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    persisted: List[Dict[str, str]] = []
+
+    for raw_name, raw_content in output_files.items():
+        safe_name = Path(str(raw_name)).name
+        suffix = Path(safe_name).suffix.lower()
+        if suffix not in _ALLOWED_VIZ_EXTENSIONS:
+            continue
+
+        if isinstance(raw_content, (bytes, bytearray)):
+            content = bytes(raw_content)
+        elif isinstance(raw_content, str):
+            content = raw_content.encode("utf-8")
+        else:
+            continue
+
+        if not content:
+            continue
+
+        target = _next_available_path(output_dir, safe_name)
+        target.write_bytes(content)
+        persisted.append({"filename": target.name, "path": str(target)})
+
+    return persisted
+
+
+def _resolve_container_data_path(data_file: str) -> str:
+    raw_path = str(data_file or "").strip()
+    if not raw_path:
+        return raw_path
+    if raw_path.startswith("/workspace/"):
+        return raw_path
+    return f"/workspace/{Path(raw_path).name}"
+
+
+def _extract_python_code(raw_response: str) -> str:
+    text = str(raw_response or "").strip()
+    if not text:
+        return ""
+    fence_match = re.search(r"```(?:python)?\s*([\s\S]*?)```", text, re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
+    return text
+
+
+def _is_generated_code_allowed(code: str) -> bool:
+    lowered = code.lower()
+    if "import pandas as pd" not in lowered:
+        return False
+    if "pd.read_" not in lowered and "read_csv(" not in lowered and "read_excel(" not in lowered:
+        return False
+    blocked_patterns = (
+        "locals(",
+        "globals(",
+        "eval(",
+        "exec(",
+        "__import__(",
+        "subprocess.",
+        "os.system(",
+        "open(",
+    )
+    return not any(pattern in lowered for pattern in blocked_patterns)
+
+
+def _generate_visualization_code_with_llm(
+    data_file: str,
+    chart_type: str,
+    x_column: Optional[str] = None,
+    y_column: Optional[str] = None,
+    color_column: Optional[str] = None,
+    title: Optional[str] = None,
+    save_format: str = "png",
+    interactive: bool = False,
+    instruction: Optional[str] = None,
+    dataset_metadata: Optional[Dict[str, Any]] = None,
+) -> tuple[str, str, str]:
+    fallback_code = _generate_visualization_code(
+        data_file=data_file,
+        chart_type=chart_type,
+        x_column=x_column,
+        y_column=y_column,
+        color_column=color_column,
+        title=title,
+        save_format=save_format,
+        interactive=interactive,
+    )
+
+    container_data_file = _resolve_container_data_path(data_file)
+    output_format = "html" if interactive else save_format
+    output_path = f"/workspace/{chart_type}_chart.{output_format}"
+    prompt_title = title or f"{chart_type.title()} Chart"
+    user_instruction = instruction or f"Create a {chart_type} chart for key insights."
+    metadata_payload = build_prompt_metadata(dataset_metadata or {})
+
+    prompt = f"""
+Generate executable Python code for data visualization.
+
+Task:
+- instruction: {user_instruction}
+- chart_type: {chart_type}
+- x_column: {x_column or "auto-detect"}
+- y_column: {y_column or "auto-detect if needed"}
+- color_column: {color_column or "none"}
+- chart_title: {prompt_title}
+- data_file: {container_data_file}
+- output_file: {output_path}
+- dataset_metadata_json: {metadata_payload}
+
+Hard requirements:
+1. Use pandas as pd and numpy as np.
+2. You only receive dataset metadata above (not raw rows); infer column types from metadata_json.
+3. Use matplotlib/seaborn for static charts, and plotly.express only when interactive=True.
+4. Read data from "{container_data_file}".
+5. Save exactly one chart to "{output_path}".
+6. Build dict variable chart_info with keys:
+   chart_type, x_column, y_column, color_column, title, output_file, data_points, interactive
+7. Print exactly one final marker line:
+   CHART_INFO_JSON=<json>
+   where <json> is json.dumps(chart_info, ensure_ascii=False)
+8. Do NOT use locals(), globals(), eval(), exec(), __import__(), open(), subprocess, os.system.
+9. Never raise exceptions when columns are missing; auto-fallback to available columns or frequency counts so one chart is still produced.
+10. Ensure chart_info values are JSON-serializable Python types.
+11. Return Python code only, no markdown fences or explanations.
+"""
+
+    try:
+        from backend.services.llm_integration.llm_client import get_llm_client
+
+        client = get_llm_client()
+        raw_response = client.generate(
+            prompt,
+            temperature=0.1,
+            max_tokens=1000,
+            top_p=0.9,
+        )
+        generated_code = _extract_python_code(raw_response)
+        if not generated_code:
+            raise ValueError("empty_code")
+        if not _is_generated_code_allowed(generated_code):
+            raise ValueError("generated_code_failed_safety_or_quality_gate")
+        return generated_code, "llm", ""
+    except Exception as exc:
+        logger.warning("LLM visualization code generation failed; using template fallback: %s", exc)
+        return fallback_code, "template_fallback", str(exc)
 
 
 @tool
@@ -19,6 +204,7 @@ def visualization_tool(
     y_column: Annotated[Optional[str], "Y-axis column name"] = None,
     color_column: Annotated[Optional[str], "Color grouping column name"] = None,
     title: Annotated[Optional[str], "Chart title"] = None,
+    instruction: Annotated[Optional[str], "Natural-language visualization instruction"] = None,
     save_format: Annotated[str, "Save format: 'png', 'jpg', 'svg', 'html'"] = "png",
     interactive: Annotated[bool, "Whether to generate interactive charts"] = False,
 ) -> Dict[str, Any]:
@@ -74,34 +260,100 @@ def visualization_tool(
         >>> print(f"图表路径: {result['file_path']}")
     """
 
-    # Generate visualization code
-    viz_code = _generate_visualization_code(
-        data_file,
-        chart_type,
-        x_column,
-        y_column,
-        color_column,
-        title,
-        save_format,
-        interactive,
+    # 先尝试由 LLM 动态生成代码，失败时回退模板。
+    dataset_metadata = extract_dataset_metadata(data_file)
+    metadata_report = build_metadata_audit_report(dataset_metadata)
+    llm_input_policy = {
+        "mode": "metadata_only",
+        "raw_data_sent_to_llm": False,
+        "metadata_status": metadata_report.get("status"),
+        "redaction_mode": metadata_report.get("redaction_mode"),
+    }
+    viz_code, generation_mode, generation_error = _generate_visualization_code_with_llm(
+        data_file=data_file,
+        chart_type=chart_type,
+        x_column=x_column,
+        y_column=y_column,
+        color_column=color_column,
+        title=title,
+        save_format=save_format,
+        interactive=interactive,
+        instruction=instruction,
+        dataset_metadata=dataset_metadata,
     )
 
     # 使用代码执行工具运行可视化
     from backend.tools.code_execution import code_execution_tool
 
     try:
+        execution_mode = generation_mode
+        execution_reason = generation_error
         result = code_execution_tool.invoke(
             {"code": viz_code, "data_files": [data_file] if data_file else None}
         )
+        if not result.get("success") and generation_mode == "llm":
+            runtime_error = str(result.get("error") or "").strip()
+            fallback_code = _generate_visualization_code(
+                data_file=data_file,
+                chart_type=chart_type,
+                x_column=x_column,
+                y_column=y_column,
+                color_column=color_column,
+                title=title,
+                save_format=save_format,
+                interactive=interactive,
+            )
+            fallback_result = code_execution_tool.invoke(
+                {
+                    "code": fallback_code,
+                    "data_files": [data_file] if data_file else None,
+                }
+            )
+            if fallback_result.get("success"):
+                viz_code = fallback_code
+                result = fallback_result
+                execution_mode = "template_fallback_runtime"
+                execution_reason = runtime_error or generation_error
+            else:
+                fallback_error = str(fallback_result.get("error") or "").strip()
+                if fallback_error:
+                    result["error"] = (
+                        f"{runtime_error or 'Runtime error'}; "
+                        f"template_retry_error={fallback_error}"
+                    )
 
         if result["success"]:
             # 解析可视化结果
             viz_result = _parse_visualization_output(result["stdout"])
+            persisted_visualizations = _persist_visualization_artifacts(
+                result.get("output_files", {})
+            )
+
+            if persisted_visualizations:
+                first_path = persisted_visualizations[0]["path"]
+                chart_info = viz_result.get("chart_info")
+                if not isinstance(chart_info, dict):
+                    chart_info = {}
+                chart_info["output_file"] = first_path
+                viz_result["chart_info"] = chart_info
+                viz_result["file_path"] = first_path
+
             viz_result.update(
                 {
                     "success": True,
                     "chart_type": chart_type,
-                    "visualizations": result.get("visualizations", []),
+                    "visualizations": (
+                        persisted_visualizations
+                        if persisted_visualizations
+                        else result.get("visualizations", [])
+                    ),
+                    "code_generation": {
+                        "mode": execution_mode,
+                        "fallback_reason": execution_reason or None,
+                    },
+                    "generated_code_preview": viz_code[:1200],
+                    "metadata_extraction": metadata_report,
+                    "llm_input_policy": llm_input_policy,
                 }
             )
 
@@ -114,11 +366,24 @@ def visualization_tool(
                 "chart_type": chart_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
+                "code_generation": {
+                    "mode": execution_mode,
+                    "fallback_reason": execution_reason or None,
+                },
+                "generated_code_preview": viz_code[:1200],
+                "metadata_extraction": metadata_report,
+                "llm_input_policy": llm_input_policy,
             }
 
     except Exception as e:
         logger.error(f"Visualization tool error: {e}")
-        return {"success": False, "error": f"Tool error: {str(e)}", "chart_type": chart_type}
+        return {
+            "success": False,
+            "error": f"Tool error: {str(e)}",
+            "chart_type": chart_type,
+            "metadata_extraction": metadata_report,
+            "llm_input_policy": llm_input_policy,
+        }
 
 
 @tool
@@ -311,12 +576,13 @@ def _generate_visualization_code(
     """Generate visualization code"""
 
     # 确定文件读取方式
+    container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
-        read_code = f"df = pd.read_csv('{data_file}')"
+        read_code = f"df = pd.read_csv('{container_data_file}')"
     elif data_file.endswith((".xlsx", ".xls")):
-        read_code = f"df = pd.read_excel('{data_file}')"
+        read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# Please read data file manually: {data_file}"
+        read_code = f"# Please read data file manually: {container_data_file}"
 
     # 选择可视化库
     if interactive:
@@ -329,6 +595,7 @@ def _generate_visualization_code(
     base_code = f"""
 import pandas as pd
 import numpy as np
+import json
 import {viz_lib}
 import warnings
 warnings.filterwarnings('ignore')
@@ -346,21 +613,35 @@ print(f"Data Shape: {{df.shape}}")
 print(f"列名: {{list(df.columns)}}")
 
 # 自动检测列（如果未指定）
+numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
 """
 
     if not x_column:
         base_code += """
-x_col = df.select_dtypes(include=[np.number]).columns[0] if len(df.select_dtypes(include=[np.number]).columns) > 0 else df.columns[0]
+x_col = numeric_columns[0] if len(numeric_columns) > 0 else df.columns[0]
 """
     else:
         base_code += f"x_col = '{x_column}'\n"
 
     if not y_column and chart_type in ["line", "bar", "scatter"]:
         base_code += """
-y_col = df.select_dtypes(include=[np.number]).columns[1] if len(df.select_dtypes(include=[np.number]).columns) > 1 else df.select_dtypes(include=[np.number]).columns[0]
+if len(numeric_columns) > 1:
+    y_col = numeric_columns[1]
+elif len(numeric_columns) == 1:
+    y_col = numeric_columns[0]
+else:
+    # Fallback: build a frequency table so charts can still be rendered.
+    source_col = str(df.columns[0])
+    freq_df = df[source_col].astype(str).value_counts().reset_index()
+    freq_df.columns = [source_col, 'value_count']
+    df = freq_df
+    x_col = source_col
+    y_col = 'value_count'
 """
     elif y_column:
         base_code += f"y_col = '{y_column}'\n"
+    else:
+        base_code += "y_col = None\n"
 
     if not color_column:
         base_code += "color_col = None\n"
@@ -402,7 +683,7 @@ fig = px.pie(df, names=x_col, values=y_col, title=chart_title)
 
         base_code += f"""
 fig.update_layout(title_font_size=16, showlegend=True)
-output_file = f'/workspace/{{chart_type}}_chart.html'
+output_file = '/workspace/{chart_type}_chart.html'
 fig.write_html(output_file)
 print(f"交互式图表已保存: {{output_file}}")
 """
@@ -459,7 +740,12 @@ plt.grid(True, alpha=0.3)
         elif chart_type == "histogram":
             base_code += """
 plt.figure(figsize=(10, 6))
-if color_col and df[color_col].nunique() <= 5:
+is_numeric_hist = pd.api.types.is_numeric_dtype(df[x_col])
+if not is_numeric_hist:
+    hist_counts = df[x_col].astype(str).value_counts()
+    plt.bar(hist_counts.index, hist_counts.values)
+    plt.xticks(rotation=45)
+elif color_col and df[color_col].nunique() <= 5:
     for group in df[color_col].unique():
         group_data = df[df[color_col] == group]
         plt.hist(group_data[x_col], alpha=0.7, label=str(group), bins=30)
@@ -520,34 +806,31 @@ plt.axis('equal')
 
         base_code += f"""
 plt.tight_layout()
-output_file = f'/workspace/{{chart_type}}_chart.{save_format}'
+output_file = '/workspace/{chart_type}_chart.{save_format}'
 plt.savefig(output_file, dpi=300, bbox_inches='tight')
 plt.close()
 print(f"图表已保存: {{output_file}}")
 """
 
     # 添加图表信息输出
-    base_code += (
-        """
+    base_code += f"""
 # 输出图表信息
-chart_info = {
-    'chart_type': chart_type,
+chart_info = {{
+    'chart_type': '{chart_type}',
     'x_column': x_col,
-    'y_column': y_col if 'y_col' in locals() else None,
+    'y_column': y_col,
     'color_column': color_col,
     'title': chart_title,
     'output_file': output_file,
     'data_points': len(df),
-    'interactive': """
-        + str(interactive).lower()
-        + """
-}
+    'interactive': {repr(interactive)}
+}}
 
 print("\\n=== 图表信息 ===")
 for key, value in chart_info.items():
     print(f"{{key}}: {{value}}")
+print("CHART_INFO_JSON=" + json.dumps(chart_info, ensure_ascii=False))
 """
-    )
 
     return base_code
 
@@ -563,12 +846,13 @@ def _generate_advanced_viz_code(
     """Generate advanced visualization code"""
 
     # 确定文件读取方式
+    container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
-        read_code = f"df = pd.read_csv('{data_file}')"
+        read_code = f"df = pd.read_csv('{container_data_file}')"
     elif data_file.endswith((".xlsx", ".xls")):
-        read_code = f"df = pd.read_excel('{data_file}')"
+        read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# Please read data file manually: {data_file}"
+        read_code = f"# Please read data file manually: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -598,6 +882,7 @@ print(f"列名: {{list(df.columns)}}")
         base_code += f"selected_columns = {columns}\n"
     else:
         base_code += "selected_columns = df.select_dtypes(include=[np.number]).columns.tolist()[:5]\n"
+    base_code += "output_file = None\n"
 
     if not title:
         base_code += (
@@ -750,7 +1035,7 @@ viz_info = {{
     'columns_used': selected_columns,
     'group_column': '{group_column}' if '{group_column}' else None,
     'title': chart_title,
-    'output_file': output_file if 'output_file' in locals() else None,
+    'output_file': output_file,
     'data_points': len(df)
 }}
 
@@ -772,12 +1057,13 @@ def _generate_dashboard_code(
     """Generate dashboard code"""
 
     # 确定文件读取方式
+    container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
-        read_code = f"df = pd.read_csv('{data_file}')"
+        read_code = f"df = pd.read_csv('{container_data_file}')"
     elif data_file.endswith((".xlsx", ".xls")):
-        read_code = f"df = pd.read_excel('{data_file}')"
+        read_code = f"df = pd.read_excel('{container_data_file}')"
     else:
-        read_code = f"# Please read data file manually: {data_file}"
+        read_code = f"# Please read data file manually: {container_data_file}"
 
     base_code = f"""
 import pandas as pd
@@ -983,14 +1269,28 @@ for key, value in dashboard_info.items():
 def _parse_visualization_output(stdout: str) -> Dict[str, Any]:
     """Parse visualization output"""
     try:
-        # 尝试从输出中提取图表信息
         lines = stdout.split("\n")
-        chart_info = {}
+        chart_info: Dict[str, Any] = {}
 
-        for line in lines:
-            if ":" in line and not line.startswith("==="):
-                key, value = line.split(":", 1)
-                chart_info[key.strip()] = value.strip()
+        marker = "CHART_INFO_JSON="
+        marker_line = next(
+            (line for line in lines if line.strip().startswith(marker)),
+            None,
+        )
+        if marker_line:
+            raw_json = marker_line.split(marker, 1)[1].strip()
+            try:
+                parsed = json.loads(raw_json)
+                if isinstance(parsed, dict):
+                    chart_info = parsed
+            except Exception:
+                chart_info = {}
+
+        if not chart_info:
+            for line in lines:
+                if ":" in line and not line.startswith("==="):
+                    key, value = line.split(":", 1)
+                    chart_info[key.strip()] = value.strip()
 
         return {
             "chart_info": chart_info,
