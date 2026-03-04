@@ -138,10 +138,10 @@ D --> E[Prompt Node]
 E --> F[Groundedness Node]
 F --> G[Route Node]
 G -->|local| H[Local LLM]
-G -->|cloud| I[Dispatch + Redaction + Budget Guard]
-H --> J{Need Code Exec?}
+G -->|cloud| I["Dispatch + Redaction + Budget Guard"]
+H --> J{"Need Code Exec?"}
 I --> J
-J -->|yes| K[Executor Manager Docker/PPIO]
+J -->|yes| K["Executor Manager Docker/PPIO"]
 J -->|no| L[Safety Node]
 K --> L
 L --> M[Response Node]
