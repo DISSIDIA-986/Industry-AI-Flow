@@ -1,12 +1,79 @@
 """数据分析工具 - 自动化 EDA 和数据分析功能"""
 
+import json
 import logging
+import math
 from pathlib import Path
+import re
 from typing import Annotated, Any, Dict, List, Optional
 
+from backend.tools.dataset_metadata import (
+    build_metadata_audit_report,
+    build_prompt_metadata,
+    extract_dataset_metadata,
+)
 from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
+
+_FORBIDDEN_CODE_PATTERNS = (
+    "locals(",
+    "globals(",
+    "eval(",
+    "exec(",
+    "__import__(",
+    "subprocess.",
+    "os.system(",
+    "open(",
+    ".apply(",
+    ".agg(",
+    ".transform(",
+    ".map(",
+    ".query(",
+    ".eval(",
+    "lambda ",
+)
+
+
+def _json_safe(value: Any) -> Any:
+    """Convert parsed values into JSON-safe Python primitives."""
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return None
+        return value
+    if isinstance(value, (int, str, bool)) or value is None:
+        return value
+    if hasattr(value, "item"):
+        try:
+            return _json_safe(value.item())
+        except Exception:
+            return str(value)
+    return str(value)
+
+
+def _extract_python_code(raw_response: str) -> str:
+    text = str(raw_response or "").strip()
+    if not text:
+        return ""
+    fence_match = re.search(r"```(?:python)?\s*([\s\S]*?)```", text, re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
+    return text
+
+
+def _is_generated_code_allowed(code: str) -> bool:
+    lowered = code.lower()
+    if "import pandas as pd" not in lowered:
+        return False
+    if "pd.read_" not in lowered and "read_csv(" not in lowered and "read_excel(" not in lowered:
+        return False
+    return not any(pattern in lowered for pattern in _FORBIDDEN_CODE_PATTERNS)
 
 
 def _resolve_container_data_path(data_file: str) -> str:
@@ -19,6 +86,75 @@ def _resolve_container_data_path(data_file: str) -> str:
     return f"/workspace/{Path(raw_path).name}"
 
 
+def _generate_analysis_code_with_llm(
+    data_file: str,
+    analysis_type: str,
+    target_column: Optional[str] = None,
+    columns: Optional[List[str]] = None,
+    instruction: Optional[str] = None,
+    dataset_metadata: Optional[Dict[str, Any]] = None,
+) -> tuple[str, str, str]:
+    fallback_code = _generate_analysis_code(
+        data_file=data_file,
+        analysis_type=analysis_type,
+        target_column=target_column,
+        columns=columns,
+    )
+
+    container_data_file = _resolve_container_data_path(data_file)
+    column_hint = ", ".join(columns or []) if columns else "auto-detect suitable columns"
+    user_instruction = instruction or f"Run a concise {analysis_type} analysis."
+    metadata_payload = build_prompt_metadata(dataset_metadata or {})
+
+    prompt = f"""
+Generate executable Python code for data analysis.
+
+Task:
+- analysis_type: {analysis_type}
+- instruction: {user_instruction}
+- target_column: {target_column or "none"}
+- preferred_columns: {column_hint}
+- dataset_path: {container_data_file}
+- dataset_metadata_json: {metadata_payload}
+
+Hard requirements:
+1. Use pandas as pd, numpy as np, matplotlib.pyplot as plt, seaborn as sns, and json.
+2. You only receive dataset metadata above (not raw rows); infer structure from metadata_json.
+3. Read the dataset from "{container_data_file}" when the generated code runs in sandbox.
+4. Keep runtime short; limit heavy loops and avoid expensive operations.
+5. Print key findings.
+6. Build a dict variable named analysis_summary.
+7. Print exactly one final marker line:
+   ANALYSIS_SUMMARY_JSON=<json>
+   where <json> is json.dumps(analysis_summary, ensure_ascii=False)
+8. Do NOT use these APIs: locals(), globals(), eval(), exec(), __import__(), open(), subprocess, os.system.
+9. Do NOT use dataframe/series methods blocked by sandbox policy: .apply(), .agg(), .transform(), .map(), .query(), .eval().
+10. Ensure analysis_summary values are JSON-serializable Python types. Cast numpy/pandas scalars with int()/float()/str() as needed.
+11. Always define analysis_summary before printing it.
+12. Return Python code only, no explanations and no markdown fences.
+"""
+
+    try:
+        from backend.services.llm_integration.llm_client import get_llm_client
+
+        client = get_llm_client()
+        raw_response = client.generate(
+            prompt,
+            temperature=0.1,
+            max_tokens=1200,
+            top_p=0.9,
+        )
+        generated_code = _extract_python_code(raw_response)
+        if not generated_code:
+            raise ValueError("empty_code")
+        if not _is_generated_code_allowed(generated_code):
+            raise ValueError("generated_code_failed_safety_or_quality_gate")
+        return generated_code, "llm", ""
+    except Exception as exc:
+        logger.warning("LLM code generation failed; using template fallback: %s", exc)
+        return fallback_code, "template_fallback", str(exc)
+
+
 @tool
 def data_analysis_tool(
     data_file: Annotated[str, "Data file path"],
@@ -27,6 +163,7 @@ def data_analysis_tool(
     ] = "eda",
     target_column: Annotated[Optional[str], "Target column name (for supervised learning analysis)"] = None,
     columns: Annotated[Optional[List[str]], "List of column names to analyze"] = None,
+    instruction: Annotated[Optional[str], "Natural-language analysis instruction"] = None,
 ) -> Dict[str, Any]:
     """
     数据分析工具 - 自动化探索性数据分析（EDA）
@@ -71,18 +208,59 @@ def data_analysis_tool(
         >>> print(f"数据Row Count: {result['data_info']['rows']}")
     """
 
-    # 生成分析代码
-    analysis_code = _generate_analysis_code(
-        data_file, analysis_type, target_column, columns
+    # 先尝试 LLM 动态生成代码，失败时回退模板。
+    dataset_metadata = extract_dataset_metadata(data_file)
+    metadata_report = build_metadata_audit_report(dataset_metadata)
+    llm_input_policy = {
+        "mode": "metadata_only",
+        "raw_data_sent_to_llm": False,
+        "metadata_status": metadata_report.get("status"),
+        "redaction_mode": metadata_report.get("redaction_mode"),
+    }
+    analysis_code, generation_mode, generation_error = _generate_analysis_code_with_llm(
+        data_file=data_file,
+        analysis_type=analysis_type,
+        target_column=target_column,
+        columns=columns,
+        instruction=instruction,
+        dataset_metadata=dataset_metadata,
     )
 
     # 使用代码执行工具运行分析
     from backend.tools.code_execution import code_execution_tool
 
     try:
+        execution_mode = generation_mode
+        execution_reason = generation_error
         result = code_execution_tool.invoke(
             {"code": analysis_code, "data_files": [data_file] if data_file else None}
         )
+        if not result.get("success") and generation_mode == "llm":
+            runtime_error = str(result.get("error") or "").strip()
+            fallback_code = _generate_analysis_code(
+                data_file=data_file,
+                analysis_type=analysis_type,
+                target_column=target_column,
+                columns=columns,
+            )
+            fallback_result = code_execution_tool.invoke(
+                {
+                    "code": fallback_code,
+                    "data_files": [data_file] if data_file else None,
+                }
+            )
+            if fallback_result.get("success"):
+                analysis_code = fallback_code
+                result = fallback_result
+                execution_mode = "template_fallback_runtime"
+                execution_reason = runtime_error or generation_error
+            else:
+                fallback_error = str(fallback_result.get("error") or "").strip()
+                if fallback_error:
+                    result["error"] = (
+                        f"{runtime_error or 'Runtime error'}; "
+                        f"template_retry_error={fallback_error}"
+                    )
 
         if result["success"]:
             # 解析分析结果
@@ -98,6 +276,13 @@ def data_analysis_tool(
                     "answer": answer,
                     "analysis_type": analysis_type,
                     "visualizations": result.get("visualizations", []),
+                    "code_generation": {
+                        "mode": execution_mode,
+                        "fallback_reason": execution_reason or None,
+                    },
+                    "generated_code_preview": analysis_code[:1200],
+                    "metadata_extraction": metadata_report,
+                    "llm_input_policy": llm_input_policy,
                 }
             )
 
@@ -110,6 +295,13 @@ def data_analysis_tool(
                 "analysis_type": analysis_type,
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
+                "code_generation": {
+                    "mode": execution_mode,
+                    "fallback_reason": execution_reason or None,
+                },
+                "generated_code_preview": analysis_code[:1200],
+                "metadata_extraction": metadata_report,
+                "llm_input_policy": llm_input_policy,
             }
 
     except Exception as e:
@@ -118,6 +310,8 @@ def data_analysis_tool(
             "success": False,
             "error": f"Tool error: {str(e)}",
             "analysis_type": analysis_type,
+            "metadata_extraction": metadata_report,
+            "llm_input_policy": llm_input_policy,
         }
 
 
@@ -345,16 +539,17 @@ print(f"完全重复的Row Count: {{df_analysis.duplicated().sum()}}")
 
 # 输出analysis_summary
 analysis_summary = {
-    'total_rows': len(df_analysis),
-    'total_columns': len(df_analysis.columns),
-    'numeric_columns': len(numeric_columns),
-    'categorical_columns': len(categorical_columns),
-    'missing_values': missing_info.sum(),
-    'duplicate_rows': df_analysis.duplicated().sum()
+    'total_rows': int(len(df_analysis)),
+    'total_columns': int(len(df_analysis.columns)),
+    'numeric_columns': int(len(numeric_columns)),
+    'categorical_columns': int(len(categorical_columns)),
+    'missing_values': int(missing_info.sum()),
+    'duplicate_rows': int(df_analysis.duplicated().sum())
 }
 
 print("\\n=== analysis_summary ===")
 print(json.dumps(analysis_summary, indent=2, ensure_ascii=False))
+print("ANALYSIS_SUMMARY_JSON=" + json.dumps(analysis_summary, ensure_ascii=False))
 """
 
     elif analysis_type == "correlation":
@@ -616,30 +811,46 @@ print(json.dumps(preprocessing_summary, indent=2, ensure_ascii=False))
 def _parse_analysis_output(stdout: str) -> Dict[str, Any]:
     """Parse analysis output"""
     try:
-        # 尝试从输出中提取JSON格式的摘要
         lines = stdout.split("\n")
-        json_start = None
-        json_end = None
+        summary: Dict[str, Any] = {}
 
-        for i, line in enumerate(lines):
-            if "analysis_summary" in line or "preprocessing_summary" in line:
-                # 查找JSON开始
-                for j in range(i, len(lines)):
-                    if lines[j].strip().startswith("{"):
-                        json_start = j
-                        break
-                # 查找JSON结束
-                for j in range(json_start or i, len(lines)):
-                    if lines[j].strip().endswith("}"):
-                        json_end = j
-                        break
-                break
+        marker = "ANALYSIS_SUMMARY_JSON="
+        marker_line = next(
+            (line for line in lines if line.strip().startswith(marker)),
+            None,
+        )
+        if marker_line:
+            raw_json = marker_line.split(marker, 1)[1].strip()
+            try:
+                parsed = json.loads(raw_json)
+                if isinstance(parsed, dict):
+                    summary = _json_safe(parsed)
+            except Exception:
+                summary = {}
 
-        if json_start is not None and json_end is not None:
-            json_str = "\n".join(lines[json_start : json_end + 1])
-            summary = eval(json_str)  # simple JSON parse
-        else:
-            summary = {}
+        if not summary:
+            json_start = None
+            json_end = None
+            for i, line in enumerate(lines):
+                if "analysis_summary" in line or "preprocessing_summary" in line:
+                    for j in range(i, len(lines)):
+                        if lines[j].strip().startswith("{"):
+                            json_start = j
+                            break
+                    for j in range(json_start or i, len(lines)):
+                        if lines[j].strip().endswith("}"):
+                            json_end = j
+                            break
+                    break
+
+            if json_start is not None and json_end is not None:
+                json_str = "\n".join(lines[json_start : json_end + 1]).strip()
+                try:
+                    parsed = json.loads(json_str)
+                    if isinstance(parsed, dict):
+                        summary = _json_safe(parsed)
+                except Exception:
+                    summary = {}
 
         return {
             "data_info": {
