@@ -69,25 +69,25 @@ export default function OverviewDashboardPage() {
         {/* Statistics cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard 
-            title="Total number of items" 
+            title="Total Projects"
             value={stats.totalProjects}
             change="+12%"
           />
           
           <MetricCard 
-            title="active query" 
+            title="Active Queries"
             value={stats.activeQueries}
             change="+3 today"
           />
           
           <MetricCard 
-            title="Process documents" 
+            title="Processed Documents"
             value={stats.documentsProcessed}
             change="+8 this week"
           />
           
           <MetricCard 
-            title="cost savings" 
+            title="Cost Savings"
             value={`$${stats.costSavings.toLocaleString()}`}
             change="+15% Efficiency improvement"
           />
@@ -96,7 +96,7 @@ export default function OverviewDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Cost Trend Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">cost trends</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Trends</h2>
             {chartData ? (
               <LineChartComponent 
                 data={chartData}
@@ -112,14 +112,14 @@ export default function OverviewDashboardPage() {
 
           {/* Project type distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Project type distribution</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Project Type Distribution</h2>
             {chartData ? (
               <BarChartComponent 
                 data={[
                   { name: 'Residential', value: 35 },
                   { name: 'Business', value: 28 },
-                  { name: 'industry', value: 22 },
-                  { name: 'infrastructure', value: 15 }
+                  { name: 'Industrial', value: 22 },
+                  { name: 'Infrastructure', value: 15 }
                 ]}
                 title="Proportion of project types"
                 height={250}
@@ -135,7 +135,7 @@ export default function OverviewDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           {/* Quick operation */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick operation</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {quickActions.map((action, index) => (
                 <Link
@@ -155,7 +155,7 @@ export default function OverviewDashboardPage() {
 
           {/* Recent activities */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent activities</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h2>
             <div className="space-y-4">
               {recentActivities.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3">
@@ -176,10 +176,10 @@ export default function OverviewDashboardPage() {
 
         {/* System status */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">System status</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">System Status</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">Front-end service</div>
+              <div className="text-sm font-medium text-gray-500">Frontend Service</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 <div className="text-green-600 font-medium">Running normally</div>
@@ -195,7 +195,7 @@ export default function OverviewDashboardPage() {
             </div>
             
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">data visualization</div>
+              <div className="text-sm font-medium text-gray-500">Data Visualization</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 <div className="text-green-600 font-medium">Enabled</div>

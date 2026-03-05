@@ -219,6 +219,10 @@ async def test_enhanced_query_rejects_chinese_input(monkeypatch):
 
     monkeypatch.setattr(enhanced_query_routes, "get_rag_instance", lambda: _FakeRAG())
 
+    from backend.config import settings
+
+    monkeypatch.setattr(settings, "enable_rag_english_query", True)
+
     app = _build_app()
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"

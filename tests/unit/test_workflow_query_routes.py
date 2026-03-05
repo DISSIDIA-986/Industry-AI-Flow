@@ -323,7 +323,11 @@ async def test_workflow_query_records_audit_and_metrics(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_workflow_query_rejects_chinese_input():
+async def test_workflow_query_rejects_chinese_input(monkeypatch):
+    from backend.config import settings
+
+    monkeypatch.setattr(settings, "enable_rag_english_query", True)
+
     app = FastAPI()
     app.include_router(router)
 
