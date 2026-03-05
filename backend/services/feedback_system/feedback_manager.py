@@ -255,22 +255,22 @@ class FeedbackManager:
     def _calculate_quality_impact(
         self, feedback_type: FeedbackType, weight: float = 1.0
     ) -> float:
-        """EN"""
+        """Calculate the quality score delta based on feedback type and weight."""
         impact_scores = {
             FeedbackType.HELPFUL: 1.0,
-            FeedbackType.NOT_HELPFUL: -1.5,  # EN
+            FeedbackType.NOT_HELPFUL: -1.5,  # Negative feedback penalized more heavily
             FeedbackType.PARTIALLY_HELPFUL: 0.3,
         }
         return impact_scores.get(feedback_type, 0.0) * weight
 
     def _trigger_adaptive_optimization(self, feedback: UserFeedback):
-        """EN"""
+        """Trigger adaptive optimizations based on the feedback signal."""
         try:
-            # EN
+            # Negative feedback triggers reranking weight adjustment
             if feedback.feedback_type == FeedbackType.NOT_HELPFUL:
                 self._schedule_reranking_optimization(feedback)
 
-            # EN
+            # Check if query rewriting is warranted by repeated negative feedback
             if self._should_rewrite_query(feedback):
                 self._schedule_query_rewriting(feedback)
 
@@ -278,11 +278,11 @@ class FeedbackManager:
             logger.error(f"Failed to trigger adaptive optimization: {e}")
 
     def _schedule_reranking_optimization(self, feedback: UserFeedback):
-        """EN"""
-        # EN,EN
+        """Schedule reranking weight optimization based on negative feedback."""
+        # Log the optimization trigger for observability
         logger.info(f"Scheduling reranking optimization for query {feedback.query_id}")
 
-        # EN
+        # Build optimization payload and apply if reranker is available
         if self.reranker:
             optimization_data = {
                 "query_id": feedback.query_id,
@@ -290,14 +290,14 @@ class FeedbackManager:
                 "feedback_type": feedback.feedback_type.value,
                 "retrieved_chunks": feedback.retrieved_chunks,
             }
-            # EN,EN
+            # Apply feedback-driven reranking weight adjustment
             self._optimize_reranking_weights(optimization_data)
 
     def _optimize_reranking_weights(self, optimization_data: Dict):
-        """EN"""
+        """Adjust reranking weights based on accumulated feedback patterns."""
         try:
-            # EN
-            # EN
+            # Analyze feedback patterns and adjust retrieval weights accordingly
+            # Future: implement gradient-based weight tuning from feedback signal
             logger.info(
                 f"Optimizing reranking weights based on feedback: {optimization_data}"
             )
@@ -309,8 +309,8 @@ class FeedbackManager:
             logger.error(f"Failed to optimize reranking weights: {e}")
 
     def _should_rewrite_query(self, feedback: UserFeedback) -> bool:
-        """EN"""
-        # EN
+        """Determine whether a query should be rewritten based on repeated negative feedback."""
+        # Check for similar queries with negative feedback in recent history
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -319,14 +319,14 @@ class FeedbackManager:
                 """
                 SELECT COUNT(*) FROM query_feedback
                 WHERE feedback_type = 'not_helpful'
-                AND question % %s  -- ENPostgreSQLEN
+                AND question % %s  -- PostgreSQL trigram similarity match
                 AND created_at > NOW() - INTERVAL '24 hours'  -- fixed literal, no parameterization needed
             """,
                 (feedback.question,),
             )
 
             similar_negative_feedback = cur.fetchone()[0]
-            return similar_negative_feedback >= 2  # EN24EN2EN
+            return similar_negative_feedback >= 2  # Trigger rewrite if 2+ similar negative feedbacks in 24h
 
         except Exception as e:
             logger.error(f"Failed to check query rewriting necessity: {e}")
@@ -336,7 +336,7 @@ class FeedbackManager:
             conn.close()
 
     def _schedule_query_rewriting(self, feedback: UserFeedback):
-        """EN"""
+        """Schedule query rewriting optimization for a poorly performing query."""
         logger.info(f"Scheduling query rewriting for query {feedback.query_id}")
 
         optimization_data = {
@@ -346,11 +346,11 @@ class FeedbackManager:
             "feedback_type": feedback.feedback_type.value,
         }
 
-        # EN,EN
+        # Execute query rewriting with expansion strategy
         self._rewrite_query(optimization_data)
 
     def _rewrite_query(self, optimization_data: Dict):
-        """EN"""
+        """Rewrite a query using feedback-driven keyword expansion and adjustment."""
         try:
             # Rewrite query using feedback data
             # Adjust keywords, filters, and ranking based on past feedback
@@ -360,7 +360,7 @@ class FeedbackManager:
             logger.error(f"Failed to rewrite query: {e}")
 
     def get_feedback_statistics(self, days: int = 7) -> FeedbackStatistics:
-        """EN"""
+        """Get aggregated feedback statistics for the specified time period."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -405,7 +405,7 @@ class FeedbackManager:
     def get_high_quality_documents(
         self, min_score: float = 0.5, limit: int = 100
     ) -> List[Dict]:
-        """EN"""
+        """Retrieve documents with quality scores above the minimum threshold."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -446,22 +446,22 @@ class FeedbackManager:
     def adjust_search_weights(
         self, feedback_history: List[UserFeedback]
     ) -> Dict[str, float]:
-        """EN"""
+        """Adjust vector vs BM25 search weights based on feedback history."""
         if not feedback_history:
             return {"vector_weight": 0.7, "bm25_weight": 0.3}
 
-        # EN
+        # Calculate the ratio of helpful feedback
         helpful_ratio = sum(
             1 for f in feedback_history if f.feedback_type == FeedbackType.HELPFUL
         ) / len(feedback_history)
 
-        # EN,EN
+        # Adjust weights based on feedback satisfaction ratio
         if helpful_ratio < 0.5:
-            # EN,EN
+            # Low satisfaction: increase vector weight for better semantic matching
             return {"vector_weight": 0.8, "bm25_weight": 0.2}
         elif helpful_ratio > 0.8:
-            # EN,EN
+            # High satisfaction: increase BM25 weight to leverage keyword relevance
             return {"vector_weight": 0.6, "bm25_weight": 0.4}
         else:
-            # EN
+            # Moderate satisfaction: keep balanced default weights
             return {"vector_weight": 0.7, "bm25_weight": 0.3}
