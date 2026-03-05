@@ -26,7 +26,8 @@ class _FailingLLM:
 
 
 @pytest.mark.asyncio
-async def test_classify_intent_prefers_llm_response_when_available():
+async def test_classify_intent_uses_llm_when_heuristic_uncertain():
+    """LLM is called when the heuristic shortcut cannot classify with high confidence."""
     llm = _RecordingLLM(
         '{"intent":"data_analysis","confidence":0.82,"reasoning":"needs analytics",'
         '"keywords":["csv","trend"],"context_clues":["dataset"],'
@@ -35,13 +36,29 @@ async def test_classify_intent_prefers_llm_response_when_available():
     classifier = IntentClassifier(prompt_manager=None, llm_client=llm, enable_cache=False)
     context = QueryContext(session_id="s-1")
 
+    # Use an ambiguous query that the heuristic classifies with low confidence
+    result = await classifier.classify_intent(
+        "Can you help me with this project task?", context
+    )
+
+    # Heuristic returns knowledge_retrieval at 0.51 (below 0.85), so LLM is called
+    assert llm.calls, "LLM generate should be called when heuristic is uncertain"
+
+
+@pytest.mark.asyncio
+async def test_classify_intent_skips_llm_when_heuristic_confident():
+    """Heuristic shortcut skips LLM call when confidence is high."""
+    llm = _RecordingLLM('{"intent":"knowledge_retrieval","confidence":0.9}')
+    classifier = IntentClassifier(prompt_manager=None, llm_client=llm, enable_cache=False)
+    context = QueryContext(session_id="s-1")
+
     result = await classifier.classify_intent(
         "Analyze csv trend for anomaly detection", context
     )
 
     assert result.intent == IntentType.DATA_ANALYSIS
-    assert result.confidence == pytest.approx(0.82, abs=1e-6)
-    assert llm.calls, "LLM generate should be called for intent classification"
+    assert result.confidence >= 0.85
+    assert not llm.calls, "LLM should NOT be called when heuristic is confident"
 
 
 @pytest.mark.asyncio

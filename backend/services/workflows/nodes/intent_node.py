@@ -165,15 +165,14 @@ async def intent_node(state: WorkflowState, services: Any) -> WorkflowState:
         if isinstance(result, dict):
             extracted = _extract_intent_value(result.get("intent"))
             state["intent"] = extracted or _heuristic_intent(query)
-            if "confidence" in result:
-                metadata["intent_confidence"] = result.get("confidence")
+            metadata["intent_confidence"] = result.get("confidence", 0.85)
         elif hasattr(result, "intent"):
             extracted = _extract_intent_value(getattr(result, "intent"))
             state["intent"] = extracted or _heuristic_intent(query)
-            if hasattr(result, "confidence"):
-                metadata["intent_confidence"] = getattr(result, "confidence")
+            metadata["intent_confidence"] = getattr(result, "confidence", 0.85)
         else:
             state["intent"] = _extract_intent_value(result) or _heuristic_intent(query)
+            metadata["intent_confidence"] = 0.85
         metadata["intent_source"] = "classifier"
     else:
         state["intent"] = _heuristic_intent(query)

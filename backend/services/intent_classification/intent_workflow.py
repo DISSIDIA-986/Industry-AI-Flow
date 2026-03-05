@@ -690,8 +690,8 @@ class IntentClassificationWorkflow:
             if state.get("error"):
                 # EN:EN.
                 error_response = (
-                    "EN,EN."
-                    "EN,EN."
+                    "I encountered an issue processing your request. "
+                    "Please try rephrasing your question or try again later."
                 )
                 if not str(state.get("agent_response") or "").strip():
                     state["agent_response"] = error_response
