@@ -31,14 +31,14 @@ export default function RegisterPage() {
 
     // Verify password match
     if (formData.password !== formData.confirmPassword) {
-      setError('The passwords entered twice do not match')
+      setError('Passwords do not match')
       setLoading(false)
       return
     }
 
     try {
       await register(formData.name, formData.email, formData.password)
-      router.push('/dashboard')
+      router.push('/workflow-chat')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -54,9 +54,9 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            create Account
+            Create Account
           </h1>
-          <p className="text-gray-600">join inIndustry AI Flowplatform</p>
+          <p className="text-gray-600">Join the Industry AI Flow Platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -70,7 +70,7 @@ export default function RegisterPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              placeholder="Zhang San"
+              placeholder="John Doe"
               required
             />
           </div>
@@ -92,7 +92,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              password
+              Password
             </label>
             <input
               type="password"

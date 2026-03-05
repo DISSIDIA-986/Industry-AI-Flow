@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
-      router.push('/dashboard')
+      router.push('/workflow-chat')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -38,7 +38,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Industry AI Flow
           </h1>
-          <p className="text-gray-600">Enterprise levelAIWorkflow platform</p>
+          <p className="text-gray-600">Enterprise Level AI Workflow Platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              password
+              Password
             </label>
             <input
               type="password"
