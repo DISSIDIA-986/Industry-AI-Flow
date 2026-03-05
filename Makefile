@@ -342,11 +342,11 @@ examples: ## Run example applications
 
 example-rag: ## Run RAG example
 	@echo "🔍 Running RAG example..."
-	cd examples/basic_usage && $(PYTHON_BIN) rag_example.py
+	cd docs/examples && $(PYTHON_BIN) demo_version_solution.py
 
 example-ocr: ## Run OCR example
 	@echo "📷 Running OCR example..."
-	cd examples/basic_usage && $(PYTHON_BIN) ocr_example.py
+	cd docs/examples && $(PYTHON_BIN) demo_python313_paddleocr_solution.py
 
 utilities: ## Show available utility scripts
 	@echo "🛠️ Available utility scripts:"

@@ -37,7 +37,7 @@ class ArchitectureConstructionTester:
         self.test_resources_path = project_root / "test_resources"
         self.datasets_path = self.test_resources_path / "datasets"
         self.images_path = self.test_resources_path / "images"
-        self.test_cases_path = project_root / "test_cases"
+        self.test_cases_path = project_root / "docs" / "testing" / "test-case-specs"
 
     def test_dataset_loading(self):
         """EN"""

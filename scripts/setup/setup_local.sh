@@ -79,9 +79,9 @@ echo "启用pgvector扩展..."
 psql ai_workflow -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null
 
 # 执行初始化SQL
-if [ -f "infra/init.sql" ]; then
+if [ -f "infrastructure/init.sql" ]; then
     echo "执行初始化SQL..."
-    psql ai_workflow -f infra/init.sql
+    psql ai_workflow -f infrastructure/init.sql
 fi
 
 # 6. 检查并下载模型

@@ -7,11 +7,11 @@
 .env.local
 .env.local.*
 .venv/
-.venv_capstone/
-.venv_test/
+.venv_*/
+.venv-*/
 venv/
 venv_*/
-venv_test/
+venv-*/
 env/
 test_env/
 

@@ -11,7 +11,7 @@ echo "=== Luncheon AI Flow 数据分析 Docker 镜像构建 ==="
 IMAGE_NAME="luncheon/code-analysis"
 IMAGE_VERSION="1.0"
 FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_VERSION}"
-DOCKERFILE_PATH="Dockerfile.data-analysis"
+DOCKERFILE_PATH="docker/Dockerfile.data-analysis"
 
 # 颜色输出
 RED='\033[0;31m'
