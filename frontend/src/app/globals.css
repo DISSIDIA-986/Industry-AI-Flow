@@ -66,7 +66,6 @@ a {
 }
 
 .shell-root-simple {
-  min-height: 100vh;
   animation: slide-in 450ms ease-out;
 }
 
@@ -142,9 +141,11 @@ a {
 }
 
 .shell-main-simple {
-  padding: 1rem 1.2rem 2rem;
+  padding: 1rem 1.2rem 1rem;
   width: min(1280px, 100%);
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .shell-header {
@@ -204,6 +205,8 @@ a {
 
 .shell-content {
   margin-top: 0.95rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .page-stack {

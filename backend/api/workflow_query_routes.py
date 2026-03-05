@@ -414,6 +414,12 @@ async def workflow_query(
     if not isinstance(intent_result, dict):
         intent_result = {}
 
+    # Propagate intent confidence into metadata so frontend can display it
+    if "intent_confidence" not in metadata:
+        intent_confidence = intent_result.get("confidence")
+        if intent_confidence is not None:
+            metadata["intent_confidence"] = intent_confidence
+
     # Fallback runner cannot consume route mode through run_workflow args.
     # Re-apply requested policy here to keep API behavior consistent.
     if metadata.get("workflow_runner") == "fallback_orchestrator":

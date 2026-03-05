@@ -33,6 +33,8 @@ class OllamaClient:
         # P0 修复: 可配置的超时设置
         self.connect_timeout = settings.ollama_connect_timeout_seconds
         self.request_timeout = settings.ollama_request_timeout_seconds
+        # Reuse TCP connections across requests
+        self._session = requests.Session()
 
     def generate(
         self,
@@ -79,7 +81,7 @@ class OllamaClient:
             payload["options"].update(kwargs)
 
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 timeout=(self.connect_timeout, self.request_timeout)  # (connect, read) timeout
@@ -150,7 +152,7 @@ class OllamaClient:
         }
 
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}/api/chat",
                 json=payload,
                 timeout=(self.connect_timeout, self.request_timeout)
@@ -165,7 +167,7 @@ class OllamaClient:
     def get_model_info(self) -> Dict[str, Any]:
         """Retrieve metadata and details for the currently configured model."""
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}/api/show",
                 json={"name": self.model},
                 timeout=(self.connect_timeout, self.request_timeout)
@@ -179,7 +181,7 @@ class OllamaClient:
     def list_models(self) -> list:
         """List all models available on the Ollama server."""
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self.base_url}/api/tags",
                 timeout=(self.connect_timeout, self.request_timeout)
             )

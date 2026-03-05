@@ -11,11 +11,44 @@ import {
 } from "@/lib/api-client";
 import { formatCurrency, formatNumber, normalizeError } from "@/lib/formatters";
 
+const PROJECT_TYPES = [
+  "commercial_office",
+  "commercial_retail",
+  "education_school",
+  "healthcare_hospital",
+  "industrial_warehouse",
+  "infrastructure_bridge",
+  "mixed_use",
+  "renewable_energy",
+  "renovation_commercial",
+  "residential_multi_family",
+  "residential_single_family",
+  "transit_station",
+] as const;
+
+const LOCATIONS = [
+  "Brampton",
+  "Calgary",
+  "Edmonton",
+  "Halifax",
+  "Markham",
+  "Mississauga",
+  "Montreal",
+  "Ottawa",
+  "Quebec City",
+  "Saskatoon",
+  "Surrey",
+  "Toronto",
+  "Vancouver",
+  "Victoria",
+  "Winnipeg",
+] as const;
+
 const baseProject: CostProjectFeatures = {
   project_type: "commercial_office",
   location: "Toronto",
-  sqft: 185000,
-  floors: 18,
+  sqft: 29155,
+  floors: 5,
   num_units: 1,
   planned_duration_weeks: 78,
   estimated_cost_cad: 72000000,
@@ -27,8 +60,8 @@ const baseProject: CostProjectFeatures = {
   material_volatility: 0.44,
   num_subcontractors: 16,
   budget_pressure: 0.58,
-  risk_score: 6.8,
-  risk_score_original: 6.3,
+  risk_score: 24.2,
+  risk_score_original: 34.3,
 };
 
 const NUM_FIELDS: Array<keyof CostProjectFeatures> = [
@@ -129,21 +162,29 @@ export default function CostEstimationPage() {
         <div className="form-grid two-col">
           <label className="field-group">
             Project Type
-            <input
+            <select
               value={project.project_type}
               onChange={(event) =>
                 setProject((prev) => ({ ...prev, project_type: event.target.value }))
               }
-            />
+            >
+              {PROJECT_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </label>
           <label className="field-group">
             Location
-            <input
+            <select
               value={project.location}
               onChange={(event) =>
                 setProject((prev) => ({ ...prev, location: event.target.value }))
               }
-            />
+            >
+              {LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
           </label>
 
           {NUM_FIELDS.map((field) => (

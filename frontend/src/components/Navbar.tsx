@@ -17,12 +17,12 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/simple-dashboard' },
-    { name: 'Workflow chat', href: '/workflow-chat' },
-    { name: 'Document management', href: '/documents-integrated' },
-    { name: 'Data dashboard', href: '/data-dashboard' },
-    { name: 'cost estimate', href: '/cost-estimation' },
-    { name: 'APItest', href: '/api-integration-test' },
-    { name: 'Component demo', href: '/components-demo' },
+    { name: 'Workflow Chat', href: '/workflow-chat' },
+    { name: 'Documents', href: '/documents-integrated' },
+    { name: 'Data Dashboard', href: '/data-dashboard' },
+    { name: 'Cost Estimation', href: '/cost-estimation' },
+    { name: 'API Test', href: '/api-integration-test' },
+    { name: 'Component Demo', href: '/components-demo' },
   ]
 
   return (
@@ -76,7 +76,7 @@ export default function Navbar() {
                   href="/register"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
                 >
-                  register
+                  Register
                 </Link>
               </div>
             )}

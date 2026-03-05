@@ -20,8 +20,14 @@ For user-uploaded datasets outside the pre-built cost model: extracts **metadata
 ### Architecture Innovation
 The AI Workflow pipeline is a core innovation with two stages: an **11-node intent classification StateGraph** (intent_workflow.py) handles user input → intent classification → multi-turn clarification → query reformulation → keyword extraction, then routes to a **10-node fixed-order execution pipeline** (graph.py): intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness. Intent recognition is especially critical for RAG routing.
 
-### Multi-Backend LLM Design
-Supports Ollama (Qwen3.5:4b/9b), llama.cpp (Metal), and cloud APIs. Rationale: enterprise deployments need local models for data privacy, but current hardware is limited. Hybrid mode: simple tasks use local model, complex code generation uses cloud. Demo backend: Ollama with Qwen3.5:4b (default, ~28 TPS on M1 Max) or Qwen3.5:9b for higher quality.
+### LLM Backend: Ollama (Primary)
+**Ollama is the sole local backend for demo.** llama.cpp was evaluated early on but abandoned — Ollama is simpler to manage and its bottom layer is llama.cpp anyway. Cloud APIs (Zhipu/Gemini) are used only for code generation tasks. Demo backend: Ollama with Qwen3.5:4b (default) or Qwen3.5:9b for higher quality.
+
+**Performance-critical settings:**
+- **Thinking mode (`OLLAMA_ENABLE_THINKING`)**: Default `false`. Qwen3.5 supports a "thinking" mode that significantly increases first-token latency. Keep disabled for demo responsiveness.
+- **Metal/MPS acceleration**: Ollama on macOS uses Metal GPU by default — verify with `ollama ps` (should show GPU layers). If model runs on CPU only, performance will be 3-5x slower.
+- **Model size tradeoff**: 4B model (~28 TPS on M1 Max) vs 9B (~12 TPS). For live demo, 4B is recommended for faster response times.
+- **llama.cpp legacy**: Code still exists in `llama_cpp_client.py` but is deprecated. Config defaults now point to Ollama. Do not use `LLM_BACKEND=llama_cpp` unless specifically testing.
 
 ### Non-Demo Features (Architecture Previews)
 - **Multi-tenant isolation** (X-Tenant-ID): future-proofing for enterprise deployment, NOT a demo requirement
@@ -45,9 +51,12 @@ make capstone-env-setup
 # Or manual setup:
 python3.13 -m venv venv && source venv/bin/activate
 python -m pip install --pre paddlepaddle -i https://www.paddlepaddle.org.cn/packages/nightly/cpu/
-export CMAKE_ARGS="-DGGML_METAL=on -DCMAKE_OSX_ARCHITECTURES=arm64"
-pip install --no-cache-dir llama-cpp-python==0.2.90
 pip install -r backend/requirements.txt
+
+# Ollama setup (required):
+# Install Ollama from https://ollama.com, then:
+ollama pull qwen3.5:4b        # Default demo model
+ollama pull nomic-embed-text   # Embedding model (optional, system uses fastembed)
 ```
 
 ## Common Commands
@@ -122,7 +131,7 @@ Client → FastAPI (main.py)
 | Hybrid Search | `backend/services/retrieval/hybrid_search.py` | BM25 + vector + RRF fusion |
 | Reranker | `backend/services/retrieval/reranker.py` | bge-reranker-base cross-encoder |
 | Intent Workflow | `backend/services/intent_classification/intent_workflow.py` | 11-node State Graph |
-| LLM Client | `backend/services/llm_integration/llm_client.py` | Factory: llama_cpp / ollama / zhipu |
+| LLM Client | `backend/services/llm_integration/llm_client.py` | Factory: ollama / zhipu (llama_cpp deprecated) |
 | LLM Dispatch | `backend/services/llm_integration/dispatch_service.py` | Hybrid local+cloud routing |
 | Memory Manager | `backend/services/memory/manager.py` | 3-layer memory orchestration |
 | Prompt Manager | `backend/services/prompt_manager.py` | Versioned prompts with A/B testing |
@@ -161,7 +170,7 @@ Client → FastAPI (main.py)
 - **10-node workflow pipeline** (fixed order in `graph.py`): `intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness`
 - **Thread-safe lazy singletons**: Global `rag_engine`, `unified_orchestrator`, `code_executor` initialized with `threading.Lock()` double-checked locking in `main.py`
 - **Multi-tenant isolation**: `X-Tenant-ID` header → `TenantContext` → per-tenant rate limiting + audit logging
-- **LLM backend abstraction**: `LLMClientFactory.create_client(backend)` with `LLM_BACKEND` env var (`llama_cpp|ollama|zhipu`)
+- **LLM backend abstraction**: `LLMClientFactory.create_client(backend)` with `LLM_BACKEND` env var (`ollama|zhipu`; `llama_cpp` deprecated)
 - **Hybrid dispatch**: `hybrid_mode` config (`local_only|hybrid_auto|cloud_only`) with confidence-based fallback (`local_confidence_threshold: 0.75`)
 - **Memory guard**: `MEMORY_GUARD_LIMIT_MB` setting triggers GC or request rejection
 
@@ -183,7 +192,7 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 Key environment variables (in `.env`):
 
 ```bash
-LLM_BACKEND=ollama                  # llama_cpp | ollama | zhipu
+LLM_BACKEND=ollama                  # ollama | zhipu (llama_cpp deprecated)
 OLLAMA_HOST=http://localhost:11434
 POSTGRES_HOST=localhost
 POSTGRES_DB=ai_workflow
@@ -198,7 +207,7 @@ CODE_EXECUTION_PROVIDER=docker      # docker | auto | ppio
 
 ## Tech Stack
 
-- **LLM**: Qwen3.5:4b/9b via Ollama or llama.cpp (Metal acceleration) or Zhipu AI cloud
+- **LLM**: Qwen3.5:4b/9b via Ollama (Metal GPU on macOS) or Zhipu AI cloud
 - **Embeddings**: nomic-embed-text-v1.5 (768-dim, local)
 - **Vector DB**: PostgreSQL + pgvector (IVFFlat index)
 - **Reranking**: bge-reranker-base cross-encoder

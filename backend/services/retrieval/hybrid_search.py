@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from typing import TYPE_CHECKING
 
 try:
@@ -41,6 +42,8 @@ class HybridRetriever:
         self.bm25 = None
         self.doc_chunks = []  # EN [{chunk_id, doc_id, content, filename}]
         self._indexed_chunk_count = 0
+        self._last_staleness_check = 0.0  # timestamp of last DB count check
+        self._staleness_check_interval = 30.0  # seconds between DB count checks
         self.stemmer = PorterStemmer() if PorterStemmer else None  # EN
         self._nltk_checked = False
         self._nltk_ready = False
@@ -204,6 +207,7 @@ class HybridRetriever:
         self.bm25 = None
         self.doc_chunks = []
         self._indexed_chunk_count = 0
+        self._last_staleness_check = 0.0
 
     def _get_chunk_count(self) -> int:
         conn = self.vector_store.get_connection()
@@ -238,8 +242,13 @@ class HybridRetriever:
         Returns:
             EN [{doc_id, content, filename, score}]
         """
-        if self.bm25 is None or self._get_chunk_count() != self._indexed_chunk_count:
+        now = time.monotonic()
+        if self.bm25 is None:
             self.build_bm25_index()
+        elif now - self._last_staleness_check >= self._staleness_check_interval:
+            self._last_staleness_check = now
+            if self._get_chunk_count() != self._indexed_chunk_count:
+                self.build_bm25_index()
 
         # 1. EN
         from backend.services.core.embedder import embed_query_text
