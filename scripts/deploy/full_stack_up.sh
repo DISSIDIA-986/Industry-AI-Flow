@@ -11,11 +11,7 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 if [[ -z "${VENV_DIR+x}" ]]; then
-  if [[ "$(uname -m)" == "arm64" ]] && [[ -x "${ROOT_DIR}/.venv_capstone_arm64/bin/python" ]]; then
-    VENV_DIR="${ROOT_DIR}/.venv_capstone_arm64"
-  else
-    VENV_DIR="${ROOT_DIR}/.venv_capstone"
-  fi
+  VENV_DIR="${ROOT_DIR}/.venv"
 fi
 PYTHON_BIN="${PYTHON_BIN:-python3.13}"
 LOCK_FILE="${LOCK_FILE:-${ROOT_DIR}/requirements/lock/py313-capstone.txt}"

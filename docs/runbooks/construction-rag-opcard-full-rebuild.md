@@ -16,7 +16,7 @@ Use this card when:
 ### Step A: Environment
 
 ```bash
-source .venv_capstone_arm64/bin/activate
+source .venv/bin/activate
 ```
 
 ### Step B: Re-tune

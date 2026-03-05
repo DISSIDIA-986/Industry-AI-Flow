@@ -129,7 +129,7 @@ echo ""
 # ==========================================
 echo -e "${BLUE}=== Application Config ===${NC}"
 [ -f ".env" ] && check_pass "Environment config .env exists" || check_warning "Environment config .env does not exist"
-[ -f ".venv_capstone/bin/activate" ] && check_pass "Virtual environment exists" || check_warning "Virtual environment does not exist"
+[ -f ".venv/bin/activate" ] && check_pass "Virtual environment exists" || check_warning "Virtual environment does not exist"
 [ -d "logs" ] && check_pass "Logs directory exists" || check_warning "Logs directory does not exist"
 echo ""
 

@@ -54,10 +54,10 @@ echo "✅ Ollama配置完成"
 
 # 5. 部署应用
 echo -e "${BLUE}[5/6]${NC} 部署应用..."
-if [ ! -d ".venv_capstone" ]; then
-    python3.13 -m venv .venv_capstone || python3 -m venv .venv_capstone
+if [ ! -d ".venv" ]; then
+    python3.13 -m venv .venv || python3 -m venv .venv
 fi
-source .venv_capstone/bin/activate
+source .venv/bin/activate
 pip install -q -r requirements/lock/py313-capstone.txt 2>/dev/null || pip install -q -r requirements/base.txt
 if [ ! -f ".env" ]; then
     cp .env.example .env

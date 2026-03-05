@@ -77,7 +77,7 @@ Build a cross-functional, executable test plan that verifies:
 ## 5. Standard Execution
 
 ```bash
-source .venv_capstone_arm64/bin/activate
+source .venv/bin/activate
 python scripts/utilities/init_construction_kb.py \
   --disable-ocr \
   --chunk-size 512 \

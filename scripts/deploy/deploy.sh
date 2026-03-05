@@ -187,16 +187,16 @@ deploy_application() {
     log_info "部署应用..."
     
     # 检查虚拟环境
-    if [ -d ".venv_capstone" ]; then
+    if [ -d ".venv" ]; then
         log_info "虚拟环境已存在，跳过创建"
     else
         log_info "创建虚拟环境..."
-        python3.13 -m venv .venv_capstone || python3 -m venv .venv_capstone
+        python3.13 -m venv .venv || python3 -m venv .venv
         log_success "虚拟环境创建成功"
     fi
-    
+
     # 激活虚拟环境
-    source .venv_capstone/bin/activate
+    source .venv/bin/activate
     
     # 安装依赖
     log_info "安装Python依赖..."
@@ -244,7 +244,7 @@ start_services() {
     log_info "启动服务..."
     
     # 激活虚拟环境
-    source .venv_capstone/bin/activate
+    source .venv/bin/activate
     
     # 启动后端服务
     log_info "启动后端服务..."
@@ -276,7 +276,7 @@ run_tests() {
     log_info "运行冒烟测试..."
     
     # 激活虚拟环境
-    source .venv_capstone/bin/activate
+    source .venv/bin/activate
     
     # 运行CI友好的冒烟测试
     python scripts/testing/run_demo_smoke.py \
