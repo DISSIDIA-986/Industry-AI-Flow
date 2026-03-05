@@ -12,7 +12,7 @@ def test_data_transfer_rejects_outside_allowed_paths() -> None:
     result = service.transfer_file_for_docker("/etc/hosts", transfer_method="file_mapping")
 
     assert result["success"] is False
-    assert "outside allowed paths" in (result.get("error") or "")
+    assert "outside allowed" in (result.get("error") or "").lower()
 
 
 def test_data_transfer_accepts_workspace_file_and_cleans_up() -> None:

@@ -416,7 +416,10 @@ async def workflow_query(
 
     # Propagate intent confidence into metadata so frontend can display it
     if "intent_confidence" not in metadata:
-        intent_confidence = intent_result.get("confidence")
+        intent_confidence = (
+            intent_result.get("confidence")
+            or metadata.get("confidence")
+        )
         if intent_confidence is not None:
             metadata["intent_confidence"] = intent_confidence
 

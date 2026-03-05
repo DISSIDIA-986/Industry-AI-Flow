@@ -215,6 +215,30 @@ class IntentClassifier:
                     logger.debug(f"Cache hit for intent: {cached_result.intent}")
                     return cached_result
 
+            # 2.5 Fast heuristic pre-check: skip LLM if keywords give high confidence
+            heuristic_json = await self._simulate_llm_response(
+                f"Query:\n{processed_query}\n\n"
+            )
+            heuristic_data = json.loads(heuristic_json)
+            heuristic_confidence = float(heuristic_data.get("confidence", 0))
+            if heuristic_confidence >= 0.85:
+                logger.info(
+                    "Intent heuristic shortcut: %s (conf=%.2f), skipping LLM",
+                    heuristic_data.get("intent"),
+                    heuristic_confidence,
+                )
+                intent_result = await self._parse_classification_result(heuristic_json)
+                intent_result = await self._post_process_result(
+                    intent_result, query, context
+                )
+                intent_result.processing_time_ms = int(
+                    (datetime.now() - start_time).total_seconds() * 1000
+                )
+                if self.enable_cache:
+                    self._save_to_cache(cache_key, intent_result)
+                self._update_stats(intent_result)
+                return intent_result
+
             # 3. Build the classification request
             classification_request = await self._build_classification_request(
                 processed_query, context
