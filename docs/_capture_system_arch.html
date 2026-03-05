@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 2400px;
+    height: 1600px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(160deg, #FAFBFF, #F0F4FF);
+    padding: 36px;
+    overflow: hidden;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .header h1 { font-size: 32px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px; }
+  .header .sub { font-size: 16px; color: #64748B; margin-top: 2px; }
+  .header .badge {
+    background: #0F172A; color: white; border-radius: 30px;
+    padding: 10px 24px; font-size: 13px; font-weight: 600;
+  }
+  .content-row { display: flex; gap: 20px; }
+  .layers-col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+  .crosscut-col { width: 200px; }
+  .layer {
+    border-radius: 14px; padding: 16px 24px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .layer-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
+  }
+  .layer-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    background: rgba(0,0,0,0.08);
+  }
+  .layer-items { display: flex; gap: 10px; flex-wrap: wrap; }
+  .layer-item {
+    background: white; border-radius: 10px; padding: 10px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06);
+    font-size: 12px; color: #334155; font-weight: 500;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .layer-item .item-label { font-size: 10px; color: #94A3B8; font-weight: 400; }
+  .layer-item.highlight {
+    border: 2px solid #6366F1; box-shadow: 0 0 12px rgba(99,102,241,0.15);
+  }
+  .layer-item.wide { flex: 1; min-width: 200px; }
+  .sub-items { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .sub-item {
+    background: #F1F5F9; border-radius: 6px; padding: 4px 10px;
+    font-size: 10px; color: #475569;
+  }
+  .l1 { background: linear-gradient(to right, #DBEAFE, #E0E7FF); }
+  .l1 .layer-label { color: #1E40AF; }
+  .l2 { background: linear-gradient(to right, #E0E7FF, #EDE9FE); }
+  .l2 .layer-label { color: #4338CA; }
+  .l3 { background: linear-gradient(to right, #EDE9FE, #FCE7F3); }
+  .l3 .layer-label { color: #7E22CE; }
+  .l4 { background: linear-gradient(to right, #FEF3C7, #FFEDD5); }
+  .l4 .layer-label { color: #92400E; }
+  .l5 { background: linear-gradient(to right, #D1FAE5, #CCFBF1); }
+  .l5 .layer-label { color: #065F46; }
+  .l6 { background: linear-gradient(to right, #F1F5F9, #E2E8F0); }
+  .l6 .layer-label { color: #334155; }
+  .layer-arrow {
+    text-align: center; color: #94A3B8; font-size: 16px; line-height: 1;
+    margin: -4px 0;
+  }
+  .crosscut {
+    background: linear-gradient(to bottom, #0F172A, #1E293B);
+    border-radius: 14px; padding: 20px 16px; color: white;
+    display: flex; flex-direction: column; gap: 12px; height: 100%;
+  }
+  .crosscut h3 {
+    font-size: 13px; font-weight: 700; text-align: center;
+    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .crosscut-item {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 8px 12px; font-size: 11px; text-align: center;
+  }
+  .tech-bar {
+    margin-top: 16px; display: flex; align-items: center; gap: 12px;
+    background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px 24px;
+  }
+  .tech-bar-label { font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap; }
+  .tech-bar-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tech-bar-pill {
+    background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px;
+    padding: 4px 12px; font-size: 11px; color: #475569; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Industry AI Flow &mdash; System Architecture</h1>
+    <div class="sub">6-Layer Architecture with Cross-Cutting Concerns</div>
+  </div>
+  <div class="badge">Technical View</div>
+</div>
+
+<div class="content-row">
+  <div class="layers-col">
+    <div class="layer l1">
+      <div class="layer-label">L1 &mdash; UI Layer <span class="layer-tag">Next.js App Router</span></div>
+      <div class="layer-items">
+        <div class="layer-item">Chat Interface<div class="item-label">workflow-chat</div></div>
+        <div class="layer-item">Data Dashboard<div class="item-label">data-dashboard</div></div>
+        <div class="layer-item">Document Manager<div class="item-label">documents-integrated</div></div>
+        <div class="layer-item">Cost Estimator<div class="item-label">dashboard</div></div>
+        <div class="layer-item">API Proxy<div class="item-label">api/backend/[...path]</div></div>
+      </div>
+    </div>
+    <div class="layer-arrow">&#x25BC;</div>
+    <div class="layer l2">
+      <div class="layer-label">L2 &mdash; API Gateway <span class="layer-tag">FastAPI + Middleware</span></div>
+      <div class="layer-items">
+        <div class="layer-item">Router Mount<div class="item-label">main.py</div></div>
+        <div class="layer-item">Auth Middleware<div class="item-label">API key validation</div></div>
+        <div class="layer-item">Tenant Isolation<div class="item-label">X-Tenant-ID header</div></div>
+        <div class="layer-item">Input Validation<div class="item-label">Pydantic models</div></div>
+        <div class="layer-item">Rate Limiter<div class="item-label">Per-tenant limits</div></div>
+      </div>
+    </div>
+    <div class="layer-arrow">&#x25BC;</div>
+    <div class="layer l3">
+      <div class="layer-label">L3 &mdash; Business Services <span class="layer-tag">Orchestration &amp; Routing</span></div>
+      <div class="layer-items">
+        <div class="layer-item highlight" style="min-width: 280px;">
+          Intent Classification
+          <div class="item-label">11-Node LangGraph StateGraph</div>
+          <div class="sub-items">
+            <span class="sub-item">Input</span><span class="sub-item">Language</span><span class="sub-item">Keywords</span><span class="sub-item">Safety</span><span class="sub-item">Classify</span><span class="sub-item">Confidence</span><span class="sub-item">Clarify</span><span class="sub-item">Context</span><span class="sub-item">Reformulate</span><span class="sub-item">Extract</span><span class="sub-item">Route</span>
+          </div>
+        </div>
+        <div class="layer-item">Routing Decision<div class="item-label">routing_decision.py</div></div>
+        <div class="layer-item highlight" style="min-width: 260px;">
+          Workflow Pipeline
+          <div class="item-label">10-Node Fixed-Order (graph.py)</div>
+          <div class="sub-items">
+            <span class="sub-item">intent</span><span class="sub-item">safety</span><span class="sub-item">cost_est</span><span class="sub-item">retrieval</span><span class="sub-item">rerank</span><span class="sub-item">prompt</span><span class="sub-item">route</span><span class="sub-item">code_exec</span><span class="sub-item">response</span><span class="sub-item">groundedness</span>
+          </div>
+        </div>
+        <div class="layer-item">Prompt Manager<div class="item-label">A/B testing + versioning</div></div>
+        <div class="layer-item">Memory Manager<div class="item-label">3-layer memory</div></div>
+      </div>
+    </div>
+    <div class="layer-arrow">&#x25BC;</div>
+    <div class="layer l4">
+      <div class="layer-label">L4 &mdash; AI Runtime <span class="layer-tag">Models &amp; Execution</span></div>
+      <div class="layer-items">
+        <div class="layer-item wide">
+          RAG Engine
+          <div class="item-label">rag_engine.py</div>
+          <div class="sub-items">
+            <span class="sub-item">BM25</span><span class="sub-item">pgvector</span><span class="sub-item">RRF Fusion</span><span class="sub-item">bge-reranker</span><span class="sub-item">Query Cache</span><span class="sub-item">Embedder</span>
+          </div>
+        </div>
+        <div class="layer-item">
+          LLM Dispatch
+          <div class="item-label">dispatch_service.py</div>
+          <div class="sub-items">
+            <span class="sub-item">Ollama (local)</span><span class="sub-item">Zhipu/Gemini (cloud)</span>
+          </div>
+        </div>
+        <div class="layer-item">
+          Code Executor
+          <div class="item-label">Docker sandbox</div>
+          <div class="sub-items">
+            <span class="sub-item">Validator</span><span class="sub-item">Manager</span><span class="sub-item">Providers</span>
+          </div>
+        </div>
+        <div class="layer-item">
+          Cost Estimation
+          <div class="item-label">Ridge regression</div>
+          <div class="sub-items">
+            <span class="sub-item">10K dataset</span><span class="sub-item">ML Model</span>
+          </div>
+        </div>
+        <div class="layer-item">Unified Agent<div class="item-label">12 tools</div></div>
+      </div>
+    </div>
+    <div class="layer-arrow">&#x25BC;</div>
+    <div class="layer l5">
+      <div class="layer-label">L5 &mdash; Data Storage <span class="layer-tag">PostgreSQL + pgvector</span></div>
+      <div class="layer-items">
+        <div class="layer-item">document_chunks<div class="item-label">vector(768) + text + metadata</div></div>
+        <div class="layer-item">prompt_versions<div class="item-label">A/B testing scores</div></div>
+        <div class="layer-item">conversation_memories<div class="item-label">3-layer with embeddings</div></div>
+        <div class="layer-item">llm_usage_logs<div class="item-label">Cost tracking per tenant</div></div>
+        <div class="layer-item">ML Model Store<div class="item-label">Trained model artifacts</div></div>
+      </div>
+    </div>
+    <div class="layer-arrow">&#x25BC;</div>
+    <div class="layer l6">
+      <div class="layer-label">L6 &mdash; Security &amp; Platform <span class="layer-tag">Hardened Infrastructure</span></div>
+      <div class="layer-items">
+        <div class="layer-item">Sanitizer<div class="item-label">XSS / injection guard</div></div>
+        <div class="layer-item">Rate Limiter<div class="item-label">Per-tenant throttle</div></div>
+        <div class="layer-item">Audit Logger<div class="item-label">Tenant-aware logging</div></div>
+        <div class="layer-item">Prometheus<div class="item-label">Metrics export</div></div>
+        <div class="layer-item">Language Policy<div class="item-label">English-only enforcement</div></div>
+        <div class="layer-item">Secret Manager<div class="item-label">Credential vault</div></div>
+        <div class="layer-item">Memory Guard<div class="item-label">OOM protection</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="crosscut-col">
+    <div class="crosscut">
+      <h3>Cross-Cutting Concerns</h3>
+      <div class="crosscut-item">Configuration<br><span style="font-size:10px;opacity:0.7;">Pydantic BaseSettings</span></div>
+      <div class="crosscut-item">Environment<br><span style="font-size:10px;opacity:0.7;">.env variables</span></div>
+      <div class="crosscut-item">Thread Safety<br><span style="font-size:10px;opacity:0.7;">Double-checked locking</span></div>
+      <div class="crosscut-item">Docker<br><span style="font-size:10px;opacity:0.7;">Compose + sandbox</span></div>
+      <div class="crosscut-item">CI/CD<br><span style="font-size:10px;opacity:0.7;">11 release gates</span></div>
+      <div class="crosscut-item">Testing<br><span style="font-size:10px;opacity:0.7;">Unit + E2E + smoke</span></div>
+      <div class="crosscut-item">Python 3.13<br><span style="font-size:10px;opacity:0.7;">Required runtime</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="tech-bar">
+  <div class="tech-bar-label">Tech Stack:</div>
+  <div class="tech-bar-pills">
+    <span class="tech-bar-pill">Python 3.13</span>
+    <span class="tech-bar-pill">FastAPI</span>
+    <span class="tech-bar-pill">LangGraph</span>
+    <span class="tech-bar-pill">Ollama</span>
+    <span class="tech-bar-pill">Qwen3.5</span>
+    <span class="tech-bar-pill">PostgreSQL + pgvector</span>
+    <span class="tech-bar-pill">nomic-embed-v1.5</span>
+    <span class="tech-bar-pill">bge-reranker</span>
+    <span class="tech-bar-pill">PaddleOCR</span>
+    <span class="tech-bar-pill">Next.js</span>
+    <span class="tech-bar-pill">Docker</span>
+    <span class="tech-bar-pill">Prometheus</span>
+  </div>
+</div>
+
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

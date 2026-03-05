@@ -1,864 +1,540 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industry AI Flow — Capstone Showcase Poster</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap"
-        rel="stylesheet">
-    <style>
-        :root {
-            /* Premium Color Palette */
-            --primary: #4F46E5;
-            --primary-dark: #312E81;
-            --primary-light: #818CF8;
-            --accent-teal: #0D9488;
-            --accent-rose: #E11D48;
-            --text-dark: #0F172A;
-            --text-gray: #475569;
-            --text-light: #94A3B8;
-            --bg-color: #FAFAF9;
-            --white: #FFFFFF;
-            --surface: #F8FAFC;
-            --surface-border: #E2E8F0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #333;
-            /* Dark background for preview outside print */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        /* 24x36 inch Poster Specification */
-        @page {
-            size: 24in 36in;
-            margin: 0;
-        }
-
-        .poster {
-            width: 24in;
-            height: 36in;
-            background-color: var(--bg-color);
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Ambient Background Graphics */
-        .ambient-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .ambient-blob-1 {
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 1200px;
-            height: 1200px;
-            background: radial-gradient(circle, rgba(79, 70, 229, 0.08) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .ambient-blob-2 {
-            position: absolute;
-            bottom: -5%;
-            right: -20%;
-            width: 1500px;
-            height: 1500px;
-            background: radial-gradient(circle, rgba(13, 148, 136, 0.06) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .ambient-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(rgba(15, 23, 42, 0.03) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(15, 23, 42, 0.03) 2px, transparent 2px);
-            background-size: 100px 100px;
-            opacity: 0.5;
-        }
-
-        .content-layer {
-            position: relative;
-            z-index: 1;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 2in;
-            /* 192px internal padding */
-            gap: 1.25in;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4 {
-            font-family: 'Outfit', sans-serif;
-            color: var(--text-dark);
-            line-height: 1.1;
-        }
-
-        /* ================= 1. Hero Region ================= */
-        .hero {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .hero-badge {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(13, 148, 136, 0.1));
-            color: var(--primary-dark);
-            padding: 12px 32px;
-            border-radius: 100px;
-            font-weight: 700;
-            font-size: 24px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border: 2px solid rgba(79, 70, 229, 0.2);
-        }
-
-        .hero h1 {
-            font-weight: 900;
-            font-size: 110px;
-            letter-spacing: -2px;
-            background: linear-gradient(135deg, var(--text-dark) 20%, var(--primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-        }
-
-        .hero .tagline {
-            font-size: 42px;
-            font-weight: 500;
-            color: var(--text-gray);
-            max-width: 80%;
-            line-height: 1.3;
-        }
-
-        /* ================= 2. Problem vs Solution ================= */
-        .ps-section {
-            display: flex;
-            gap: 60px;
-            background: var(--white);
-            border-radius: 40px;
-            padding: 60px;
-            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.04), 0 0 0 1px var(--surface-border);
-            position: relative;
-        }
-
-        .ps-vs-badge {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
-            background: var(--text-dark);
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 28px;
-            border: 8px solid var(--white);
-            z-index: 2;
-        }
-
-        .ps-card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .ps-card.problem .ps-header {
-            color: var(--accent-rose);
-        }
-
-        .ps-card.solution .ps-header {
-            color: var(--accent-teal);
-        }
-
-        .ps-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            font-size: 48px;
-            font-weight: 800;
-        }
-
-        .ps-header svg {
-            width: 56px;
-            height: 56px;
-        }
-
-        .ps-body {
-            font-size: 28px;
-            color: var(--text-gray);
-            line-height: 1.6;
-        }
-
-        .ps-body strong {
-            color: var(--text-dark);
-        }
-
-        /* ================= Vivid Architecture Diagram ================= */
-        .vivid-arch {
-            background: linear-gradient(135deg, #020617 0%, #0F172A 100%);
-            border-radius: 40px;
-            padding: 80px 60px;
-            color: var(--white);
-            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.4);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .vivid-arch::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: radial-gradient(circle at 50% 0%, rgba(79, 70, 229, 0.3) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .arch-header {
-            text-align: center;
-            position: relative;
-            z-index: 2;
-            margin-bottom: 60px;
-        }
-
-        .arch-header h2 {
-            color: var(--white);
-            font-size: 56px;
-            font-weight: 800;
-            margin-bottom: 16px;
-            letter-spacing: -1px;
-        }
-
-        .arch-header p {
-            color: #94A3B8;
-            font-size: 24px;
-        }
-
-        .arch-canvas {
-            display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            gap: 40px;
-            position: relative;
-            z-index: 2;
-            align-items: stretch;
-        }
-
-        .arch-col {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .arch-block {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 24px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .arch-block.highlight {
-            background: linear-gradient(90deg, rgba(79, 70, 229, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%);
-            border-color: rgba(79, 70, 229, 0.3);
-        }
-
-        .arch-block-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .arch-block-icon svg {
-            width: 32px;
-            height: 32px;
-            color: #fff;
-            stroke-width: 2px;
-        }
-
-        .arch-block-text {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .arch-block-text h4 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: #E2E8F0;
-        }
-
-        .arch-block-text span {
-            font-size: 16px;
-            color: #94A3B8;
-        }
-
-        /* Core Engine Central Hub */
-        .core-engine {
-            background: rgba(255, 255, 255, 0.02);
-            border: 2px solid rgba(79, 70, 229, 0.3);
-            border-radius: 30px;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-            box-shadow: inset 0 0 40px rgba(79, 70, 229, 0.1);
-        }
-
-        .core-gateway {
-            text-align: center;
-            background: linear-gradient(90deg, rgba(79, 70, 229, 0.8) 0%, rgba(13, 148, 136, 0.8) 100%);
-            padding: 20px;
-            border-radius: 16px;
-            font-family: 'Outfit';
-            font-size: 28px;
-            font-weight: 800;
-            color: #FFF;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
-        }
-
-        .core-paths {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-        }
-
-        .path-box {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-            transition: transform 0.3s ease;
-        }
-
-        .path-box.rag {
-            border-top: 6px solid #3B82F6;
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.1);
-        }
-
-        .path-box.flow {
-            border-top: 6px solid #8B5CF6;
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.1);
-        }
-
-        .path-box.agent {
-            border-top: 6px solid #10B981;
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.1);
-        }
-
-        .path-icon {
-            width: 64px;
-            height: 64px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            margin-bottom: 8px;
-        }
-
-        .path-icon svg {
-            width: 32px;
-            height: 32px;
-        }
-
-        .path-box.rag .path-icon {
-            color: #3B82F6;
-        }
-
-        .path-box.flow .path-icon {
-            color: #8B5CF6;
-        }
-
-        .path-box.agent .path-icon {
-            color: #10B981;
-        }
-
-        .path-box h4 {
-            font-size: 22px;
-            color: #FFF;
-            margin-bottom: 4px;
-        }
-
-        .path-box span {
-            font-size: 16px;
-            color: #94A3B8;
-            font-family: 'Inter';
-        }
-
-        .shared-layer {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .shared-pill {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 16px 30px;
-            border-radius: 100px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #CBD5E1;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .shared-pill svg {
-            width: 24px;
-            height: 24px;
-            stroke-width: 2.5px;
-        }
-
-        /* ================= 4. Key Features ================= */
-        .features-section {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
-        }
-
-        .feature-card {
-            background: var(--surface);
-            border-radius: 30px;
-            padding: 50px 40px;
-            border: 1px solid var(--surface-border);
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            transition: transform 0.3s ease;
-        }
-
-        .feature-icon {
-            width: 80px;
-            height: 80px;
-            background: var(--white);
-            border-radius: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-        }
-
-        .feature-icon svg {
-            width: 40px;
-            height: 40px;
-            stroke-width: 2px;
-        }
-
-        .feature-card h3 {
-            font-size: 36px;
-            font-weight: 700;
-        }
-
-        .feature-card p {
-            font-size: 24px;
-            color: var(--text-gray);
-            line-height: 1.5;
-        }
-
-        /* ================= 5. Footer / Tech Cred ================= */
-        .footer {
-            margin-top: auto;
-            border-top: 2px solid var(--surface-border);
-            padding-top: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .tech-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .tech-stack h4 {
-            font-size: 24px;
-            color: var(--text-light);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .pills {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .pill {
-            background: var(--white);
-            border: 2px solid var(--surface-border);
-            color: var(--text-dark);
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-size: 24px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .qr-placeholder {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .qr-box {
-            width: 140px;
-            height: 140px;
-            background: var(--white);
-            border: 4px solid var(--primary);
-            border-radius: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-        }
-
-        .qr-box svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .qr-text {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .qr-text strong {
-            font-size: 32px;
-            font-family: 'Outfit';
-            color: var(--text-dark);
-        }
-
-        .qr-text span {
-            font-size: 24px;
-            color: var(--text-light);
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Industry AI Flow - Capstone Poster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #4F46E5;
+    --primary-dark: #312E81;
+    --accent-teal: #0D9488;
+    --accent-rose: #E11D48;
+    --dk: #0F172A;
+    --gray: #475569;
+    --lt: #94A3B8;
+    --bg: #FAFAF9;
+    --wh: #FFFFFF;
+    --bdr: #E2E8F0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #333;
+    display: flex; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  @page { size: 24in 36in; margin: 0; }
+
+  .poster {
+    width: 24in; height: 36in;
+    background: var(--bg);
+    position: relative; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+  /* Ambient background */
+  .ambient { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .ambient-grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(15,23,42,0.035) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .ambient-b1 {
+    position: absolute; top: -8%; left: -8%; width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(79,70,229,0.06) 0%, transparent 70%); border-radius: 50%;
+  }
+  .ambient-b2 {
+    position: absolute; bottom: -5%; right: -15%; width: 1100px; height: 1100px;
+    background: radial-gradient(circle, rgba(13,148,136,0.04) 0%, transparent 70%); border-radius: 50%;
+  }
+
+  .content {
+    position: relative; z-index: 1;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    padding: 0.9in 1.3in 0.8in;
+    gap: 0.4in;
+  }
+  h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--dk); line-height: 1.15; }
+
+  /* ========== HERO ========== */
+  .hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(13,148,136,0.08));
+    color: var(--primary-dark); padding: 10px 30px; border-radius: 100px;
+    font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;
+    border: 2px solid rgba(79,70,229,0.15);
+  }
+  .hero-badge .sait { color: var(--accent-teal); }
+  .hero h1 {
+    font-weight: 900; font-size: 96px; letter-spacing: -2px;
+    background: linear-gradient(135deg, var(--dk) 30%, var(--primary) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { font-size: 30px; font-weight: 500; color: var(--gray); max-width: 92%; line-height: 1.4; }
+
+  /* ========== PROBLEM vs SOLUTION ========== */
+  .ps-section {
+    display: flex; gap: 80px; background: var(--wh); border-radius: 28px;
+    padding: 36px 44px; box-shadow: 0 16px 40px rgba(15,23,42,0.04), 0 0 0 1px var(--bdr);
+    position: relative;
+  }
+  .ps-vs {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 58px; height: 58px; background: var(--dk); color: var(--wh);
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    font-family: 'Outfit'; font-weight: 800; font-size: 21px;
+    border: 5px solid var(--bg); z-index: 2;
+  }
+  .ps-card { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .ps-header { display: flex; align-items: center; gap: 14px; font-family: 'Outfit'; font-size: 34px; font-weight: 800; }
+  .ps-card.problem .ps-header { color: var(--accent-rose); }
+  .ps-card.solution .ps-header { color: var(--accent-teal); }
+  .ps-header svg { width: 40px; height: 40px; flex-shrink: 0; }
+  .ps-body { font-size: 22px; color: var(--gray); line-height: 1.5; }
+  .ps-body strong { color: var(--dk); }
+
+  /* ========== SECTION LABEL ========== */
+  .sec-label { display: flex; align-items: center; gap: 14px; }
+  .sec-label .num {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--primary); color: var(--wh);
+    display: flex; justify-content: center; align-items: center;
+    font-family: 'Outfit'; font-weight: 800; font-size: 20px;
+  }
+  .sec-label h2 { font-size: 34px; font-weight: 800; }
+  .sec-label .sub { font-size: 20px; color: var(--lt); margin-left: auto; }
+
+  /* ========== CAPABILITIES ========== */
+  .capabilities { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .cap-c {
+    background: var(--wh); border-radius: 24px; padding: 32px 28px;
+    border: 1.5px solid var(--bdr); display: flex; flex-direction: column; gap: 12px;
+  }
+  .cap-icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .cap-icon svg { width: 28px; height: 28px; stroke-width: 2px; }
+  .cap-icon.blue { background: #EFF6FF; color: #2563EB; }
+  .cap-icon.green { background: #F0FDF4; color: #16A34A; }
+  .cap-icon.purple { background: #FDF4FF; color: #9333EA; }
+  .cap-c h3 { font-size: 28px; font-weight: 700; }
+  .cap-c p { font-size: 20px; color: var(--gray); line-height: 1.45; }
+  .cap-tag {
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 12px; border-radius: 12px; align-self: flex-start;
+  }
+  .cap-tag.bt { background: #DBEAFE; color: #1D4ED8; }
+  .cap-tag.gt { background: #DCFCE7; color: #15803D; }
+  .cap-tag.pt { background: #F3E8FF; color: #7E22CE; }
+
+  /* ========== PRODUCT ARCHITECTURE (inline) ========== */
+  .arch-frame {
+    background: var(--wh); border-radius: 20px; padding: 28px 32px;
+    box-shadow: 0 10px 30px rgba(15,23,42,0.04), 0 0 0 1px var(--bdr);
+    flex: 1;
+  }
+  .pa { display: flex; flex-direction: column; gap: 18px; height: 100%; }
+  .pa-header {
+    background: linear-gradient(to right, #4F46E5, #7C3AED);
+    border-radius: 12px; padding: 16px 28px; color: white;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .pa-header strong { font-size: 20px; white-space: nowrap; }
+  .pa-nodes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .pa-nd { background: rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 14px; font-size: 15px; }
+  .pa-arr { opacity: 0.5; font-size: 15px; }
+
+  .pa-cols { display: flex; gap: 18px; flex: 1; }
+  .pa-col-left { width: 240px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
+  .pa-input {
+    background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;
+  }
+  .pa-input h5 { font-size: 17px; font-weight: 700; color: var(--dk); margin-bottom: 10px; }
+  .pa-input-item { font-size: 15px; color: var(--gray); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+  .pa-input-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .pa-col-center { flex: 1; display: flex; gap: 14px; }
+  .pa-cap {
+    flex: 1; border-radius: 14px; padding: 20px 18px; border-left: 5px solid;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .pa-cap.blue { background: #EFF6FF; border-color: #3B82F6; }
+  .pa-cap.green { background: #F0FDF4; border-color: #16A34A; }
+  .pa-cap.purple { background: #FDF4FF; border-color: #9333EA; }
+  .pa-cap h5 { font-size: 18px; font-weight: 700; }
+  .pa-cap.blue h5 { color: #1E40AF; }
+  .pa-cap.green h5 { color: #166534; }
+  .pa-cap.purple h5 { color: #6B21A8; }
+  .pa-cap .badge-sm {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 8px;
+    border-radius: 8px; align-self: flex-start; letter-spacing: 0.3px;
+  }
+  .pa-cap.blue .badge-sm { background: #DBEAFE; color: #1D4ED8; }
+  .pa-cap.green .badge-sm { background: #DCFCE7; color: #15803D; }
+  .pa-cap.purple .badge-sm { background: #F3E8FF; color: #7E22CE; }
+  .pa-step { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--gray); }
+  .pa-sn {
+    width: 22px; height: 22px; border-radius: 50%; color: white; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .pa-cap.blue .pa-sn { background: #3B82F6; }
+  .pa-cap.green .pa-sn { background: #16A34A; }
+  .pa-cap.purple .pa-sn { background: #9333EA; }
+
+  .pa-col-right { width: 220px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
+  .pa-output {
+    background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px;
+  }
+  .pa-output h5 { font-size: 16px; font-weight: 700; color: var(--dk); margin-bottom: 8px; }
+  .pa-output-item { font-size: 14px; color: var(--gray); padding: 4px 0; }
+
+  .pa-bottom {
+    background: linear-gradient(to right, #059669, #0D9488);
+    border-radius: 10px; padding: 14px 28px; color: white; font-size: 16px; font-weight: 600;
+    display: flex; justify-content: center; gap: 32px;
+  }
+
+  /* ========== SYSTEM ARCHITECTURE (inline) ========== */
+  .sa { display: flex; flex-direction: column; gap: 10px; height: 100%; justify-content: space-between; }
+  .sa-layer {
+    border-radius: 12px; padding: 16px 22px;
+    border: 1px solid rgba(0,0,0,0.06);
+    display: flex; align-items: flex-start; gap: 18px;
+  }
+  .sa-lbl {
+    font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap; min-width: 200px; padding-top: 3px;
+  }
+  .sa-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.07); margin-left: 6px; }
+  .sa-items { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+  .sa-item {
+    background: white; border-radius: 8px; padding: 10px 16px;
+    border: 1px solid rgba(0,0,0,0.07); font-size: 15px; color: #334155; font-weight: 500;
+  }
+  .sa-item .sub { font-size: 12px; color: #94A3B8; display: block; margin-top: 2px; }
+  .sa-item.hl { border: 2px solid #6366F1; box-shadow: 0 0 8px rgba(99,102,241,0.1); }
+  .sa-arrow { text-align: center; color: #CBD5E1; font-size: 14px; line-height: 1; margin: -1px 0; }
+  .sl1 { background: linear-gradient(to right, #DBEAFE, #E0E7FF); }
+  .sl1 .sa-lbl { color: #1E40AF; }
+  .sl2 { background: linear-gradient(to right, #E0E7FF, #EDE9FE); }
+  .sl2 .sa-lbl { color: #4338CA; }
+  .sl3 { background: linear-gradient(to right, #EDE9FE, #FCE7F3); }
+  .sl3 .sa-lbl { color: #7E22CE; }
+  .sl4 { background: linear-gradient(to right, #FEF3C7, #FFEDD5); }
+  .sl4 .sa-lbl { color: #92400E; }
+  .sl5 { background: linear-gradient(to right, #D1FAE5, #CCFBF1); }
+  .sl5 .sa-lbl { color: #065F46; }
+  .sl6 { background: linear-gradient(to right, #F1F5F9, #E2E8F0); }
+  .sl6 .sa-lbl { color: #334155; }
+
+  /* ========== FOOTER ========== */
+  .footer {
+    border-top: 2px solid var(--bdr);
+    padding-top: 32px; display: flex; justify-content: space-between; align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .footer-left { display: flex; flex-direction: column; gap: 12px; }
+  .footer-left h4 { font-size: 18px; color: var(--lt); text-transform: uppercase; letter-spacing: 1.5px; }
+  .fp { display: flex; gap: 10px; flex-wrap: wrap; }
+  .fp span {
+    background: var(--wh); border: 1.5px solid var(--bdr); color: var(--dk);
+    padding: 8px 18px; border-radius: 100px; font-size: 18px; font-weight: 600;
+  }
+  .f-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .f-meta .prog { font-family: 'Outfit'; font-size: 22px; font-weight: 700; color: var(--dk); }
+  .f-meta .sch { font-size: 18px; color: var(--gray); }
+  .f-meta .dt { font-size: 16px; color: var(--lt); }
+  .footer-right { display: flex; align-items: center; gap: 20px; }
+  .qr-text { display: flex; flex-direction: column; gap: 4px; text-align: right; }
+  .qr-text strong { font-family: 'Outfit'; font-size: 26px; color: var(--dk); }
+  .qr-text span { font-size: 18px; color: var(--lt); }
+  .qr-box {
+    width: 110px; height: 110px; background: var(--wh);
+    border: 3px solid var(--primary); border-radius: 16px;
+    display: flex; justify-content: center; align-items: center; padding: 10px;
+  }
+  .qr-box svg { width: 100%; height: 100%; }
+
+  @media print { body { background: none; padding: 0; } .poster { box-shadow: none; } }
+</style>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
 </head>
-
 <body>
-    <div class="poster">
-        <!-- Ambient Background Patterns -->
-        <div class="ambient-bg">
-            <div class="ambient-grid"></div>
-            <div class="ambient-blob-1"></div>
-            <div class="ambient-blob-2"></div>
+<div class="poster">
+  <div class="ambient">
+    <div class="ambient-grid"></div>
+    <div class="ambient-b1"></div>
+    <div class="ambient-b2"></div>
+  </div>
+  <div class="content">
+
+    <!-- 1. HERO -->
+    <header class="hero">
+      <div class="hero-badge"><span class="sait">SAIT</span> Integrated AI Capstone 2026</div>
+      <h1>Industry AI Flow</h1>
+      <p class="tagline">An AI-powered platform helping construction professionals instantly search building codes, predict cost overruns, and analyze project data — with full data privacy.</p>
+    </header>
+
+    <!-- 2. PROBLEM vs SOLUTION -->
+    <section class="ps-section">
+      <div class="ps-vs">VS</div>
+      <div class="ps-card problem">
+        <div class="ps-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          The Pain Point
         </div>
-
-        <div class="content-layer">
-
-            <!-- 1. Hero Region -->
-            <header class="hero">
-                <div class="hero-badge">AI + Architecture Capstone</div>
-                <h1>Industry AI Flow</h1>
-                <p class="tagline">An intelligent assistant transforming how construction professionals search, verify,
-                    and utilize building codes.</p>
-            </header>
-
-            <!-- 2. Problem vs Solution -->
-            <section class="ps-section">
-                <div class="ps-vs-badge">VS</div>
-
-                <div class="ps-card problem">
-                    <div class="ps-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        The Pain Point
-                    </div>
-                    <div class="ps-body">
-                        Construction teams spend <strong>hours manually digging</strong> through thousands of pages of
-                        building codes, safety manuals, and material specs. Answers are slow, scattered, and prone to
-                        human error.
-                    </div>
-                </div>
-
-                <div class="ps-card solution">
-                    <div class="ps-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                            <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg>
-                        Our Solution
-                    </div>
-                    <div class="ps-body">
-                        A private <strong>AI-powered search engine</strong> that intuitively understands your documents.
-                        It delivers instant, highly accurate answers backed by precise source citations from your own
-                        data.
-                    </div>
-                </div>
-            </section>
-
-            <!-- Vivid Product Architecture -->
-            <section class="vivid-arch">
-                <div class="arch-header">
-                    <h2>System Architecture</h2>
-                    <p>A multi-layered AI engine built for the construction industry</p>
-                </div>
-
-                <div class="arch-canvas">
-                    <!-- Column 1: Inputs -->
-                    <div class="arch-col">
-                        <div class="arch-block">
-                            <div class="arch-block-icon" style="background: rgba(225, 29, 72, 0.2);"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="#fb7185">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line x1="16" y1="13" x2="8" y2="13" />
-                                    <line x1="16" y1="17" x2="8" y2="17" />
-                                    <polyline points="10 9 9 9 8 9" />
-                                </svg></div>
-                            <div class="arch-block-text">
-                                <h4>Building Codes</h4>
-                                <span>PDF Documents</span>
-                            </div>
-                        </div>
-                        <div class="arch-block">
-                            <div class="arch-block-icon" style="background: rgba(13, 148, 136, 0.2);"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="#2dd4bf">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <line x1="3" y1="9" x2="21" y2="9" />
-                                    <line x1="9" y1="21" x2="9" y2="9" />
-                                </svg></div>
-                            <div class="arch-block-text">
-                                <h4>Material Specs</h4>
-                                <span>CSV & Tables</span>
-                            </div>
-                        </div>
-                        <div class="arch-block">
-                            <div class="arch-block-icon" style="background: rgba(245, 158, 11, 0.2);"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="#fbbf24">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                </svg></div>
-                            <div class="arch-block-text">
-                                <h4>Tech Scans</h4>
-                                <span>Images (OCR)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Column 2: Core Engine -->
-                    <div class="arch-col">
-                        <div class="core-engine">
-                            <div class="core-gateway">
-                                API Gateway & Security
-                            </div>
-
-                            <div class="core-paths">
-                                <div class="path-box rag">
-                                    <div class="path-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <circle cx="11" cy="11" r="8" />
-                                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                        </svg></div>
-                                    <h4>Path A</h4>
-                                    <span>Semantic RAG</span>
-                                </div>
-                                <div class="path-box flow">
-                                    <div class="path-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path
-                                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                                            <line x1="12" y1="22.08" x2="12" y2="12" />
-                                        </svg></div>
-                                    <h4>Path B</h4>
-                                    <span>10-Node Flow</span>
-                                </div>
-                                <div class="path-box agent">
-                                    <div class="path-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M12 2a10 10 0 1 0 10 10H12z" />
-                                            <path d="M12 2a10 10 0 1 1-10 10h10z" />
-                                            <circle cx="12" cy="12" r="3" />
-                                        </svg></div>
-                                    <h4>Path C</h4>
-                                    <span>ReAct Agent</span>
-                                </div>
-                            </div>
-
-                            <div class="shared-layer">
-                                <div class="shared-pill"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        stroke="#93c5fd">
-                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                        <polyline points="22 4 12 14.01 9 11.01" />
-                                    </svg> Qwen3.5 LLM</div>
-                                <div class="shared-pill"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                        stroke="#86efac">
-                                        <ellipse cx="12" cy="5" rx="9" ry="3" />
-                                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                                    </svg> pgvector DB</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Column 3: Outputs -->
-                    <div class="arch-col">
-                        <div class="arch-block highlight">
-                            <div class="arch-block-icon" style="background: rgba(255,255,255,0.2);"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                </svg></div>
-                            <div class="arch-block-text">
-                                <h4>Structured Answer</h4>
-                                <span>With Confidence Rating</span>
-                            </div>
-                        </div>
-                        <div class="arch-block highlight">
-                            <div class="arch-block-icon" style="background: rgba(255,255,255,0.2);"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                </svg></div>
-                            <div class="arch-block-text">
-                                <h4>Accurate Citations</h4>
-                                <span>Linked to Handbooks</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 4. Key Features -->
-            <section class="features-section">
-                <!-- Feature 1 -->
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                    </div>
-                    <h3>Smart Semantic Search</h3>
-                    <p>Goes beyond keywords. Finds the exact meaning behind your query using hybrid vector technology.
-                    </p>
-                </div>
-
-                <!-- Feature 2 -->
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <path d="M3 9h18" />
-                            <path d="M9 21V9" />
-                        </svg>
-                    </div>
-                    <h3>Intelligent Layout Parsing</h3>
-                    <p>Reads complex construction documents, blueprints, and tables naturally like a human engineer.</p>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>
-                    </div>
-                    <h3>100% Data Privacy</h3>
-                    <p>Designed to run entirely on private hardware. Your proprietary data never leaves the network.</p>
-                </div>
-            </section>
-
-            <!-- 5. Footer -->
-            <footer class="footer">
-                <div class="tech-stack">
-                    <h4>Powered By Core Technologies</h4>
-                    <div class="pills">
-                        <span class="pill">FastAPI</span>
-                        <span class="pill">LangChain</span>
-                        <span class="pill">PostgreSQL & Vector</span>
-                        <span class="pill">Local LLMs (Qwen)</span>
-                    </div>
-                </div>
-
-                <div class="qr-placeholder">
-                    <div class="qr-text">
-                        <strong>Scan for Demo</strong>
-                        <span>Or talk to the team</span>
-                    </div>
-                    <div class="qr-box">
-                        <!-- Generic QR Representation -->
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="3" y="3" width="7" height="7" rx="1" />
-                            <rect x="14" y="3" width="7" height="7" rx="1" />
-                            <rect x="3" y="14" width="7" height="7" rx="1" />
-                            <rect x="14" y="14" width="4" height="4" rx="0.5" />
-                            <line x1="21" y1="14" x2="21" y2="21" />
-                            <line x1="14" y1="21" x2="21" y2="21" />
-                        </svg>
-                    </div>
-                </div>
-            </footer>
-
+        <div class="ps-body">Construction teams spend <strong>hours manually searching</strong> through thousands of pages of building codes, safety manuals, and specs. Answers are slow, scattered, and error-prone.</div>
+      </div>
+      <div class="ps-card solution">
+        <div class="ps-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Our Solution
         </div>
+        <div class="ps-body">A private <strong>AI-powered platform</strong> that understands construction documents, predicts cost overruns with ML, and generates data insights — all running on local hardware for complete privacy.</div>
+      </div>
+    </section>
+
+    <!-- 3. THREE CAPABILITIES -->
+    <div class="sec-label"><div class="num">1</div><h2>Three Core Capabilities</h2></div>
+    <section class="capabilities">
+      <div class="cap-c">
+        <div class="cap-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="cap-tag bt">Primary Feature</div>
+        <h3>RAG Knowledge QA</h3>
+        <p>Upload building codes and ask questions in natural language. Hybrid search (BM25 + pgvector + RRF) with cross-encoder reranking and cited answers.</p>
+      </div>
+      <div class="cap-c">
+        <div class="cap-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+        <div class="cap-tag gt">ML Prediction</div>
+        <h3>Cost Estimation</h3>
+        <p>Ridge regression on 10K+ project records predicts cost overruns with confidence intervals and risk factor breakdowns.</p>
+      </div>
+      <div class="cap-c">
+        <div class="cap-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l4-8 4 5 3-3 7 6"/></svg></div>
+        <div class="cap-tag pt">Code Generation</div>
+        <h3>Dynamic Data Analysis</h3>
+        <p>Upload any dataset — AI generates and executes analysis code in a secure Docker sandbox with automatic charts.</p>
+      </div>
+    </section>
+
+    <!-- 4-5. ARCHITECTURE DIAGRAMS (flex-grow to fill space) -->
+    <div style="flex:1; display:flex; flex-direction:column; gap:0.4in; min-height:0;">
+
+    <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
+    <div class="sec-label"><div class="num">2</div><h2>Product Architecture</h2><span class="sub">How users interact with the AI platform</span></div>
+    <div class="arch-frame">
+      <div class="pa">
+        <!-- Intent pipeline -->
+        <div class="pa-header">
+          <strong>11-Node Intent Classification</strong>
+          <div class="pa-nodes">
+            <span class="pa-nd">Input</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Language</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Keywords</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Safety</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Classify</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Confidence</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Clarify</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Context</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Reformulate</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Extract</span><span class="pa-arr">-></span>
+            <span class="pa-nd">Route</span>
+          </div>
+        </div>
+        <!-- 3-column: Input | Capabilities | Output -->
+        <div class="pa-cols">
+          <div class="pa-col-left">
+            <div class="pa-input">
+              <h5>Document Upload</h5>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#3B82F6;"></div> PDF Documents</div>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#D97706;"></div> Scanned Images (OCR)</div>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#16A34A;"></div> CSV / Spreadsheets</div>
+            </div>
+            <div class="pa-input">
+              <h5>Natural Language Query</h5>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#7C3AED;"></div> Construction Questions</div>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#DB2777;"></div> Cost Estimation</div>
+              <div class="pa-input-item"><div class="pa-input-dot" style="background:#0D9488;"></div> Data Analysis</div>
+            </div>
+          </div>
+          <div class="pa-col-center">
+            <div class="pa-cap blue">
+              <div class="badge-sm">Primary</div>
+              <h5>RAG Knowledge QA</h5>
+              <div class="pa-step"><div class="pa-sn">1</div> Chunking (512 chars, 128 overlap)</div>
+              <div class="pa-step"><div class="pa-sn">2</div> BM25 + pgvector + RRF fusion</div>
+              <div class="pa-step"><div class="pa-sn">3</div> bge-reranker cross-encoder</div>
+              <div class="pa-step"><div class="pa-sn">4</div> LLM cited generation</div>
+            </div>
+            <div class="pa-cap green">
+              <div class="badge-sm">ML</div>
+              <h5>Cost Estimation</h5>
+              <div class="pa-step"><div class="pa-sn">1</div> Feature extraction</div>
+              <div class="pa-step"><div class="pa-sn">2</div> Ridge regression</div>
+              <div class="pa-step"><div class="pa-sn">3</div> Confidence + risk score</div>
+            </div>
+            <div class="pa-cap purple">
+              <div class="badge-sm">Code Gen</div>
+              <h5>Dynamic Data Analysis</h5>
+              <div class="pa-step"><div class="pa-sn">1</div> Metadata-only extraction</div>
+              <div class="pa-step"><div class="pa-sn">2</div> Cloud LLM code gen</div>
+              <div class="pa-step"><div class="pa-sn">3</div> Docker sandbox exec</div>
+              <div class="pa-step"><div class="pa-sn">4</div> Visualizations returned</div>
+            </div>
+          </div>
+          <div class="pa-col-right">
+            <div class="pa-output">
+              <h5>Cited Answers</h5>
+              <div class="pa-output-item">Source-grounded responses</div>
+              <div class="pa-output-item">Document references</div>
+              <div class="pa-output-item">Groundedness check</div>
+            </div>
+            <div class="pa-output">
+              <h5>Predictions</h5>
+              <div class="pa-output-item">Cost overrun estimates</div>
+              <div class="pa-output-item">Confidence intervals</div>
+            </div>
+            <div class="pa-output">
+              <h5>Visualizations</h5>
+              <div class="pa-output-item">Auto-generated charts</div>
+              <div class="pa-output-item">Statistical summaries</div>
+            </div>
+          </div>
+        </div>
+        <!-- Privacy bar -->
+        <div class="pa-bottom">
+          <span>Privacy by Design</span>
+          <span>|</span>
+          <span>Metadata-Only Cloud Transfer</span>
+          <span>|</span>
+          <span>Local LLM Processing (Ollama)</span>
+          <span>|</span>
+          <span>Docker Sandbox Isolation</span>
+        </div>
+      </div>
     </div>
-</body>
 
+    </div><!-- end product arch wrapper -->
+
+    <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
+    <div class="sec-label"><div class="num">3</div><h2>System Architecture</h2><span class="sub">Six-layer technical stack with cross-cutting concerns</span></div>
+    <div class="arch-frame">
+      <div class="sa">
+        <div class="sa-layer sl1">
+          <div class="sa-lbl">L1 - UI Layer<span class="sa-tag">Next.js App Router</span></div>
+          <div class="sa-items">
+            <div class="sa-item">Chat Interface<span class="sub">workflow-chat</span></div>
+            <div class="sa-item">Data Dashboard<span class="sub">data-dashboard</span></div>
+            <div class="sa-item">Document Manager<span class="sub">documents-integrated</span></div>
+            <div class="sa-item">Cost Estimator<span class="sub">dashboard</span></div>
+            <div class="sa-item">API Proxy<span class="sub">backend/[...path]</span></div>
+          </div>
+        </div>
+        <div class="sa-arrow">&#x25BC;</div>
+        <div class="sa-layer sl2">
+          <div class="sa-lbl">L2 - API Gateway<span class="sa-tag">FastAPI + Middleware</span></div>
+          <div class="sa-items">
+            <div class="sa-item">Router Mount<span class="sub">main.py</span></div>
+            <div class="sa-item">Auth Middleware<span class="sub">API key validation</span></div>
+            <div class="sa-item">Tenant Isolation<span class="sub">X-Tenant-ID</span></div>
+            <div class="sa-item">Input Validation<span class="sub">Pydantic models</span></div>
+            <div class="sa-item">Rate Limiter<span class="sub">Per-tenant</span></div>
+          </div>
+        </div>
+        <div class="sa-arrow">&#x25BC;</div>
+        <div class="sa-layer sl3">
+          <div class="sa-lbl">L3 - Business<span class="sa-tag">Orchestration</span></div>
+          <div class="sa-items">
+            <div class="sa-item hl">Intent Classification<span class="sub">11-Node LangGraph StateGraph</span></div>
+            <div class="sa-item">Routing Decision<span class="sub">routing_decision.py</span></div>
+            <div class="sa-item hl">Workflow Pipeline<span class="sub">10-Node Fixed-Order (graph.py)</span></div>
+            <div class="sa-item">Prompt Manager<span class="sub">A/B testing + versioning</span></div>
+            <div class="sa-item">Memory Manager<span class="sub">3-layer memory</span></div>
+          </div>
+        </div>
+        <div class="sa-arrow">&#x25BC;</div>
+        <div class="sa-layer sl4">
+          <div class="sa-lbl">L4 - AI Runtime<span class="sa-tag">Models &amp; Execution</span></div>
+          <div class="sa-items">
+            <div class="sa-item">RAG Engine<span class="sub">BM25 + pgvector + RRF + reranker + cache</span></div>
+            <div class="sa-item">LLM Dispatch<span class="sub">Ollama (local) / Zhipu / Gemini (cloud)</span></div>
+            <div class="sa-item">Code Executor<span class="sub">Docker sandbox + validator</span></div>
+            <div class="sa-item">Cost Estimation<span class="sub">Ridge regression, 10K dataset</span></div>
+            <div class="sa-item">Unified Agent<span class="sub">12 tools</span></div>
+          </div>
+        </div>
+        <div class="sa-arrow">&#x25BC;</div>
+        <div class="sa-layer sl5">
+          <div class="sa-lbl">L5 - Data Storage<span class="sa-tag">PostgreSQL + pgvector</span></div>
+          <div class="sa-items">
+            <div class="sa-item">document_chunks<span class="sub">vector(768) + text + metadata</span></div>
+            <div class="sa-item">prompt_versions<span class="sub">A/B testing scores</span></div>
+            <div class="sa-item">conversation_memories<span class="sub">3-layer with embeddings</span></div>
+            <div class="sa-item">llm_usage_logs<span class="sub">Cost per tenant/model</span></div>
+            <div class="sa-item">ML Model Store<span class="sub">Trained artifacts</span></div>
+          </div>
+        </div>
+        <div class="sa-arrow">&#x25BC;</div>
+        <div class="sa-layer sl6">
+          <div class="sa-lbl">L6 - Security<span class="sa-tag">Hardened Infrastructure</span></div>
+          <div class="sa-items">
+            <div class="sa-item">Sanitizer<span class="sub">XSS / injection</span></div>
+            <div class="sa-item">Rate Limiter<span class="sub">Per-tenant throttle</span></div>
+            <div class="sa-item">Audit Logger<span class="sub">Tenant-aware</span></div>
+            <div class="sa-item">Prometheus<span class="sub">Metrics export</span></div>
+            <div class="sa-item">Language Policy<span class="sub">English-only</span></div>
+            <div class="sa-item">Secret Manager<span class="sub">Credential vault</span></div>
+            <div class="sa-item">Memory Guard<span class="sub">OOM protection</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div><!-- end system arch wrapper -->
+
+    </div><!-- end architecture flex container -->
+
+    <!-- 6. FOOTER -->
+    <footer class="footer">
+      <div class="footer-left">
+        <h4>Core Technologies</h4>
+        <div class="fp">
+          <span>FastAPI</span>
+          <span>LangGraph</span>
+          <span>PostgreSQL + pgvector</span>
+          <span>Ollama (Qwen 3.5)</span>
+          <span>Next.js</span>
+          <span>Docker</span>
+          <span>scikit-learn</span>
+        </div>
+        <div class="f-meta">
+          <span class="prog">Integrated AI Program</span>
+          <span class="sch">Southern Alberta Institute of Technology (SAIT)</span>
+          <span class="dt">Capstone Showcase 2026</span>
+        </div>
+      </div>
+      <div class="footer-right">
+        <div class="qr-text">
+          <strong>Try the Demo</strong>
+          <span>Scan or visit our booth</span>
+        </div>
+        <div class="qr-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="4" height="4" rx="0.5"/>
+            <line x1="21" y1="14" x2="21" y2="21"/>
+            <line x1="14" y1="21" x2="21" y2="21"/>
+          </svg>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+</div>
+</body>
 </html>
