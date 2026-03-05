@@ -80,7 +80,7 @@ Quick path selection:
 ### Step 0: Activate Environment
 
 ```bash
-source .venv_capstone_arm64/bin/activate
+source .venv/bin/activate
 ```
 
 ### Step 1: Tune Retrieval (if new corpus or major model change)

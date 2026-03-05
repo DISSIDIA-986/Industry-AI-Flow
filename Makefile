@@ -7,8 +7,8 @@
 
 # Default target
 .DEFAULT_GOAL := help
-PYTHON_BIN ?= $(shell if [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
-PYTHON_BIN_ARM64 ?= $(shell if [ -x .venv_capstone_arm64/bin/python ]; then echo .venv_capstone_arm64/bin/python; elif [ -x .venv_capstone/bin/python ]; then echo .venv_capstone/bin/python; elif [ -x venv_test/bin/python ]; then echo venv_test/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+PYTHON_BIN ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; elif command -v python3.13 >/dev/null 2>&1; then echo python3.13; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+PYTHON_BIN_ARM64 ?= $(PYTHON_BIN)
 
 # ==========================================
 # Help and Information

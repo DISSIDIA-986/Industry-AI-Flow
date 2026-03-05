@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-VENV_DIR="${VENV_DIR:-$ROOT/.venv_capstone}"
+VENV_DIR="${VENV_DIR:-$ROOT/.venv}"
 PYTHON_BIN="${PYTHON_BIN:-python3.13}"
 LOCK_FILE="${LOCK_FILE:-$ROOT/requirements/lock/py313-capstone.txt}"
 WITH_GATE="${WITH_GATE:-false}"

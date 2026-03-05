@@ -13,8 +13,8 @@ BACKEND_LOG="${LOG_DIR}/backend-e2e-live.log"
 FRONTEND_HOST="${FRONTEND_HOST:-127.0.0.1}"
 FRONTEND_PORT="${FRONTEND_PORT:-3200}"
 
-if [[ -x "${ROOT_DIR}/.venv_capstone/bin/python" ]]; then
-  PYTHON_BIN="${ROOT_DIR}/.venv_capstone/bin/python"
+if [[ -x "${ROOT_DIR}/.venv/bin/python" ]]; then
+  PYTHON_BIN="${ROOT_DIR}/.venv/bin/python"
 else
   PYTHON_BIN="${PYTHON_BIN:-python}"
 fi

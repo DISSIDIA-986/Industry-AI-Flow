@@ -105,52 +105,41 @@ sequenceDiagram
 
 ## 技术栈
 
-- **LLM**: llama.cpp + Qwen2.5:7b GGUF（本地推理，Metal 加速）
-- **向量库**: PostgreSQL + pgvector（本地 homebrew）
-- **嵌入模型**: nomic-embed-text-v1.5（768维）
-- **后端**: FastAPI
-- **OCR**: PaddleOCR（支持图片文档）
+- **LLM**: Qwen3.5:4b/9b via Ollama（Metal GPU 加速）
+- **向量库**: PostgreSQL + pgvector（IVFFlat 索引）
+- **嵌入模型**: nomic-embed-text-v1.5（768维, fastembed）
+- **后端**: FastAPI + LangChain 1.0 (langgraph State Graph)
+- **前端**: Next.js + TypeScript
+- **OCR**: PaddleOCR（需 Python 3.13.x）
 - **检索**: 混合检索（BM25 + 向量 + RRF融合）
-- **重排序**: bge-reranker-base
-- **备用LLM**: Ollama（兼容后端）
+- **重排序**: bge-reranker-base cross-encoder
+- **Cloud LLM**: Zhipu AI / Gemini（仅用于代码生成任务）
 
 ## ⚠️ 环境要求
 
-### 🔴 CRITICAL: Python Version Requirement
+### Python 环境 (CRITICAL)
 
-**本项目必须使用 Python 3.13.x**
+| 要求 | 说明 |
+|------|------|
+| **Python 版本** | **3.13.x ONLY** — `pyproject.toml` 锁定 `>=3.13,<3.14` |
+| **虚拟环境** | 标准 `venv` — 唯一的 venv 目录为 `.venv/` |
+| **包管理** | `pip` — 锁定文件: `requirements/lock/py313-capstone.txt` |
+| **禁止使用** | Python 3.14+（PaddleOCR 不兼容）、Conda、Poetry |
 
 ```bash
-# ✅ 正确的Python版本
-python3.13 --version
-# 输出: Python 3.13.x
-
-# ❌ 错误 - 不支持Python 3.14+
-python3.14 --version  # 会导致PaddlePaddle安装失败！
-```
-
-**原因**:
-- PaddlePaddle on macOS 需要使用 **Developer Nightly Build** 版本
-- Nightly Build 最高支持 Python 3.13 (支持 3.9/3.10/3.11/3.12/3.13)
-- Python 3.14+ 将导致 PaddlePaddle 无法安装，进而影响 PaddleOCR OCR 功能
-
-**安装 Python 3.13** (如果未安装):
-```bash
-# macOS (推荐使用 Homebrew)
+# 安装 Python 3.13 (macOS)
 brew install python@3.13
 
-# 验证安装
-python3.13 --version
+# 验证
+python3.13 --version  # → Python 3.13.x
 ```
 
 ### 其他环境要求
 
-- **macOS**: M1/M2/M3 Apple Silicon (推荐)
-- **内存**: 16GB+ RAM
-- **Python**: **3.13.x ONLY** (严格要求)
-- **PostgreSQL**: 14+ (通过 homebrew 安装)
-- **Redis**: 通过 homebrew 安装
-- **Ollama**: 本地LLM运行环境
+- **macOS**: Apple Silicon M1/M2/M3/M4 (推荐)
+- **内存**: 16GB+ RAM (32GB recommended for 9B model)
+- **PostgreSQL**: 14+ with pgvector extension
+- **Ollama**: 本地 LLM 运行环境 (https://ollama.com)
 
 ## 🚀 快速开始
 
@@ -194,43 +183,6 @@ make lint             # 运行代码检查
 - **Node.js**: 16+ (可选，用于前端工具)
 - **Docker**: 20+ (可选，用于容器化部署)
 
-### 🧩 Capstone Demo 环境标准（推荐）
-
-```bash
-# 1) 一键创建并安装锁定环境（Python 3.13）
-make capstone-env-setup
-
-# 2) 检查当前环境与锁定清单的一致性
-make capstone-env-check
-
-# 3) 运行 CI 友好型冒烟 gate（跳过 Postgres/Ollama，保留 API TestClient 检查）
-make test-demo-smoke-gate
-
-# 4) 运行本地 live 冒烟 gate（检查 Postgres/Ollama + API）
-make test-demo-smoke-live-gate
-```
-
-在执行 `make test-demo-smoke-live-gate`（或 `make test-demo-smoke`）前，请先确保：
-
-```bash
-# PostgreSQL 服务已启动
-brew services start postgresql@14 || brew services start postgresql
-
-# Ollama 模型与配置一致（二选一）
-ollama pull qwen2.5:7b
-# 或修改 .env
-# OLLAMA_MODEL=deepseek-r1:8b
-
-# 如果不改 .env，也可以临时覆盖 live gate 的模型参数
-make test-demo-smoke-live-gate DEMO_SMOKE_LIVE_ARGS="--ollama-model deepseek-r1:8b"
-```
-
-依赖分层文件位于：
-- `requirements/base.txt`
-- `requirements/dev.txt`
-- `requirements/demo.txt`
-- `requirements/lock/py313-capstone.txt`
-
 ### 🔧 快速安装
 
 ```bash
@@ -238,36 +190,55 @@ make test-demo-smoke-live-gate DEMO_SMOKE_LIVE_ARGS="--ollama-model deepseek-r1:
 git clone <repository-url>
 cd Industry-AI-Flow
 
-# 2. ⚠️ CRITICAL: 使用 Python 3.13 创建虚拟环境
-python3.13 -m venv venv
-source venv/bin/activate
+# 2. 创建标准虚拟环境（一键方式，推荐）
+make capstone-env-setup    # 自动创建 .venv/ + 安装锁定依赖
 
-# 3. 安装 PaddlePaddle Nightly Build (macOS required)
+# 或手动创建：
+python3.13 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements/lock/py313-capstone.txt
+
+# 3. (可选) 安装 PaddleOCR 的 PaddlePaddle nightly
 python -m pip install --pre paddlepaddle -i https://www.paddlepaddle.org.cn/packages/nightly/cpu/
 
-# 4. 安装 llama-cpp-python (with Metal acceleration for Apple Silicon)
-export CMAKE_ARGS="-DGGML_METAL=on -DCMAKE_OSX_ARCHITECTURES=arm64"
-export ARCHFLAGS="-arch arm64"
-pip install --no-cache-dir llama-cpp-python==0.2.90
+# 4. 安装 Ollama 并拉取模型
+# 从 https://ollama.com 安装 Ollama，然后：
+ollama pull qwen3.5:4b        # 默认 demo 模型
+ollama pull nomic-embed-text   # 嵌入模型（可选, 系统默认使用 fastembed）
 
-# 5. 安装其他依赖
-pip install -r backend/requirements.txt
-
-# 6. 创建模型软链接（使用 Ollama 已下载的模型）
-mkdir -p models
-ln -sf ~/.ollama/models/blobs/sha256-xxx models/qwen2.5-7b-instruct.gguf
-
-# 7. 数据库设置
+# 5. 数据库设置
+brew services start postgresql@14
 make db-setup
 
-# 8. 启动服务
-make run
+# 6. 启动服务
+make run                       # 后端 API :8000
+make frontend-dev              # 前端 :3000 (另一个终端)
 ```
 
-**重要提示**:
-- 步骤 2-3 是 macOS 系统的必要步骤
-- 必须先安装 PaddlePaddle Nightly Build，再安装其他依赖
-- 不要跳过步骤 2 的 Python 3.13 虚拟环境创建
+### 依赖管理
+
+```
+requirements.txt                          # 入口 → 引用 requirements/base.txt
+├── requirements/base.txt                 # → 引用 lock file
+│   └── requirements/lock/py313-capstone.txt   # ← 唯一的依赖真相来源
+├── requirements/dev.txt                  # 开发工具 (black, pytest, mypy...)
+└── requirements/demo.txt                 # Demo 额外依赖 (streamlit, jupyter)
+```
+
+**规则**: 添加新依赖时，编辑 `requirements/lock/py313-capstone.txt` 并使用精确版本号。
+
+### 环境验证
+
+```bash
+# 检查环境一致性
+make capstone-env-check
+
+# CI 冒烟测试 (无需 Postgres/Ollama)
+make test-demo-smoke-gate
+
+# 本地全栈冒烟测试 (需要 Postgres + Ollama)
+make test-demo-smoke-live-gate
+```
 
 ### 🎯 核心功能测试
 
@@ -589,22 +560,22 @@ graph LR
 复制 `.env.example` 到 `.env` 并根据需要修改：
 
 ```bash
-# 数据库配置（本地 PostgreSQL）
+# LLM 后端
+LLM_BACKEND=ollama              # ollama | zhipu
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=qwen3.5:4b         # 默认 demo 模型 (或 qwen3.5:9b)
+
+# 数据库
 POSTGRES_HOST=localhost
 POSTGRES_DB=ai_workflow
 
-# Ollama 配置
-OLLAMA_MODEL=qwen2.5:7b
-
-# OCR 配置 (默认英文)
-OCR_LANG=en  # 'en'=英文, 'ch'=中文, 'en+ch'=混合
-
-# 文档处理配置
-CHUNK_SIZE=300
-CHUNK_OVERLAP=50
-
 # RAG 配置
-TOP_K=5
+CHUNK_SIZE=512
+CHUNK_OVERLAP=128
+TOP_K=8
+
+# OCR
+OCR_LANG=en                     # en | ch | en+ch
 ```
 
 ## API 接口
@@ -728,7 +699,7 @@ Industry AI Flow采用**分层分类**的文档管理策略，确保文档易于
 | **[测试策略与计划](docs/development/testing.md)** | 整体测试方法 | 测试负责人、QA | 每季度 |
 | **[建筑RAG多角色测试方案](docs/runbooks/construction-rag-multi-agent-test-plan.md)** | 架构/开发/QA协同验证方案 | 架构师、开发、QA | 每次知识库更新 |
 | **[E2E测试计划](docs/FRONTEND_E2E_TEST_PLAN.md)** | 端到端测试方案 | 测试工程师、开发者 | 每月 |
-| **[测试用例库](test_cases/README.md)** | 详细测试用例集合 | 测试工程师 | 每月 |
+| **[测试用例库](docs/testing/test-case-specs/README.md)** | 详细测试用例集合 | 测试工程师 | 每月 |
 | **[测试资源管理](test_resources/README.md)** | 测试数据和资源 | 测试团队 | 每月 |
 
 ### 🚀 部署与运维（运维团队）

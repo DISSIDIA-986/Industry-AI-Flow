@@ -40,24 +40,41 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 ### Evaluation Criteria
 Evaluators care about: stable demo (no crashes), clear presentation, sound architecture, logical technical decisions. **Top priority: system stability during live demo.**
 
-## Critical Environment Requirement
+## Python Environment
 
-**Python 3.13.x is mandatory.** PaddlePaddle on macOS requires the Developer Nightly Build which only supports Python 3.9-3.13. Python 3.14+ will break PaddleOCR functionality.
+### Python Version
+
+**Python 3.13.x is mandatory** (`requires-python = ">=3.13,<3.14"` in `pyproject.toml`). PaddlePaddle on macOS requires the Developer Nightly Build which only supports Python 3.9-3.13. **Python 3.14+ will break PaddleOCR.**
+
+### Virtual Environment
+
+The project uses a **single canonical venv** at `.venv/` (standard `python -m venv`). No Conda, no pyenv, no Poetry — just `venv` + `pip`.
+
+- **Locked dependencies**: `requirements/lock/py313-capstone.txt` — the single source of truth
+- **Dependency chain**: `requirements.txt` → `requirements/base.txt` → `requirements/lock/py313-capstone.txt`
+- **Makefile auto-detection**: `PYTHON_BIN` resolves `.venv/bin/python` first, then falls back to system `python3.13`
 
 ```bash
-# Recommended: use the locked capstone environment
-make capstone-env-setup
+# Recommended: create the canonical .venv with locked deps
+make capstone-env-setup    # Creates .venv/ with Python 3.13 + locked deps
 
 # Or manual setup:
-python3.13 -m venv venv && source venv/bin/activate
+python3.13 -m venv .venv && source .venv/bin/activate
+pip install -r requirements/lock/py313-capstone.txt
+# PaddleOCR nightly (if OCR features needed):
 python -m pip install --pre paddlepaddle -i https://www.paddlepaddle.org.cn/packages/nightly/cpu/
-pip install -r backend/requirements.txt
 
-# Ollama setup (required):
-# Install Ollama from https://ollama.com, then:
+# Ollama setup (required for LLM features):
+# Install from https://ollama.com, then:
 ollama pull qwen3.5:4b        # Default demo model
 ollama pull nomic-embed-text   # Embedding model (optional, system uses fastembed)
 ```
+
+### Rules
+- **Do NOT create additional venvs** (no `.venv_test`, `venv_capstone`, etc.). Use `.venv/` only.
+- **Do NOT use Python 3.14+** — it breaks PaddleOCR.
+- **Do NOT use `requirements.txt` directly for installing** — it just redirects to the lock file. Add new dependencies to `requirements/lock/py313-capstone.txt`.
+- On Apple Silicon, ensure the venv uses the **arm64** Python (not Rosetta x86_64). Verify: `python -c "import platform; print(platform.machine())"` should print `arm64`.
 
 ## Common Commands
 
