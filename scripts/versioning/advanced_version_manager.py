@@ -205,7 +205,7 @@ class AdvancedVersionManager:
         }
         return aliases.get(module_name, [module_name])
 
-    def analyze_test_directory(self, test_dir: str = "test_cases") -> Dict:
+    def analyze_test_directory(self, test_dir: str = "docs/testing/test-case-specs") -> Dict:
         """分析测试目录中的所有文件"""
         test_path = Path(test_dir)
         if not test_path.exists():
@@ -458,7 +458,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="高级版本管理器 - 全面测试环境分析")
-    parser.add_argument("--test-dir", default="test_cases", help="测试目录路径")
+    parser.add_argument("--test-dir", default="docs/testing/test-case-specs", help="测试目录路径")
     parser.add_argument("--resources-dir", default="test_resources", help="资源目录路径")
     parser.add_argument("--save-report", action="store_true", help="保存详细报告到JSON文件")
     parser.add_argument("--quiet", action="store_true", help="静默模式")
