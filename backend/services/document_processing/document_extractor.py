@@ -86,12 +86,11 @@ class DocumentExtractor:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"EN: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-        # EN
         file_ext = file_path.suffix.lower()
         if file_ext not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError(f"EN: {file_ext}")
+            raise ValueError(f"Unsupported file extension: {file_ext}")
 
         file_type = self.SUPPORTED_EXTENSIONS[file_ext]
 
@@ -107,7 +106,7 @@ class DocumentExtractor:
         elif file_type == "image":
             return self._extract_image(file_path)
         else:
-            raise ValueError(f"EN: {file_type}")
+            raise ValueError(f"Unsupported file type: {file_type}")
 
     def _extract_pdf(self, file_path: Path) -> DocumentContent:
         """ENPDFEN"""

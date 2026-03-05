@@ -96,26 +96,26 @@ export default function ApiTestPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">APIIntegration testing</h1>
-        
-        {/* health status */}
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">API Integration Testing</h1>
+
+        {/* Health status */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">rear endAPIhealth status</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Backend API Health Status</h2>
+
           {loading ? (
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-              <span className="text-gray-600">examineAPIstate...</span>
+              <span className="text-gray-600">Checking API status...</span>
             </div>
           ) : health ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-medium">APIstate</div>
-                  <div className="text-sm text-gray-600">rear endFastAPIServe</div>
+                  <div className="font-medium">API Status</div>
+                  <div className="text-sm text-gray-600">Backend FastAPI Server</div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(health.status)}`}>
-                  {health.status === 'ok' ? 'normal operation' : 'abnormal'}
+                  {health.status === 'ok' ? 'Operational' : 'Error'}
                 </span>
               </div>
               
@@ -217,7 +217,7 @@ export default function ApiTestPage() {
 
         {/* Instructions for use */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">APIIntegration instructions</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">API Integration Guide</h2>
           
           <div className="space-y-4">
             <div>

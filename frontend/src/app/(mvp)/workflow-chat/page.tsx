@@ -88,7 +88,7 @@ export default function WorkflowChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I amIndustry AI Flowassistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?',
+      content: 'Hello! I am the Industry AI Flow assistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -106,7 +106,7 @@ export default function WorkflowChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
 
-  // examineAPIconnection status
+  // Check API connection status
   useEffect(() => {
     const checkApiHealth = async () => {
       try {
@@ -118,7 +118,7 @@ export default function WorkflowChatPage() {
     }
     
     checkApiHealth()
-    // Check every 30 secondsAPIstate
+    // Check API status every 30 seconds
     const interval = setInterval(checkApiHealth, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -151,7 +151,7 @@ export default function WorkflowChatPage() {
     }
   }, [])
 
-  // WebSocketConnection management
+  // WebSocket connection management
   useEffect(() => {
     if (!useWebSocket) return
     
@@ -228,14 +228,14 @@ export default function WorkflowChatPage() {
 
     try {
       if (useWebSocket && wsStatus === 'connected') {
-        // useWebSocketSend inquiry
+        // Send query via WebSocket
         const sent = websocketService.sendChatMessage(queryText)
         if (!sent) {
-          throw new Error('WebSocketSending failed')
+          throw new Error('WebSocket send failed')
         }
-        // WebSocketResponses will be handled via event listeners
+        // Responses will be handled via WebSocket event listeners
       } else {
-        // useHTTP APISend inquiry
+        // Send query via HTTP API
         const response = await workflowApi.sendQuery(
           {
             query: queryText,
@@ -333,11 +333,11 @@ export default function WorkflowChatPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Workflow chat</h1>
             <p className="text-gray-600 mt-2">
-              andAIAssistant dialogue for cost estimation, risk analysis and data query
+              Chat with the AI assistant for cost estimation, risk analysis and data queries
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            {/* WebSocketcontrol */}
+            {/* WebSocket toggle */}
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setUseWebSocket(!useWebSocket)}
@@ -347,7 +347,7 @@ export default function WorkflowChatPage() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                {useWebSocket ? 'WebSocket: open' : 'WebSocket: close'}
+                {useWebSocket ? 'WebSocket: On' : 'WebSocket: Off'}
               </button>
               <div className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}></div>
               <span className="text-xs text-gray-600">
@@ -355,21 +355,21 @@ export default function WorkflowChatPage() {
               </span>
             </div>
             
-            {/* APIstate */}
+            {/* API status */}
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${
                 apiStatus === 'connected' ? 'bg-green-500' :
                 apiStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
               }`}></div>
               <span className="text-sm text-gray-600">
-                {apiStatus === 'connected' ? 'APIConnected' :
-                 apiStatus === 'disconnected' ? 'APIConnection failed (please check backend)' : 'examineAPIstate...'}
+                {apiStatus === 'connected' ? 'API Connected' :
+                 apiStatus === 'disconnected' ? 'API Disconnected (please check backend)' : 'Checking API status...'}
               </span>
             </div>
           </div>
         </div>
         
-        {/* WebSocketStatus prompt */}
+        {/* WebSocket status banner */}
         {useWebSocket && (
           <div className={`mt-3 p-3 rounded-lg text-sm ${wsBannerClass}`}>
             {wsBannerText}
@@ -397,7 +397,7 @@ export default function WorkflowChatPage() {
                   >
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     
-                    {/* Display intent information (onlyAIinformation) */}
+                    {/* Intent info (AI messages only) */}
                     {message.sender === 'ai' && message.intent && (
                       <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
                         <div className="flex items-center justify-between text-sm">
@@ -412,7 +412,7 @@ export default function WorkflowChatPage() {
                       </div>
                     )}
                     
-                    {/* Show source information (onlyAIinformation) */}
+                    {/* Source citations (AI messages only) */}
                     {message.sender === 'ai' && message.sources && message.sources.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
                         <div className="text-sm font-medium mb-2">Reference sources:</div>
@@ -481,7 +481,7 @@ export default function WorkflowChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* input area */}
+            {/* Input area */}
             <div className="border-t border-gray-200 p-4">
               <div className="flex space-x-2">
                 <textarea
@@ -498,18 +498,18 @@ export default function WorkflowChatPage() {
                   disabled={loading || !input.trim()}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
                 >
-                  {loading ? 'Sending...' : 'send'}
+                  {loading ? 'Sending...' : 'Send'}
                 </button>
               </div>
               
               <div className="mt-3 text-sm text-gray-500">
-                according to Enter send,Shift + Enter newline
+                Press Enter to send, Shift + Enter for new line
               </div>
             </div>
           </div>
         </div>
 
-        {/* sidebar */}
+        {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Tips */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">

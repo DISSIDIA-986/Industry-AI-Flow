@@ -65,7 +65,7 @@ class LlamaCppClient:
 
         # EN
         if not self._validate_model_file():
-            raise FileNotFoundError(f"EN: {self.model_path}")
+            raise FileNotFoundError(f"Model file not found: {self.model_path}")
 
         # ENGPU
         if self.n_gpu_layers == -1:
@@ -144,7 +144,7 @@ class LlamaCppClient:
             logger.info("✅ EN")
         except Exception as e:
             logger.error(f"❌ EN: {e}")
-            raise RuntimeError(f"EN: {e}")
+            raise RuntimeError(f"Model validation failed: {e}")
 
     def generate(
         self,

@@ -60,14 +60,14 @@ def _resolve_allowed_source_file(file_path: str) -> Path:
 
     allowed_roots = _allowed_source_roots()
     if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
-        raise DataFileTransferError("EN(outside allowed paths)")
+        raise DataFileTransferError("Path outside allowed directories")
 
     if not candidate.exists():
-        raise DataFileTransferError(f"EN: {candidate}")
+        raise DataFileTransferError(f"File not found: {candidate}")
     if not candidate.is_file():
-        raise DataFileTransferError(f"EN: {candidate}")
+        raise DataFileTransferError(f"Not a regular file: {candidate}")
     if not os.access(candidate, os.R_OK):
-        raise DataFileTransferError(f"EN: {candidate}")
+        raise DataFileTransferError(f"File not readable: {candidate}")
 
     return candidate
 
@@ -124,7 +124,7 @@ class DataFileTransfer:
             elif transfer_method == "database":
                 return self._database_transfer(str(safe_file_path), file_info)
             else:
-                raise DataFileTransferError(f"EN: {transfer_method}")
+                raise DataFileTransferError(f"Unsupported transfer method: {transfer_method}")
 
         except Exception as e:
             logger.error(f"EN: {e}")
@@ -183,7 +183,7 @@ class DataFileTransfer:
             }
 
         except Exception as e:
-            raise DataFileTransferError(f"EN: {e}")
+            raise DataFileTransferError(f"Data transfer failed: {e}")
 
     def _database_transfer(
         self, file_path: str, file_info: Dict[str, Any]
@@ -238,7 +238,7 @@ class DataFileTransfer:
             }
 
         except Exception as e:
-            raise DataFileTransferError(f"EN: {e}")
+            raise DataFileTransferError(f"Data transfer failed: {e}")
 
     def _get_file_info(self, file_path: str) -> Dict[str, Any]:
         """EN"""
@@ -282,7 +282,7 @@ class DataFileTransfer:
             return df
 
         except Exception as e:
-            raise DataFileTransferError(f"EN: {e}")
+            raise DataFileTransferError(f"Data transfer failed: {e}")
 
     def _basic_data_cleaning(self, df: pd.DataFrame) -> pd.DataFrame:
         """EN"""
@@ -345,7 +345,7 @@ class DataFileTransfer:
         elif transfer_result["method"] == "database":
             return self._create_database_access_script(transfer_result, script_name)
         else:
-            raise DataFileTransferError(f"EN: {transfer_result['method']}")
+            raise DataFileTransferError(f"Unsupported transfer method: {transfer_result['method']}")
 
     def _create_file_access_script(
         self, transfer_result: Dict[str, Any], script_name: str

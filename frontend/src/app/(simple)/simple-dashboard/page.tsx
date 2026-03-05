@@ -40,10 +40,10 @@ export default function SimpleDashboardPage() {
   }, [])
 
   const quickActions = [
-    { title: 'Start a new query', description: 'andAIAssistant conversation', href: '/workflow-chat', color: 'blue' },
-    { title: 'Upload documents', description: 'Process and analyze documents', href: '/documents', color: 'green' },
-    { title: 'Data dashboard', description: 'View detailed analysis', href: '/data-dashboard', color: 'purple' },
-    { title: 'cost estimate', description: 'Estimate project costs', href: '/cost-estimation', color: 'orange' }
+    { title: 'Start a New Query', description: 'Chat with the AI assistant', href: '/workflow-chat', color: 'blue' },
+    { title: 'Upload Documents', description: 'Process and analyze documents', href: '/documents', color: 'green' },
+    { title: 'Data Dashboard', description: 'View detailed analysis', href: '/data-dashboard', color: 'purple' },
+    { title: 'Cost Estimation', description: 'Estimate project costs', href: '/cost-estimation', color: 'orange' }
   ]
 
   return (
@@ -52,10 +52,10 @@ export default function SimpleDashboardPage() {
         {/* welcome banner */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 mb-8 text-white">
           <h1 className="text-3xl font-bold mb-2">
-            welcome back,{user?.name || 'user'}！
+            Welcome back, {user?.name || 'User'}!
           </h1>
           <p className="text-blue-100">
-            you have {stats.activeQueries} active queries and {stats.documentsProcessed} processed documents
+            You have {stats.activeQueries} active queries and {stats.documentsProcessed} processed documents
           </p>
         </div>
 

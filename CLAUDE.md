@@ -15,13 +15,13 @@ Users upload construction documents (PDF, images, CSV) → system vectorizes and
 Uses a partner-provided construction cost dataset with Ridge regression to predict project cost overruns. Standard supervised learning on structured data (features: project_type, sqft, floors, location, contractor_rating, risk_score, etc.).
 
 ### 3. Dynamic Data Analysis (Code Generation + Sandbox Execution)
-For user-uploaded datasets outside the pre-built cost model: extracts **metadata only** (not raw data — privacy by design) → sends metadata to cloud LLM (Gemini/Qwen/GLM/Claude) for code generation → executes generated Python in local/Docker sandbox → returns results + visualizations. Cloud models used because local 7B models are too weak for reliable code generation. **Docker sandbox execution is NOT fully tested — biggest demo risk.**
+For user-uploaded datasets outside the pre-built cost model: extracts **metadata only** (not raw data — privacy by design) → sends metadata to cloud LLM (Gemini/Qwen/GLM/Claude) for code generation → executes generated Python in local/Docker sandbox → returns results + visualizations. Cloud models used because local models are too weak for reliable code generation. Docker sandbox has received security hardening (TDI rounds 28-36) but **end-to-end integration testing is still limited — significant demo risk.**
 
 ### Architecture Innovation
-The 11-node AI Workflow pipeline is a core innovation: user input → intent classification → multi-turn clarification → query reformulation → keyword extraction → route to appropriate workflow (RAG / cost estimation / dynamic analysis). Intent recognition is especially critical for RAG routing.
+The AI Workflow pipeline is a core innovation with two stages: an **11-node intent classification StateGraph** (intent_workflow.py) handles user input → intent classification → multi-turn clarification → query reformulation → keyword extraction, then routes to a **10-node fixed-order execution pipeline** (graph.py): intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness. Intent recognition is especially critical for RAG routing.
 
 ### Multi-Backend LLM Design
-Supports Ollama (Qwen2.5:7b), llama.cpp (Metal), and cloud APIs. Rationale: enterprise deployments need local models for data privacy, but current hardware is limited. Hybrid mode: simple tasks use local 7B model, complex code generation uses cloud. Demo backend not yet finalized.
+Supports Ollama (Qwen3.5:4b/9b), llama.cpp (Metal), and cloud APIs. Rationale: enterprise deployments need local models for data privacy, but current hardware is limited. Hybrid mode: simple tasks use local model, complex code generation uses cloud. Demo backend: Ollama with Qwen3.5:4b (default, ~28 TPS on M1 Max) or Qwen3.5:9b for higher quality.
 
 ### Non-Demo Features (Architecture Previews)
 - **Multi-tenant isolation** (X-Tenant-ID): future-proofing for enterprise deployment, NOT a demo requirement
@@ -198,7 +198,7 @@ CODE_EXECUTION_PROVIDER=docker      # docker | auto | ppio
 
 ## Tech Stack
 
-- **LLM**: Qwen2.5:7b via Ollama or llama.cpp (Metal acceleration) or Zhipu AI cloud
+- **LLM**: Qwen3.5:4b/9b via Ollama or llama.cpp (Metal acceleration) or Zhipu AI cloud
 - **Embeddings**: nomic-embed-text-v1.5 (768-dim, local)
 - **Vector DB**: PostgreSQL + pgvector (IVFFlat index)
 - **Reranking**: bge-reranker-base cross-encoder

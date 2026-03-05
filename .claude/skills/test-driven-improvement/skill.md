@@ -12,18 +12,20 @@ Industry AI Flow is a 2-person Capstone project (Integrated AI, SAIT). Python Fa
 |---------|--------|-------------|-----------|
 | **RAG Knowledge QA** | `SimpleRAG`, `HybridRetriever`, `Reranker` | ~12 construction docs in pgvector, hybrid retrieval (BM25 + vector + RRF), bge-reranker, cited answers | Medium — retrieval quality depends on chunk/param tuning |
 | **Cost Estimation** | `CostEstimationService`, `cost_estimation_node` | Ridge regression on partner-provided construction cost dataset. Supervised learning, structured data. | Low — self-contained ML, fixed dataset |
-| **Dynamic Data Analysis** | `DataAnalysisAgent`, `DockerCodeExecutor` | Upload CSV → extract metadata only (privacy) → cloud LLM generates Python code → sandbox executes | **High — Docker sandbox untested, cloud API dependency, resource-intensive** |
+| **Dynamic Data Analysis** | `DataAnalysisAgent`, `DockerCodeExecutor` | Upload CSV → extract metadata only (privacy) → cloud LLM generates Python code → sandbox executes | **Medium-High — Docker sandbox security-hardened (TDI rounds 28-36) but E2E integration testing limited, cloud API dependency** |
 
-**Why cloud LLM for code generation**: Local 7B models (Ollama/Qwen2.5:7b) are too weak for reliable code generation. Cloud models (Gemini/Qwen/GLM/Claude) used for code gen; only metadata sent (not raw data) for privacy.
+**Why cloud LLM for code generation**: Local models (Ollama/Qwen3.5:4b-9b) are too weak for reliable code generation. Cloud models (Gemini/Qwen/GLM/Claude) used for code gen; only metadata sent (not raw data) for privacy.
 
 **Demo hardware**: Mac Studio M1 Max 32GB or Windows 32GB+RTX5060 (undecided). Resource exhaustion during demo is a real risk.
 
-**Workflow Pipeline** (fixed-order, in `graph.py`):
+**Fixed-Order Execution Pipeline** (10-node, in `graph.py`):
 ```
 intent_node → safety_node → cost_estimation_node → retrieval_node →
 rerank_node → prompt_node → route_node → code_exec_node →
 response_node → groundedness_node
 ```
+
+**Intent Classification StateGraph** (11-node, in `intent_workflow.py`): Separate LangGraph state machine handling intent recognition, confidence evaluation, clarification loops (max 2 rounds), query reformulation, and keyword extraction. MAX_CLARIFICATION_ROUNDS=2 prevents infinite recursion.
 
 **Intent Types:** `knowledge_retrieval`, `data_analysis`, `cost_estimation`, `document_processing`, `code_execution`, `unclear_intent`
 
@@ -256,9 +258,10 @@ tests/unit/bugs/
     __init__.py
     conftest.py                    # Shared fixtures (mock LLM, construction data, workflow states)
     test_bug_audit_round3.py       # Round 3 bugs
-    ...                            # Rounds 4–13
-    test_bug_audit_round14.py      # Round 14 bugs (latest)
-    test_bug_audit_round14_pipeline.py  # Round 14 pipeline-specific
+    ...                            # Rounds 4–19
+    test_bug_audit_round20.py      # Round 20 bugs
+    ...                            # Rounds 28–36 (security hardening focus)
+    test_bug_audit_round36.py      # Round 36 bugs (latest)
     test_bug_code_execution.py     # Categorical: code execution bugs
     test_bug_cost_estimation.py    # Categorical: cost estimation bugs
     test_bug_intent_routing.py     # Categorical: intent routing bugs
@@ -368,6 +371,8 @@ After a TDI round stabilizes (zero new regressions across subsequent commits):
 | 5     | 2026-02-25 | 70  | 8        | 18   | 14    | pending   | 3           |
 | ...   | ...        | ... | ...      | ...  | ...   | ...       | ...         |
 | 14    | 2026-02-26 | ... | ...      | ...  | ...   | ...       | ...         |
+| 15-19 | 2026-02-26 | ... | ...      | ...  | 67+   | ...       | ...         |
+| 28-36 | 2026-02-28 | ... | ...      | ...  | ...   | ...       | security hardening |
 ```
 > See `tests/unit/bugs/AUDIT_LOG.md` for the complete history across rounds 3–14.
 
@@ -435,6 +440,8 @@ Patterns discovered across TDI rounds. **Status**: Confirmed = found and fixed i
 | Agent-type misrouting | cost_estimation routed to GENERAL_AGENT which dispatches to RAG | **Confirmed (Round 14)** |
 | Pipeline shortcut bypass | `shortcut_response=True` but non-essential nodes still execute | Theoretical |
 | A/B allocator boundary | `split=1.0` returns bucket "A" instead of "B" | Theoretical |
+| Intent clarification infinite loop | LLM empty response + unclear_intent fallback → endless clarification | **Confirmed (P0, pre-round 37)** — fixed via MAX_CLARIFICATION_ROUNDS=2 |
+| Heuristic confidence too low | Single keyword match → 0.1 confidence → unnecessary clarification loop | **Confirmed (pre-round 37)** — fixed by dividing by 30.0 instead of 100 |
 
 ### LLM Dispatch & Confidence
 
@@ -454,7 +461,7 @@ Modules that crash on import without proper mocking. Use these workarounds in te
 ### Module-level side effects
 | Module | Crash Cause | Workaround |
 |--------|-------------|-----------|
-| `data_analysis_agent.py` | Calls `LLMClientFactory.create_client()` at module level | Read source as text: `open("backend/services/data_analysis/data_analysis_agent.py").read()` |
+| `data_analysis_agent.py` | Previously crashed at import; now uses lazy init in `__init__()` — **FIXED** | Safe to import, but LLMClientFactory call in `__init__` still requires mocking for unit tests |
 | `rag_engine.py` | Triggers database connection setup | `monkeypatch` settings or mock `backend.config.settings` before import |
 | `code_executor.py` (legacy) | Initializes Docker client | Use `importlib.util.spec_from_file_location` (see below) |
 

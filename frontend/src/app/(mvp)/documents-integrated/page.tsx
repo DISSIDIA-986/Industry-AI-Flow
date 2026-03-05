@@ -292,8 +292,8 @@ export default function DocumentsIntegratedPage() {
                 apiStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
               }`}></div>
               <span className="text-sm text-gray-600">
-                {apiStatus === 'connected' ? 'APIConnected' :
-                 apiStatus === 'disconnected' ? 'APINot connected' : 'examineAPIstate...'}
+                {apiStatus === 'connected' ? 'API Connected' :
+                 apiStatus === 'disconnected' ? 'API Disconnected' : 'Checking API status...'}
               </span>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function DocumentsIntegratedPage() {
             {/* APIstatus card */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>APIstate</CardTitle>
+                <CardTitle>API Status</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">

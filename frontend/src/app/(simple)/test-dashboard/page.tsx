@@ -40,7 +40,7 @@ export default function TestDashboardPage() {
             </div>
             <div className="flex items-center">
               <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-              <div className="text-gray-900">rear endAPI: Running normally</div>
+              <div className="text-gray-900">Backend API: Running normally</div>
             </div>
             <div className="flex items-center">
               <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>

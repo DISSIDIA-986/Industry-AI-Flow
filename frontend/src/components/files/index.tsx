@@ -148,7 +148,7 @@ export function FileUpload({
               Or drag and drop files here
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              support {accept}，maximum {maxSize}MB
+              Supported formats: {accept}, max {maxSize}MB
             </p>
           </div>
           

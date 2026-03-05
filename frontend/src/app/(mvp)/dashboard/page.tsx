@@ -40,17 +40,17 @@ export default function OverviewDashboardPage() {
   }, [])
 
   const quickActions = [
-    { title: 'Start a new query', description: 'andAIAssistant conversation', href: '/workflow-chat', color: 'blue' },
-    { title: 'Upload documents', description: 'Process and analyze documents', href: '/documents', color: 'green' },
-    { title: 'Data dashboard', description: 'View detailed analysis', href: '/data-dashboard', color: 'purple' },
-    { title: 'cost estimate', description: 'Estimate project costs', href: '/cost-estimation', color: 'orange' }
+    { title: 'Start a New Query', description: 'Chat with the AI assistant', href: '/workflow-chat', color: 'blue' },
+    { title: 'Upload Documents', description: 'Process and analyze documents', href: '/documents', color: 'green' },
+    { title: 'Data Dashboard', description: 'View detailed analysis', href: '/data-dashboard', color: 'purple' },
+    { title: 'Cost Estimation', description: 'Estimate project costs', href: '/cost-estimation', color: 'orange' }
   ]
 
   const recentActivities = [
-    { id: 1, type: 'query', description: 'Construction cost risks analyzed', time: '10minutes ago' },
-    { id: 2, type: 'document', description: 'Project report uploaded.pdf', time: '30minutes ago' },
-    { id: 3, type: 'analysis', description: 'Cost analysis chart generated', time: '1hours ago' },
-    { id: 4, type: 'system', description: 'System update completed', time: '2hours ago' }
+    { id: 1, type: 'query', description: 'Construction cost risks analyzed', time: '10 minutes ago' },
+    { id: 2, type: 'document', description: 'Project report uploaded.pdf', time: '30 minutes ago' },
+    { id: 3, type: 'analysis', description: 'Cost analysis chart generated', time: '1 hour ago' },
+    { id: 4, type: 'system', description: 'System update completed', time: '2 hours ago' }
   ]
 
   return (
@@ -59,10 +59,10 @@ export default function OverviewDashboardPage() {
         {/* welcome banner */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 mb-8 text-white">
           <h1 className="text-3xl font-bold mb-2">
-            welcome back,{user?.name || 'user'}！
+            Welcome back, {user?.name || 'User'}!
           </h1>
           <p className="text-blue-100">
-            you have {stats.activeQueries} active queries and {stats.documentsProcessed} processed documents
+            You have {stats.activeQueries} active queries and {stats.documentsProcessed} processed documents
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function OverviewDashboardPage() {
             </div>
             
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">rear endAPI</div>
+              <div className="text-sm font-medium text-gray-500">Backend API</div>
               <div className="flex items-center mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 <div className="text-green-600 font-medium">Running normally</div>

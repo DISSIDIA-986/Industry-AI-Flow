@@ -175,7 +175,7 @@ class OCRProcessor:
         image_path = Path(image_path)
 
         if not image_path.exists():
-            raise FileNotFoundError(f"EN: {image_path}")
+            raise FileNotFoundError(f"Image file not found: {image_path}")
 
         # ENOCR
         if self.local_ocr:
@@ -248,7 +248,7 @@ class OCRProcessor:
 
         # EN
         if "error_code" in result:
-            raise RuntimeError(f"ENAPIEN: {result.get('error_msg', 'Unknown')}")
+            raise RuntimeError(f"OCR API error: {result.get('error_msg', 'Unknown')}")
 
         # EN
         words_result = result.get("words_result", [])

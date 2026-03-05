@@ -42,7 +42,7 @@ description: |
 | Principle | Implementation |
 |-----------|---------------|
 | Zero Hard Deletes | All files soft-moved to `.deprecated/` (except `__pycache__/`, orphaned venvs) |
-| Pipeline Integrity | 11-node workflow pipeline tested before and after every change |
+| Pipeline Integrity | 10-node fixed-order workflow pipeline + 11-node intent StateGraph tested before and after every change |
 | Import Chain Safety | Every move validated against `grep -r` import analysis across 150+ backend modules |
 | Rollback Ready | Auto-generated `scripts/rollback_cleanup.sh` with absolute paths |
 | Manifest Logging | Every move logged to `cleanup_manifest.log` with timestamp |
@@ -75,7 +75,7 @@ Client → FastAPI (main.py)
 |--------|-----------|--------|
 | Orphaned venvs (6 directories) | ~4.5 GB | Disk, git noise |
 | Root-level status reports | 16 files, ~166 KB | Clutter |
-| EN: placeholder text | ~95 instances across multiple modules (partially fixed in TDI rounds 12-14) | Professionalism |
+| EN: placeholder text | ~250+ instances across multiple modules (partially fixed in TDI rounds 12-14, many remain) | Professionalism |
 | Duplicate modules (code_executor, init_database) | 3-4 files | Confusion |
 | Frontend duplicate pages (-new, -integrated) | 6 files | Confusion |
 | Oversized __init__.py files | 2 files (137, 51 lines) | Maintainability |
