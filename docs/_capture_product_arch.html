@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 2400px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F8FAFC;
+    padding: 40px;
+  }
+  .header {
+    background: linear-gradient(to right, #4F46E5, #7C3AED);
+    border-radius: 16px; padding: 28px 48px; color: white;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .header h1 { font-size: 34px; font-weight: 700; }
+  .header p { font-size: 16px; opacity: 0.9; margin-top: 4px; }
+  .badge { background: rgba(255,255,255,0.2); border-radius: 24px; padding: 8px 20px; font-size: 13px; font-weight: 600; }
+
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    color: #6366F1; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
+  }
+
+  .intent-bar {
+    background: linear-gradient(to right, #6366F1, #8B5CF6);
+    border-radius: 12px; padding: 16px 36px; color: white;
+    display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
+  }
+  .intent-bar span.label { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .nodes { display: flex; gap: 6px; align-items: center; }
+  .node { background: rgba(255,255,255,0.2); border-radius: 6px; padding: 5px 12px; font-size: 11px; }
+  .arrow { opacity: 0.5; font-size: 14px; }
+
+  .row { display: flex; gap: 20px; margin-bottom: 20px; }
+  .card {
+    background: white; border-radius: 14px; padding: 22px; flex: 1;
+    border: 1px solid #E5E7EB; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .card h3 { font-size: 16px; font-weight: 700; color: #1E293B; margin-bottom: 10px; }
+  .card-item {
+    background: #F8FAFC; border-radius: 6px; padding: 7px 12px; margin-bottom: 6px;
+    font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px;
+  }
+  .icon-box {
+    width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+
+  .cap-card {
+    border-radius: 14px; padding: 24px; flex: 1;
+    border-left: 5px solid; position: relative;
+  }
+  .cap-card.blue { background: #EFF6FF; border-color: #3B82F6; }
+  .cap-card.green { background: #F0FDF4; border-color: #16A34A; }
+  .cap-card.purple { background: #FDF4FF; border-color: #9333EA; }
+  .cap-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .cap-card.blue .cap-title { color: #1E40AF; }
+  .cap-card.green .cap-title { color: #166534; }
+  .cap-card.purple .cap-title { color: #6B21A8; }
+  .cap-desc { font-size: 12px; color: #64748B; margin-bottom: 12px; line-height: 1.5; }
+  .cap-badge {
+    position: absolute; top: 14px; right: 14px; font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: 16px; text-transform: uppercase;
+  }
+  .cap-card.blue .cap-badge { background: #DBEAFE; color: #1D4ED8; }
+  .cap-card.green .cap-badge { background: #DCFCE7; color: #15803D; }
+  .cap-card.purple .cap-badge { background: #F3E8FF; color: #7E22CE; }
+  .step { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #475569; }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%; color: white; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .cap-card.blue .step-num { background: #3B82F6; }
+  .cap-card.green .step-num { background: #16A34A; }
+  .cap-card.purple .step-num { background: #9333EA; }
+
+  .output-card {
+    background: white; border-radius: 12px; padding: 18px; flex: 1;
+    border: 1px solid #E5E7EB;
+  }
+  .output-card h4 { font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+  .output-item { font-size: 11px; color: #475569; padding: 4px 0; }
+
+  .privacy-bar {
+    background: linear-gradient(to right, #059669, #0D9488);
+    border-radius: 10px; padding: 14px 36px; color: white; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: center; gap: 36px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  .footer-bar {
+    background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+    padding: 16px 36px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-label { font-size: 13px; font-weight: 700; color: #334155; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px;
+    padding: 5px 12px; font-size: 11px; color: #475569;
+  }
+
+  .diff-row { display: flex; gap: 20px; margin-bottom: 20px; }
+  .diff-box { flex: 1; background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px 22px; }
+  .diff-box h4 { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; }
+  .diff-items { display: flex; gap: 10px; flex-wrap: wrap; }
+  .diff-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; background: #F8FAFC; padding: 5px 10px; border-radius: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #475569; }
+  .legend-bar { width: 18px; height: 3px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Industry AI Flow</h1>
+    <p>AI-Powered Construction Intelligence Platform</p>
+  </div>
+  <div class="badge">Product Architecture</div>
+</div>
+
+<div class="intent-bar">
+  <span class="label">AI Intent Classification (11-Node Pipeline)</span>
+  <div class="nodes">
+    <span class="node">Input</span><span class="arrow">-></span>
+    <span class="node">Language</span><span class="arrow">-></span>
+    <span class="node">Keywords</span><span class="arrow">-></span>
+    <span class="node">Safety</span><span class="arrow">-></span>
+    <span class="node">Classify</span><span class="arrow">-></span>
+    <span class="node">Confidence</span><span class="arrow">-></span>
+    <span class="node">Clarify</span><span class="arrow">-></span>
+    <span class="node">Context</span><span class="arrow">-></span>
+    <span class="node">Reformulate</span><span class="arrow">-></span>
+    <span class="node">Extract</span><span class="arrow">-></span>
+    <span class="node">Route</span>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">User Interactions</div>
+  <div class="row">
+    <div class="card">
+      <h3>Document Upload</h3>
+      <div class="card-item"><div class="icon-box" style="background:#DBEAFE;color:#2563EB;">PDF</div> PDF Documents</div>
+      <div class="card-item"><div class="icon-box" style="background:#FEF3C7;color:#D97706;">IMG</div> Scanned Images (OCR)</div>
+      <div class="card-item"><div class="icon-box" style="background:#DCFCE7;color:#16A34A;">CSV</div> CSV / Spreadsheets</div>
+    </div>
+    <div class="card">
+      <h3>Natural Language Query</h3>
+      <div class="card-item"><div class="icon-box" style="background:#EDE9FE;color:#7C3AED;">QA</div> Construction Questions</div>
+      <div class="card-item"><div class="icon-box" style="background:#FCE7F3;color:#DB2777;">$</div> Cost Estimation Requests</div>
+      <div class="card-item"><div class="icon-box" style="background:#CCFBF1;color:#0D9488;">Viz</div> Data Analysis Requests</div>
+    </div>
+    <div class="card">
+      <h3>Interactive Dashboard</h3>
+      <div class="card-item"><div class="icon-box" style="background:#FEE2E2;color:#DC2626;">Cfg</div> Configuration Panel</div>
+      <div class="card-item"><div class="icon-box" style="background:#E0E7FF;color:#4F46E5;">Doc</div> Document Browser</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">AI Processing Platform - Three Core Capabilities</div>
+  <div class="row">
+    <div class="cap-card blue">
+      <div class="cap-badge">Primary</div>
+      <div class="cap-title">RAG Knowledge QA</div>
+      <div class="cap-desc">Hybrid retrieval with semantic + keyword search, cross-encoder reranking, and cited answers from 12+ construction documents.</div>
+      <div class="step"><div class="step-num">1</div> Document chunking (512 chars, 128 overlap)</div>
+      <div class="step"><div class="step-num">2</div> Hybrid search: BM25 + pgvector + RRF fusion</div>
+      <div class="step"><div class="step-num">3</div> bge-reranker-base cross-encoder scoring</div>
+      <div class="step"><div class="step-num">4</div> LLM generation with source citations</div>
+    </div>
+    <div class="cap-card green">
+      <div class="cap-badge">ML Model</div>
+      <div class="cap-title">Cost Estimation</div>
+      <div class="cap-desc">Ridge regression on partner-provided dataset predicts construction cost overruns from structured project features.</div>
+      <div class="step"><div class="step-num">1</div> Feature input: type, sqft, floors, location, risk</div>
+      <div class="step"><div class="step-num">2</div> Ridge regression prediction</div>
+      <div class="step"><div class="step-num">3</div> Cost overrun probability + confidence</div>
+    </div>
+    <div class="cap-card purple">
+      <div class="cap-badge">Code Gen</div>
+      <div class="cap-title">Dynamic Data Analysis</div>
+      <div class="cap-desc">Metadata-only extraction preserves privacy. Cloud LLM generates Python code executed in sandboxed Docker environment.</div>
+      <div class="step"><div class="step-num">1</div> Extract metadata only (privacy by design)</div>
+      <div class="step"><div class="step-num">2</div> Cloud LLM code generation (Gemini/Qwen)</div>
+      <div class="step"><div class="step-num">3</div> Docker sandbox execution</div>
+      <div class="step"><div class="step-num">4</div> Results + visualizations returned</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Intelligent Outputs</div>
+  <div class="row">
+    <div class="output-card">
+      <h4>Cited Answers</h4>
+      <div class="output-item">- Source-grounded responses</div>
+      <div class="output-item">- Document chunk references</div>
+      <div class="output-item">- Groundedness verification</div>
+    </div>
+    <div class="output-card">
+      <h4>Predictions</h4>
+      <div class="output-item">- Cost overrun estimates</div>
+      <div class="output-item">- Confidence intervals</div>
+      <div class="output-item">- Risk factor breakdown</div>
+    </div>
+    <div class="output-card">
+      <h4>Visualizations</h4>
+      <div class="output-item">- Auto-generated charts</div>
+      <div class="output-item">- Statistical summaries</div>
+      <div class="output-item">- Interactive dashboards</div>
+    </div>
+    <div class="output-card">
+      <h4>Conversation</h4>
+      <div class="output-item">- Multi-turn context</div>
+      <div class="output-item">- 3-layer memory system</div>
+      <div class="output-item">- Conversation history</div>
+    </div>
+  </div>
+</div>
+
+<div class="privacy-bar">
+  <span>Privacy by Design</span>
+  <span>|</span>
+  <span>Metadata-Only Cloud Transfer</span>
+  <span>|</span>
+  <span>Local LLM Processing (Ollama)</span>
+  <span>|</span>
+  <span>Docker Sandbox Isolation</span>
+</div>
+
+<div class="diff-row">
+  <div class="diff-box">
+    <h4>Key Differentiators</h4>
+    <div class="diff-items">
+      <div class="diff-item"><div class="dot" style="background:#6366F1;"></div> 11-Node Intent Classification</div>
+      <div class="diff-item"><div class="dot" style="background:#3B82F6;"></div> Hybrid BM25 + Vector + RRF</div>
+      <div class="diff-item"><div class="dot" style="background:#16A34A;"></div> Cross-Encoder Reranking</div>
+      <div class="diff-item"><div class="dot" style="background:#9333EA;"></div> Privacy-First Data Analysis</div>
+      <div class="diff-item"><div class="dot" style="background:#059669;"></div> Multi-Tenant Architecture</div>
+      <div class="diff-item"><div class="dot" style="background:#D97706;"></div> 10-Node Execution Pipeline</div>
+    </div>
+  </div>
+  <div class="diff-box" style="max-width: 300px;">
+    <h4>Legend</h4>
+    <div class="legend-item"><div class="legend-bar" style="background:#3B82F6;"></div> RAG Knowledge QA</div>
+    <div class="legend-item"><div class="legend-bar" style="background:#16A34A;"></div> Cost Estimation (ML)</div>
+    <div class="legend-item"><div class="legend-bar" style="background:#9333EA;"></div> Dynamic Data Analysis</div>
+    <div class="legend-item"><div class="legend-bar" style="background:#6366F1;"></div> Intent Classification</div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <div class="footer-label">Technology Foundation</div>
+  <div class="pills">
+    <span class="pill">Qwen3.5 via Ollama</span>
+    <span class="pill">FastAPI</span>
+    <span class="pill">LangGraph</span>
+    <span class="pill">pgvector</span>
+    <span class="pill">nomic-embed-v1.5</span>
+    <span class="pill">bge-reranker</span>
+    <span class="pill">PaddleOCR</span>
+    <span class="pill">Next.js</span>
+    <span class="pill">Docker</span>
+  </div>
+</div>
+
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>
