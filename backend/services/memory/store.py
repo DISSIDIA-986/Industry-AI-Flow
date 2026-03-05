@@ -82,7 +82,7 @@ class LongTermMemoryStore:
                 )
                 conn.rollback()
         except Exception as exc:
-            logger.warning("EN: %s", exc)
+            logger.warning("Memory table initialization failed: %s", exc)
         finally:
             if "cur" in locals():
                 cur.close()
@@ -131,7 +131,7 @@ class LongTermMemoryStore:
             return memory_id
         except Exception as exc:
             conn.rollback()
-            logger.error("EN: %s", exc)
+            logger.error("Failed to store memory: %s", exc)
             raise
         finally:
             cur.close()
@@ -201,7 +201,7 @@ class LongTermMemoryStore:
                 )
             return memories
         except Exception as exc:
-            logger.error("EN: %s", exc)
+            logger.error("Failed to retrieve memories: %s", exc)
             return []
         finally:
             cur.close()

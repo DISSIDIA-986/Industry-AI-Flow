@@ -1,5 +1,5 @@
 """
-EN - EN,EN
+Document Manager - Handles document CRUD operations with version tracking.
 """
 
 import datetime
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentOperation(Enum):
-    """EN"""
+    """Types of document operations."""
 
     CREATE = "create"
     UPDATE = "update"
@@ -31,7 +31,7 @@ class DocumentOperation(Enum):
 
 @dataclass
 class DocumentVersion:
-    """EN"""
+    """Represents a specific version of a document."""
 
     doc_id: str
     version: int
@@ -44,7 +44,7 @@ class DocumentVersion:
 
 
 class DocumentManager:
-    """EN - ENCRUDEN"""
+    """Document Manager - Provides full CRUD operations with version control."""
 
     def __init__(self, vectorstore: VectorStore):
         self.vectorstore = vectorstore
@@ -66,12 +66,12 @@ class DocumentManager:
             logger.warning("Failed to remove document profile for %s: %s", doc_id, exc)
 
     def _init_database(self):
-        """EN"""
+        """Initialize document management database tables."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # EN
+            # Create document versions table
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_versions (
@@ -90,7 +90,7 @@ class DocumentManager:
             """
             )
 
-            # EN
+            # Create operations log table
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_operations_log (
@@ -107,25 +107,25 @@ class DocumentManager:
             """
             )
 
-            # EN
+            # Create version management trigger function
             cur.execute(
                 """
                 CREATE OR REPLACE FUNCTION update_document_versions()
                 RETURNS TRIGGER AS $$
                 BEGIN
-                    -- EN
+                    -- Deactivate previous versions
                     UPDATE document_versions
                     SET is_active = FALSE
                     WHERE doc_id = NEW.doc_id AND is_active = TRUE AND version != NEW.version;
 
-                    -- EN
+                    -- Return the new row
                     RETURN NEW;
                 END;
                 $$ LANGUAGE plpgsql;
             """
             )
 
-            # EN
+            # Create the trigger
             cur.execute(
                 """
                 DROP TRIGGER IF EXISTS trigger_update_document_versions ON document_versions;
@@ -136,7 +136,7 @@ class DocumentManager:
             """
             )
 
-            # EN
+            # Create indexes
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_doc_versions_doc_id ON document_versions(doc_id)"
             )
@@ -162,15 +162,15 @@ class DocumentManager:
         self, doc_id: str, new_filepath: str, reason: str = None
     ) -> bool:
         """
-        EN
+        Update an existing document with new content.
 
         Args:
-            doc_id: ENID
-            new_filepath: EN
-            reason: EN
+            doc_id: Document ID to update.
+            new_filepath: Path to the new document file.
+            reason: Reason for the update.
 
         Returns:
-            EN
+            True if the update was successful, False otherwise.
         """
         if not settings.enable_document_update:
             logger.warning("Document update is disabled")
@@ -180,7 +180,7 @@ class DocumentManager:
         cur = conn.cursor()
 
         try:
-            # EN
+            # Look up existing document
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -192,12 +192,12 @@ class DocumentManager:
 
             old_filename, old_filepath = existing_doc
 
-            # EN
+            # Verify new file exists
             if not os.path.exists(new_filepath):
                 logger.error(f"New file not found: {new_filepath}")
                 return False
 
-            # EN
+            # Get current version number
             cur.execute(
                 "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                 (doc_id,),
@@ -205,15 +205,15 @@ class DocumentManager:
             current_version = cur.fetchone()[0]
             new_version = current_version + 1
 
-            # EN
+            # Process the new document
             try:
-                # EN
+                # Load and chunk the new file
                 new_filename = os.path.basename(new_filepath)
                 documents = self.document_loader.load_document(new_filepath)
                 if not documents:
                     raise ValueError(f"No content loaded from {new_filepath}")
 
-                # EN
+                # Split into chunks
                 chunks = []
                 for doc in documents:
                     doc_chunks = self.chunker.chunk_document(doc)
@@ -222,7 +222,7 @@ class DocumentManager:
                 if not chunks:
                     raise ValueError(f"No chunks generated from {new_filepath}")
 
-                # EN
+                # Generate embeddings for each chunk
                 embeddings = [embed_single_text(chunk) for chunk in chunks]
 
             except Exception as e:
@@ -238,10 +238,10 @@ class DocumentManager:
                 )
                 return False
 
-            # EN
+            # Delete old chunks
             cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-            # EN
+            # Insert new chunks with embeddings
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -251,7 +251,7 @@ class DocumentManager:
                     (doc_id, i, chunk, embedding),
                 )
 
-            # EN
+            # Update document metadata
             cur.execute(
                 """
                 UPDATE documents
@@ -261,7 +261,7 @@ class DocumentManager:
                 (new_filename, new_filepath, len(chunks), doc_id),
             )
 
-            # EN
+            # Record new version
             cur.execute(
                 """
                 INSERT INTO document_versions (doc_id, version, filename, filepath, chunk_count, operation, is_active)
@@ -280,7 +280,7 @@ class DocumentManager:
             conn.commit()
             self._refresh_profile_best_effort(doc_id)
 
-            # EN
+            # Log successful operation
             self._log_operation(
                 doc_id,
                 DocumentOperation.UPDATE,
@@ -316,15 +316,15 @@ class DocumentManager:
         self, doc_id: str, reason: str = None, soft_delete: bool = True
     ) -> bool:
         """
-        EN
+        Delete a document (soft or hard delete).
 
         Args:
-            doc_id: ENID
-            reason: EN
-            soft_delete: EN(ENTrue)
+            doc_id: Document ID to delete.
+            reason: Reason for the deletion.
+            soft_delete: If True, mark as inactive; if False, permanently remove (default: True).
 
         Returns:
-            EN
+            True if the deletion was successful, False otherwise.
         """
         if not settings.enable_document_deletion:
             logger.warning("Document deletion is disabled")
@@ -334,7 +334,7 @@ class DocumentManager:
         cur = conn.cursor()
 
         try:
-            # EN
+            # Look up existing document
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -347,7 +347,7 @@ class DocumentManager:
             filename, filepath = doc_info
 
             if soft_delete:
-                # EN:EN
+                # Soft delete: deactivate versions and remove chunks
                 cur.execute(
                     """
                     UPDATE document_versions
@@ -357,10 +357,10 @@ class DocumentManager:
                     (doc_id,),
                 )
 
-                # EN
+                # Remove all chunks
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-                # EN(EN)
+                # Reset chunk count (keep document record)
                 cur.execute(
                     """
                     UPDATE documents
@@ -370,7 +370,7 @@ class DocumentManager:
                     (doc_id,),
                 )
 
-                # EN
+                # Record delete version
                 cur.execute(
                     "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                     (doc_id,),
@@ -394,7 +394,7 @@ class DocumentManager:
                 )
 
             else:
-                # EN:EN
+                # Hard delete: permanently remove all records
                 cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
                 cur.execute(
                     "DELETE FROM document_versions WHERE doc_id = %s", (doc_id,)
@@ -404,7 +404,7 @@ class DocumentManager:
             conn.commit()
             self._remove_profile_best_effort(doc_id)
 
-            # EN
+            # Log the operation
             delete_type = "soft_delete" if soft_delete else "hard_delete"
             self._log_operation(
                 doc_id,
@@ -442,21 +442,21 @@ class DocumentManager:
         self, doc_id: str, new_filepath: str, reason: str = None
     ) -> bool:
         """
-        EN(EN,ENdoc_id)
+        Replace a document entirely (delete old content and insert new, keeping same doc_id).
 
         Args:
-            doc_id: ENID
-            new_filepath: EN
-            reason: EN
+            doc_id: Document ID to replace.
+            new_filepath: Path to the replacement document file.
+            reason: Reason for the replacement.
 
         Returns:
-            EN
+            True if the replacement was successful, False otherwise.
         """
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # EN
+            # Look up existing document
             cur.execute(
                 "SELECT filename, filepath FROM documents WHERE id = %s", (doc_id,)
             )
@@ -468,22 +468,22 @@ class DocumentManager:
 
             old_filename, old_filepath = existing_doc
 
-            # EN
+            # Verify replacement file exists
             if not os.path.exists(new_filepath):
                 logger.error(f"Replacement file not found: {new_filepath}")
                 return False
 
-            # EN
+            # Delete existing chunks
             cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
 
-            # EN
+            # Process replacement document
             try:
                 new_filename = os.path.basename(new_filepath)
                 documents = self.document_loader.load_document(new_filepath)
                 if not documents:
                     raise ValueError(f"No content loaded from {new_filepath}")
 
-                # EN
+                # Split into chunks
                 chunks = []
                 for doc in documents:
                     doc_chunks = self.chunker.chunk_document(doc)
@@ -492,7 +492,7 @@ class DocumentManager:
                 if not chunks:
                     raise ValueError(f"No chunks generated from {new_filepath}")
 
-                # EN
+                # Generate embeddings
                 embeddings = [embed_single_text(chunk) for chunk in chunks]
 
             except Exception as e:
@@ -509,7 +509,7 @@ class DocumentManager:
                 )
                 return False
 
-            # EN
+            # Insert new chunks
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -519,7 +519,7 @@ class DocumentManager:
                     (doc_id, i, chunk, embedding),
                 )
 
-            # EN
+            # Update document metadata
             cur.execute(
                 """
                 UPDATE documents
@@ -529,7 +529,7 @@ class DocumentManager:
                 (new_filename, new_filepath, len(chunks), doc_id),
             )
 
-            # EN
+            # Record new version
             cur.execute(
                 "SELECT COALESCE(MAX(version), 0) FROM document_versions WHERE doc_id = %s",
                 (doc_id,),
@@ -555,7 +555,7 @@ class DocumentManager:
             conn.commit()
             self._refresh_profile_best_effort(doc_id)
 
-            # EN
+            # Log successful operation
             self._log_operation(
                 doc_id,
                 DocumentOperation.REPLACE,
@@ -588,7 +588,7 @@ class DocumentManager:
             conn.close()
 
     def get_document_versions(self, doc_id: str) -> List[DocumentVersion]:
-        """EN"""
+        """Get all versions of a document, ordered by version descending."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -630,16 +630,16 @@ class DocumentManager:
     def restore_document_version(
         self, doc_id: str, version: int, reason: str = None
     ) -> bool:
-        """EN"""
-        # EN
-        # EN,EN
+        """Restore a document to a previous version."""
+        # Not yet implemented
+        # Future: reload the specified version's content and re-embed
         logger.info(
             f"Document version restoration not yet implemented for {doc_id} version {version}"
         )
         return False
 
     def get_operation_log(self, doc_id: str = None, limit: int = 50) -> List[Dict]:
-        """EN"""
+        """Get the document operations log, optionally filtered by doc_id."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -700,7 +700,7 @@ class DocumentManager:
         status: str = "success",
         error_message: str = None,
     ):
-        """EN"""
+        """Record a document operation in the operations log."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -730,18 +730,18 @@ class DocumentManager:
             conn.close()
 
     def get_document_statistics(self) -> Dict:
-        """EN"""
+        """Get aggregate document statistics."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
             stats = {}
 
-            # EN
+            # Total document count
             cur.execute("SELECT COUNT(*) FROM documents")
             stats["total_documents"] = cur.fetchone()[0]
 
-            # EN
+            # Active document count
             cur.execute(
                 """
                 SELECT COUNT(DISTINCT dv.doc_id)
@@ -751,11 +751,11 @@ class DocumentManager:
             )
             stats["active_documents"] = cur.fetchone()[0]
 
-            # EN
+            # Total chunk count
             cur.execute("SELECT COUNT(*) FROM document_chunks")
             stats["total_chunks"] = cur.fetchone()[0]
 
-            # EN
+            # Operation breakdown
             cur.execute(
                 """
                 SELECT operation, COUNT(*)

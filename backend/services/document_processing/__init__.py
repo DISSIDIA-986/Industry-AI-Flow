@@ -1,10 +1,10 @@
 """
-EN
+Document Processing Module
 
-EN:
-- OCRProcessor: OCREN(ENPaddleOCRENAPI)
-- DocumentExtractor: EN
-- process_document: EN
+Components:
+- OCRProcessor: OCR engine (local PaddleOCR with cloud API fallback)
+- DocumentExtractor: Multi-format document text extractor
+- process_document: Convenience function for document extraction
 """
 
 from backend.services.document_processing.document_extractor import (
@@ -17,12 +17,12 @@ from backend.services.document_processing.ocr_processor import (
     process_image_with_ocr,
 )
 
-# ENOCREN(EN)
+# Global OCR processor singleton (lazy initialization)
 _global_ocr_processor = None
 
 
 def get_ocr_processor() -> OCRProcessor:
-    """ENOCREN(EN)"""
+    """Get or create the global OCR processor singleton."""
     global _global_ocr_processor
     if _global_ocr_processor is None:
         try:
@@ -31,12 +31,12 @@ def get_ocr_processor() -> OCRProcessor:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"ENOCREN: {e}")
+            logger.warning(f"Failed to initialize OCR processor: {e}")
             _global_ocr_processor = None
     return _global_ocr_processor
 
 
-# ENocr_processorEN
+# Initialize global ocr_processor instance
 ocr_processor = get_ocr_processor()
 
 

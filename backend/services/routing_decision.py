@@ -1,6 +1,7 @@
 """
-EN
-EN,ENAgent
+Routing Decision Engine
+
+Determines the optimal agent to handle each user request based on intent classification.
 """
 
 import asyncio
@@ -18,16 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 class RoutingPath(str, Enum):
-    """EN"""
+    """Available routing paths for request processing."""
 
-    DIRECT_ROUTING = "direct"  # EN
-    CLARIFICATION = "clarification"  # EN
-    FALLBACK = "fallback"  # EN
-    ESCALATION = "escalation"  # EN
+    DIRECT_ROUTING = "direct"  # High-confidence direct routing
+    CLARIFICATION = "clarification"  # Low-confidence, needs user clarification
+    FALLBACK = "fallback"  # Error fallback to general agent
+    ESCALATION = "escalation"  # Escalation for complex requests
 
 
 class AgentType(str, Enum):
-    """AgentEN"""
+    """Available agent types for request handling."""
 
     RAG_AGENT = "rag_agent"
     DATA_ANALYSIS_AGENT = "data_analysis_agent"
@@ -40,7 +41,7 @@ class AgentType(str, Enum):
 
 @dataclass
 class RoutingDecision:
-    """EN"""
+    """Encapsulates a routing decision including agent, path, confidence, and parameters."""
 
     selected_agent: AgentType
     routing_path: RoutingPath
@@ -53,7 +54,7 @@ class RoutingDecision:
     clarification_context: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """EN"""
+        """Convert routing decision to a dictionary representation."""
         return {
             "selected_agent": self.selected_agent.value,
             "routing_path": self.routing_path.value,
@@ -69,7 +70,7 @@ class RoutingDecision:
 
 @dataclass
 class SystemStatus:
-    """EN"""
+    """Tracks agent availability, system load, and queue status."""
 
     agent_availability: Dict[AgentType, bool] = field(default_factory=dict)
     system_load: float = 0.0
@@ -78,7 +79,7 @@ class SystemStatus:
     average_response_times: Dict[AgentType, float] = field(default_factory=dict)
 
     def get_available_agents(self) -> List[AgentType]:
-        """ENAgentEN"""
+        """Return list of currently available agents."""
         return [
             agent for agent, available in self.agent_availability.items() if available
         ]
@@ -86,7 +87,7 @@ class SystemStatus:
     def get_least_loaded_agent(
         self, candidates: List[AgentType]
     ) -> Optional[AgentType]:
-        """ENAgentEN"""
+        """Return the least loaded agent from the candidate list."""
         if not candidates:
             return None
 
@@ -96,7 +97,7 @@ class SystemStatus:
         if not available_candidates:
             return None
 
-        # ENAgent
+        # Select agent with lowest combined score (queue length + response time)
         best_agent = None
         best_score = float("inf")
 
@@ -113,28 +114,28 @@ class SystemStatus:
 
 
 class RoutingDecisionEngine:
-    """EN"""
+    """Engine that routes user requests to the optimal agent based on intent and system state."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
-        EN
+        Initialize the routing decision engine.
 
         Args:
-            config: EN
+            config: Optional configuration dictionary for thresholds and agent settings.
         """
         self.config = config or {}
 
-        # EN
+        # Confidence thresholds for routing decisions
         self.confidence_thresholds = self.config.get(
             "confidence_thresholds",
             {
-                "high": 0.8,  # EN,EN
-                "medium": 0.6,  # EN,EN
-                "low": 0.4,  # EN,EN
+                "high": 0.8,  # Direct routing without clarification
+                "medium": 0.6,  # Route directly unless many uncertainty factors
+                "low": 0.4,  # Below this, request clarification from user
             },
         )
 
-        # AgentEN
+        # Agent-specific configuration (timeouts, retries, priorities, capabilities)
         self.agent_config = self.config.get(
             "agent_config",
             {
@@ -181,7 +182,7 @@ class RoutingDecisionEngine:
             },
         )
 
-        # EN
+        # Routing rules and thresholds
         self.routing_rules = self.config.get(
             "routing_rules",
             {
@@ -193,11 +194,11 @@ class RoutingDecisionEngine:
             },
         )
 
-        # EN
+        # System status tracking
         self.system_status = SystemStatus()
         self._initialize_system_status()
 
-        # EN
+        # Routing statistics
         self.routing_stats = {
             "total_routes": 0,
             "direct_routes": 0,
@@ -207,19 +208,19 @@ class RoutingDecisionEngine:
         }
         self._routing_stats_lock = threading.Lock()
 
-        logger.info("EN")
+        logger.info("Routing decision engine initialized")
 
     def _initialize_system_status(self):
-        """EN"""
-        # ENAgentEN
+        """Initialize system status with default values for all agents."""
+        # Set all agents as available by default
         for agent in AgentType:
             self.system_status.agent_availability[agent] = True
 
-        # EN(EN)
+        # Initialize queue lengths to zero
         for agent in AgentType:
             self.system_status.queue_lengths[agent] = 0
 
-        # EN
+        # Set initial average response times (50% of max configured time)
         for agent in AgentType:
             config = self.agent_config.get(agent, {})
             self.system_status.average_response_times[agent] = (
@@ -233,29 +234,29 @@ class RoutingDecisionEngine:
         user_preferences: Optional[Dict[str, Any]] = None,
     ) -> RoutingDecision:
         """
-        EN
+        Make a routing decision based on intent classification results.
 
         Args:
-            intent_result: EN
-            context: EN
-            user_preferences: EN
+            intent_result: Intent classification output (intent, confidence, keywords).
+            context: Session context (session_id, user_id, uploaded files, etc.).
+            user_preferences: Optional user preferences for response style.
 
         Returns:
-            RoutingDecision: EN
+            RoutingDecision: The routing decision with selected agent and parameters.
         """
         try:
-            # EN
+            # Extract intent classification results
             intent = intent_result.get("intent", "knowledge_retrieval")
             confidence = float(intent_result.get("confidence", 0.0))
             reasoning = intent_result.get("reasoning", "")
 
-            # ENAgent
+            # Map intent to primary agent
             primary_agent = self._map_intent_to_agent(intent)
 
-            # ENAgent
+            # Determine fallback agents
             fallback_agents = self._get_fallback_agents(primary_agent, intent)
 
-            # EN
+            # Determine routing path based on confidence
             routing_path = self._determine_routing_path(confidence, intent_result)
 
             # Load balancing: only apply when confidence is below high threshold
@@ -273,15 +274,15 @@ class RoutingDecisionEngine:
             else:
                 selected_agent = primary_agent
 
-            # EN
+            # Build routing parameters
             parameters = self._build_routing_parameters(
                 selected_agent, intent_result, context, user_preferences
             )
 
-            # EN
+            # Estimate processing time
             estimated_time = self._estimate_processing_time(selected_agent, context)
 
-            # EN
+            # Check if clarification is needed
             requires_clarification = routing_path == RoutingPath.CLARIFICATION
             clarification_context = None
             if requires_clarification:
@@ -293,12 +294,12 @@ class RoutingDecisionEngine:
                     "user_context": context,
                 }
 
-            # EN
+            # Create routing decision
             decision = RoutingDecision(
                 selected_agent=selected_agent,
                 routing_path=routing_path,
                 confidence=confidence,
-                reasoning=f"EN'{intent}'EN{confidence:.2f}EN{selected_agent.value}.{reasoning}",
+                reasoning=f"Intent '{intent}' with confidence {confidence:.2f} routed to {selected_agent.value}. {reasoning}",
                 parameters=parameters,
                 fallback_options=fallback_agents,
                 estimated_processing_time=estimated_time,
@@ -306,21 +307,21 @@ class RoutingDecisionEngine:
                 clarification_context=clarification_context,
             )
 
-            # EN
+            # Update routing statistics
             self._update_routing_stats(decision)
 
             logger.info(
-                f"EN: {selected_agent.value} (EN: {confidence:.2f}, EN: {routing_path.value})"
+                f"Routing decision: {selected_agent.value} (confidence: {confidence:.2f}, path: {routing_path.value})"
             )
             return decision
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
-            # ENAgent
+            logger.error(f"Routing decision failed: {str(e)}")
+            # Fall back to general agent on error
             return self._create_fallback_decision(intent_result, str(e))
 
     def _map_intent_to_agent(self, intent: str) -> AgentType:
-        """ENAgent"""
+        """Map an intent string to the corresponding agent type."""
         intent_mapping = {
             "knowledge_retrieval": AgentType.RAG_AGENT,
             "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
@@ -333,7 +334,7 @@ class RoutingDecisionEngine:
     def _get_fallback_agents(
         self, primary_agent: AgentType, intent: str
     ) -> List[AgentType]:
-        """ENAgentEN"""
+        """Get ordered list of fallback agents for the primary agent."""
         fallback_mapping = {
             AgentType.RAG_AGENT: [AgentType.GENERAL_AGENT],
             AgentType.DATA_ANALYSIS_AGENT: [
@@ -359,7 +360,7 @@ class RoutingDecisionEngine:
     def _determine_routing_path(
         self, confidence: float, intent_result: Dict[str, Any]
     ) -> RoutingPath:
-        """EN"""
+        """Determine routing path based on confidence level and uncertainty factors."""
         high_threshold = self.confidence_thresholds.get("high", 0.8)
         low_threshold = self.confidence_thresholds.get("low", 0.4)
 
@@ -368,7 +369,7 @@ class RoutingDecisionEngine:
         elif confidence <= low_threshold:
             return RoutingPath.CLARIFICATION
         else:
-            # EN,EN
+            # Medium confidence: check uncertainty factors to decide
             uncertainty_factors = intent_result.get("uncertainty_factors", [])
             if len(uncertainty_factors) > 2:
                 return RoutingPath.CLARIFICATION
@@ -382,7 +383,7 @@ class RoutingDecisionEngine:
         context: Dict[str, Any],
         user_preferences: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """EN"""
+        """Build routing parameters for the selected agent."""
         base_params = {
             "timeout": self.agent_config[agent]["max_response_time"],
             "retry_count": self.agent_config[agent]["retry_count"],
@@ -393,7 +394,7 @@ class RoutingDecisionEngine:
             "context_clues": intent_result.get("context_clues", []),
         }
 
-        # EN
+        # Add session context
         if context:
             base_params["session_context"] = {
                 "session_id": context.get("session_id"),
@@ -402,7 +403,7 @@ class RoutingDecisionEngine:
                 "has_uploaded_files": context.get("has_uploaded_files", False),
             }
 
-        # EN
+        # Add user preferences if provided
         if user_preferences:
             base_params["user_preferences"] = user_preferences
 
@@ -411,39 +412,39 @@ class RoutingDecisionEngine:
     def _estimate_processing_time(
         self, agent: AgentType, context: Dict[str, Any]
     ) -> int:
-        """EN"""
+        """Estimate processing time in seconds based on agent type and context."""
         base_time = self.agent_config[agent]["max_response_time"]
 
-        # EN
+        # Time modifier based on context
         modifiers = 1.0
 
-        # EN,EN
+        # File uploads increase processing time
         if context.get("has_uploaded_files", False):
             if agent == AgentType.DATA_ANALYSIS_AGENT:
-                modifiers *= 1.5  # EN
+                modifiers *= 1.5  # Data analysis with files takes longer
             elif agent == AgentType.DOCUMENT_PROCESSING_AGENT:
-                modifiers *= 1.3  # EN
+                modifiers *= 1.3  # Document processing with files takes longer
 
-        # EN
+        # Long sessions may have accumulated context
         query_count = context.get("query_count", 1)
-        if query_count > 5:  # EN
+        if query_count > 5:  # Many queries in session
             modifiers *= 1.2
 
         return int(base_time * modifiers)
 
     def _get_possible_intents(self, intent_result: Dict[str, Any]) -> List[str]:
-        """EN"""
+        """Get list of possible intents based on keywords and classification."""
         primary_intent = intent_result.get("intent")
         confidence = intent_result.get("confidence", 0.0)
 
         if confidence >= 0.8:
             return [primary_intent]
 
-        # EN
+        # Infer additional possible intents from keywords
         keywords = intent_result.get("keywords", [])
         possible_intents = [primary_intent]
 
-        # EN
+        # Keyword-to-intent mapping for disambiguation
         keyword_intent_mapping = {
             "analyze": "data_analysis",
             "dataset": "data_analysis",
@@ -465,16 +466,16 @@ class RoutingDecisionEngine:
             if mapped_intent and mapped_intent not in possible_intents:
                 possible_intents.append(mapped_intent)
 
-        return possible_intents[:3]  # EN3EN
+        return possible_intents[:3]  # Return at most 3 possible intents
 
     def _generate_clarification_questions(
         self, intent_result: Dict[str, Any]
     ) -> List[str]:
-        """EN"""
+        """Generate clarification questions based on intent and keywords."""
         intent = intent_result.get("intent")
         keywords = intent_result.get("keywords", [])
 
-        # EN
+        # Intent-specific clarification question templates
         clarification_templates = {
             "knowledge_retrieval": [
                 "Could you be more specific about what information you're looking for?",
@@ -507,10 +508,10 @@ class RoutingDecisionEngine:
         elif "PDF" in keywords and intent == "document_processing":
             questions.insert(0, "Would you like to extract text from the PDF or process it another way?")
 
-        return questions[:2]  # EN2EN
+        return questions[:2]  # Return at most 2 clarification questions
 
     def _update_routing_stats(self, decision: RoutingDecision):
-        """EN"""
+        """Update routing statistics with the latest decision."""
         with self._routing_stats_lock:
             self.routing_stats["total_routes"] += 1
             self.routing_stats["agent_usage"][decision.selected_agent] += 1
@@ -525,7 +526,7 @@ class RoutingDecisionEngine:
     def _create_fallback_decision(
         self, intent_result: Dict[str, Any], error: str
     ) -> RoutingDecision:
-        """EN"""
+        """Create a fallback routing decision when an error occurs."""
         return RoutingDecision(
             selected_agent=AgentType.GENERAL_AGENT,
             routing_path=RoutingPath.FALLBACK,
@@ -543,7 +544,7 @@ class RoutingDecisionEngine:
         )
 
     def get_routing_statistics(self) -> Dict[str, Any]:
-        """EN"""
+        """Get routing statistics including rates and agent usage."""
         with self._routing_stats_lock:
             total = self.routing_stats["total_routes"]
             if total == 0:
@@ -555,7 +556,7 @@ class RoutingDecisionEngine:
                     "agent_usage": dict(self.routing_stats["agent_usage"]),
                 }
 
-            # EN
+            # Calculate routing rates
             stats = {
                 "total_routes": total,
                 "direct_routes": self.routing_stats["direct_routes"],
@@ -567,7 +568,7 @@ class RoutingDecisionEngine:
             stats["clarification_rate"] = stats["clarification_routes"] / total
             stats["fallback_rate"] = stats["fallback_routes"] / total
 
-            # AgentEN
+            # Agent usage rates
             stats["agent_usage_rates"] = {
                 agent.value: count / total
                 for agent, count in stats["agent_usage"].items()
@@ -576,7 +577,7 @@ class RoutingDecisionEngine:
             return stats
 
     def update_system_status(self, status_updates: Dict[str, Any]):
-        """EN"""
+        """Update system status with new metrics."""
         if "agent_availability" in status_updates:
             self.system_status.agent_availability.update(
                 status_updates["agent_availability"]
@@ -597,7 +598,7 @@ class RoutingDecisionEngine:
             )
 
     async def health_check(self) -> Dict[str, Any]:
-        """EN"""
+        """Perform a health check on the routing engine."""
         return {
             "status": "healthy",
             "total_routes": self.routing_stats["total_routes"],

@@ -1,6 +1,6 @@
 """
-EN
-ENLangChain 1.0 State Graph,EN
+Intent Classification Workflow
+11-node LangChain 1.0 State Graph for intent classification, routing, and agent dispatch.
 """
 
 import asyncio
@@ -38,29 +38,29 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowState(TypedDict):
-    """EN"""
+    """Workflow state shared across all nodes in the intent classification graph."""
 
-    messages: Annotated[List, add_messages]  # EN
-    session_id: str  # ENID
-    user_id: Optional[str]  # ENID
-    current_query: str  # EN
-    query_context: QueryContext  # EN
-    session_context: SessionContext  # EN
-    intent_result: Optional[IntentResult]  # EN
-    routing_decision: Optional[RoutingDecision]  # EN
-    clarification_needed: bool  # EN
-    clarification_response: Optional[str]  # EN
+    messages: Annotated[List, add_messages]  # Conversation message history
+    session_id: str  # Session identifier
+    user_id: Optional[str]  # User identifier
+    current_query: str  # Current user query
+    query_context: QueryContext  # Enriched query context
+    session_context: SessionContext  # Session-level context
+    intent_result: Optional[IntentResult]  # Intent classification result
+    routing_decision: Optional[RoutingDecision]  # Agent routing decision
+    clarification_needed: bool  # Whether clarification is needed
+    clarification_response: Optional[str]  # Generated clarification message
     clarification_round: int  # P0: Track clarification iterations to prevent infinite loops
-    agent_response: Optional[str]  # AgentEN
-    workflow_complete: bool  # EN
-    error: Optional[str]  # EN
-    system_prompt: Optional[str]  # PromptEN
-    prompt_meta: Optional[Dict[str, Any]]  # PromptEN
-    metadata: Dict[str, Any]  # EN
+    agent_response: Optional[str]  # Agent execution response
+    workflow_complete: bool  # Whether the workflow has completed
+    error: Optional[str]  # Error message if any
+    system_prompt: Optional[str]  # Prompt manager system prompt
+    prompt_meta: Optional[Dict[str, Any]]  # Prompt metadata
+    metadata: Dict[str, Any]  # Workflow execution metadata
 
 
 class IntentClassificationWorkflow:
-    """EN"""
+    """Intent classification workflow using an 11-node LangGraph StateGraph."""
 
     def __init__(
         self,
@@ -70,13 +70,13 @@ class IntentClassificationWorkflow:
         prompt_manager: Optional[PromptManager] = None,
     ):
         """
-        EN
+        Initialize the intent classification workflow.
 
         Args:
-            intent_classifier: EN
-            context_manager: EN
-            routing_engine: EN
-            prompt_manager: PromptEN(EN)
+            intent_classifier: Intent classifier service
+            context_manager: Session context manager
+            routing_engine: Agent routing decision engine
+            prompt_manager: Prompt manager instance (optional)
         """
         self.intent_classifier = intent_classifier
         self.context_manager = context_manager
@@ -89,20 +89,20 @@ class IntentClassificationWorkflow:
         self._document_extractor = None
         self._code_execution_manager = None
 
-        # EN
+        # Build the workflow graph
         self.workflow = self._create_workflow()
 
-        # EN(EN)
+        # Initialize memory checkpointer (for multi-turn conversation state)
         self.memory = MemorySaver()
 
-        logger.info("EN")
+        logger.info("Intent classification workflow initialized")
 
     def _create_workflow(self) -> StateGraph:
-        """EN"""
-        # EN
+        """Create and configure the 11-node state graph."""
+        # Initialize the state graph
         workflow = StateGraph(WorkflowState)
 
-        # EN
+        # Add workflow nodes
         workflow.add_node("input_preprocessing", self._input_preprocessing_node)
         workflow.add_node("context_enrichment", self._context_enrichment_node)
         workflow.add_node("intent_classification", self._intent_classification_node)
@@ -117,7 +117,7 @@ class IntentClassificationWorkflow:
         workflow.add_node("response_processing", self._response_processing_node)
         workflow.add_node("error_handling", self._error_handling_node)
 
-        # EN
+        # Set entry point
         workflow.set_entry_point("input_preprocessing")
 
         # Route preprocessing/enrichment failures to the dedicated error handler.
@@ -139,7 +139,7 @@ class IntentClassificationWorkflow:
         )
         workflow.add_edge("intent_classification", "confidence_evaluation")
 
-        # EN
+        # Route based on confidence evaluation result
         workflow.add_conditional_edges(
             "confidence_evaluation",
             self._route_based_on_confidence,
@@ -154,7 +154,7 @@ class IntentClassificationWorkflow:
         workflow.add_edge("prompt_preparation", "agent_dispatch")
         workflow.add_edge("clarification_step", "clarification_processing")
 
-        # EN
+        # Route after clarification processing
         workflow.add_conditional_edges(
             "clarification_processing",
             self._route_after_clarification,
@@ -172,46 +172,46 @@ class IntentClassificationWorkflow:
         return workflow
 
     async def _input_preprocessing_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Preprocess user input: clean and normalize the query."""
         try:
-            logger.info(f"EN,ENID: {state['session_id']}")
+            logger.info(f"Starting input preprocessing, session ID: {state['session_id']}")
 
-            # EN
+            # Get the current query
             current_query = state.get("current_query", "")
 
-            # EN
+            # Clean and normalize the query
             cleaned_query = current_query.strip()
 
-            # EN
+            # Update state with cleaned query
             state["current_query"] = cleaned_query
             state["messages"].append(HumanMessage(content=cleaned_query))
 
-            # EN
+            # Record preprocessing metadata
             state["metadata"]["preprocessing_timestamp"] = datetime.now().isoformat()
             state["metadata"]["query_length"] = len(cleaned_query)
 
-            logger.debug(f"EN: {cleaned_query[:100]}...")
+            logger.debug(f"Preprocessed query: {cleaned_query[:100]}...")
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Input preprocessing failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _context_enrichment_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Enrich the query with session context and interaction history."""
         try:
-            logger.info("EN")
+            logger.info("Starting context enrichment")
 
             session_id = state["session_id"]
 
-            # EN
+            # Retrieve session context
             session_context = await self.context_manager.get_session_context(
                 session_id=session_id, user_id=state.get("user_id")
             )
             state["session_context"] = session_context
 
-            # EN
+            # Get enhanced context with interaction history
             enhanced_context = await self.context_manager.get_enhanced_context(
                 session_id=session_id, max_history=5, include_files=True
             )
@@ -231,7 +231,7 @@ class IntentClassificationWorkflow:
                 for file_ctx in session_context.uploaded_files
             ]
 
-            # EN
+            # Build enriched query context
             query_context = QueryContext(
                 session_id=session_id,
                 user_id=state.get("user_id"),
@@ -245,7 +245,7 @@ class IntentClassificationWorkflow:
             )
             state["query_context"] = query_context
 
-            # EN
+            # Record context enrichment metadata
             state["metadata"][
                 "context_enrichment_timestamp"
             ] = datetime.now().isoformat()
@@ -253,26 +253,26 @@ class IntentClassificationWorkflow:
                 "context_quality", "medium"
             )
 
-            logger.debug(f"EN,EN: {state['metadata']['context_quality']}")
+            logger.debug(f"Context enrichment complete, quality: {state['metadata']['context_quality']}")
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Context enrichment failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _intent_classification_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Classify user intent using the intent classifier."""
         try:
-            logger.info("EN")
+            logger.info("Starting intent classification")
 
-            # EN
+            # Classify the user query intent
             intent_result = await self.intent_classifier.classify_intent(
                 query=state["current_query"], context=state["query_context"]
             )
             state["intent_result"] = intent_result
 
-            # EN(EN,EN)
+            # Record the classification interaction (for tracking and analytics)
             await self._record_interaction(
                 session_id=state["session_id"],
                 user_query=state["current_query"],
@@ -281,13 +281,13 @@ class IntentClassificationWorkflow:
                     if hasattr(intent_result.intent, "value")
                     else str(intent_result.intent)
                 ),
-                agent_response="",  # ENAgentEN
+                agent_response="",  # Agent response not available yet at classification stage
                 confidence=intent_result.confidence,
                 processing_time_ms=intent_result.processing_time_ms,
                 success=True,
             )
 
-            # EN
+            # Record classification metadata
             state["metadata"]["classification_timestamp"] = datetime.now().isoformat()
             state["metadata"]["intent"] = (
                 intent_result.intent.value
@@ -297,19 +297,19 @@ class IntentClassificationWorkflow:
             state["metadata"]["confidence"] = intent_result.confidence
 
             logger.info(
-                f"EN: {intent_result.intent} (EN: {intent_result.confidence:.2f})"
+                f"Intent classified: {intent_result.intent} (confidence: {intent_result.confidence:.2f})"
             )
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Intent classification failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _confidence_evaluation_node(self, state: WorkflowState) -> WorkflowState:
         """P0: Evaluate intent confidence and track clarification rounds."""
         try:
-            logger.info("EN")
+            logger.info("Evaluating intent confidence")
 
             # P0: CRITICAL - Check max rounds BEFORE anything else to prevent recursion
             clarification_round = state.get("clarification_round", 0)
@@ -329,19 +329,19 @@ class IntentClassificationWorkflow:
 
             intent_result = state.get("intent_result")
             if not intent_result:
-                state["error"] = "EN"
+                state["error"] = "No intent classification result available"
                 return state
 
             confidence = intent_result.confidence
 
-            # EN
+            # Define confidence thresholds
             high_threshold = 0.8
             low_threshold = 0.5
 
             if confidence >= high_threshold:
                 state["clarification_needed"] = False
                 evaluation_result = "high_confidence"
-                logger.info("EN,EN")
+                logger.info("High confidence, proceeding to routing")
             elif confidence <= low_threshold:
                 # P0: Increment clarification round counter when entering clarification
                 state["clarification_round"] = clarification_round + 1
@@ -353,38 +353,38 @@ class IntentClassificationWorkflow:
                     MAX_CLARIFICATION_ROUNDS
                 )
             else:
-                # EN,EN
+                # Medium confidence, check uncertainty factors to decide
                 uncertainty_factors = intent_result.uncertainty_factors
                 if len(uncertainty_factors) > 2:
                     # P0: Increment clarification round counter when entering clarification
                     state["clarification_round"] = clarification_round + 1
                     state["clarification_needed"] = True
                     evaluation_result = "low_confidence"
-                    logger.info("EN,EN")
+                    logger.info("Multiple uncertainty factors detected, requesting clarification")
                 else:
                     state["clarification_needed"] = False
                     evaluation_result = "high_confidence"
-                    logger.info("EN,EN")
+                    logger.info("Few uncertainty factors, proceeding with current classification")
 
-            # EN
+            # Record evaluation metadata
             state["metadata"]["confidence_evaluation"] = evaluation_result
             state["metadata"]["uncertainty_factors"] = intent_result.uncertainty_factors
 
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Confidence evaluation failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _routing_decision_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Make agent routing decision based on classified intent."""
         try:
-            logger.info("EN")
+            logger.info("Making routing decision")
 
             intent_result = state["intent_result"]
 
-            # EN
+            # Build routing context
             routing_context = {
                 "session_id": state["session_id"],
                 "user_id": state.get("user_id"),
@@ -393,7 +393,7 @@ class IntentClassificationWorkflow:
                 "session_stage": state["session_context"].session_stage,
             }
 
-            # EN
+            # Execute routing decision
             routing_decision = await self.routing_engine.make_routing_decision(
                 intent_result=intent_result.to_dict(),
                 context=routing_context,
@@ -401,21 +401,21 @@ class IntentClassificationWorkflow:
             )
             state["routing_decision"] = routing_decision
 
-            # EN
+            # Record routing metadata
             state["metadata"]["routing_timestamp"] = datetime.now().isoformat()
             state["metadata"]["selected_agent"] = routing_decision.selected_agent.value
             state["metadata"]["routing_path"] = routing_decision.routing_path.value
 
-            logger.info(f"EN: {routing_decision.selected_agent.value}")
+            logger.info(f"Routing decision: {routing_decision.selected_agent.value}")
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Routing decision failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _prompt_preparation_node(self, state: WorkflowState) -> WorkflowState:
-        """PromptEN(ENAgentEN)"""
+        """Prepare system prompt via prompt manager (runs before agent dispatch)."""
         if not self.prompt_manager:
             state["metadata"]["prompt_status"] = "disabled"
             return state
@@ -456,15 +456,15 @@ class IntentClassificationWorkflow:
                 state["metadata"]["prompt_meta"] = state["prompt_meta"]
             return state
         except Exception as e:
-            logger.warning(f"PromptEN,EN: {e}")
+            logger.warning(f"Prompt preparation failed, continuing without managed prompt: {e}")
             state["metadata"]["prompt_status"] = "error"
             state["metadata"]["prompt_error"] = str(e)
             return state
 
     async def _clarification_needed_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Generate a clarification request when intent confidence is low."""
         try:
-            logger.info("EN")
+            logger.info("Generating clarification request")
 
             intent_result = state["intent_result"]
             routing_decision = state.get("routing_decision")
@@ -472,7 +472,7 @@ class IntentClassificationWorkflow:
             if routing_decision and routing_decision.clarification_context:
                 clarification_context = routing_decision.clarification_context
             else:
-                # EN
+                # Build default clarification context
                 clarification_context = {
                     "possible_intents": [
                         intent_result.intent.value
@@ -489,7 +489,7 @@ class IntentClassificationWorkflow:
                     },
                 }
 
-            # ENPromptEN,ENPrompt
+            # If prompt manager is available, use managed prompt for clarification
             if self.prompt_manager:
                 try:
                     prompt_info, prompt_content = await self.prompt_manager.get_prompt(
@@ -513,14 +513,14 @@ class IntentClassificationWorkflow:
                         },
                     )
 
-                    # ENLLMEN
+                    # Generate clarification using LLM with managed prompt
                     clarification_message = (
                         await self._generate_clarification_with_prompt(
                             prompt_content, clarification_context
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"ENPromptEN,EN: {str(e)}")
+                    logger.warning(f"Prompt-based clarification failed, using default: {str(e)}")
                     clarification_message = self._generate_default_clarification(
                         clarification_context
                     )
@@ -533,11 +533,11 @@ class IntentClassificationWorkflow:
             state["metadata"]["clarification_timestamp"] = datetime.now().isoformat()
             state["metadata"]["clarification_generated"] = True
 
-            logger.info("EN")
+            logger.info("Clarification request generated")
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Clarification generation failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
@@ -546,7 +546,7 @@ class IntentClassificationWorkflow:
     ) -> WorkflowState:
         """P0: Process clarification with max rounds escape hatch."""
         try:
-            logger.info("EN")
+            logger.info("Processing clarification response")
 
             # P0: CRITICAL CHECK - If max rounds reached, immediately force proceed
             clarification_round = state.get("clarification_round", 0)
@@ -566,18 +566,17 @@ class IntentClassificationWorkflow:
                 state["metadata"]["clarification_handled"] = False
                 return state
 
-            # EN,EN
-            # EN,EN
+            # Process the clarification response from the user.
+            # If no response yet, wait for user input.
 
-            # EN
+            # Check if clarification response exists
             clarification_response = state.get("clarification_response")
             if not clarification_response:
-                # EN,EN
+                # No clarification response yet, await user input
                 state["metadata"]["awaiting_user_clarification"] = True
                 return state
 
-            # EN
-            # EN,EN
+            # Check for user-provided clarification input
 
             # Check if the user actually provided new clarification input.
             # If so, enrich the current query and run a best-effort reclassification.
@@ -624,18 +623,18 @@ class IntentClassificationWorkflow:
                 return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Clarification processing failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _agent_dispatch_node(self, state: WorkflowState) -> WorkflowState:
-        """AgentEN"""
+        """Dispatch the query to the selected agent for execution."""
         try:
-            logger.info("ENAgentEN")
+            logger.info("Dispatching to agent for execution")
 
             routing_decision = state["routing_decision"]
 
-            # EN:EN,EN
+            # Dispatch to the appropriate agent based on routing decision
             agent_type = routing_decision.selected_agent
             dispatch_result = await self._dispatch_to_agent(
                 agent_type=agent_type,
@@ -656,7 +655,7 @@ class IntentClassificationWorkflow:
             state["metadata"]["agent_execution_status"] = "ok"
             state["metadata"]["agent_execution"] = dispatch_result.get("metadata", {})
 
-            # EN(EN,EN)
+            # Record the agent interaction (for session history and analytics)
             intent_result = state["intent_result"]
             await self._record_interaction(
                 session_id=state["session_id"],
@@ -672,23 +671,23 @@ class IntentClassificationWorkflow:
                 success=True,
             )
 
-            logger.info(f"AgentEN: {agent_type.value}")
+            logger.info(f"Agent dispatch complete: {agent_type.value}")
             return state
 
         except Exception as e:
-            logger.error(f"AgentEN: {str(e)}")
+            logger.error(f"Agent dispatch failed: {str(e)}")
             state["error"] = f"Agent execution error: {str(e)}"
             state["metadata"]["agent_execution_status"] = "error"
             state["metadata"]["agent_execution_error"] = str(e)
             return state
 
     async def _response_processing_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
+        """Process and finalize the agent response."""
         try:
-            logger.info("EN")
+            logger.info("Processing response")
 
             if state.get("error"):
-                # EN:EN.
+                # Error occurred: provide a user-friendly error response.
                 error_response = (
                     "I encountered an issue processing your request. "
                     "Please try rephrasing your question or try again later."
@@ -705,26 +704,26 @@ class IntentClassificationWorkflow:
                 state["error"] = "Agent returned empty response"
                 return state
 
-            # ENAIEN
+            # Append agent response as an AI message
             state["messages"].append(AIMessage(content=agent_response))
 
-            # EN
+            # Mark workflow as complete
             state["workflow_complete"] = True
             state["metadata"]["completion_timestamp"] = datetime.now().isoformat()
 
-            logger.info("EN")
+            logger.info("Response processing complete")
             return state
 
         except Exception as e:
-            logger.error(f"EN: {str(e)}")
+            logger.error(f"Response processing failed: {str(e)}")
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _error_handling_node(self, state: WorkflowState) -> WorkflowState:
-        """EN"""
-        logger.error(f"EN: {state.get('error', 'EN')}")
+        """Handle workflow errors and generate error response."""
+        logger.error(f"Workflow error: {state.get('error', 'Unknown error')}")
 
-        # EN
+        # Generate a user-friendly error message
         error_message = (
             "The workflow encountered an internal error and could not complete your request."
         )
@@ -1678,7 +1677,7 @@ class IntentClassificationWorkflow:
         prompt_meta: Optional[Dict[str, Any]] = None,
         route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """ENAgentEN,EN."""
+        """Dispatch query to the appropriate agent and return the result."""
         normalized_params = parameters if isinstance(parameters, dict) else {}
         if system_prompt:
             normalized_params["system_prompt"] = system_prompt
@@ -1722,16 +1721,16 @@ class IntentClassificationWorkflow:
         route_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        EN
+        Execute the full intent classification workflow.
 
         Args:
-            query: EN
-            session_id: ENID
-            user_id: ENID
-            thread_id: ENID(ENLangGraph)
+            query: User query string
+            session_id: Session identifier
+            user_id: User identifier
+            thread_id: Thread identifier (for LangGraph state persistence)
 
         Returns:
-            Dict[str, Any]: EN
+            Dict[str, Any]: Workflow execution result
         """
         try:
             # P0: Initialize clarification_round counter to prevent infinite loops
@@ -1762,17 +1761,17 @@ class IntentClassificationWorkflow:
                 },
             )
 
-            # EN
+            # Compile the workflow with memory checkpointer
             runnable_workflow = self.workflow.compile(checkpointer=self.memory)
 
-            # EN
+            # Execute the workflow
             config = {
                 "configurable": {"thread_id": thread_id or session_id},
-                "recursion_limit": settings.workflow_recursion_limit,  # P0 修复: 设置递归限制
+                "recursion_limit": settings.workflow_recursion_limit,  # P0 fix: set recursion limit
             }
             result = await runnable_workflow.ainvoke(initial_state, config=config)
 
-            # EN
+            # Extract and return the workflow result
             metadata = result.get("metadata") or {}
             if not isinstance(metadata, dict):
                 metadata = {}
@@ -1823,22 +1822,22 @@ class IntentClassificationWorkflow:
         self, user_response: str, session_id: str, thread_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        EN(EN)
+        Continue the workflow after user provides clarification input.
 
         Args:
-            user_response: EN
-            session_id: ENID
-            thread_id: ENID
+            user_response: User's clarification response
+            session_id: Session identifier
+            thread_id: Thread identifier
 
         Returns:
-            Dict[str, Any]: EN
+            Dict[str, Any]: Workflow continuation result
         """
         try:
-            # EN
+            # Compile workflow and restore from checkpoint
             runnable_workflow = self.workflow.compile(checkpointer=self.memory)
             config = {
                 "configurable": {"thread_id": thread_id or session_id},
-                "recursion_limit": settings.workflow_recursion_limit,  # P0 修复: 设置递归限制
+                "recursion_limit": settings.workflow_recursion_limit,  # P0 fix: set recursion limit
             }
 
             existing_metadata: Dict[str, Any] = {}
@@ -1886,7 +1885,7 @@ class IntentClassificationWorkflow:
                 }
             )
 
-            # EN
+            # Create continuation state with user's clarification
             state_update = WorkflowState(
                 messages=[HumanMessage(content=user_response)],
                 session_id=session_id,
@@ -1906,7 +1905,7 @@ class IntentClassificationWorkflow:
                 metadata=merged_metadata,
             )
 
-            # EN
+            # Execute the continued workflow
             result = await runnable_workflow.ainvoke(state_update, config=config)
 
             return {
@@ -1941,7 +1940,7 @@ class IntentClassificationWorkflow:
             }
 
     def get_workflow_stats(self) -> Dict[str, Any]:
-        """EN"""
+        """Return workflow statistics and component status."""
         routing_stats = self.routing_engine.get_routing_statistics()
 
         return {

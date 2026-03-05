@@ -1,6 +1,6 @@
 """
-PromptEN - ENPromptEN,EN,EN
-ENPromptEN,A/BEN,EN
+Prompt Manager - Versioned prompt management with template rendering and caching.
+Supports prompt CRUD, A/B experiment allocation, and usage analytics.
 """
 
 import asyncio
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class PromptStatus(Enum):
-    """PromptEN"""
+    """Prompt lifecycle status."""
 
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -31,7 +31,7 @@ class PromptStatus(Enum):
 
 
 class ExperimentStatus(Enum):
-    """EN"""
+    """A/B experiment lifecycle status."""
 
     ACTIVE = "active"
     PAUSED = "paused"
@@ -41,7 +41,7 @@ class ExperimentStatus(Enum):
 
 @dataclass
 class PromptVariable:
-    """PromptEN"""
+    """Definition of a template variable used in a prompt."""
 
     name: str
     type: str = "string"  # string, number, boolean, json
@@ -54,7 +54,7 @@ class PromptVariable:
 
 @dataclass
 class PromptInfo:
-    """PromptEN"""
+    """Complete prompt metadata and content."""
 
     id: uuid.UUID
     name: str
@@ -78,13 +78,13 @@ class PromptInfo:
 
     @property
     def success_rate(self) -> float:
-        """EN"""
+        """Calculate the success rate (successful uses / total uses)."""
         if self.usage_count == 0:
             return 0.0
         return self.success_count / self.usage_count
 
     def to_dict(self) -> Dict[str, Any]:
-        """EN"""
+        """Convert prompt info to a serializable dictionary."""
         data = asdict(self)
         data["variables"] = (
             [asdict(var) for var in self.variables] if self.variables else []
@@ -95,7 +95,7 @@ class PromptInfo:
 
 @dataclass
 class UsageLog:
-    """EN"""
+    """Prompt usage log entry for analytics and monitoring."""
 
     prompt_id: uuid.UUID
     session_id: Optional[str]
@@ -112,15 +112,15 @@ class UsageLog:
 
 
 class PromptManager:
-    """PromptEN - EN"""
+    """Prompt Manager - versioned prompt management with caching and A/B testing."""
 
     def __init__(self, db_pool: asyncpg.Pool, cache_ttl: int = 300):
         """
-        ENPromptEN
+        Initialize the prompt manager.
 
         Args:
-            db_pool: EN
-            cache_ttl: EN(EN)
+            db_pool: Database connection pool
+            cache_ttl: Cache time-to-live in seconds (default: 300)
         """
         self.db_pool = db_pool
         self.cache_ttl = cache_ttl
@@ -132,10 +132,10 @@ class PromptManager:
         )
         self._jinja_env.policies['ext.require_sandboxed'] = True
 
-        # EN
+        # Regex pattern for simple variable extraction
         self._variable_pattern = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
-        logger.info("PromptEN")
+        logger.info("Prompt manager initialized")
 
     async def get_prompt(
         self,
@@ -146,17 +146,17 @@ class PromptManager:
         enable_experiments: bool = True,
     ) -> Tuple[PromptInfo, str]:
         """
-        ENPromptEN
+        Retrieve and render a prompt template.
 
         Args:
-            name: PromptEN
-            category: PromptEN
-            context: EN,EN
-            variables: EN
-            enable_experiments: ENA/BEN
+            name: Prompt name
+            category: Prompt category
+            context: Optional context for experiment allocation
+            variables: Template variables for rendering
+            enable_experiments: Whether to use A/B experiment allocation
 
         Returns:
-            Tuple[PromptInfo, str]: (PromptEN, EN)
+            Tuple[PromptInfo, str]: (prompt metadata, rendered content)
         """
         cache_key = f"{category}:{name}"
 
@@ -165,11 +165,11 @@ class PromptManager:
         if not enable_experiments and cache_key in self._cache:
             prompt_info, cached_at = self._cache[cache_key]
             if datetime.now() - cached_at < timedelta(seconds=self.cache_ttl):
-                logger.debug(f"ENPrompt: {cache_key}")
+                logger.debug(f"Cache hit for prompt: {cache_key}")
                 rendered_content = self._render_template(prompt_info.content, variables)
                 return prompt_info, rendered_content
 
-        # ENPrompt
+        # Retrieve prompt from database
         if enable_experiments:
             prompt_info = await self._get_prompt_with_experiment(
                 name, category, context
@@ -178,40 +178,40 @@ class PromptManager:
             prompt_info = await self._get_best_prompt(name, category, context)
 
         if not prompt_info:
-            raise ValueError(f"ENPrompt: {category}/{name}")
+            raise ValueError(f"Prompt not found: {category}/{name}")
 
         # Only cache when NOT using experiments — experiment requests must go
         # through allocation logic each time to maintain correct traffic split.
         if not enable_experiments:
             self._cache[cache_key] = (prompt_info, datetime.now())
 
-        # EN
+        # Render the template with variables
         rendered_content = self._render_template(prompt_info.content, variables)
 
-        # EN(EN,EN)
+        # Record usage start asynchronously (non-blocking)
         asyncio.create_task(
             self._record_usage_start(prompt_info.id, context, variables)
         )
 
-        logger.info(f"ENPromptEN: {category}/{name} v{prompt_info.version}")
+        logger.info(f"Prompt retrieved and rendered: {category}/{name} v{prompt_info.version}")
         return prompt_info, rendered_content
 
     async def _get_best_prompt(
         self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
-        ENPromptEN
+        Get the best matching prompt by priority and performance score.
 
         Args:
-            name: PromptEN
-            category: PromptEN
-            context: EN
+            name: Prompt name
+            category: Prompt category
+            context: Optional context (reserved for future use)
 
         Returns:
-            PromptInfo: ENPromptEN
+            PromptInfo: Best matching prompt, or None if not found
         """
         async with self.db_pool.acquire() as conn:
-            # EN,EN
+            # Select prompt with highest priority and performance score
             query = """
                 SELECT p.*,
                        COALESCE(
@@ -238,18 +238,18 @@ class PromptManager:
         self, name: str, category: str, context: Optional[Dict[str, Any]] = None
     ) -> Optional[PromptInfo]:
         """
-        ENA/BENPrompt
+        Get prompt with A/B experiment allocation.
 
         Args:
-            name: PromptEN
-            category: PromptEN
-            context: EN
+            name: Prompt name
+            category: Prompt category
+            context: Optional context for experiment bucket allocation
 
         Returns:
-            PromptInfo: ENPromptEN
+            PromptInfo: Selected prompt (from experiment or fallback)
         """
         async with self.db_pool.acquire() as conn:
-            # ENA/BEN
+            # Check for active A/B experiments
             experiment_query = """
                 SELECT pe.*, pa.id as a_id, pb.id as b_id,
                        pa.performance_score as a_score, pb.performance_score as b_score
@@ -264,10 +264,10 @@ class PromptManager:
             experiment_row = await conn.fetchrow(experiment_query, name, category)
 
             if not experiment_row:
-                # EN,ENPrompt
+                # No active experiment, use best available prompt
                 return await self._get_best_prompt(name, category, context)
 
-            # A/BEN:EN,EN.
+            # A/B allocation: deterministic bucket assignment based on context.
             use_a = (
                 self._allocate_experiment_bucket(
                     name=name,
@@ -280,12 +280,12 @@ class PromptManager:
 
             selected_id = experiment_row["a_id"] if use_a else experiment_row["b_id"]
 
-            # EN
+            # Record experiment usage
             await self._record_experiment_usage(
                 experiment_row["id"], selected_id, context
             )
 
-            # ENPrompt
+            # Fetch the selected prompt
             prompt_query = """
                 SELECT p.*,
                        COALESCE(
@@ -304,51 +304,51 @@ class PromptManager:
             if prompt_row:
                 return self._row_to_prompt_info(prompt_row)
 
-            # EN:ENPrompt
+            # Fallback: use best available prompt
             return await self._get_best_prompt(name, category, context)
 
     def _render_template(
         self, template_content: str, variables: Optional[Dict[str, Any]]
     ) -> str:
         """
-        ENPromptEN
+        Render a prompt template with Jinja2.
 
         Args:
-            template_content: EN
-            variables: EN
+            template_content: Jinja2 template string
+            variables: Template variable values
 
         Returns:
-            str: EN
+            str: Rendered prompt content
         """
         if not variables:
             variables = {}
 
         try:
-            # ENJinja2EN
+            # Render using sandboxed Jinja2 environment
             template = self._jinja_env.from_string(template_content)
             rendered = template.render(**variables)
 
-            # EN
+            # Clean up excessive blank lines
             rendered = re.sub(r"\n\s*\n\s*\n", "\n\n", rendered)
             rendered = rendered.strip()
 
             return rendered
 
         except Exception as e:
-            logger.error(f"EN: {e}")
-            # EN
+            logger.error(f"Template rendering failed: {e}")
+            # Fallback to simple variable replacement
             return self._simple_variable_replace(template_content, variables)
 
     def _simple_variable_replace(self, content: str, variables: Dict[str, Any]) -> str:
         """
-        EN(EN)
+        Simple regex-based variable replacement (Jinja2 fallback).
 
         Args:
-            content: EN
-            variables: EN
+            content: Template content string
+            variables: Variable name-value mapping
 
         Returns:
-            str: EN
+            str: Content with variables replaced
         """
 
         def replace_match(match):
@@ -359,21 +359,21 @@ class PromptManager:
 
     def extract_variables(self, content: str) -> List[str]:
         """
-        EN
+        Extract template variable names from content.
 
         Args:
-            content: EN
+            content: Template content string
 
         Returns:
-            List[str]: EN
+            List[str]: Sorted list of unique variable names
         """
         try:
-            # ENJinja2EN
+            # Use Jinja2 AST to find undeclared variables
             ast = self._jinja_env.parse(content)
             variables = list(meta.find_undeclared_variables(ast))
             return sorted(set(variables))
         except Exception:
-            # EN
+            # Fallback to regex extraction
             matches = self._variable_pattern.findall(content)
             return sorted(set(matches))
 
@@ -391,36 +391,36 @@ class PromptManager:
         created_by: Optional[str] = None,
     ) -> PromptInfo:
         """
-        ENPrompt
+        Create a new prompt.
 
         Args:
-            name: PromptEN
-            category: PromptEN
-            content: PromptEN
-            subcategory: EN
-            version: EN
-            variables: EN
-            metadata: EN
-            priority: EN
-            tags: EN
-            created_by: EN
+            name: Prompt name
+            category: Prompt category
+            content: Prompt template content
+            subcategory: Optional subcategory
+            version: Version string (semver)
+            variables: Template variable definitions
+            metadata: Additional metadata
+            priority: Prompt priority (higher = preferred)
+            tags: List of tag names
+            created_by: Creator identifier
 
         Returns:
-            PromptInfo: ENPromptEN
+            PromptInfo: Created prompt metadata
         """
-        # EN
+        # Auto-extract variables from template if not provided
         if variables is None:
             extracted_vars = self.extract_variables(content)
             variables = [PromptVariable(name=var) for var in extracted_vars]
 
-        # EN
+        # Check for duplicate version
         existing = await self._get_prompt_by_version(name, category, version)
         if existing:
             raise ValueError(f"Prompt version already exists: {category}/{name} v{version}")
 
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
-                # ENPromptEN
+                # Generate new prompt ID and insert
                 prompt_id = uuid.uuid4()
 
                 insert_query = """
@@ -447,20 +447,20 @@ class PromptManager:
                     created_by,
                 )
 
-                # EN
+                # Add tags if provided
                 if tags:
                     await self._add_tags_to_prompt(conn, prompt_id, tags)
 
-                # EN
+                # Mark this version as the latest
                 await self._mark_as_latest_version(conn, name, category, prompt_id)
 
-                # EN
+                # Invalidate cache for this prompt
                 cache_key = f"{category}:{name}"
                 self._cache.pop(cache_key, None)
 
                 prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
-                logger.info(f"ENPromptEN: {category}/{name} v{version}")
+                logger.info(f"Prompt created: {category}/{name} v{version}")
                 return prompt_info
 
     async def update_prompt(
@@ -476,39 +476,39 @@ class PromptManager:
         create_new_version: bool = True,
     ) -> PromptInfo:
         """
-        ENPrompt
+        Update an existing prompt (optionally creating a new version).
 
         Args:
             prompt_id: Prompt ID
-            content: EN
-            variables: EN
-            metadata: EN
-            priority: EN
-            tags: EN
-            change_description: EN
-            updated_by: EN
-            create_new_version: EN
+            content: New prompt content
+            variables: Updated variable definitions
+            metadata: Updated metadata
+            priority: Updated priority
+            tags: Updated tag list
+            change_description: Description of changes
+            updated_by: Updater identifier
+            create_new_version: Whether to create a new version or update in-place
 
         Returns:
-            PromptInfo: ENPromptEN
+            PromptInfo: Updated prompt metadata
         """
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
-                # ENPrompt
+                # Fetch current prompt
                 current = await self._get_prompt_by_id(prompt_id)
                 if not current:
                     raise ValueError(f"Prompt not found: {prompt_id}")
 
                 if create_new_version:
-                    # EN
+                    # Increment version number
                     new_version = self._increment_version(current.version)
 
-                    # EN
+                    # Save current version to history
                     await self._save_version_to_history(
                         conn, current, change_description
                     )
 
-                    # EN
+                    # Determine variables for the new version
                     new_variables = variables or current.variables
                     if content:
                         new_variables = [
@@ -542,19 +542,19 @@ class PromptManager:
                         updated_by,
                     )
 
-                    # EN
+                    # Mark as latest version
                     await self._mark_as_latest_version(
                         conn, current.name, current.category, new_prompt_id
                     )
 
-                    # EN
+                    # Update tags if provided
                     if tags is not None:
                         await self._update_prompt_tags(conn, new_prompt_id, tags)
 
                     prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
                 else:
-                    # EN
+                    # Update in-place without creating new version
                     update_fields = []
                     update_values = []
                     param_count = 1
@@ -597,25 +597,25 @@ class PromptManager:
 
                     row = await conn.fetchrow(update_query, *update_values)
 
-                    # EN
+                    # Update tags if provided
                     if tags is not None:
                         await self._update_prompt_tags(conn, prompt_id, tags)
 
                     prompt_info = self._row_to_prompt_info_with_tags(row, tags)
 
-                # EN
+                # Invalidate cache
                 cache_key = f"{prompt_info.category}:{prompt_info.name}"
                 self._cache.pop(cache_key, None)
 
-                logger.info(f"ENPromptEN: {prompt_info.category}/{prompt_info.name}")
+                logger.info(f"Prompt updated: {prompt_info.category}/{prompt_info.name}")
                 return prompt_info
 
     async def record_usage_log(self, log: UsageLog) -> None:
         """
-        ENPromptEN
+        Record a prompt usage log entry.
 
         Args:
-            log: EN
+            log: Usage log data
         """
         async with self.db_pool.acquire() as conn:
             insert_query = """
@@ -645,13 +645,13 @@ class PromptManager:
 
     async def get_prompt_performance(self, prompt_id: uuid.UUID) -> Dict[str, Any]:
         """
-        ENPromptEN
+        Get prompt performance metrics.
 
         Args:
             prompt_id: Prompt ID
 
         Returns:
-            Dict[str, Any]: EN
+            Dict[str, Any]: Performance statistics
         """
         async with self.db_pool.acquire() as conn:
             query = """
@@ -708,12 +708,12 @@ class PromptManager:
         top_limit: int = 10,
     ) -> Dict[str, Any]:
         """
-        ENPromptEN(EN).
+        Get prompt usage summary metrics (aggregated).
 
         Args:
-            days: EN
-            category: EN
-            top_limit: ENPromptEN
+            days: Number of days to look back
+            category: Optional category filter
+            top_limit: Maximum number of top prompts to return
         """
         days = max(1, int(days))
         top_limit = max(1, int(top_limit))
@@ -862,7 +862,7 @@ class PromptManager:
         metrics: Optional[Dict[str, Any]] = None,
         created_by: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """ENPrompt A/BEN."""
+        """Create a new prompt A/B experiment."""
         if prompt_a_id == prompt_b_id:
             raise ValueError("prompt_a_id and prompt_b_id must be different")
         if traffic_split <= 0 or traffic_split >= 1:
@@ -919,7 +919,7 @@ class PromptManager:
         limit: int = 20,
         offset: int = 0,
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """EN."""
+        """List experiments with optional filtering."""
         limit = max(1, int(limit))
         offset = max(0, int(offset))
 
@@ -964,7 +964,7 @@ class PromptManager:
         return [self._experiment_row_to_dict(row) for row in rows], total
 
     async def get_experiment(self, experiment_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        """EN."""
+        """Get experiment by ID."""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT
@@ -985,7 +985,7 @@ class PromptManager:
     async def update_experiment_traffic(
         self, experiment_id: uuid.UUID, traffic_split: float
     ) -> Optional[Dict[str, Any]]:
-        """EN."""
+        """Update experiment traffic split ratio."""
         if traffic_split <= 0 or traffic_split >= 1:
             raise ValueError("traffic_split must be between 0 and 1")
 
@@ -1004,7 +1004,7 @@ class PromptManager:
     async def update_experiment_status(
         self, experiment_id: uuid.UUID, status: str
     ) -> Optional[Dict[str, Any]]:
-        """EN."""
+        """Update experiment status."""
         normalized = status.lower().strip()
         self._validate_experiment_status(normalized)
 
@@ -1020,11 +1020,11 @@ class PromptManager:
 
         return self._experiment_row_to_dict(row) if row else None
 
-    # EN...
+    # Internal helper methods
     async def _get_prompt_by_version(
         self, name: str, category: str, version: str
     ) -> Optional[PromptInfo]:
-        """ENPrompt"""
+        """Get a prompt by name, category, and version."""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT p.*,
@@ -1044,7 +1044,7 @@ class PromptManager:
             return self._row_to_prompt_info_with_tags(row, []) if row else None
 
     async def _get_prompt_by_id(self, prompt_id: uuid.UUID) -> Optional[PromptInfo]:
-        """ENIDENPrompt"""
+        """Get a prompt by its ID."""
         async with self.db_pool.acquire() as conn:
             query = """
                 SELECT p.*,
@@ -1066,8 +1066,8 @@ class PromptManager:
     async def _mark_as_latest_version(
         self, conn, name: str, category: str, prompt_id: uuid.UUID
     ) -> None:
-        """EN"""
-        # ENname-categoryENlatestEN
+        """Mark a prompt version as the latest for its name-category pair."""
+        # Unset latest flag for all other versions of the same name-category
         await conn.execute(
             """
             UPDATE prompts
@@ -1079,7 +1079,7 @@ class PromptManager:
             prompt_id,
         )
 
-        # ENlatest
+        # Set this prompt as latest
         await conn.execute(
             "UPDATE prompts SET is_latest = true WHERE id = $1", prompt_id
         )
@@ -1087,7 +1087,7 @@ class PromptManager:
     async def _save_version_to_history(
         self, conn, prompt_info: PromptInfo, description: Optional[str]
     ) -> None:
-        """EN"""
+        """Save the current prompt version to version history."""
         await conn.execute(
             """
             INSERT INTO prompt_versions (
@@ -1114,7 +1114,7 @@ class PromptManager:
         )
 
     def _increment_version(self, current_version: str) -> str:
-        """EN"""
+        """Increment the patch version number (e.g. 1.0.0 -> 1.0.1)."""
         try:
             parts = current_version.split(".")
             if len(parts) == 3:
@@ -1128,9 +1128,9 @@ class PromptManager:
     async def _add_tags_to_prompt(
         self, conn, prompt_id: uuid.UUID, tags: List[str]
     ) -> None:
-        """ENPromptEN"""
+        """Add tags to a prompt, creating tag entries if needed."""
         for tag_name in tags:
-            # EN
+            # Create tag if it doesn't exist
             await conn.execute(
                 """
                 INSERT INTO prompt_tags (name) VALUES ($1)
@@ -1139,7 +1139,7 @@ class PromptManager:
                 tag_name,
             )
 
-            # EN
+            # Link tag to prompt
             await conn.execute(
                 """
                 INSERT INTO prompt_tag_relations (prompt_id, tag_id)
@@ -1153,18 +1153,18 @@ class PromptManager:
     async def _update_prompt_tags(
         self, conn, prompt_id: uuid.UUID, tags: List[str]
     ) -> None:
-        """ENPromptEN"""
-        # EN
+        """Replace all tags on a prompt."""
+        # Remove existing tags
         await conn.execute(
             "DELETE FROM prompt_tag_relations WHERE prompt_id = $1", prompt_id
         )
 
-        # EN
+        # Add new tags
         if tags:
             await self._add_tags_to_prompt(conn, prompt_id, tags)
 
     def _row_to_prompt_info(self, row) -> PromptInfo:
-        """ENPromptInfo"""
+        """Convert a database row to a PromptInfo instance."""
         variables_data = json.loads(row["variables"]) if row["variables"] else []
         variables = [PromptVariable(**var_data) for var_data in variables_data]
 
@@ -1193,7 +1193,7 @@ class PromptManager:
         )
 
     def _row_to_prompt_info_with_tags(self, row, tags: List[str] = None) -> PromptInfo:
-        """ENPromptInfo(EN)"""
+        """Convert a database row to a PromptInfo instance (with tags)."""
         prompt_info = self._row_to_prompt_info(row)
 
         if tags:
@@ -1206,8 +1206,8 @@ class PromptManager:
     async def _record_usage_start(
         self, prompt_id: uuid.UUID, context: Optional[Dict], variables: Optional[Dict]
     ) -> None:
-        """EN(EN)"""
-        # EN
+        """Record prompt usage start (placeholder for future implementation)."""
+        # Placeholder for usage start tracking
         pass
 
     async def _record_experiment_usage(
@@ -1216,14 +1216,14 @@ class PromptManager:
         selected_prompt_id: uuid.UUID,
         context: Optional[Dict],
     ) -> None:
-        """EN"""
-        # EN
+        """Record experiment prompt allocation (placeholder for future implementation)."""
+        # Placeholder for experiment usage tracking
         pass
 
     async def clear_cache(
         self, category: Optional[str] = None, name: Optional[str] = None
     ):
-        """EN"""
+        """Clear prompt cache, optionally for a specific prompt."""
         if category and name:
             cache_key = f"{category}:{name}"
             self._cache.pop(cache_key, None)
@@ -1231,7 +1231,7 @@ class PromptManager:
             self._cache.clear()
 
     async def get_cache_stats(self) -> Dict[str, Any]:
-        """EN"""
+        """Return cache statistics."""
         return {
             "cache_size": len(self._cache),
             "cache_ttl": self.cache_ttl,
@@ -1239,7 +1239,7 @@ class PromptManager:
         }
 
     async def health_check(self) -> Dict[str, Any]:
-        """EN"""
+        """Check prompt manager health (database connectivity)."""
         try:
             async with self.db_pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
@@ -1289,7 +1289,7 @@ class PromptManager:
         return f"{category}:{name}:{identity}"
 
     def _experiment_row_to_dict(self, row: Any) -> Dict[str, Any]:
-        """EN."""
+        """Convert an experiment database row to a serializable dictionary."""
         if not row:
             return {}
         metrics = row["metrics"] if "metrics" in row else {}

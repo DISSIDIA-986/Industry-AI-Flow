@@ -1,11 +1,11 @@
 """
-EN
+Database Connection Pool
 
-EN,ENPrompt APIENWorkflowEN.
-ENprompt_routesEN.
+Provides async connection pool for Prompt API and Workflow database operations.
+Used by prompt_routes and other database-dependent modules.
 
-EN: 2026-02-09
-EN: research/architecture/rag-workflow-implementation-details.md
+Created: 2026-02-09
+Reference: research/architecture/rag-workflow-implementation-details.md
 """
 
 import asyncpg
@@ -19,13 +19,13 @@ _db_pool = None
 
 async def get_database_pool() -> asyncpg.Pool:
     """
-    EN(EN)
+    Get or create the shared async database connection pool (lazy singleton).
 
     Returns:
-        asyncpg.Pool: EN
+        asyncpg.Pool: Shared connection pool instance
 
     Raises:
-        Exception: EN
+        Exception: If pool creation fails due to connection or configuration errors
     """
     global _db_pool
 
@@ -43,7 +43,7 @@ async def get_database_pool() -> asyncpg.Pool:
 
 
 async def close_database_pool():
-    """EN"""
+    """Close the shared database connection pool and release all connections."""
     global _db_pool
 
     if _db_pool:

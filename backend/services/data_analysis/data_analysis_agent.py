@@ -1,6 +1,6 @@
 """
-ENAgent - ENCSV/ExcelEN
-ENCodeExecutorEN,EN
+Data Analysis Agent - Analyzes CSV/Excel datasets via LLM-generated code.
+Uses CodeExecutor for sandboxed execution and returns results with visualizations.
 """
 
 import json
@@ -28,14 +28,14 @@ code_executor: Any | None = None
 
 
 class DataAnalysisAgent:
-    """ENAgent - EN"""
+    """Data Analysis Agent - generates and executes code to analyze datasets."""
 
     def __init__(self, llm_client: Optional[Any] = None):
         """
-        ENAgent
+        Initialize the Data Analysis Agent.
 
         Args:
-            llm_client: LLMEN,EN
+            llm_client: LLM client instance, auto-created if not provided
         """
         if llm_client is not None:
             self.llm_client = llm_client
@@ -63,18 +63,18 @@ class DataAnalysisAgent:
         dataset_metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        EN
+        Analyze a dataset to answer the user's question.
 
         Args:
-            question: EN
-            data_file_path: EN
-            dataset_metadata: EN(EN,EN)
+            question: User's analysis question
+            data_file_path: Path to the data file
+            dataset_metadata: Pre-extracted metadata (optional, extracted automatically if missing)
 
         Returns:
-            DictENanswer,code,visualizationsEN
+            Dict containing answer, code, visualizations, and execution details
         """
         try:
-            # 1. EN
+            # 1. Validate file exists
             if not os.path.exists(data_file_path):
                 return {
                     "success": False,
@@ -82,7 +82,7 @@ class DataAnalysisAgent:
                     "answer": "The dataset could not be located. Please verify the file path and retry.",
                 }
 
-            # 2. EN
+            # 2. Extract dataset metadata
             if not dataset_metadata:
                 dataset_metadata = self._extract_dataset_info(data_file_path)
             if isinstance(dataset_metadata, dict) and dataset_metadata.get("error"):
@@ -92,7 +92,7 @@ class DataAnalysisAgent:
                     "answer": dataset_metadata.get("error", "Failed to extract dataset metadata."),
                 }
 
-            # 3. EN
+            # 3. Generate analysis code
             analysis_code = self._generate_analysis_code(
                 question, data_file_path, dataset_metadata
             )
@@ -115,7 +115,7 @@ class DataAnalysisAgent:
                     "answer": "The generated analysis code did not pass security validation.",
                 }
 
-            # 4. EN
+            # 4. Execute code in sandbox
             if not self.code_execution_manager and not self.code_executor:
                 return {
                     "success": False,
@@ -135,7 +135,7 @@ class DataAnalysisAgent:
                     code=analysis_code, data_files=[data_file_path], timeout=30
                 )
 
-            # 5. EN
+            # 5. Process execution results
             if execution_result["success"]:
                 answer = self._parse_execution_output(
                     execution_result["stdout"], question, dataset_metadata
@@ -151,7 +151,7 @@ class DataAnalysisAgent:
                     "dataset_info": dataset_metadata,
                 }
             else:
-                # EN,EN
+                # Execution failed, generate fallback answer from metadata
                 fallback_answer = self._generate_fallback_answer(
                     question, dataset_metadata, execution_result.get("stderr", "")
                 )
@@ -177,16 +177,16 @@ class DataAnalysisAgent:
 
     def _extract_dataset_info(self, file_path: str) -> Dict[str, Any]:
         """
-        EN
+        Extract metadata from a dataset file (columns, types, statistics).
 
         Args:
-            file_path: EN
+            file_path: Path to the data file
 
         Returns:
-            EN
+            Dict with dataset metadata (columns, rows, statistics)
         """
         try:
-            # EN
+            # Load data file
             if file_path.endswith(".csv"):
                 df = None
                 for enc in ("utf-8", "utf-8-sig", "latin-1"):
@@ -204,7 +204,7 @@ class DataAnalysisAgent:
             else:
                 return {"error": "Unsupported data file format."}
 
-            # EN
+            # Build column metadata
             columns_info = []
             for col in df.columns:
                 col_type = str(df[col].dtype)
@@ -236,10 +236,10 @@ class DataAnalysisAgent:
                         }
                     )
 
-                # EN
+                # Categorical column statistics
                 elif df[col].dtype == "object":
                     unique_count = df[col].nunique()
-                    if unique_count <= 20:  # EN
+                    if unique_count <= 20:  # Low cardinality - include value counts
                         value_counts = df[col].value_counts().to_dict()
                         col_info.update(
                             {
@@ -263,24 +263,24 @@ class DataAnalysisAgent:
             }
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Failed to extract dataset metadata: {e}")
             return {"error": str(e)}
 
     def _generate_analysis_code(
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> Optional[str]:
         """
-        ENLLMEN
+        Use LLM to generate Python analysis code.
 
         Args:
-            question: EN
-            data_file_path: EN
-            dataset_metadata: EN
+            question: User's analysis question
+            data_file_path: Path to the data file
+            dataset_metadata: Extracted dataset metadata
 
         Returns:
-            ENPythonEN
+            Generated Python code string
         """
-        # ENPrompt
+        # Build the code generation prompt
         prompt = self._build_code_generation_prompt(
             question, data_file_path, dataset_metadata
         )
@@ -290,19 +290,19 @@ class DataAnalysisAgent:
             return self._generate_template_code(question, data_file_path, dataset_metadata)
 
         try:
-            # ENLLMEN
+            # Call LLM to generate analysis code
             llm_response = self.llm_client.generate(
-                prompt, temperature=0.1, max_tokens=1000  # EN
+                prompt, temperature=0.1, max_tokens=1000  # Low temperature for deterministic code
             )
 
-            # EN
+            # Extract code block from response
             code = self._extract_code_from_response(llm_response)
 
             return code
 
         except Exception as e:
-            logger.error(f"EN: {e}")
-            # EN:EN
+            logger.error(f"LLM code generation failed: {e}")
+            # Fallback: use template-based code generation
             return self._generate_template_code(
                 question, data_file_path, dataset_metadata
             )
@@ -310,7 +310,7 @@ class DataAnalysisAgent:
     def _build_code_generation_prompt(
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> str:
-        """ENPrompt"""
+        """Build the code generation prompt for the LLM."""
         clean_question = question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
         columns_desc = "\n".join(
             [
@@ -357,8 +357,8 @@ print("Analysis results: ...")
 Return ONLY Python code. Wrap the code in ```python and ``` markers."""
 
     def _extract_code_from_response(self, response: str) -> Optional[str]:
-        """ENLLMEN"""
-        # EN
+        """Extract Python code block from LLM response."""
+        # Try to find fenced code block
         code_pattern = r"```[Pp]ython[ \t]*\r?\n(.*?)```"
         matches = re.findall(code_pattern, response, re.DOTALL)
 

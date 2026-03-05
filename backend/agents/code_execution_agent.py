@@ -1,4 +1,4 @@
-"""EN Agent - EN LangChain 1.0 EN"""
+"""Iterative Code Execution Agent - self-healing code execution with LangChain 1.0."""
 
 import asyncio
 import json
@@ -34,7 +34,7 @@ class _FallbackAsyncLLM:
 
 @dataclass
 class ExecutionAttempt:
-    """EN"""
+    """Record of a single code execution attempt and its outcome."""
 
     attempt_id: str
     code: str
@@ -55,7 +55,7 @@ class ExecutionAttempt:
 
 
 class CodeExecutionState(TypedDict):
-    """EN"""
+    """State for the iterative code execution pipeline."""
 
     original_request: str
     current_code: str
@@ -68,7 +68,7 @@ class CodeExecutionState(TypedDict):
 
 
 class IterativeExecutionCallback(BaseCallbackHandler):
-    """EN"""
+    """Callback handler that tracks execution events and analyzes error patterns."""
 
     def __init__(self):
         self.execution_log = []
@@ -76,7 +76,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         self.fix_strategies = {}
 
     def on_agent_action(self, action, **kwargs):
-        """Agent EN"""
+        """Log an agent action event."""
         self.execution_log.append(
             {
                 "type": "agent_action",
@@ -86,7 +86,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_start(self, serialized, input_str, **kwargs):
-        """EN"""
+        """Log a tool invocation start event."""
         self.execution_log.append(
             {
                 "type": "tool_start",
@@ -97,7 +97,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_end(self, output, **kwargs):
-        """EN"""
+        """Log a tool completion event."""
         self.execution_log.append(
             {
                 "type": "tool_end",
@@ -109,7 +109,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
         )
 
     def on_tool_error(self, error, **kwargs):
-        """EN"""
+        """Log a tool error event."""
         self.execution_log.append(
             {
                 "type": "tool_error",
@@ -118,14 +118,14 @@ class IterativeExecutionCallback(BaseCallbackHandler):
             }
         )
 
-        # EN
+        # Analyze the error pattern for automatic fix strategies
         self._analyze_error_pattern(error)
 
     def _analyze_error_pattern(self, error):
-        """EN"""
+        """Classify error patterns and map them to fix strategies."""
         error_str = str(error).lower()
 
-        # EN
+        # Classify error by type
         if "import" in error_str and "no module" in error_str:
             self.error_patterns["missing_import"] = (
                 self.error_patterns.get("missing_import", 0) + 1
@@ -166,7 +166,7 @@ class IterativeExecutionCallback(BaseCallbackHandler):
 
 
 class CodeFixer:
-    """EN"""
+    """Applies template-based automatic fixes to failed code."""
 
     def __init__(self):
         self.fix_templates = {
@@ -179,7 +179,7 @@ class CodeFixer:
                 "plotly": "import plotly.express as px",
             },
             "fix_syntax": [
-                # EN
+                # Common syntax fix patterns: (keyword, prefix, suffix)
                 ("print", "print(", ")"),
                 ("return", "return ", ""),
                 ("def ", "def ", "(self):"),
@@ -188,27 +188,27 @@ class CodeFixer:
                 ("while ", "while ", ":"),
             ],
             "define_variable": {
-                # EN
+                # Default variable definitions
                 "df": "df = pd.DataFrame()",
                 "data": "data = []",
                 "result": "result = None",
                 "fig": "fig, ax = plt.subplots()",
             },
             "fix_indexing": {
-                # EN
-                "out_of_bounds": "EN len(df) - 1 EN",
-                "negative_index": "EN",
-                "iloc_loc": "EN df.iloc EN",
+                # Index error fix hints
+                "out_of_bounds": "Clamp index to len(df) - 1 maximum",
+                "negative_index": "Convert negative index to positive equivalent",
+                "iloc_loc": "Use df.iloc for integer-based indexing",
             },
             "fix_type_conversion": {
-                # EN
+                # Type conversion helpers
                 "str_to_int": "int()",
                 "str_to_float": "float()",
                 "list_to_series": "pd.Series()",
                 "series_to_list": ".tolist()",
             },
             "fix_file_path": {
-                # EN
+                # File path correction mappings
                 "workspace": "/workspace/data/",
                 "relative": "./data/",
                 "absolute": "/tmp/luncheon_data/",
@@ -219,15 +219,15 @@ class CodeFixer:
         self, code: str, error_message: str, fix_strategy: str
     ) -> tuple[str, List[str]]:
         """
-        EN
+        Apply an automatic fix to the code based on the error and strategy.
 
         Args:
-            code: EN
-            error_message: EN
-            fix_strategy: EN
+            code: The original source code that failed.
+            error_message: The error message from execution.
+            fix_strategy: The fix strategy identifier to apply.
 
         Returns:
-            EN
+            A tuple of (fixed_code, list_of_fixes_applied).
         """
         fixes_applied = []
 
@@ -254,99 +254,99 @@ class CodeFixer:
                 return code, fixes_applied
 
         except Exception as e:
-            logger.warning(f"EN: {e}")
+            logger.warning(f"Code fix failed: {e}")
             return code, fixes_applied
 
     def _fix_missing_imports(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Fix missing import errors by prepending the required import statement."""
         error_lower = error_message.lower()
         fixed_code = code
 
-        # EN
+        # Check each known module against the error message
         for module, import_statement in self.fix_templates[
             "add_import_statement"
         ].items():
             if module in error_lower and module not in code.lower():
-                # EN
+                # Prepend the missing import
                 fixed_code = f"{import_statement}\n\n{fixed_code}"
-                fixes_applied.append(f"EN: {import_statement}")
+                fixes_applied.append(f"Added import: {import_statement}")
 
         return fixed_code, fixes_applied
 
     def _fix_syntax_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Attempt to fix syntax errors using pattern matching."""
         fixed_code = code
 
-        # EN
+        # Try each syntax fix pattern
         for pattern, prefix, suffix in self.fix_templates["fix_syntax"]:
             if pattern in error_message.lower():
-                # EN
-                fixes_applied.append(f"EN: {pattern}")
+                # Apply syntax fix for the matched pattern
+                fixes_applied.append(f"Applied syntax fix for: {pattern}")
 
         return fixed_code, fixes_applied
 
     def _fix_undefined_variables(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Fix undefined variable errors by inserting default definitions."""
         fixed_code = code
         error_lower = error_message.lower()
 
-        # EN
+        # Check each known variable pattern
         for var_name, var_definition in self.fix_templates["define_variable"].items():
             if f"'{var_name}'" in error_lower and var_name not in code:
-                # EN
+                # Insert variable definition after imports
                 lines = code.split("\n")
                 insert_index = 0
 
-                # EN(EN)
+                # Skip past import statements (insert after them)
                 for i, line in enumerate(lines):
                     if line.strip().startswith(("import", "from")) or not line.strip():
                         continue
                     insert_index = i
                     break
 
-                lines.insert(insert_index, f"# EN {var_name}\n{var_definition}\n")
+                lines.insert(insert_index, f"# Auto-defined {var_name}\n{var_definition}\n")
                 fixed_code = "\n".join(lines)
-                fixes_applied.append(f"EN: {var_name}")
+                fixes_applied.append(f"Defined variable: {var_name}")
 
         return fixed_code, fixes_applied
 
     def _fix_index_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Fix index out-of-range errors."""
         fixed_code = code
-        fixes_applied.append("EN")
+        fixes_applied.append("Suggested index bounds check")
 
-        # EN
-        # EN,ENilocEN
+        # Note: full automatic index fix requires AST analysis
+        # For now, recommend using iloc with bounds checking
 
         return fixed_code, fixes_applied
 
     def _fix_type_errors(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Fix type conversion errors."""
         fixed_code = code
-        fixes_applied.append("EN")
+        fixes_applied.append("Suggested type conversion fix")
 
-        # EN
+        # Note: full automatic type fix requires runtime type inference
 
         return fixed_code, fixes_applied
 
     def _fix_file_paths(
         self, code: str, error_message: str, fixes_applied: List[str]
     ) -> tuple[str, List[str]]:
-        """EN"""
+        """Fix file path errors by remapping to the sandbox workspace."""
         fixed_code = code
-        fixes_applied.append("EN")
+        fixes_applied.append("Remapped file paths to workspace")
 
-        # EN
+        # Apply known path corrections
         path_mappings = {
             "./data/": "/workspace/data/",
             "../data/": "/workspace/data/",
@@ -357,20 +357,20 @@ class CodeFixer:
         for wrong_path, correct_path in path_mappings.items():
             if wrong_path in fixed_code:
                 fixed_code = fixed_code.replace(wrong_path, correct_path)
-                fixes_applied.append(f"EN: {wrong_path} -> {correct_path}")
+                fixes_applied.append(f"Remapped path: {wrong_path} -> {correct_path}")
 
         return fixed_code, fixes_applied
 
 
 class IterativeCodeExecutionAgent:
-    """EN Agent"""
+    """Agent that executes code iteratively with automatic error recovery."""
 
     def __init__(self, max_attempts: int = 5):
         """
-        EN Agent
+        Initialize the iterative code execution agent.
 
         Args:
-            max_attempts: EN
+            max_attempts: Maximum number of execution attempts before giving up.
         """
         self.max_attempts = max_attempts
         self.callback_handler = IterativeExecutionCallback()
@@ -379,7 +379,7 @@ class IterativeCodeExecutionAgent:
         self.logger = logging.getLogger(__name__)
 
     def _get_llm(self):
-        """EN LLM EN"""
+        """Get the LLM instance for code generation and error analysis."""
         from backend.config import settings
 
         if settings.llm_provider == "zhipu":
@@ -422,23 +422,23 @@ class IterativeCodeExecutionAgent:
         context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        EN,EN
+        Execute code iteratively with automatic error recovery.
 
         Args:
-            original_request: EN
-            initial_code: EN(EN)
-            data_file: EN(EN)
-            context: EN(EN)
+            original_request: The user's original analysis request.
+            initial_code: Pre-written code to execute (optional).
+            data_file: Path to the data file (optional).
+            context: Additional context for code generation (optional).
 
         Returns:
-            EN,EN:
-            - success: EN
-            - final_code: EN
-            - attempts: EN
-            - execution_result: EN
-            - summary: EN
+            A dict containing:
+            - success: Whether execution succeeded.
+            - final_code: The final version of the code.
+            - attempts: Number of attempts made.
+            - execution_result: Output from the last execution.
+            - summary: Execution summary with error counts.
         """
-        # EN
+        # Initialize execution state
         state = CodeExecutionState(
             original_request=original_request,
             current_code=initial_code or "",
@@ -450,13 +450,13 @@ class IterativeCodeExecutionAgent:
             is_completed=False,
         )
 
-        # EN,EN
+        # Generate initial code if none provided
         if not state["current_code"]:
             state["current_code"] = await self._generate_initial_code(
                 original_request, data_file, context
             )
 
-        # EN
+        # Iterative execution loop
         while (
             state["current_attempt"] < state["max_attempts"]
             and not state["is_completed"]
@@ -464,22 +464,22 @@ class IterativeCodeExecutionAgent:
             state["current_attempt"] += 1
 
             self.logger.info(
-                f"EN {state['current_attempt']}/{state['max_attempts']}"
+                f"Execution attempt {state['current_attempt']}/{state['max_attempts']}"
             )
 
-            # EN
+            # Execute the current code
             attempt_result = await self._execute_code_attempt(state, data_file)
             state["attempts"].append(attempt_result)
 
             if attempt_result.success:
                 state["is_completed"] = True
-                self.logger.info("EN!")
+                self.logger.info("Code execution succeeded!")
             else:
-                # EN
+                # Analyze error and attempt to fix the code
                 fixed_code = await self._analyze_and_fix_code(state, attempt_result)
                 state["current_code"] = fixed_code
 
-        # EN
+        # Generate the final result summary
         return self._generate_final_result(state)
 
     async def _generate_initial_code(
@@ -488,30 +488,30 @@ class IterativeCodeExecutionAgent:
         data_file: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """EN"""
+        """Generate initial Python code from the user's request using the LLM."""
         prompt = f"""
-EN,EN Python EN:
+Based on the following request, generate Python code to accomplish the task:
 
-EN: {request}
+Request: {request}
 
-EN: {data_file if data_file else 'EN'}
+Data file: {data_file if data_file else 'No data file specified'}
 
-EN: {json.dumps(context, ensure_ascii=False) if context else 'EN'}
+Context: {json.dumps(context, ensure_ascii=False) if context else 'No additional context'}
 
-EN Python EN,EN:
-1. EN
-2. EN
-3. EN
-4. EN
+Write clean, well-documented Python code that:
+1. Loads and validates the data
+2. Performs the requested analysis
+3. Generates visualizations if applicable
+4. Prints a summary of results
 
-EN:
-- EN
-- EN
-- EN
-- EN
+Requirements:
+- Use pandas for data manipulation
+- Handle missing values gracefully
+- Include error handling
+- Add comments explaining each step
 """
 
-        messages = [("system", "EN,EN Python EN."), ("human", prompt)]
+        messages = [("system", "You are a Python code generation assistant. Write clean, executable Python code."), ("human", prompt)]
 
         response = await self.llm.ainvoke(messages)
         return response.content
@@ -519,14 +519,14 @@ EN:
     async def _execute_code_attempt(
         self, state: CodeExecutionState, data_file: Optional[str] = None
     ) -> ExecutionAttempt:
-        """EN"""
+        """Execute the current code and return the attempt result."""
         attempt_id = f"attempt_{state['current_attempt']}"
 
-        # EN
+        # Prepare data files for the sandbox
         data_files = [data_file] if data_file else None
 
         try:
-            # EN
+            # Execute code in the sandbox
             executor = get_code_executor()
             if executor is None:
                 raise RuntimeError("Code executor unavailable: Docker is not running")
@@ -564,15 +564,15 @@ EN:
     async def _analyze_and_fix_code(
         self, state: CodeExecutionState, failed_attempt: ExecutionAttempt
     ) -> str:
-        """EN"""
-        self.logger.info(f"EN: {failed_attempt.error_message}")
+        """Analyze the failed attempt and generate fixed code."""
+        self.logger.info(f"Analyzing error: {failed_attempt.error_message}")
 
-        # EN LLM EN
+        # Use LLM to analyze the error
         analysis_result = await self._analyze_error_with_llm(
             failed_attempt.code, failed_attempt.error_message, failed_attempt.stderr
         )
 
-        # EN
+        # Apply automatic fixes based on the analysis
         fixed_code = await self._apply_automatic_fixes(
             failed_attempt.code, failed_attempt.error_message, analysis_result
         )
@@ -582,55 +582,55 @@ EN:
     async def _analyze_error_with_llm(
         self, code: str, error_message: str, stderr: str
     ) -> Dict[str, Any]:
-        """EN LLM EN"""
+        """Use the LLM to analyze a code execution error and suggest fixes."""
         prompt = f"""
-EN Python EN:
+Analyze the following Python code execution error:
 
-EN:
+Code:
 ```python
 {code}
 ```
 
-EN:
+Error message:
 {error_message}
 
-EN:
+Stderr output:
 {stderr}
 
-EN:
-1. EN
-2. EN
-3. EN
-4. EN
+Please:
+1. Identify the error type
+2. Determine the root cause
+3. Suggest specific fixes
+4. Provide corrected code snippets
 
-EN JSON EN:
+Return your analysis as JSON:
 {{
-    "error_type": "EN",
-    "root_cause": "EN",
-    "fix_suggestions": ["EN1", "EN2"],
+    "error_type": "error category",
+    "root_cause": "explanation of why the error occurred",
+    "fix_suggestions": ["fix suggestion 1", "fix suggestion 2"],
     "missing_imports": ["import1", "import2"],
     "code_changes": [
         {{
-            "line": EN,
-            "original": "EN",
-            "fixed": "EN"
+            "line": 0,
+            "original": "original code",
+            "fixed": "corrected code"
         }}
     ]
 }}
 """
 
-        messages = [("system", "EN Python EN,EN."), ("human", prompt)]
+        messages = [("system", "You are a Python debugging expert. Analyze errors and suggest precise fixes."), ("human", prompt)]
 
         try:
             response = await self.llm.ainvoke(messages)
-            # EN JSON EN
+            # Parse the JSON response from the LLM
             return json.loads(response.content)
         except:
-            # EN,EN
+            # Fallback when LLM response cannot be parsed
             return {
                 "error_type": "unknown",
-                "root_cause": "EN",
-                "fix_suggestions": ["EN"],
+                "root_cause": "Unable to determine root cause",
+                "fix_suggestions": ["Review the error message manually"],
                 "missing_imports": [],
                 "code_changes": [],
             }
@@ -638,21 +638,21 @@ EN JSON EN:
     async def _apply_automatic_fixes(
         self, code: str, error_message: str, analysis_result: Dict[str, Any]
     ) -> str:
-        """EN"""
+        """Apply automatic fixes based on LLM analysis and template-based strategies."""
         fixed_code = code
         fixes_applied = []
 
-        # EN LLM EN
+        # Extract fix suggestions from LLM analysis
         fix_suggestions = analysis_result.get("fix_suggestions", [])
         missing_imports = analysis_result.get("missing_imports", [])
 
-        # EN
+        # Add missing imports
         for import_stmt in missing_imports:
             if import_stmt not in fixed_code:
                 fixed_code = f"{import_stmt}\n{fixed_code}"
-                fixes_applied.append(f"EN: {import_stmt}")
+                fixes_applied.append(f"Added import: {import_stmt}")
 
-        # EN
+        # Apply line-level code changes
         code_changes = analysis_result.get("code_changes", [])
         for change in code_changes:
             line_num = change.get("line", 0)
@@ -663,12 +663,12 @@ EN JSON EN:
             if 0 <= line_num < len(lines):
                 if original in lines[line_num]:
                     lines[line_num] = lines[line_num].replace(original, fixed)
-                    fixes_applied.append(f"EN{line_num}EN: {original} -> {fixed}")
+                    fixes_applied.append(f"Fixed line {line_num}: {original} -> {fixed}")
 
             fixed_code = "\n".join(lines)
 
-        # EN
-        if fixes_applied:  # EN LLM EN,EN
+        # Apply template-based fixes as a fallback
+        if fixes_applied:  # If LLM fixes were applied, also try template fixes
             error_type = analysis_result.get("error_type", "").lower()
             fix_strategy = self.callback_handler.fix_strategies.get(error_type, "")
 
@@ -678,11 +678,11 @@ EN JSON EN:
                 )
                 fixes_applied.extend(auto_fixes)
 
-        self.logger.info(f"EN {len(fixes_applied)} EN")
+        self.logger.info(f"Applied {len(fixes_applied)} fixes")
         return fixed_code
 
     def _generate_final_result(self, state: CodeExecutionState) -> Dict[str, Any]:
-        """EN"""
+        """Generate the final execution result summary."""
         successful_attempt = None
         failed_attempts = []
 
@@ -733,12 +733,12 @@ EN JSON EN:
             }
 
     def _count_fixes_applied(self, attempts: List[ExecutionAttempt]) -> int:
-        """EN"""
+        """Count the total number of fixes applied across all retry attempts."""
         total_fixes = 0
-        for attempt in attempts[1:]:  # EN
+        for attempt in attempts[1:]:  # Skip the first attempt (no fixes yet)
             total_fixes += len(attempt.fixes_applied or [])
         return total_fixes
 
 
-# EN
+# Module-level singleton instance
 iterative_code_agent = IterativeCodeExecutionAgent()

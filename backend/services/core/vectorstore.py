@@ -20,9 +20,9 @@ class VectorStore:
             VectorStore._indexes_ready = True
 
     def get_connection(self):
-        """EN"""
+        """Get a new database connection."""
         conn = connect_db(self.database_url)
-        # EN pgvector,EN
+        # Register pgvector extension for vector operations
         register_pgvector(conn)
         return conn
 
@@ -55,7 +55,7 @@ class VectorStore:
             # Do not crash app if indexes cannot be created
             import logging
 
-            logging.getLogger(__name__).warning("EN: %s", exc)
+            logging.getLogger(__name__).warning("Failed to create database indexes: %s", exc)
         finally:
             if "cur" in locals():
                 cur.close()
@@ -69,14 +69,14 @@ class VectorStore:
         chunks: list[str],
         embeddings: list[list[float]],
     ) -> str:
-        """EN"""
+        """Store a document and its chunks with embeddings."""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
         query_type = "store_document"
 
         try:
-            # 1. EN
+            # 1. Insert document record
             doc_id = str(uuid.uuid4())
             cur.execute(
                 """
@@ -86,7 +86,7 @@ class VectorStore:
                 (doc_id, filename, filepath, len(chunks)),
             )
 
-            # 2. EN
+            # 2. Insert chunk records with embeddings
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 cur.execute(
                     """
@@ -122,14 +122,14 @@ class VectorStore:
     def similarity_search(
         self, query_embedding: list[float], top_k: int = 3
     ) -> list[dict]:
-        """EN(ENpgvectorEN)"""
+        """Perform vector similarity search (using pgvector cosine distance)."""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
         query_type = "similarity_search"
 
         try:
-            # EN pgvector EN
+            # Check if pgvector extension is available
             cur.execute(
                 """
                 SELECT EXISTS(
@@ -159,7 +159,7 @@ class VectorStore:
                     (embedding_str, top_k),
                 )
             else:
-                # EN Python EN(EN TEXT)
+                # Fallback: Python-based cosine similarity (embeddings stored as TEXT)
                 cur.execute(
                     """
                     SELECT
@@ -174,7 +174,7 @@ class VectorStore:
                 """
                 )
 
-                # EN
+                # Compute similarity in Python
                 import numpy as np
                 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -182,15 +182,15 @@ class VectorStore:
                 query_vec = np.array(query_embedding).reshape(1, -1)
 
                 for row in cur.fetchall():
-                    # EN(PostgreSQL EN {x,y,z})
+                    # Parse embedding string (PostgreSQL array format {x,y,z})
                     embedding_str = row[3]
                     if embedding_str.startswith("{") and embedding_str.endswith("}"):
-                        # PostgreSQL EN
-                        embedding_str = embedding_str[1:-1]  # EN {}
+                        # Strip PostgreSQL array braces
+                        embedding_str = embedding_str[1:-1]  # Remove {}
                     stored_embedding = [float(x) for x in embedding_str.split(",")]
                     stored_vec = np.array(stored_embedding).reshape(1, -1)
 
-                    # EN(EN)
+                    # Calculate cosine similarity (convert to distance)
                     similarity = cosine_similarity(query_vec, stored_vec)[0][0]
                     distance = 1 - similarity
 
@@ -204,7 +204,7 @@ class VectorStore:
                         }
                     )
 
-                # EN top_k
+                # Sort by distance and return top_k
                 all_results.sort(key=lambda x: x["distance"])
                 return all_results[:top_k]
 
@@ -228,7 +228,7 @@ class VectorStore:
             self._record_duration(query_type, start_time)
 
     def get_document_count(self) -> int:
-        """EN"""
+        """Get the total number of stored documents."""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
@@ -242,7 +242,7 @@ class VectorStore:
             self._record_duration("documents_count", start_time)
 
     def get_chunk_count(self) -> int:
-        """EN"""
+        """Get the total number of stored document chunks."""
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()

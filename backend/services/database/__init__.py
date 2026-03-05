@@ -1,9 +1,9 @@
 """
-EN
+Database Module
 
-EN.
+Provides async database connection pool management.
 
-EN: 2026-02-09
+Created: 2026-02-09
 """
 
 from backend.services.database.pool import get_database_pool, close_database_pool

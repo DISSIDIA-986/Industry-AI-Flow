@@ -15,7 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
-# ENAPIEN
+# API route imports
 from backend.api.auth_routes import router as auth_router
 from backend.api.cost_estimation_routes import router as cost_estimation_router
 from backend.api.demo_mode_routes import router as demo_mode_router
@@ -24,7 +24,7 @@ from backend.api.enhanced_query_routes import router as enhanced_query_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
-from backend.api.prompt_routes import router as prompt_router  # P0EN:ENPromptEN
+from backend.api.prompt_routes import router as prompt_router  # P0: Prompt management routes
 from backend.api.workflow_query_routes import (
     router as workflow_query_router,  # Phase 2 scaffold
 )
@@ -42,11 +42,11 @@ from backend.services.database.driver_compat import fetchall_dicts
 from backend.services.language_policy import ensure_rag_english_query
 from backend.services.security import persist_temp_file, validate_and_buffer_upload
 
-# EN
+# Initialize logging
 configure_logging()
 logger = logging.getLogger(__name__)
 
-# EN
+# Load application settings
 try:
     from backend.config import settings
 except ImportError:
@@ -60,7 +60,7 @@ ALLOWED_UPLOAD_EXTENSIONS = (
 MAX_UPLOAD_BYTES = settings.max_upload_size_bytes if settings else 10 * 1024 * 1024
 TEMP_DATA_ROOT = settings.temp_data_dir if settings else "/tmp/luncheon_data"
 
-# EN,EN
+# Global singletons with thread-safe lazy initialization
 rag_engine = None
 unified_orchestrator = None
 code_executor = None
@@ -624,7 +624,7 @@ register_error_handlers(app)
 if settings and settings.enable_metrics:
     setup_metrics(app)
 
-# ENAPIEN
+# Register API routers
 app.include_router(feedback_router, prefix="/api/v1", tags=["feedback"])
 app.include_router(
     document_management_router, prefix="/api/v1", tags=["document-management"]
@@ -632,14 +632,14 @@ app.include_router(
 app.include_router(enhanced_query_router, prefix="/api/v1", tags=["enhanced-query"])
 app.include_router(auth_router)
 app.include_router(cost_estimation_router)
-app.include_router(llm_dispatch_router)  # llm_dispatch_routesENprefix
-app.include_router(llm_cost_router)  # llm_cost_routesENprefix
+app.include_router(llm_dispatch_router)  # llm_dispatch_routes has no prefix
+app.include_router(llm_cost_router)  # llm_cost_routes has no prefix
 app.include_router(demo_mode_router)
 # prompt_routes already has prefix "/api/prompts", avoid double-prefixing to "/api/v1/api/prompts".
-app.include_router(prompt_router, tags=["prompts"])  # P0EN:ENPromptEN
+app.include_router(prompt_router, tags=["prompts"])  # P0: Prompt management routes
 app.include_router(workflow_query_router)
 
-# RAGENlazy loadingEN
+# RAG engine uses lazy loading for initialization
 
 
 class QueryRequest(BaseModel):
@@ -1009,7 +1009,6 @@ async def upload_data_file(
             "filename": file.filename,
             "file_id": safe_name,
             "sanitized_filename": safe_name,
-            "file_path": file_path,
             "size": len(content),
             "file_type": os.path.splitext(file.filename)[1].lower(),
             "message": "Data file uploaded successfully.",

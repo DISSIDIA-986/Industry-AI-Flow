@@ -1,4 +1,4 @@
-"""EN - EN"""
+"""Data File Transfer - Transfers data files for Docker container access."""
 
 import logging
 import os
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataFileTransferError(Exception):
-    """EN"""
+    """Exception raised when data file transfer fails."""
 
     pass
 
@@ -73,49 +73,49 @@ def _resolve_allowed_source_file(file_path: str) -> Path:
 
 
 class DataFileTransfer:
-    """EN"""
+    """Handles transferring user data files to Docker containers via file mapping or database."""
 
     def __init__(self):
-        """EN"""
+        """Initialize the data file transfer service."""
         self.temp_dir = Path(settings.temp_data_dir)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
-        # EN
+        # Database engine for database transfer method
         self.db_engine = None
         try:
             if create_engine and settings.postgres_host and settings.postgres_db:
                 self.db_engine = create_engine(settings.database_url)
-                logger.info("EN")
+                logger.info("Database engine initialized for data transfer")
         except Exception as e:
-            logger.warning(f"EN: {e}")
+            logger.warning(f"Database engine initialization failed: {e}")
 
     def transfer_file_for_docker(
         self, file_path: str, transfer_method: str = "auto"
     ) -> Dict[str, Any]:
         """
-        EN Docker EN
+        Transfer a data file for Docker container access.
 
         Args:
-            file_path: EN
-            transfer_method: EN:'file_mapping', 'database', 'auto'
+            file_path: Path to the source data file.
+            transfer_method: Transfer method: 'file_mapping', 'database', or 'auto'.
 
         Returns:
-            EN,EN:
-            - success: EN
-            - method: EN
-            - transferred_path: EN/EN
-            - file_info: EN
-            - metadata: EN
+            Transfer result dictionary containing:
+            - success: Whether transfer succeeded.
+            - method: Transfer method used.
+            - transferred_path: Path or table name in target environment.
+            - file_info: File metadata.
+            - metadata: Additional transfer metadata.
         """
         file_info: Optional[Dict[str, Any]] = None
 
         try:
             safe_file_path = _resolve_allowed_source_file(file_path)
 
-            # EN
+            # Get file metadata
             file_info = self._get_file_info(str(safe_file_path))
 
-            # EN
+            # Auto-select transfer method if needed
             if transfer_method == "auto":
                 transfer_method = self._choose_transfer_method(file_info)
 
@@ -127,7 +127,7 @@ class DataFileTransfer:
                 raise DataFileTransferError(f"Unsupported transfer method: {transfer_method}")
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"File transfer failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -136,37 +136,37 @@ class DataFileTransfer:
             }
 
     def _choose_transfer_method(self, file_info: Dict[str, Any]) -> str:
-        """EN"""
+        """Choose the optimal transfer method based on file size and type."""
         file_size = file_info.get("size_bytes", 0)
 
-        # EN(<50MB)EN
+        # Small files (<50MB) use file mapping
         if file_size < 50 * 1024 * 1024:
             return "file_mapping"
 
-        # EN
+        # Structured data formats use database transfer
         if file_info.get("extension") in [".csv", ".xlsx", ".xls", ".json", ".parquet"]:
             return "database"
 
-        # EN
+        # Default to file mapping
         return "file_mapping"
 
     def _file_mapping_transfer(
         self, file_path: str, file_info: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """EN"""
+        """Transfer a file via file system mapping (copy to temp directory)."""
         try:
-            # EN
+            # Create temporary directory for this transfer
             temp_id = f"data_{uuid.uuid4().hex[:8]}"
             temp_dir = self.temp_dir / temp_id
             temp_dir.mkdir(parents=True, exist_ok=True)
 
-            # EN
+            # Copy file to temp location
             file_name = os.path.basename(file_path)
             temp_file_path = temp_dir / file_name
 
             shutil.copy2(file_path, temp_file_path)
 
-            logger.info(f"EN: {file_path} -> {temp_file_path}")
+            logger.info(f"File mapped: {file_path} -> {temp_file_path}")
 
             return {
                 "success": True,
@@ -188,18 +188,18 @@ class DataFileTransfer:
     def _database_transfer(
         self, file_path: str, file_info: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """EN"""
+        """Transfer data to the database as a temporary table."""
         if not self.db_engine:
-            raise DataFileTransferError("EN")
+            raise DataFileTransferError("Database engine not available for data transfer")
 
         try:
-            # EN
+            # Create temporary table name
             table_name = f"temp_data_{uuid.uuid4().hex[:8]}"
 
-            # EN
+            # Read file into DataFrame
             df = self._read_file_to_dataframe(file_path, file_info)
 
-            # EN
+            # Write to database
             df.to_sql(
                 table_name,
                 con=self.db_engine,
@@ -209,7 +209,7 @@ class DataFileTransfer:
                 chunksize=1000,
             )
 
-            # EN
+            # Generate database access config file
             config_id = f"db_config_{uuid.uuid4().hex[:8]}"
             config_content = self._create_db_config(table_name, file_info)
 
@@ -219,7 +219,7 @@ class DataFileTransfer:
 
                 json.dump(config_content, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"EN: {file_path} -> {table_name}")
+            logger.info(f"Database transfer complete: {file_path} -> {table_name}")
 
             return {
                 "success": True,
@@ -241,7 +241,7 @@ class DataFileTransfer:
             raise DataFileTransferError(f"Data transfer failed: {e}")
 
     def _get_file_info(self, file_path: str) -> Dict[str, Any]:
-        """EN"""
+        """Get file metadata information."""
         path = Path(file_path)
         stat = path.stat()
 
@@ -258,12 +258,12 @@ class DataFileTransfer:
     def _read_file_to_dataframe(
         self, file_path: str, file_info: Dict[str, Any]
     ) -> pd.DataFrame:
-        """EN DataFrame"""
+        """Read a file into a pandas DataFrame."""
         extension = file_info["extension"]
 
         try:
             if extension == ".csv":
-                # EN
+                # Auto-detect encoding with BOM support
                 df = pd.read_csv(file_path, encoding="utf-8-sig")
             elif extension in [".xlsx", ".xls"]:
                 df = pd.read_excel(file_path)
@@ -272,11 +272,11 @@ class DataFileTransfer:
             elif extension == ".parquet":
                 df = pd.read_parquet(file_path)
             else:
-                # EN CSV EN
-                logger.warning(f"EN {extension},EN CSV EN")
+                # Unknown format, attempt CSV parsing as fallback
+                logger.warning(f"Unknown extension {extension}, attempting CSV parsing")
                 df = pd.read_csv(file_path, encoding="utf-8-sig")
 
-            # EN
+            # Basic data cleaning
             df = self._basic_data_cleaning(df)
 
             return df
@@ -285,17 +285,17 @@ class DataFileTransfer:
             raise DataFileTransferError(f"Data transfer failed: {e}")
 
     def _basic_data_cleaning(self, df: pd.DataFrame) -> pd.DataFrame:
-        """EN"""
-        # EN
+        """Perform basic data cleaning on a DataFrame."""
+        # Work on a copy
         df_clean = df.copy()
 
-        # EN(EN,EN)
+        # Normalize column names (strip whitespace, replace spaces/hyphens with underscores)
         df_clean.columns = [
             str(col).strip().replace(" ", "_").replace("-", "_")
             for col in df_clean.columns
         ]
 
-        # EN
+        # Remove duplicate rows
         df_clean.drop_duplicates(inplace=True)
 
         return df_clean
@@ -303,7 +303,7 @@ class DataFileTransfer:
     def _create_db_config(
         self, table_name: str, file_info: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """EN"""
+        """Create a database access configuration file for the container."""
         return {
             "connection": {
                 "host": settings.postgres_host,
@@ -339,7 +339,7 @@ class DataFileTransfer:
     def create_container_access_script(
         self, transfer_result: Dict[str, Any], script_name: str = "access_data.py"
     ) -> str:
-        """EN"""
+        """Generate a Python script for accessing transferred data inside the container."""
         if transfer_result["method"] == "file_mapping":
             return self._create_file_access_script(transfer_result, script_name)
         elif transfer_result["method"] == "database":
@@ -350,31 +350,31 @@ class DataFileTransfer:
     def _create_file_access_script(
         self, transfer_result: Dict[str, Any], script_name: str
     ) -> str:
-        """EN"""
+        """Generate a file-based data access script for the container."""
         container_path = transfer_result["container_path"]
         file_info = transfer_result["file_info"]
 
         script_content = f"""
-# EN - EN
+# Auto-generated data access script - File mapping method
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 
-# EN
+# Data file configuration
 data_path = "{container_path}"
 file_name = "{file_info['name']}"
 file_extension = "{file_info['extension']}"
 
-# EN
+# Verify file exists
 if not Path(data_path).exists():
-    print(f"EN:EN - {{data_path}}")
+    print(f"Error: File not found - {{data_path}}")
     exit(1)
 
-print(f"EN: {{file_name}}")
+print(f"Loading file: {{file_name}}")
 
-# EN
+# Load data
 try:
     if file_extension == '.csv':
         df = pd.read_csv(data_path, encoding='utf-8-sig')
@@ -383,21 +383,21 @@ try:
     elif file_extension == '.json':
         df = pd.read_json(data_path, orient='records')
     else:
-        # EN CSV EN
+        # Fallback: attempt CSV parsing
         df = pd.read_csv(data_path, encoding='utf-8-sig')
 
-    print(f"EN!EN: {{df.shape}}")
-    print("\\nEN:")
+    print(f"Loaded successfully! Shape: {{df.shape}}")
+    print("\\nData info:")
     print(df.info())
-    print("\\nEN:")
+    print("\\nStatistics:")
     print(df.describe())
 
-    # EN
+    # Save processed data
     df.to_csv('/workspace/output/loaded_data.csv', index=False)
-    print("\\nEN: /workspace/output/loaded_data.csv")
+    print("\\nSaved to: /workspace/output/loaded_data.csv")
 
 except Exception as e:
-    print(f"EN: {{e}}")
+    print(f"Error loading data: {{e}}")
     exit(1)
 """
 
@@ -406,12 +406,12 @@ except Exception as e:
     def _create_database_access_script(
         self, transfer_result: Dict[str, Any], script_name: str
     ) -> str:
-        """EN"""
+        """Generate a database-based data access script for the container."""
         config_file = transfer_result["config_file"]
         table_name = transfer_result["transferred_path"]
 
         script_content = f"""
-# EN - EN
+# Auto-generated data access script - Database method
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -420,17 +420,17 @@ from sqlalchemy import create_engine
 import json
 import os
 
-# EN
+# Load database configuration
 config_path = "{config_file.replace(str(self.temp_dir), '/workspace/data')}"
 if not Path(config_path).exists():
-    print(f"EN:EN - {{config_path}}")
+    print(f"Error: Config not found - {{config_path}}")
     exit(1)
 
 try:
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
 
-    # EN
+    # Build connection string
     conn_info = config['connection']
     connection_string = (
         f"postgresql://{{conn_info['user']}}:{{conn_info['password']}}"
@@ -439,46 +439,46 @@ try:
 
     engine = create_engine(connection_string)
 
-    # EN
+    # Load data from table
     table_name = "{table_name}"
-    print(f"EN: {{table_name}}")
+    print(f"Loading table: {{table_name}}")
 
     df = pd.read_sql(f"SELECT * FROM {{table_name}}", engine)
-    print(f"EN!EN: {{df.shape}}")
+    print(f"Loaded successfully! Shape: {{df.shape}}")
 
-    print("\\nEN:")
+    print("\\nData info:")
     print(df.info())
-    print("\\nEN:")
+    print("\\nStatistics:")
     print(df.describe())
 
-    # EN
+    # Save processed data
     df.to_csv('/workspace/output/loaded_data.csv', index=False)
-    print("\\nEN: /workspace/output/loaded_data.csv")
+    print("\\nSaved to: /workspace/output/loaded_data.csv")
 
-    # EN
+    # Clean up connection
     engine.dispose()
 
 except Exception as e:
-    print(f"EN: {{e}}")
+    print(f"Error loading data: {{e}}")
     exit(1)
 """
 
         return script_content
 
     def cleanup_transferred_data(self, transfer_result: Dict[str, Any]) -> bool:
-        """EN"""
+        """Clean up transferred data (temp files or temp database tables)."""
         try:
             if transfer_result["method"] == "file_mapping":
-                # EN
+                # Remove temporary directory
                 temp_id = transfer_result.get("temp_id")
                 if temp_id:
                     temp_dir = self.temp_dir / temp_id
                     if temp_dir.exists():
                         shutil.rmtree(temp_dir)
-                        logger.info(f"EN: {temp_dir}")
+                        logger.info(f"Cleaned up temp directory: {temp_dir}")
 
             elif transfer_result["method"] == "database":
-                # EN
+                # Drop temporary table
                 if self.db_engine and text is not None:
                     table_name = transfer_result.get("transferred_path")
                     if table_name and re.match(r"^temp_data_[0-9a-f]{8}$", table_name):
@@ -487,25 +487,25 @@ except Exception as e:
                                 text("DROP TABLE IF EXISTS " + table_name)
                             )
                             conn.commit()
-                            logger.info(f"EN: {table_name}")
+                            logger.info(f"Dropped temp table: {table_name}")
                     elif table_name:
                         logger.warning(
                             "Refused to drop table with unexpected name: %s",
                             table_name,
                         )
 
-                # EN
+                # Remove config file
                 config_file = transfer_result.get("config_file")
                 if config_file and os.path.exists(config_file):
                     os.remove(config_file)
-                    logger.info(f"EN: {config_file}")
+                    logger.info(f"Removed config file: {config_file}")
 
             return True
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Cleanup failed: {e}")
             return False
 
 
-# EN
+# Global data transfer instance
 data_transfer = DataFileTransfer()

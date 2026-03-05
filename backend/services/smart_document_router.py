@@ -1,10 +1,10 @@
 """
-EN - EN
+Smart Document Router - Automatically routes documents to the appropriate processing pipeline.
 
-EN:
-1. CSV/ExcelEN → ENAgent + CodeExecutor
-2. PDF/TXTEN → RAGEN
-3. EN/EN → OCREN → RAGEN
+Routing rules:
+1. CSV/Excel (structured data) -> Data Analysis Agent + CodeExecutor
+2. PDF/TXT (text documents) -> RAG retrieval pipeline
+3. Images (scanned documents) -> OCR processing -> RAG pipeline
 """
 
 import logging
@@ -17,54 +17,54 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentType(Enum):
-    """EN"""
+    """Document type classification."""
 
-    STRUCTURED_DATA = "structured_data"  # CSV, Excel - EN
-    TEXT_DOCUMENT = "text_document"  # PDF, TXT, DOCX - ENRAG
-    IMAGE_DOCUMENT = "image_document"  # JPG, PNG - ENOCR
-    CODE_FILE = "code_file"  # PY, JS - EN
-    UNKNOWN = "unknown"  # EN
+    STRUCTURED_DATA = "structured_data"  # CSV, Excel - for data analysis
+    TEXT_DOCUMENT = "text_document"  # PDF, TXT, DOCX - for RAG retrieval
+    IMAGE_DOCUMENT = "image_document"  # JPG, PNG - requires OCR
+    CODE_FILE = "code_file"  # PY, JS - code files
+    UNKNOWN = "unknown"  # Unsupported format
 
 
 class ProcessingStrategy(Enum):
-    """EN"""
+    """Document processing strategy."""
 
-    DATA_ANALYSIS = "data_analysis"  # ENAgent
-    RAG_RETRIEVAL = "rag_retrieval"  # RAGEN
-    OCR_PROCESSING = "ocr_processing"  # OCREN
-    HYBRID = "hybrid"  # EN
-    UNSUPPORTED = "unsupported"  # EN
+    DATA_ANALYSIS = "data_analysis"  # Route to Data Analysis Agent
+    RAG_RETRIEVAL = "rag_retrieval"  # Route to RAG pipeline
+    OCR_PROCESSING = "ocr_processing"  # Route to OCR processing
+    HYBRID = "hybrid"  # Combined processing
+    UNSUPPORTED = "unsupported"  # Format not supported
 
 
 class SmartDocumentRouter:
-    """EN"""
+    """Routes documents to appropriate processing pipelines based on file type."""
 
     def __init__(self):
-        """EN"""
-        # EN
+        """Initialize the smart document router with extension and strategy mappings."""
+        # File extension to document type mapping
         self.extension_mapping = {
-            # EN
+            # Structured data formats
             ".csv": DocumentType.STRUCTURED_DATA,
             ".xlsx": DocumentType.STRUCTURED_DATA,
             ".xls": DocumentType.STRUCTURED_DATA,
             ".tsv": DocumentType.STRUCTURED_DATA,
             ".parquet": DocumentType.STRUCTURED_DATA,
             ".json": DocumentType.STRUCTURED_DATA,
-            # EN
+            # Text document formats
             ".pdf": DocumentType.TEXT_DOCUMENT,
             ".txt": DocumentType.TEXT_DOCUMENT,
             ".md": DocumentType.TEXT_DOCUMENT,
             ".doc": DocumentType.TEXT_DOCUMENT,
             ".docx": DocumentType.TEXT_DOCUMENT,
             ".rtf": DocumentType.TEXT_DOCUMENT,
-            # EN
+            # Image formats
             ".jpg": DocumentType.IMAGE_DOCUMENT,
             ".jpeg": DocumentType.IMAGE_DOCUMENT,
             ".png": DocumentType.IMAGE_DOCUMENT,
             ".bmp": DocumentType.IMAGE_DOCUMENT,
             ".tiff": DocumentType.IMAGE_DOCUMENT,
             ".gif": DocumentType.IMAGE_DOCUMENT,
-            # EN
+            # Code file formats
             ".py": DocumentType.CODE_FILE,
             ".js": DocumentType.CODE_FILE,
             ".java": DocumentType.CODE_FILE,
@@ -72,47 +72,47 @@ class SmartDocumentRouter:
             ".c": DocumentType.CODE_FILE,
         }
 
-        # EN
+        # Document type to processing strategy mapping
         self.strategy_mapping = {
             DocumentType.STRUCTURED_DATA: ProcessingStrategy.DATA_ANALYSIS,
             DocumentType.TEXT_DOCUMENT: ProcessingStrategy.RAG_RETRIEVAL,
             DocumentType.IMAGE_DOCUMENT: ProcessingStrategy.OCR_PROCESSING,
-            DocumentType.CODE_FILE: ProcessingStrategy.RAG_RETRIEVAL,  # ENRAG
+            DocumentType.CODE_FILE: ProcessingStrategy.RAG_RETRIEVAL,  # Code files use RAG
             DocumentType.UNKNOWN: ProcessingStrategy.UNSUPPORTED,
         }
 
-        logger.info("EN")
+        logger.info("Smart document router initialized")
 
     def route_document(self, file_path: Union[str, Path]) -> Dict[str, Any]:
         """
-        EN
+        Route a document to the appropriate processing pipeline.
 
         Args:
-            file_path: EN
+            file_path: Path to the document file.
 
         Returns:
-            DictEN:
-            - document_type: EN
-            - processing_strategy: EN
-            - recommended_agent: ENAgent
-            - metadata: EN
-            - rationale: EN
+            Routing result dictionary containing:
+            - document_type: Identified document type.
+            - processing_strategy: Recommended processing strategy.
+            - recommended_agent: Recommended agent for processing.
+            - metadata: File metadata.
+            - rationale: Explanation of the routing decision.
         """
         file_path = Path(file_path)
 
-        # 1. EN
+        # 1. Identify document type
         doc_type = self._identify_document_type(file_path)
 
-        # 2. EN
+        # 2. Determine processing strategy
         strategy = self.strategy_mapping.get(doc_type, ProcessingStrategy.UNSUPPORTED)
 
-        # 3. ENAgent
+        # 3. Recommend agent
         recommended_agent = self._recommend_agent(doc_type, strategy)
 
-        # 4. EN
+        # 4. Collect metadata
         metadata = self._collect_metadata(file_path, doc_type)
 
-        # 5. EN
+        # 5. Generate rationale
         rationale = self._generate_rationale(doc_type, strategy, metadata)
 
         routing_result = {
@@ -129,8 +129,8 @@ class SmartDocumentRouter:
         }
 
         logger.info(
-            f"EN: {file_path.name} → {strategy.value} "
-            f"(EN: {doc_type.value}, Agent: {recommended_agent})"
+            f"Document routed: {file_path.name} -> {strategy.value} "
+            f"(type: {doc_type.value}, Agent: {recommended_agent})"
         )
 
         return routing_result
@@ -142,17 +142,17 @@ class SmartDocumentRouter:
         intent_result: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
-        EN
+        Route a query to the appropriate processing pipeline.
 
         Args:
-            question: EN
-            related_files: EN
-            intent_result: EN
+            question: User's question text.
+            related_files: Optional list of related file paths.
+            intent_result: Optional intent classification result.
 
         Returns:
-            DictEN
+            Routing result dictionary with strategy and agent recommendation.
         """
-        # 1. EN
+        # 1. Analyze related files
         file_analysis = []
         has_structured_data = False
         has_text_documents = False
@@ -168,7 +168,7 @@ class SmartDocumentRouter:
                     if routing["should_use_rag"]:
                         has_text_documents = True
 
-        # 2. EN
+        # 2. Apply intent-based routing rules
         if intent_result:
             intent_type = getattr(intent_result, "intent", None)
             if intent_type:
@@ -178,37 +178,37 @@ class SmartDocumentRouter:
                     else str(intent_type)
                 )
 
-                # EN
+                # Data analysis intent
                 if intent_value == "data_analysis":
                     if has_structured_data:
                         strategy = ProcessingStrategy.DATA_ANALYSIS
                         agent = "DataAnalysisAgent"
                     else:
                         strategy = ProcessingStrategy.RAG_RETRIEVAL
-                        agent = "RAGAgent (EN)"
+                        agent = "RAGAgent (fallback)"
 
-                # EN
+                # Cost estimation intent
                 elif intent_value == "cost_estimation":
                     if has_structured_data:
                         strategy = ProcessingStrategy.DATA_ANALYSIS
                         agent = "DataAnalysisAgent"
                     else:
                         strategy = ProcessingStrategy.RAG_RETRIEVAL
-                        agent = "RAGAgent (EN)"
+                        agent = "RAGAgent (fallback)"
 
-                # EN
+                # Knowledge retrieval intent
                 elif intent_value == "knowledge_retrieval":
                     strategy = ProcessingStrategy.RAG_RETRIEVAL
                     agent = "RAGAgent"
 
-                # EN
+                # Document processing intent
                 elif intent_value == "document_processing":
                     strategy = ProcessingStrategy.OCR_PROCESSING
                     agent = "OCRAgent"
 
-                # EN
+                # Other intents
                 else:
-                    # EN
+                    # Route based on available file types
                     if has_structured_data:
                         strategy = ProcessingStrategy.DATA_ANALYSIS
                         agent = "DataAnalysisAgent"
@@ -217,9 +217,9 @@ class SmartDocumentRouter:
                         agent = "RAGAgent"
                     else:
                         strategy = ProcessingStrategy.RAG_RETRIEVAL
-                        agent = "RAGAgent (EN)"
+                        agent = "RAGAgent (fallback)"
             else:
-                # EN,EN
+                # No specific intent, route based on file types
                 if has_structured_data:
                     strategy = ProcessingStrategy.DATA_ANALYSIS
                     agent = "DataAnalysisAgent"
@@ -227,7 +227,7 @@ class SmartDocumentRouter:
                     strategy = ProcessingStrategy.RAG_RETRIEVAL
                     agent = "RAGAgent"
         else:
-            # EN,EN
+            # No intent result, route based on file types
             if has_structured_data:
                 strategy = ProcessingStrategy.DATA_ANALYSIS
                 agent = "DataAnalysisAgent"
@@ -252,7 +252,7 @@ class SmartDocumentRouter:
         }
 
     def _identify_document_type(self, file_path: Path) -> DocumentType:
-        """EN"""
+        """Identify the document type based on file extension."""
         ext = file_path.suffix.lower()
 
         return self.extension_mapping.get(ext, DocumentType.UNKNOWN)
@@ -260,7 +260,7 @@ class SmartDocumentRouter:
     def _recommend_agent(
         self, doc_type: DocumentType, strategy: ProcessingStrategy
     ) -> str:
-        """ENAgent"""
+        """Recommend the appropriate agent based on processing strategy."""
         agent_mapping = {
             ProcessingStrategy.DATA_ANALYSIS: "DataAnalysisAgent",
             ProcessingStrategy.RAG_RETRIEVAL: "RAGAgent",
@@ -273,7 +273,7 @@ class SmartDocumentRouter:
     def _collect_metadata(
         self, file_path: Path, doc_type: DocumentType
     ) -> Dict[str, Any]:
-        """EN"""
+        """Collect file metadata for routing decisions."""
         metadata = {
             "extension": file_path.suffix.lower(),
             "size_bytes": 0,
@@ -286,7 +286,7 @@ class SmartDocumentRouter:
                 metadata["size_mb"] = round(metadata["size_bytes"] / 1024 / 1024, 2)
                 metadata["modified_time"] = file_path.stat().st_mtime
             except Exception as e:
-                logger.warning(f"EN: {e}")
+                logger.warning(f"Failed to collect file metadata: {e}")
 
         return metadata
 
@@ -296,32 +296,31 @@ class SmartDocumentRouter:
         strategy: ProcessingStrategy,
         metadata: Dict[str, Any],
     ) -> str:
-        """EN"""
+        """Generate a human-readable rationale for the routing decision."""
         rationale_templates = {
             DocumentType.STRUCTURED_DATA: (
-                f"EN({metadata.get('extension', 'unknown')}),"
-                "ENAgentEN.EN,"
-                "EN."
+                f"Structured data file ({metadata.get('extension', 'unknown')}), "
+                "routed to Data Analysis Agent for statistical analysis and visualization."
             ),
             DocumentType.TEXT_DOCUMENT: (
-                f"EN({metadata.get('extension', 'unknown')}),"
-                "ENRAGEN.EN,EN,"
-                "EN."
+                f"Text document ({metadata.get('extension', 'unknown')}), "
+                "routed to RAG pipeline for chunking, embedding, and retrieval-based Q&A."
             ),
             DocumentType.IMAGE_DOCUMENT: (
-                f"EN({metadata.get('extension', 'unknown')}),"
-                "ENOCREN,ENRAGEN."
+                f"Image file ({metadata.get('extension', 'unknown')}), "
+                "will be processed with OCR first, then fed into RAG pipeline."
             ),
             DocumentType.CODE_FILE: (
-                f"EN({metadata.get('extension', 'unknown')}),"
-                "EN,ENRAGEN."
+                f"Code file ({metadata.get('extension', 'unknown')}), "
+                "routed to RAG pipeline for code-aware retrieval."
             ),
             DocumentType.UNKNOWN: (
-                f"EN({metadata.get('extension', 'unknown')})," "EN."
+                f"Unknown file type ({metadata.get('extension', 'unknown')}), "
+                "format not supported."
             ),
         }
 
-        return rationale_templates.get(doc_type, "EN")
+        return rationale_templates.get(doc_type, "No rationale available.")
 
     def _generate_query_rationale(
         self,
@@ -331,10 +330,10 @@ class SmartDocumentRouter:
         has_text_documents: bool,
         intent_result: Optional[Any],
     ) -> str:
-        """EN"""
+        """Generate a rationale for the query routing decision."""
         parts = []
 
-        # EN
+        # Intent information
         if intent_result and hasattr(intent_result, "intent"):
             intent_value = (
                 intent_result.intent.value
@@ -342,26 +341,26 @@ class SmartDocumentRouter:
                 else str(intent_result.intent)
             )
             confidence = getattr(intent_result, "confidence", 0)
-            parts.append(f"EN: {intent_value} (EN: {confidence:.2f})")
+            parts.append(f"Intent: {intent_value} (confidence: {confidence:.2f})")
 
-        # EN
+        # File type context
         if has_structured_data:
-            parts.append("EN")
+            parts.append("Structured data files detected")
         if has_text_documents:
-            parts.append("EN")
+            parts.append("Text documents detected")
 
-        # EN
+        # Routing decision
         if strategy == ProcessingStrategy.DATA_ANALYSIS:
-            parts.append("→ ENAgentEN")
+            parts.append("-> Routed to Data Analysis Agent")
         elif strategy == ProcessingStrategy.RAG_RETRIEVAL:
-            parts.append("→ ENRAGEN")
+            parts.append("-> Routed to RAG pipeline")
         elif strategy == ProcessingStrategy.OCR_PROCESSING:
-            parts.append("→ ENOCR AgentEN")
+            parts.append("-> Routed to OCR Agent")
 
-        return "; ".join(parts) if parts else "EN"
+        return "; ".join(parts) if parts else "Default routing applied"
 
     def get_supported_formats(self) -> Dict[str, List[str]]:
-        """EN"""
+        """Get a dictionary of supported formats grouped by document type."""
         formats = {}
 
         for ext, doc_type in self.extension_mapping.items():
@@ -373,5 +372,5 @@ class SmartDocumentRouter:
         return formats
 
 
-# EN
+# Global singleton instance
 smart_document_router = SmartDocumentRouter()

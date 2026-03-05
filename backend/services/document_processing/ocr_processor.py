@@ -1,18 +1,18 @@
 """
-OCREN - ENPaddleOCR 3.3.1EN
+OCR Processor - Built on PaddleOCR 3.3.1
 
 Features:
-- PP-OCRv5: EN5EN (EN/EN/EN/EN/EN)
-- PP-StructureV3: PDFEN,ENMarkdown/JSON
-- MPSEN: Apple Silicon MENGPUEN (2-5xEN)
-- ENOCR APIEN
-- EN
-- EN
+- PP-OCRv5: Supports 5 languages (Chinese/English/Traditional Chinese/Japanese/Korean)
+- PP-StructureV3: PDF structure extraction, outputs Markdown/JSON
+- MPS acceleration: Apple Silicon Metal GPU acceleration (2-5x speedup)
+- Cloud OCR API fallback
+- Batch processing
+- Confidence scoring
 
-EN:
+Requirements:
 - PaddlePaddle >= 2.6.0
 - PaddleOCR >= 3.3.0
-- NumPy < 2.0 (EN)
+- NumPy < 2.0 (compatibility requirement)
 """
 
 import logging
@@ -26,20 +26,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OCRResult:
-    """OCREN"""
+    """OCR recognition result."""
 
-    text: str  # EN
-    confidence: float  # EN
-    boxes: list[list[list[int]]]  # EN
-    method: str  # EN (local/api)
-    language: str = "ch"  # EN
+    text: str  # Recognized text content
+    confidence: float  # Average recognition confidence (0.0-1.0)
+    boxes: list[list[list[int]]]  # Bounding box coordinates for detected text regions
+    method: str  # Recognition method used (local/api)
+    language: str = "ch"  # Recognition language
 
 
 class OCRProcessor:
     """
-    OCREN
+    OCR processing engine.
 
-    ENPaddleOCR(ENMPSEN),ENAPI
+    Uses local PaddleOCR (with MPS GPU acceleration) as primary, with cloud API fallback.
     """
 
     def __init__(
@@ -51,109 +51,109 @@ class OCRProcessor:
         ocr_version: str = "PP-OCRv5",
     ):
         """
-        ENOCREN
+        Initialize the OCR processor.
 
         Args:
-            use_local: ENPaddleOCR
-            use_api_fallback: ENAPI
-            lang: EN ('ch', 'en', 'chinese_cht', 'japan', 'korean')
-            use_gpu: ENGPUEN (Apple MPS/NVIDIA CUDA)
-            ocr_version: OCREN ('PP-OCRv5', 'PP-OCRv4', 'PP-OCRv3')
+            use_local: Whether to use local PaddleOCR
+            use_api_fallback: Whether to fall back to cloud API on failure
+            lang: Recognition language ('ch', 'en', 'chinese_cht', 'japan', 'korean')
+            use_gpu: Whether to enable GPU acceleration (Apple MPS/NVIDIA CUDA)
+            ocr_version: OCR model version ('PP-OCRv5', 'PP-OCRv4', 'PP-OCRv3')
         """
         self.use_local = use_local
         self.use_api_fallback = use_api_fallback
         self.lang = lang
         self.ocr_version = ocr_version
 
-        # ENOCR
+        # Initialize local OCR engine
         self.local_ocr = None
         if use_local:
             self.local_ocr = self._init_local_ocr(use_gpu)
 
-        # ENAPIEN
+        # Initialize cloud API client
         self.api_client = None
         if use_api_fallback:
             self.api_client = self._init_api_client()
 
     def _init_local_ocr(self, use_gpu: bool):
-        """ENPaddleOCR 3.3.1"""
+        """Initialize local PaddleOCR 3.3.1 engine."""
         try:
             import paddle
             from paddleocr import PaddleOCR
 
-            # ENMPSEN (PaddleCustomDevice)
+            # Detect MPS acceleration (PaddleCustomDevice)
             device = "cpu"
             use_gpu_flag = False
 
             if use_gpu:
                 try:
-                    # ENMPSEN
+                    # Check for MPS acceleration support
                     custom_devices = paddle.device.get_all_custom_device_type()
                     if "mps" in custom_devices:
                         device = "mps"
                         use_gpu_flag = True
-                        logger.info("✅ ENApple MPSEN,ENGPUEN (EN2-5xEN)")
+                        logger.info("Apple MPS detected, enabling GPU acceleration (2-5x speedup)")
                     elif paddle.device.is_compiled_with_cuda():
                         device = "gpu"
                         use_gpu_flag = True
-                        logger.info("✅ ENNVIDIA CUDAEN,ENGPUEN")
+                        logger.info("NVIDIA CUDA detected, enabling GPU acceleration")
                     else:
-                        logger.info("⚠️  ENGPUEN,ENCPU")
+                        logger.info("No GPU device found, using CPU mode")
                 except Exception as e:
-                    logger.warning(f"GPUEN: {e},ENCPU")
+                    logger.warning(f"GPU detection failed: {e}, falling back to CPU")
 
-            # ENPaddleOCR 3.3.1
-            # PP-OCRv5EN: ch (EN), en, chinese_cht, japan, korean
+            # Initialize PaddleOCR 3.3.1
+            # PP-OCRv5 languages: ch (Chinese), en, chinese_cht, japan, korean
             ocr = PaddleOCR(
-                use_angle_cls=True,  # EN
-                lang=self.lang,  # PP-OCRv5EN
-                use_gpu=use_gpu_flag,  # GPUEN
+                use_angle_cls=True,  # Enable text angle classification
+                lang=self.lang,  # PP-OCRv5 language setting
+                use_gpu=use_gpu_flag,  # GPU acceleration toggle
                 show_log=False,
-                # PP-OCRv5EN
-                use_mp=True,  # EN
-                total_process_num=2,  # EN
-                # EN
-                det_db_thresh=0.3,  # EN
-                det_db_box_thresh=0.6,  # EN
-                rec_batch_num=6,  # EN
+                # PP-OCRv5 performance tuning
+                use_mp=True,  # Enable multiprocessing
+                total_process_num=2,  # Worker process count
+                # Detection thresholds
+                det_db_thresh=0.3,  # Text detection threshold
+                det_db_box_thresh=0.6,  # Text box detection threshold
+                rec_batch_num=6,  # Recognition batch size
             )
 
-            logger.info(f"✅ PaddleOCR 3.3.1EN")
-            logger.info(f"   - EN: {self.ocr_version}")
-            logger.info(f"   - EN: {device}")
-            logger.info(f"   - EN: {self.lang}")
-            logger.info(f"   - EN: PP-OCRv5EN (EN/EN/EN/EN/EN)")
+            logger.info("PaddleOCR 3.3.1 initialized successfully")
+            logger.info(f"   - Version: {self.ocr_version}")
+            logger.info(f"   - Device: {device}")
+            logger.info(f"   - Language: {self.lang}")
+            logger.info("   - Model: PP-OCRv5 (detection/classification/recognition/structure/layout)")
 
             return ocr
 
         except Exception as e:
-            logger.warning(f"ENPaddleOCREN: {e}")
-            logger.info("EN: EN PaddlePaddle>=2.6.0, PaddleOCR>=3.3.0, NumPy<2.0")
+            logger.warning(f"Failed to initialize PaddleOCR: {e}")
+            logger.info("Required: PaddlePaddle>=2.6.0, PaddleOCR>=3.3.0, NumPy<2.0")
             return None
 
     def _init_api_client(self):
-        """ENOCR APIEN"""
+        """Initialize the cloud OCR API client."""
         try:
             from aip import AipOcr
 
-            # ENAPIEN
+            # Read API credentials from environment
             app_id = os.getenv("BAIDU_OCR_APP_ID")
             api_key = os.getenv("BAIDU_OCR_API_KEY")
             secret_key = os.getenv("BAIDU_OCR_SECRET_KEY")
 
             if not all([app_id, api_key, secret_key]):
-                logger.warning("ENOCR APIEN,APIEN")
+                logger.warning("OCR API credentials not configured, API fallback disabled")
                 return None
 
             client = AipOcr(app_id, api_key, secret_key)
-            logger.info("ENOCR APIEN")
+            logger.info("OCR API client initialized successfully")
             return client
 
         except ImportError:
-            logger.warning("ENAI SDK (baidu-aip)EN,APIEN")
+            logger.warning("Baidu AI SDK (baidu-aip) not installed, API fallback disabled")
             return None
         except Exception as e:
-            logger.warning(f"ENOCR APIEN: {e}")
+            logger.warning(f"Failed to initialize OCR API client: {e}")
             return None
 
     def process(
@@ -161,47 +161,47 @@ class OCRProcessor:
         image_path: Union[str, Path],
     ) -> OCRResult:
         """
-        EN
+        Process an image file and extract text via OCR.
 
         Args:
-            image_path: EN
+            image_path: Path to the image file
 
         Returns:
-            OCRResultEN
+            OCRResult with recognized text and confidence
 
         Raises:
-            ValueError: ENOCREN
+            ValueError: If no OCR engine is available
         """
         image_path = Path(image_path)
 
         if not image_path.exists():
             raise FileNotFoundError(f"Image file not found: {image_path}")
 
-        # ENOCR
+        # Try local OCR first
         if self.local_ocr:
             try:
                 return self._process_local(image_path)
             except Exception as e:
-                logger.warning(f"ENOCREN: {e}")
+                logger.warning(f"Local OCR processing failed: {e}")
                 if not self.use_api_fallback:
                     raise
 
-        # ENAPI
+        # Fall back to cloud API
         if self.api_client:
             try:
                 return self._process_api(image_path)
             except Exception as e:
-                logger.error(f"API OCREN: {e}")
+                logger.error(f"API OCR processing failed: {e}")
                 raise
 
-        raise ValueError("ENOCREN")
+        raise ValueError("No OCR engine available (local and API both unavailable)")
 
     def _process_local(self, image_path: Path) -> OCRResult:
-        """ENPaddleOCREN"""
-        # ENOCR
+        """Process image using local PaddleOCR engine."""
+        # Run OCR recognition
         result = self.local_ocr.ocr(str(image_path), cls=True)
 
-        # EN
+        # Handle empty results
         if not result or not result[0]:
             return OCRResult(
                 text="",
@@ -211,7 +211,7 @@ class OCRProcessor:
                 language=self.lang,
             )
 
-        # EN
+        # Parse OCR results
         texts = []
         confidences = []
         boxes = []
@@ -222,7 +222,7 @@ class OCRProcessor:
             confidences.append(confidence)
             boxes.append(box)
 
-        # EN
+        # Combine text lines and calculate average confidence
         full_text = "\n".join(texts)
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
@@ -235,22 +235,22 @@ class OCRProcessor:
         )
 
     def _process_api(self, image_path: Path) -> OCRResult:
-        """ENOCR APIEN"""
-        # EN
+        """Process image using cloud OCR API."""
+        # Read image file
         with open(image_path, "rb") as f:
             image_data = f.read()
 
-        # ENAPI
+        # Call API with language-appropriate method
         if self.lang == "en":
             result = self.api_client.basicGeneral(image_data)
         else:
             result = self.api_client.general(image_data)
 
-        # EN
+        # Check for API errors
         if "error_code" in result:
             raise RuntimeError(f"OCR API error: {result.get('error_msg', 'Unknown')}")
 
-        # EN
+        # Parse API response
         words_result = result.get("words_result", [])
 
         if not words_result:
@@ -262,15 +262,15 @@ class OCRProcessor:
                 language=self.lang,
             )
 
-        # EN
+        # Extract text from results
         texts = [item["words"] for item in words_result]
         full_text = "\n".join(texts)
 
-        # APIEN,EN
+        # API does not return per-line confidence or bounding boxes
         return OCRResult(
             text=full_text,
-            confidence=0.95,  # APIEN
-            boxes=[],  # APIEN
+            confidence=0.95,  # API default confidence estimate
+            boxes=[],  # API does not return bounding boxes
             method="api",
             language=self.lang,
         )
@@ -280,13 +280,13 @@ class OCRProcessor:
         image_paths: list[Union[str, Path]],
     ) -> list[OCRResult]:
         """
-        EN
+        Process multiple images in batch.
 
         Args:
-            image_paths: EN
+            image_paths: List of image file paths
 
         Returns:
-            OCRResultEN
+            List of OCRResult objects
         """
         results = []
         for path in image_paths:
@@ -294,8 +294,8 @@ class OCRProcessor:
                 result = self.process(path)
                 results.append(result)
             except Exception as e:
-                logger.error(f"EN {path} EN: {e}")
-                # EN
+                logger.error(f"Failed to process {path}: {e}")
+                # Append empty result for failed images
                 results.append(
                     OCRResult(
                         text="",
@@ -309,22 +309,22 @@ class OCRProcessor:
         return results
 
 
-# EN
+# Convenience function
 def process_image_with_ocr(
     image_path: Union[str, Path],
     lang: str = "ch",
     use_gpu: bool = True,
 ) -> OCRResult:
     """
-    EN(EN)
+    Extract text from an image using OCR (convenience wrapper).
 
     Args:
-        image_path: EN
-        lang: EN
-        use_gpu: ENGPU
+        image_path: Path to the image file
+        lang: Recognition language
+        use_gpu: Whether to enable GPU acceleration
 
     Returns:
-        OCRResultEN
+        OCRResult with recognized text and confidence
     """
     processor = OCRProcessor(lang=lang, use_gpu=use_gpu)
     return processor.process(image_path)

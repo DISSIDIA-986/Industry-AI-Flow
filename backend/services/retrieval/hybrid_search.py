@@ -30,21 +30,21 @@ if TYPE_CHECKING:
 
 
 class HybridRetriever:
-    """EN:EN BM25 EN
+    """Hybrid retriever combining vector similarity and BM25 keyword search.
 
-    EN(2026-02-09):
-    - ENjiebaENNLTKEN,ENbug
-    - ENBM25EN86%(0.35 → 0.65)
+    Update (2026-02-09):
+    - Replaced jieba with NLTK tokenizer to fix English tokenization bugs
+    - BM25 accuracy improved 86% (0.35 -> 0.65)
     """
 
     def __init__(self, vector_store):
         self.vector_store = vector_store
         self.bm25 = None
-        self.doc_chunks = []  # EN [{chunk_id, doc_id, content, filename}]
+        self.doc_chunks = []  # Cached chunks [{chunk_id, doc_id, content, filename}]
         self._indexed_chunk_count = 0
         self._last_staleness_check = 0.0  # timestamp of last DB count check
         self._staleness_check_interval = 30.0  # seconds between DB count checks
-        self.stemmer = PorterStemmer() if PorterStemmer else None  # EN
+        self.stemmer = PorterStemmer() if PorterStemmer else None  # English stemmer
         self._nltk_checked = False
         self._nltk_ready = False
 
@@ -87,48 +87,48 @@ class HybridRetriever:
         return re.findall(r"[a-z0-9]+(?:[.-][a-z0-9]+)*", text)
 
     def _tokenize_english(self, text: str) -> list[str]:
-        """EN(ENjieba)
+        """English text tokenizer (replaced jieba).
 
-        ENbugEN:
-        - jiebaEN(EN"reinforced-concrete", "load-bearing")EN
-        - ENNLTK word_tokenize + PorterStemmerEN
-        - EN(EN"CSA-A23.1-19", "HVAC")
+        Bug fix notes:
+        - jieba incorrectly split compound terms (e.g. "reinforced-concrete", "load-bearing")
+        - Switched to NLTK word_tokenize + PorterStemmer for English text
+        - Preserves construction standard codes (e.g. "CSA-A23.1-19", "HVAC")
 
         Args:
-            text: EN
+            text: Input text to tokenize
 
         Returns:
-            EN
+            List of stemmed tokens
         """
-        # EN
+        # Lowercase for case-insensitive matching
         text_lower = text.lower()
 
         if self._ensure_nltk_resources():
             try:
-                # NLTKEN
+                # Use NLTK tokenizer
                 tokens = word_tokenize(text_lower)
             except LookupError:
                 tokens = self._regex_tokenize(text_lower)
         else:
             tokens = self._regex_tokenize(text_lower)
 
-        # EN + EN
+        # Filter and stem tokens
         stemmed_tokens = []
         for token in tokens:
             if token.isalnum():
-                # EN
+                # Apply stemming
                 stemmed = self.stemmer.stem(token) if self.stemmer else token
                 stemmed_tokens.append(stemmed)
-            # EN(EN"load-bearing", "fire-resistance-rated")
+            # Handle hyphenated terms (e.g. "load-bearing", "fire-resistance-rated")
             elif "-" in token:
-                # ENtokenEN
+                # Split and stem each part
                 parts = token.split("-")
                 for part in parts:
                     if part.isalnum():
                         stemmed_tokens.append(
                             self.stemmer.stem(part) if self.stemmer else part
                         )
-                stemmed_tokens.append(token.lower())  # EN
+                stemmed_tokens.append(token.lower())  # Keep original compound form
             # Dotted tokens (e.g. "nbc2020.4", "a23.1", "0.85")
             elif "." in token:
                 stemmed_tokens.append(token)
@@ -141,7 +141,7 @@ class HybridRetriever:
         return stemmed_tokens
 
     def build_bm25_index(self):
-        """EN BM25 EN(ENNLTKEN)"""
+        """Build the BM25 index from document chunks (using NLTK tokenizer)."""
         if not BM25_AVAILABLE:
             self.bm25 = None
             self.doc_chunks = []
@@ -150,7 +150,7 @@ class HybridRetriever:
             )
             return
 
-        # EN
+        # Fetch all document chunks from the database
         conn = self.vector_store.get_connection()
         cur = conn.cursor()
 
@@ -188,15 +188,15 @@ class HybridRetriever:
                 }
                 self.doc_chunks.append(chunk_info)
 
-                # ENNLTKEN(ENjieba)
+                # Tokenize using NLTK English tokenizer (replaced jieba)
                 tokens = self._tokenize_english(row[2])
                 tokenized_corpus.append(tokens or ["_empty_"])
 
-            # EN BM25 EN
+            # Build BM25 index
             self.bm25 = BM25Okapi(tokenized_corpus)
             self._indexed_chunk_count = len(self.doc_chunks)
 
-            logger.info("BM25 EN(NLTKEN),EN %s EN", len(self.doc_chunks))
+            logger.info("BM25 index built (NLTK tokenizer), indexed %s chunks", len(self.doc_chunks))
 
         finally:
             cur.close()
@@ -231,16 +231,16 @@ class HybridRetriever:
         bm25_weight: float = 0.3,
     ) -> list[dict]:
         """
-        EN
+        Perform hybrid search combining vector similarity and BM25.
 
         Args:
-            query: EN
-            top_k: EN
-            vector_weight: EN
-            bm25_weight: BM25 EN
+            query: Search query text
+            top_k: Number of results to return
+            vector_weight: Weight for vector similarity scores
+            bm25_weight: Weight for BM25 keyword scores
 
         Returns:
-            EN [{doc_id, content, filename, score}]
+            Ranked results [{doc_id, content, filename, score}]
         """
         now = time.monotonic()
         if self.bm25 is None:
@@ -250,7 +250,7 @@ class HybridRetriever:
             if self._get_chunk_count() != self._indexed_chunk_count:
                 self.build_bm25_index()
 
-        # 1. EN
+        # 1. Vector similarity search
         from backend.services.core.embedder import embed_query_text
 
         query_embedding = embed_query_text(query)
@@ -276,19 +276,19 @@ class HybridRetriever:
                 )
             return final
 
-        # 2. BM25 EN(ENNLTKEN)
+        # 2. BM25 keyword search (using NLTK tokenizer)
         query_tokens = self._tokenize_english(query) or ["_empty_"]
         bm25_scores = self.bm25.get_scores(query_tokens)
 
-        # EN BM25 EN [(chunk_index, score)]
+        # Sort BM25 results [(chunk_index, score)]
         bm25_results = [(i, score) for i, score in enumerate(bm25_scores)]
         bm25_results.sort(key=lambda x: x[1], reverse=True)
         bm25_top = [(i, score) for i, score in bm25_results[:top_k * 2] if score > 0.0]
 
-        # 3. EN (Reciprocal Rank Fusion - RRF)
+        # 3. Fusion (Reciprocal Rank Fusion - RRF)
         fused_scores = {}
 
-        # EN(EN) — RRF with k=60
+        # Vector scores — RRF with k=60
         rrf_k = 60
         for rank, result in enumerate(vector_results, 1):
             chunk_id = result.get("chunk_id")
@@ -298,17 +298,17 @@ class HybridRetriever:
                 fused_scores.get(chunk_id, 0) + vector_weight / (rrf_k + rank)
             )
 
-        # BM25 EN — RRF with k=60
+        # BM25 scores — RRF with k=60
         for rank, (chunk_index, score) in enumerate(bm25_top, 1):
             chunk_id = self.doc_chunks[chunk_index]["id"]
             fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / (rrf_k + rank)
 
-        # 4. EN top_k EN
+        # 4. Select top_k results
         sorted_chunks = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[
             :top_k
         ]
 
-        # 5. EN
+        # 5. Build final results with metadata
         final_results = []
         chunk_map = {chunk["id"]: chunk for chunk in self.doc_chunks}
         vector_map = {
@@ -318,7 +318,7 @@ class HybridRetriever:
         }
 
         for chunk_id, fusion_score in sorted_chunks:
-            # EN doc_chunks EN
+            # Look up chunk info from doc_chunks cache
             chunk_info = chunk_map.get(chunk_id)
             if not chunk_info:
                 vector_info = vector_map.get(chunk_id)
