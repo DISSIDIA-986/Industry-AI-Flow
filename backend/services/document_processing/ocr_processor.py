@@ -76,53 +76,27 @@ class OCRProcessor:
             self.api_client = self._init_api_client()
 
     def _init_local_ocr(self, use_gpu: bool):
-        """Initialize local PaddleOCR 3.3.1 engine."""
+        """Initialize local PaddleOCR engine.
+
+        PaddleOCR 3.3+ handles device selection (MPS/CUDA/CPU) internally
+        via PaddlePaddle's device auto-detection.
+        """
         try:
-            import paddle
             from paddleocr import PaddleOCR
 
-            # Detect MPS acceleration (PaddleCustomDevice)
-            device = "cpu"
-            use_gpu_flag = False
-
-            if use_gpu:
-                try:
-                    # Check for MPS acceleration support
-                    custom_devices = paddle.device.get_all_custom_device_type()
-                    if "mps" in custom_devices:
-                        device = "mps"
-                        use_gpu_flag = True
-                        logger.info("Apple MPS detected, enabling GPU acceleration (2-5x speedup)")
-                    elif paddle.device.is_compiled_with_cuda():
-                        device = "gpu"
-                        use_gpu_flag = True
-                        logger.info("NVIDIA CUDA detected, enabling GPU acceleration")
-                    else:
-                        logger.info("No GPU device found, using CPU mode")
-                except Exception as e:
-                    logger.warning(f"GPU detection failed: {e}, falling back to CPU")
-
-            # Initialize PaddleOCR 3.3.1
-            # PP-OCRv5 languages: ch (Chinese), en, chinese_cht, japan, korean
             ocr = PaddleOCR(
-                use_angle_cls=True,  # Enable text angle classification
-                lang=self.lang,  # PP-OCRv5 language setting
-                use_gpu=use_gpu_flag,  # GPU acceleration toggle
-                show_log=False,
-                # PP-OCRv5 performance tuning
-                use_mp=True,  # Enable multiprocessing
-                total_process_num=2,  # Worker process count
-                # Detection thresholds
-                det_db_thresh=0.3,  # Text detection threshold
-                det_db_box_thresh=0.6,  # Text box detection threshold
-                rec_batch_num=6,  # Recognition batch size
+                use_textline_orientation=True,
+                lang=self.lang,
+                ocr_version=self.ocr_version,
+                text_det_thresh=0.3,
+                text_det_box_thresh=0.6,
+                text_recognition_batch_size=6,
             )
 
-            logger.info("PaddleOCR 3.3.1 initialized successfully")
-            logger.info(f"   - Version: {self.ocr_version}")
-            logger.info(f"   - Device: {device}")
-            logger.info(f"   - Language: {self.lang}")
-            logger.info("   - Model: PP-OCRv5 (detection/classification/recognition/structure/layout)")
+            logger.info(
+                f"PaddleOCR initialized (version={self.ocr_version}, "
+                f"lang={self.lang})"
+            )
 
             return ocr
 
@@ -197,12 +171,30 @@ class OCRProcessor:
         raise ValueError("No OCR engine available (local and API both unavailable)")
 
     def _process_local(self, image_path: Path) -> OCRResult:
-        """Process image using local PaddleOCR engine."""
-        # Run OCR recognition
-        result = self.local_ocr.ocr(str(image_path), cls=True)
+        """Process image using local PaddleOCR engine.
+
+        PaddleOCR 3.3+ uses the predict() API which returns dicts with keys:
+        rec_texts, rec_scores, dt_polys.
+        """
+        # Run OCR recognition (PaddleOCR 3.3+ predict API)
+        texts = []
+        confidences = []
+        boxes = []
+
+        for res in self.local_ocr.predict(str(image_path)):
+            rec_texts = res.get("rec_texts", [])
+            rec_scores = res.get("rec_scores", [])
+            dt_polys = res.get("dt_polys", [])
+
+            texts.extend(rec_texts)
+            confidences.extend(rec_scores)
+            boxes.extend(
+                poly.tolist() if hasattr(poly, "tolist") else poly
+                for poly in dt_polys
+            )
 
         # Handle empty results
-        if not result or not result[0]:
+        if not texts:
             return OCRResult(
                 text="",
                 confidence=0.0,
@@ -210,17 +202,6 @@ class OCRProcessor:
                 method="local",
                 language=self.lang,
             )
-
-        # Parse OCR results
-        texts = []
-        confidences = []
-        boxes = []
-
-        for line in result[0]:
-            box, (text, confidence) = line
-            texts.append(text)
-            confidences.append(confidence)
-            boxes.append(box)
 
         # Combine text lines and calculate average confidence
         full_text = "\n".join(texts)

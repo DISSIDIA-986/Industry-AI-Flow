@@ -109,35 +109,63 @@ class DocumentExtractor:
             raise ValueError(f"Unsupported file type: {file_type}")
 
     def _extract_pdf(self, file_path: Path) -> DocumentContent:
-        """Extract text from a PDF file."""
+        """Extract text from a PDF file, with OCR fallback for scanned pages."""
         try:
-            from PyPDF2 import PdfReader
+            import fitz  # PyMuPDF
 
-            reader = PdfReader(file_path)
+            doc = fitz.open(file_path)
             text_parts = []
+            ocr_pages = []
 
-            for page_num, page in enumerate(reader.pages):
-                page_text = page.extract_text()
-                if page_text.strip():
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                page_text = page.get_text().strip()
+
+                if page_text:
                     text_parts.append(page_text)
                 elif self.use_ocr and self.ocr_processor:
-                    # No extractable text on this page, fall back to OCR
-                    logger.info(f"PDF page {page_num+1} has no extractable text, falling back to OCR")
-                    # TODO: Convert PDF page to image using pdf2image for OCR processing
-                    # Not yet implemented
+                    # Scanned page — render to image and OCR
+                    logger.info(
+                        f"PDF page {page_num + 1} has no extractable text, "
+                        "falling back to OCR"
+                    )
+                    try:
+                        pix = page.get_pixmap(dpi=200)
+                        import tempfile
+
+                        with tempfile.NamedTemporaryFile(
+                            suffix=".png", delete=False
+                        ) as tmp:
+                            pix.save(tmp.name)
+                            ocr_result = self.ocr_processor.process(tmp.name)
+                            if ocr_result.text.strip():
+                                text_parts.append(ocr_result.text)
+                                ocr_pages.append(page_num + 1)
+                            Path(tmp.name).unlink(missing_ok=True)
+                    except Exception as ocr_err:
+                        logger.warning(
+                            f"OCR fallback failed for page {page_num + 1}: {ocr_err}"
+                        )
 
             full_text = "\n\n".join(text_parts)
 
+            pdf_metadata = doc.metadata or {}
             metadata = {
-                "num_pages": len(reader.pages),
-                "author": reader.metadata.get("/Author", "Unknown"),
-                "title": reader.metadata.get("/Title", "Unknown"),
+                "num_pages": len(doc),
+                "author": pdf_metadata.get("author", "Unknown"),
+                "title": pdf_metadata.get("title", "Unknown"),
             }
+            if ocr_pages:
+                metadata["ocr_pages"] = ocr_pages
+
+            method = "pymupdf+ocr" if ocr_pages else "pymupdf"
+
+            doc.close()
 
             return DocumentContent(
                 text=full_text,
                 metadata=metadata,
-                method="pypdf2",
+                method=method,
                 file_type="pdf",
             )
 
