@@ -1,6 +1,6 @@
 """
 LangChain 1.0 Prompt Manager Middleware
-ENPromptEN,EN,A/BEN
+Integrates prompt management into LangChain pipelines with versioning, monitoring, and A/B testing support.
 """
 
 import asyncio
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PromptContext:
-    """PromptEN"""
+    """Prompt execution context for a single request."""
 
     user_request: str
     session_id: str
@@ -40,7 +40,7 @@ class PromptContext:
 
 
 class PromptUsageCallback(BaseCallbackHandler):
-    """PromptEN"""
+    """Callback handler for tracking prompt usage during LLM calls."""
 
     def __init__(self, prompt_manager: PromptManager):
         self.prompt_manager = prompt_manager
@@ -49,26 +49,26 @@ class PromptUsageCallback(BaseCallbackHandler):
     async def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
-        """LLMEN"""
-        # ENPromptEN
+        """Called when LLM starts generating."""
+        # Record prompt usage start event
         pass
 
     async def on_llm_end(self, response, **kwargs: Any) -> None:
-        """LLMEN"""
-        # EN
+        """Called when LLM finishes generating."""
+        # Record prompt usage end event
         pass
 
 
 class PromptManagerMiddleware:
     """
-    PromptEN
+    Prompt Manager Middleware for LangChain pipelines.
 
-    EN:
-    1. ENPromptEN
-    2. EN
-    3. A/BEN
-    4. EN
-    5. EN
+    Capabilities:
+    1. Automatic prompt retrieval and rendering
+    2. Variable injection and template processing
+    3. A/B experiment prompt selection
+    4. Usage monitoring and performance tracking
+    5. Context-aware prompt enrichment
     """
 
     def __init__(
@@ -79,20 +79,20 @@ class PromptManagerMiddleware:
         context_enrichers: Optional[List[Callable]] = None,
     ):
         """
-        EN
+        Initialize the prompt manager middleware.
 
         Args:
-            prompt_manager: PromptEN
-            enable_experiments: ENA/BEN
-            enable_monitoring: EN
-            context_enrichers: EN
+            prompt_manager: Prompt manager instance
+            enable_experiments: Enable A/B experiment prompt selection
+            enable_monitoring: Enable usage monitoring
+            context_enrichers: List of context enrichment functions
         """
         self.prompt_manager = prompt_manager
         self.enable_experiments = enable_experiments
         self.enable_monitoring = enable_monitoring
         self.context_enrichers = context_enrichers or []
 
-        logger.info("PromptEN")
+        logger.info("Prompt manager middleware initialized")
 
     def create_prompt_chain(
         self,
@@ -101,24 +101,24 @@ class PromptManagerMiddleware:
         context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> Runnable:
         """
-        ENPromptEN
+        Create a LangChain Runnable chain that manages prompt retrieval and rendering.
 
         Args:
-            prompt_name: PromptEN
-            category: PromptEN
-            context_builder: EN
+            prompt_name: Prompt template name
+            category: Prompt category
+            context_builder: Optional function to build prompt context from inputs
 
         Returns:
-            Runnable: EN
+            Runnable: A LangChain Runnable chain with prompt management
         """
 
         async def process_input(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """EN,ENPrompt"""
+            """Process input and retrieve the managed prompt."""
             try:
-                # EN
+                # Build prompt context
                 prompt_context = self._build_context(inputs, context_builder)
 
-                # ENPrompt
+                # Retrieve and render the prompt
                 prompt_info, rendered_content = await self.prompt_manager.get_prompt(
                     name=prompt_name,
                     category=category,
@@ -127,7 +127,7 @@ class PromptManagerMiddleware:
                     enable_experiments=self.enable_experiments,
                 )
 
-                # ENPromptEN
+                # Enrich inputs with prompt information
                 enriched_inputs = inputs.copy()
                 enriched_inputs.update(
                     {
@@ -138,33 +138,33 @@ class PromptManagerMiddleware:
                     }
                 )
 
-                # EN
+                # Start monitoring if enabled
                 if self.enable_monitoring:
                     self._record_usage_start(prompt_info.id, prompt_context)
 
-                logger.debug(f"PromptEN: {category}/{prompt_name}")
+                logger.debug(f"Prompt loaded: {category}/{prompt_name}")
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"PromptEN: {e}")
-                # EN:EN
+                logger.error(f"Prompt retrieval failed: {e}")
+                # Fallback: return original inputs without prompt enrichment
                 return inputs
 
         async def process_output(
             outputs: Dict[str, Any], inputs: Dict[str, Any]
         ) -> Dict[str, Any]:
-            """EN,EN"""
+            """Process output and record usage metrics."""
             try:
                 if "prompt_info" in inputs and "usage_start_time" in inputs:
                     prompt_info = inputs["prompt_info"]
                     usage_start_time = inputs["usage_start_time"]
 
-                    # EN
+                    # Calculate execution time
                     execution_time_ms = int(
                         (datetime.now() - usage_start_time).total_seconds() * 1000
                     )
 
-                    # EN
+                    # Build usage log entry
                     usage_log = UsageLog(
                         prompt_id=prompt_info.id,
                         session_id=inputs.get("prompt_context", {}).get("session_id"),
@@ -184,13 +184,13 @@ class PromptManagerMiddleware:
                         temperature=outputs.get("temperature"),
                     )
 
-                    # EN
+                    # Record usage log asynchronously
                     if self.enable_monitoring:
                         asyncio.create_task(
                             self.prompt_manager.record_usage_log(usage_log)
                         )
 
-                    # EN
+                    # Attach prompt performance metadata to output
                     outputs["prompt_performance"] = {
                         "prompt_id": str(prompt_info.id),
                         "prompt_name": prompt_info.name,
@@ -202,14 +202,14 @@ class PromptManagerMiddleware:
                 return outputs
 
             except Exception as e:
-                logger.error(f"EN: {e}")
+                logger.error(f"Output processing failed: {e}")
                 return outputs
 
-        # EN
+        # Build the prompt chain
         chain = (
             RunnableLambda(process_input)
             | RunnablePassthrough()
-            | RunnableLambda(lambda outputs: outputs)  # EN
+            | RunnableLambda(lambda outputs: outputs)  # Placeholder for LLM call
             | RunnableLambda(process_output)
         )
 
@@ -221,39 +221,39 @@ class PromptManagerMiddleware:
         context_analyzer: Callable[[Dict[str, Any]], str],
     ) -> Runnable:
         """
-        ENPromptEN,EN
+        Create an adaptive prompt chain that selects prompt category based on context.
 
         Args:
-            prompt_categories: ENPromptEN
-            context_analyzer: EN,EN
+            prompt_categories: List of available prompt categories
+            context_analyzer: Function to analyze context and select a category
 
         Returns:
-            Runnable: EN
+            Runnable: A LangChain Runnable chain with adaptive prompt selection
         """
 
         async def adaptive_prompt_selection(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """ENPromptEN"""
+            """Select and retrieve the best prompt based on context analysis."""
             try:
-                # EN,EN
+                # Analyze context to determine the best prompt category
                 selected_category = context_analyzer(inputs)
 
                 if selected_category not in prompt_categories:
-                    logger.warning(f"EN: {selected_category}")
-                    selected_category = prompt_categories[0]  # EN
+                    logger.warning(f"Unknown category selected: {selected_category}")
+                    selected_category = prompt_categories[0]  # Fallback to first category
 
-                # EN
+                # Build prompt context
                 prompt_context = self._build_context(inputs)
 
-                # ENPrompt
+                # Retrieve the prompt for the selected category
                 prompt_info, rendered_content = await self.prompt_manager.get_prompt(
-                    name=inputs.get("task_name", "default"),  # EN
+                    name=inputs.get("task_name", "default"),  # Use task name or default
                     category=selected_category,
                     context=prompt_context.metadata,
                     variables=prompt_context.variables,
                     enable_experiments=self.enable_experiments,
                 )
 
-                # ENPrompt
+                # Enrich inputs with the selected prompt
                 enriched_inputs = inputs.copy()
                 enriched_inputs.update(
                     {
@@ -268,14 +268,14 @@ class PromptManagerMiddleware:
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"ENPromptEN: {e}")
+                logger.error(f"Adaptive prompt selection failed: {e}")
                 return inputs
 
-        # EN
+        # Build the adaptive prompt chain
         chain = (
             RunnableLambda(adaptive_prompt_selection)
             | RunnablePassthrough()
-            | RunnableLambda(lambda x: x)  # EN
+            | RunnableLambda(lambda x: x)  # Placeholder for LLM call
         )
 
         return chain
@@ -284,38 +284,38 @@ class PromptManagerMiddleware:
         self, experiment_name: str, fallback_prompt_name: str, fallback_category: str
     ) -> Runnable:
         """
-        ENA/BEN
+        Create an A/B experiment prompt chain.
 
         Args:
-            experiment_name: EN
-            fallback_prompt_name: ENPromptEN
-            fallback_category: ENPromptEN
+            experiment_name: Name of the experiment
+            fallback_prompt_name: Fallback prompt name if experiment is unavailable
+            fallback_category: Fallback prompt category
 
         Returns:
-            Runnable: EN
+            Runnable: A LangChain Runnable chain for experiment prompt selection
         """
 
         async def experiment_prompt_selection(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            """ENPromptEN"""
+            """Select prompt based on experiment allocation."""
             try:
-                # ENPrompt
-                # EN
+                # Retrieve experiment prompt
+                # Build context for experiment prompt selection
                 prompt_context = self._build_context(inputs)
 
-                # ENPrompt(EN)
+                # Try to get experiment control prompt (primary)
                 try:
                     (
                         prompt_info,
                         rendered_content,
                     ) = await self.prompt_manager.get_prompt(
-                        name=f"{experiment_name}_control",  # EN
+                        name=f"{experiment_name}_control",  # Control group prompt
                         category="experiments",
                         context=prompt_context.metadata,
                         variables=prompt_context.variables,
                         enable_experiments=True,
                     )
                 except ValueError:
-                    # ENPrompt
+                    # Experiment prompt not found, use fallback
                     (
                         prompt_info,
                         rendered_content,
@@ -341,7 +341,7 @@ class PromptManagerMiddleware:
                 return enriched_inputs
 
             except Exception as e:
-                logger.error(f"ENPromptEN: {e}")
+                logger.error(f"Experiment prompt selection failed: {e}")
                 return inputs
 
         chain = (
@@ -357,11 +357,11 @@ class PromptManagerMiddleware:
         inputs: Dict[str, Any],
         context_builder: Optional[Callable[[Dict[str, Any]], PromptContext]] = None,
     ) -> PromptContext:
-        """ENPromptEN"""
+        """Build a PromptContext from the input dictionary."""
         if context_builder:
             return context_builder(inputs)
 
-        # EN
+        # Build default prompt context from inputs
         return PromptContext(
             user_request=inputs.get("input", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -374,12 +374,12 @@ class PromptManagerMiddleware:
     def _record_usage_start(
         self, prompt_id: uuid.UUID, prompt_context: PromptContext
     ) -> None:
-        """EN(EN)"""
-        # EN
+        """Record prompt usage start (placeholder for future implementation)."""
+        # Placeholder for usage tracking
         pass
 
     def create_rag_prompt_chain(self) -> Runnable:
-        """ENRAGENPromptEN"""
+        """Create a prompt chain for RAG response generation."""
         return self.create_prompt_chain(
             prompt_name="rag_response",
             category="RAG",
@@ -387,7 +387,7 @@ class PromptManagerMiddleware:
         )
 
     def create_code_execution_prompt_chain(self) -> Runnable:
-        """ENPromptEN"""
+        """Create a prompt chain for code execution tasks."""
         return self.create_prompt_chain(
             prompt_name="code_execution",
             category="Code-Execution",
@@ -395,7 +395,7 @@ class PromptManagerMiddleware:
         )
 
     def create_data_analysis_prompt_chain(self) -> Runnable:
-        """ENPromptEN"""
+        """Create a prompt chain for data analysis tasks."""
         return self.create_prompt_chain(
             prompt_name="data_analysis",
             category="Data-Analysis",
@@ -403,7 +403,7 @@ class PromptManagerMiddleware:
         )
 
     def _rag_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """RAGEN"""
+        """Build prompt context for RAG queries."""
         return PromptContext(
             user_request=inputs.get("query", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -423,7 +423,7 @@ class PromptManagerMiddleware:
         )
 
     def _code_execution_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """EN"""
+        """Build prompt context for code execution tasks."""
         return PromptContext(
             user_request=inputs.get("request", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -442,7 +442,7 @@ class PromptManagerMiddleware:
         )
 
     def _data_analysis_context_builder(self, inputs: Dict[str, Any]) -> PromptContext:
-        """EN"""
+        """Build prompt context for data analysis tasks."""
         return PromptContext(
             user_request=inputs.get("request", ""),
             session_id=inputs.get("session_id", str(uuid.uuid4())),
@@ -463,19 +463,19 @@ class PromptManagerMiddleware:
 
 
 class PromptManagerIntegration:
-    """PromptEN"""
+    """Helper class for integrating prompt management with LangGraph workflows."""
 
     @staticmethod
     def integrate_with_langgraph(
         workflow, prompt_manager: PromptManager, node_configs: Dict[str, Dict[str, Any]]
     ) -> None:
         """
-        ENPromptENLangGraphEN
+        Integrate prompt management into a LangGraph workflow.
 
         Args:
-            workflow: LangGraphEN
-            prompt_manager: PromptEN
-            node_configs: EN
+            workflow: LangGraph workflow instance
+            prompt_manager: Prompt manager instance
+            node_configs: Node configuration mapping
                 {
                     'node_name': {
                         'prompt_name': 'prompt_name',
@@ -487,14 +487,14 @@ class PromptManagerIntegration:
         middleware = PromptManagerMiddleware(prompt_manager)
 
         for node_name, config in node_configs.items():
-            # ENPromptEN
+            # Create a prompt chain for each configured node
             prompt_chain = middleware.create_prompt_chain(
                 prompt_name=config["prompt_name"],
                 category=config["category"],
                 context_builder=config.get("context_builder"),
             )
 
-            # EN
+            # Add the prompt-enhanced node to the workflow
             workflow.add_node(
                 node_name, lambda state, chain=prompt_chain: chain.invoke(state)
             )
@@ -504,21 +504,21 @@ class PromptManagerIntegration:
         llm, prompt_manager: PromptManager, system_prompt_category: str = "System"
     ):
         """
-        ENPromptENAgent
+        Create an agent enhanced with prompt management.
 
         Args:
-            llm: EN
-            prompt_manager: PromptEN
-            system_prompt_category: ENPromptEN
+            llm: LLM instance
+            prompt_manager: Prompt manager instance
+            system_prompt_category: System prompt category name
 
         Returns:
-            PromptENAgent
+            Prompt-enhanced agent callable
         """
         middleware = PromptManagerMiddleware(prompt_manager)
 
         async def prompt_enhanced_call(messages: List[BaseMessage]) -> BaseMessage:
-            """PromptEN"""
-            # EN
+            """Call LLM with prompt-managed system prompt."""
+            # Get the last message
             last_message = messages[-1] if messages else HumanMessage(content="")
 
             inputs = {
@@ -527,7 +527,7 @@ class PromptManagerIntegration:
                 "session_id": str(uuid.uuid4()),
             }
 
-            # ENPrompt
+            # Retrieve the system prompt
             try:
                 (
                     system_prompt_info,
@@ -539,21 +539,21 @@ class PromptManagerIntegration:
                     variables={"conversation_history": messages},
                 )
 
-                # EN
+                # Prepend system prompt to messages
                 enhanced_messages = [
                     AIMessage(content=system_prompt_content)
                 ] + messages
 
-                # ENLLM
+                # Call the LLM with enhanced messages
                 response = await llm.ainvoke(enhanced_messages)
 
-                # EN
+                # Record usage log
                 usage_log = UsageLog(
                     prompt_id=system_prompt_info.id,
                     session_id=inputs["session_id"],
                     context={"message_count": len(messages)},
                     variables_used={},
-                    execution_time_ms=0,  # EN
+                    execution_time_ms=0,  # Placeholder: actual timing not tracked here
                     success=True,
                     tokens_used=response.usage_metadata.get("total_tokens", 0)
                     if hasattr(response, "usage_metadata")
@@ -565,8 +565,8 @@ class PromptManagerIntegration:
                 return response
 
             except Exception as e:
-                logger.error(f"PromptEN: {e}")
-                # EN
+                logger.error(f"Prompt-enhanced call failed: {e}")
+                # Fallback: call LLM without prompt enhancement
                 return await llm.ainvoke(messages)
 
         return prompt_enhanced_call

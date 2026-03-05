@@ -1,5 +1,5 @@
 """
-EN - RAGEN
+Feedback Manager - Feedback-driven RAG quality optimization system.
 """
 
 import datetime
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackType(Enum):
-    """EN"""
+    """User feedback classification for query responses."""
 
     HELPFUL = "helpful"
     NOT_HELPFUL = "not_helpful"
@@ -27,7 +27,7 @@ class FeedbackType(Enum):
 
 @dataclass
 class UserFeedback:
-    """EN"""
+    """Data class representing a user's feedback on a query response."""
 
     query_id: str
     question: str
@@ -36,7 +36,7 @@ class UserFeedback:
     user_comment: Optional[str] = None
     timestamp: datetime.datetime = None
     retrieved_chunks: List[Dict] = None
-    feedback_weight: float = 1.0  # EN
+    feedback_weight: float = 1.0  # Multiplier for feedback impact on quality scores
 
     def __post_init__(self):
         if self.timestamp is None:
@@ -47,7 +47,7 @@ class UserFeedback:
 
 @dataclass
 class FeedbackStatistics:
-    """EN"""
+    """Aggregated feedback statistics over a time period."""
 
     total_queries: int
     helpful_count: int
@@ -58,7 +58,7 @@ class FeedbackStatistics:
 
 
 class FeedbackManager:
-    """EN - EN"""
+    """Manages user feedback collection and drives adaptive RAG optimization."""
 
     def __init__(self, vectorstore: VectorStore, reranker: Reranker = None):
         self.vectorstore = vectorstore
@@ -66,12 +66,12 @@ class FeedbackManager:
         self._init_database()
 
     def _init_database(self):
-        """EN"""
+        """Initialize feedback database tables and indexes."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
         try:
-            # EN
+            # Create query feedback table
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_feedback (
@@ -89,7 +89,7 @@ class FeedbackManager:
             """
             )
 
-            # EN
+            # Create document quality scores table
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS document_quality_scores (
@@ -104,7 +104,7 @@ class FeedbackManager:
             """
             )
 
-            # EN
+            # Create query optimization log table
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_optimization_log (
@@ -119,7 +119,7 @@ class FeedbackManager:
             """
             )
 
-            # EN
+            # Create indexes for efficient querying
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_feedback_type ON query_feedback(feedback_type)"
             )
@@ -142,7 +142,7 @@ class FeedbackManager:
             conn.close()
 
     def record_feedback(self, feedback: UserFeedback) -> bool:
-        """EN"""
+        """Record user feedback and trigger adaptive optimizations."""
         conn = self.vectorstore.get_connection()
         cur = conn.cursor()
 
@@ -302,8 +302,8 @@ class FeedbackManager:
                 f"Optimizing reranking weights based on feedback: {optimization_data}"
             )
 
-            # EN:EN
-            # EN
+            # Apply feedback-driven optimizations
+            # Update retrieval parameters based on feedback patterns
 
         except Exception as e:
             logger.error(f"Failed to optimize reranking weights: {e}")
@@ -352,8 +352,8 @@ class FeedbackManager:
     def _rewrite_query(self, optimization_data: Dict):
         """EN"""
         try:
-            # EN
-            # EN:EN,EN
+            # Rewrite query using feedback data
+            # Adjust keywords, filters, and ranking based on past feedback
             logger.info(f"Rewriting query: {optimization_data}")
 
         except Exception as e:

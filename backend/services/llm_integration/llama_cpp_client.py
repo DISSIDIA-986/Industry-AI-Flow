@@ -1,6 +1,6 @@
 """
-llama.cpp EN
-EN GGUF EN,EN Metal EN
+llama.cpp Client (Deprecated)
+Loads GGUF model files with Metal GPU acceleration support.
 """
 import logging
 import os
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class LlamaCppClient:
-    """llama.cpp EN,EN GGUF EN"""
+    """llama.cpp client for loading and running GGUF model files."""
 
     def __init__(
         self,
@@ -35,19 +35,19 @@ class LlamaCppClient:
         verbose: bool = False,
     ):
         """
-        EN llama.cpp EN
+        Initialize the llama.cpp client.
 
         Args:
-            model_path: EN
-            n_ctx: EN
-            n_threads: CPUEN(EN)
-            n_gpu_layers: GPUEN (-1=ENGPU, 0=ENCPU)
-            n_batch: EN
-            verbose: EN
+            model_path: Path to the GGUF model file
+            n_ctx: Context window size
+            n_threads: CPU thread count (auto-detected if not set)
+            n_gpu_layers: GPU offload layers (-1=all GPU, 0=CPU only)
+            n_batch: Batch size for prompt processing
+            verbose: Enable verbose logging
         """
         if not LLAMA_CPP_AVAILABLE:
             raise ImportError(
-                "llama-cpp-python EN.EN: "
+                "llama-cpp-python is not installed. Install with: "
                 "CMAKE_ARGS='-DGGML_METAL=on' pip install llama-cpp-python"
             )
 
@@ -63,58 +63,58 @@ class LlamaCppClient:
         self.verbose = verbose
         self.model = None
 
-        # EN
+        # Validate model file exists
         if not self._validate_model_file():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
 
-        # ENGPU
+        # Auto-detect GPU layers
         if self.n_gpu_layers == -1:
             self.n_gpu_layers = self._detect_gpu_layers()
 
-        # EN
+        # Load the model
         self._load_model()
 
     def _validate_model_file(self) -> bool:
-        """EN"""
+        """Validate that the model file exists and is valid."""
         model_path = Path(self.model_path)
 
         if not model_path.exists():
-            logger.error(f"EN: {self.model_path}")
+            logger.error(f"Model file not found: {self.model_path}")
             return False
 
         if not model_path.is_file():
-            logger.error(f"EN: {self.model_path}")
+            logger.error(f"Path is not a file: {self.model_path}")
             return False
 
         file_size = model_path.stat().st_size
-        if file_size < 1024 * 1024:  # EN1MBEN
-            logger.warning(f"EN,EN: {file_size} bytes")
+        if file_size < 1024 * 1024:  # Less than 1MB is suspicious
+            logger.warning(f"Model file is suspiciously small: {file_size} bytes")
 
-        logger.info(f"✅ EN: {self.model_path} ({file_size / (1024**3):.2f} GB)")
+        logger.info(f"Model file validated: {self.model_path} ({file_size / (1024**3):.2f} GB)")
         return True
 
     def _detect_gpu_layers(self) -> int:
-        """ENGPUEN"""
+        """Auto-detect GPU acceleration capability."""
         try:
             import torch
 
             if torch.backends.mps.is_available():
-                logger.info("✅ EN Apple Silicon Metal,EN GPU EN")
-                return -1  # ENGPUEN
+                logger.info("Apple Silicon Metal detected, enabling full GPU offload")
+                return -1  # Offload all layers to GPU
         except ImportError:
-            logger.info("torch EN,ENGPUEN")
+            logger.info("torch not available, skipping GPU detection")
         except Exception as e:
-            logger.warning(f"GPUEN: {e}")
+            logger.warning(f"GPU detection failed: {e}")
 
-        logger.info("ENCPUEN")
-        return 0  # ENCPUEN
+        logger.info("Using CPU-only mode")
+        return 0  # CPU only
 
     def _load_model(self):
-        """EN"""
+        """Load the GGUF model into memory."""
         try:
-            logger.info(f"EN: {Path(self.model_path).name}")
+            logger.info(f"Loading model: {Path(self.model_path).name}")
             logger.info(
-                f"EN - EN: {self.n_ctx}, EN: {self.n_threads}, GPUEN: {self.n_gpu_layers}"
+                f"Config - context: {self.n_ctx}, threads: {self.n_threads}, GPU layers: {self.n_gpu_layers}"
             )
 
             start_time = time.time()
@@ -128,22 +128,22 @@ class LlamaCppClient:
             )
 
             load_time = time.time() - start_time
-            logger.info(f"✅ EN,EN: {load_time:.2f}EN")
+            logger.info(f"Model loaded successfully in {load_time:.2f}s")
 
-            # EN
+            # Run validation test
             self._test_model()
 
         except Exception as e:
-            logger.error(f"❌ EN: {e}")
-            raise RuntimeError(f"EN {self.model_path}: {e}")
+            logger.error(f"Model loading failed: {e}")
+            raise RuntimeError(f"Failed to load model {self.model_path}: {e}")
 
     def _test_model(self):
-        """EN"""
+        """Run a quick validation test on the loaded model."""
         try:
             test_response = self.model("Hello", max_tokens=5, echo=False)
-            logger.info("✅ EN")
+            logger.info("Model validation passed")
         except Exception as e:
-            logger.error(f"❌ EN: {e}")
+            logger.error(f"Model validation failed: {e}")
             raise RuntimeError(f"Model validation failed: {e}")
 
     def generate(
@@ -159,23 +159,23 @@ class LlamaCppClient:
         **kwargs,
     ) -> str:
         """
-        EN(EN OllamaClient EN)
+        Generate text from a prompt (compatible with OllamaClient interface).
 
         Args:
-            prompt: EN
-            temperature: EN
-            max_tokens: ENtokenEN
-            top_p: nucleusEN
-            top_k: top-kEN
-            repeat_penalty: EN
-            stop: EN
-            stream: EN(EN)
-            **kwargs: EN
+            prompt: Input prompt text
+            temperature: Sampling temperature
+            max_tokens: Maximum output token count
+            top_p: Nucleus sampling threshold
+            top_k: Top-k sampling parameter
+            repeat_penalty: Repetition penalty factor
+            stop: Stop sequences
+            stream: Enable streaming (not implemented)
+            **kwargs: Additional parameters
 
         Returns:
-            EN
+            Generated text response
         """
-        # EN
+        # Apply default parameters
         temperature = (
             temperature
             if temperature is not None
@@ -205,7 +205,7 @@ class LlamaCppClient:
             return response["choices"][0]["text"]
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Text generation failed: {e}")
             raise RuntimeError(f"LLM generation failed: {e}")
 
     def chat(
@@ -216,18 +216,18 @@ class LlamaCppClient:
         top_p: Optional[float] = None,
     ) -> str:
         """
-        EN(EN OllamaClient EN)
+        Chat-style generation (compatible with OllamaClient interface).
 
         Args:
-            messages: EN [{"role": "user", "content": "..."}]
-            temperature: EN
-            max_tokens: ENtokenEN
-            top_p: nucleusEN
+            messages: Chat messages [{"role": "user", "content": "..."}]
+            temperature: Sampling temperature
+            max_tokens: Maximum output token count
+            top_p: Nucleus sampling threshold
 
         Returns:
-            EN
+            Generated assistant response
         """
-        # EN
+        # Convert chat messages to a single prompt
         prompt_parts = []
         for msg in messages:
             role = msg.get("role", "user")
@@ -246,7 +246,7 @@ class LlamaCppClient:
         )
 
     def get_model_info(self) -> Dict[str, Any]:
-        """EN"""
+        """Return current model information and configuration."""
         return {
             "model": Path(self.model_path).name,
             "model_path": self.model_path,
@@ -259,7 +259,7 @@ class LlamaCppClient:
         }
 
     def get_current_config(self) -> Dict[str, Any]:
-        """EN(EN OllamaClient)"""
+        """Get current runtime configuration (compatible with OllamaClient)."""
         return {
             "model": Path(self.model_path).name,
             "base_url": "local",
@@ -269,7 +269,7 @@ class LlamaCppClient:
         }
 
     def list_models(self) -> list:
-        """EN(EN OllamaClient)"""
+        """List available GGUF model files (compatible with OllamaClient)."""
         models_dir = Path("models")
         if models_dir.exists():
             return [
@@ -279,11 +279,11 @@ class LlamaCppClient:
         return []
 
     def update_config(self, **kwargs):
-        """EN(EN OllamaClient)"""
-        logger.info(f"EN: {kwargs}")
+        """Update runtime configuration (compatible with OllamaClient)."""
+        logger.info(f"Configuration updated: {kwargs}")
 
     def get_memory_usage(self) -> Dict[str, float]:
-        """EN"""
+        """Get current memory and CPU usage of the model process."""
         process = psutil.Process(os.getpid())
         return {
             "memory_mb": round(process.memory_info().rss / 1024 / 1024, 2),
@@ -291,12 +291,12 @@ class LlamaCppClient:
         }
 
     def unload_model(self):
-        """EN"""
+        """Unload the model from memory."""
         if self.model:
             del self.model
             self.model = None
-            logger.info("✅ EN,EN")
+            logger.info("Model unloaded, memory freed")
 
     def is_loaded(self) -> bool:
-        """EN"""
+        """Check if a model is currently loaded."""
         return self.model is not None

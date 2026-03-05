@@ -1,4 +1,4 @@
-"""EN Agent - EN RAG EN"""
+"""Unified Agent - combines RAG retrieval with data analysis capabilities."""
 
 import logging
 import threading
@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 def _get_llm():
     """
-    ENLLMEN
+    Get the LLM instance based on the configured provider.
 
     Returns:
-        ENLLMEN
+        A LangChain-compatible LLM instance.
     """
     if settings.llm_provider == "zhipu":
         try:
@@ -140,20 +140,20 @@ def _classify_user_intent(question: str) -> str:
 
 def build_unified_agent():
     """
-    EN Agent - EN RAG EN
+    Build the unified agent combining RAG retrieval and data analysis.
 
-    EN:
-    1. EN:EN
-    2. EN:EN
-    3. EN:EN
-    4. EN:EN
-    5. EN:EN
+    Steps:
+    1. Initialize the LLM backend
+    2. Define the system prompt with tool descriptions
+    3. Register all available tools
+    4. Optionally enable iterative execution tools
+    5. Create and return the agent
 
     Returns:
-        EN Agent EN
+        A configured unified agent instance.
     """
 
-    # 1. ENLLM
+    # 1. Initialize LLM
     llm = _get_llm()
 
     # 2. System prompt
@@ -240,71 +240,71 @@ def build_unified_agent():
         ),
     )
 
-    # 3. EN
+    # 3. Register tools
     tools = [
-        # RAG EN
+        # RAG retrieval tools
         hybrid_retrieval_tool,
         rerank_tool,
-        # EN
+        # Code execution tools
         code_execution_tool,
         code_validation_tool,
         get_execution_environment_info,
-        # EN
+        # Data analysis tools
         data_analysis_tool,
         data_preprocessing_tool,
-        # EN
+        # Visualization tools
         visualization_tool,
         advanced_visualization_tool,
         dashboard_generation_tool,
     ]
 
-    # EN,EN
+    # Add iterative execution tools if enabled
     if getattr(settings, "enable_iterative_execution", True):
         tools.extend([iterative_code_analysis_tool, self_healing_code_execution_tool])
 
-    # 4. EN Agent
+    # 4. Create the unified agent
     agent = create_agent_compat(
         model=llm,
         tools=tools,
         system_prompt=system_prompt,
-        # state_schema=RAGAgentState,  # EN,EN
-        max_iterations=getattr(settings, "max_code_fix_attempts", 5),  # EN
+        # state_schema=RAGAgentState,  # Disabled; using default state schema
+        max_iterations=getattr(settings, "max_code_fix_attempts", 5),  # Max tool iterations
     )
 
     return agent
 
 
 class UnifiedAgentOrchestrator:
-    """EN Agent EN - EN"""
+    """Unified Agent Orchestrator - routes requests to the appropriate agent pipeline."""
 
     def __init__(self):
-        """EN"""
+        """Initialize the orchestrator with a shared unified agent instance."""
         self.agent = get_unified_agent()
         self.logger = logging.getLogger(__name__)
 
     def process_request(self, question: str, **kwargs) -> Dict[str, Any]:
         """
-        EN
+        Process a user request through the unified agent pipeline.
 
         Args:
-            question: EN
-            **kwargs: EN(EN)
+            question: The user's question text.
+            **kwargs: Additional parameters (e.g., data_file path).
 
         Returns:
-            EN
+            A dict with success status, intent, question, and result.
         """
         try:
-            # 1. EN
+            # 1. Classify intent
             intent = _classify_user_intent(question)
-            self.logger.info(f"EN: {intent}")
+            self.logger.info(f"Classified intent: {intent}")
 
-            # 2. EN
+            # 2. Enhance input based on intent
             enhanced_input = self._enhance_input_by_intent(question, intent, **kwargs)
 
-            # 3. EN Agent
+            # 3. Invoke the unified agent
             result = self.agent.invoke(enhanced_input)
 
-            # 4. EN
+            # 4. Process result based on intent
             processed_result = self._process_result_by_intent(result, intent)
 
             return {
@@ -316,7 +316,7 @@ class UnifiedAgentOrchestrator:
             }
 
         except Exception as e:
-            self.logger.error(f"EN Agent EN: {e}")
+            self.logger.error(f"Unified agent processing failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -327,36 +327,36 @@ class UnifiedAgentOrchestrator:
     def _enhance_input_by_intent(
         self, question: str, intent: str, **kwargs
     ) -> Dict[str, Any]:
-        """EN"""
+        """Enhance the agent input with intent-specific context."""
         base_input = {"messages": [], "question": question}
 
         if intent == "data_analysis":
-            # EN,EN
+            # Attach data file path if provided
             if "data_file" in kwargs:
                 base_input["data_file"] = kwargs["data_file"]
-                base_input["question"] += f"\n\nEN: {kwargs['data_file']}"
+                base_input["question"] += f"\n\nData file: {kwargs['data_file']}"
 
-            # EN
-            base_input["question"] += "\n\nEN,EN,EN."
+            # Add data analysis instructions
+            base_input["question"] += "\n\nPlease analyze this data, generate statistics, and provide visualizations."
 
         elif intent == "knowledge":
-            # EN,EN
-            base_input["question"] += "\n\nEN,EN."
+            # Add knowledge retrieval instructions
+            base_input["question"] += "\n\nPlease search the knowledge base and cite your sources."
 
         elif intent == "mixed":
-            # EN,EN
+            # Attach data file and combine both instruction sets
             if "data_file" in kwargs:
                 base_input["data_file"] = kwargs["data_file"]
-                base_input["question"] += f"\n\nEN: {kwargs['data_file']}"
+                base_input["question"] += f"\n\nData file: {kwargs['data_file']}"
 
-            base_input["question"] += "\n\nEN,EN."
+            base_input["question"] += "\n\nPlease combine knowledge retrieval with data analysis."
 
         return base_input
 
     def _process_result_by_intent(
         self, result: Dict[str, Any], intent: str
     ) -> Dict[str, Any]:
-        """EN"""
+        """Process the agent result based on the classified intent."""
         processed = {
             "answer": "",
             "sources": [],
@@ -366,24 +366,24 @@ class UnifiedAgentOrchestrator:
             "confidence": "medium",
         }
 
-        # EN
+        # Extract the answer from messages
         if "messages" in result:
             messages = result["messages"]
             if messages:
-                # EN
+                # Get the last message as the final answer
                 last_message = messages[-1]
                 if hasattr(last_message, "content"):
                     processed["answer"] = last_message.content
                 else:
                     processed["answer"] = str(last_message)
 
-        # EN
+        # Extract intent-specific results
         if intent in ["knowledge", "mixed"]:
-            # EN
+            # Extract document sources from retrieval steps
             processed["sources"] = self._extract_sources(result)
 
         if intent in ["data_analysis", "mixed"]:
-            # EN
+            # Extract analysis results and visualizations
             processed["data_analysis"] = self._extract_analysis_results(result)
             processed["visualizations"] = self._extract_visualizations(result)
             processed["code_execution"] = self._extract_code_execution_results(result)
@@ -391,10 +391,10 @@ class UnifiedAgentOrchestrator:
         return processed
 
     def _extract_sources(self, result: Dict[str, Any]) -> List[str]:
-        """EN"""
+        """Extract document source IDs from retrieval tool results."""
         sources = []
 
-        # EN
+        # Search intermediate steps for retrieval tool outputs
         if "intermediate_steps" in result:
             for step in result["intermediate_steps"]:
                 if len(step) >= 2:
@@ -408,7 +408,7 @@ class UnifiedAgentOrchestrator:
         return sources
 
     def _extract_analysis_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """EN"""
+        """Extract data analysis results from tool execution steps."""
         analysis_results = {}
 
         if "intermediate_steps" in result:
@@ -424,7 +424,7 @@ class UnifiedAgentOrchestrator:
         return analysis_results
 
     def _extract_visualizations(self, result: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """EN"""
+        """Extract generated visualizations from tool execution steps."""
         visualizations = []
 
         if "intermediate_steps" in result:
@@ -441,7 +441,7 @@ class UnifiedAgentOrchestrator:
         return visualizations
 
     def _extract_code_execution_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """EN"""
+        """Extract code execution results from tool execution steps."""
         code_results = {}
 
         if "intermediate_steps" in result:

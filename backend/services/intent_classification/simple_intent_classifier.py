@@ -1,6 +1,6 @@
 """
-EN - EN
-EN
+Simple Intent Classifier - Keyword-based intent classification.
+Lightweight classifier that uses keyword matching and regex patterns without LLM calls.
 """
 
 import json
@@ -14,19 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 class IntentType(Enum):
-    """EN"""
+    """Supported intent types for classification."""
 
-    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # EN
-    DATA_ANALYSIS = "data_analysis"  # EN
-    COST_ESTIMATION = "cost_estimation"  # EN
-    DOCUMENT_PROCESSING = "document_processing"  # EN
-    CODE_EXECUTION = "code_execution"  # EN
-    UNCLEAR_INTENT = "unclear_intent"  # EN
+    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # Knowledge/document retrieval queries
+    DATA_ANALYSIS = "data_analysis"  # Data analysis and statistics queries
+    COST_ESTIMATION = "cost_estimation"  # Construction cost estimation queries
+    DOCUMENT_PROCESSING = "document_processing"  # Document processing and OCR queries
+    CODE_EXECUTION = "code_execution"  # Code execution queries
+    UNCLEAR_INTENT = "unclear_intent"  # Intent could not be determined
 
 
 @dataclass
 class SimpleIntentResult:
-    """EN"""
+    """Result of a simple intent classification."""
 
     intent: IntentType
     confidence: float = 0.0
@@ -40,52 +40,52 @@ class SimpleIntentResult:
 
     @property
     def is_high_confidence(self) -> bool:
-        """EN"""
+        """Check if classification confidence is above the high threshold."""
         return self.confidence >= 0.7
 
     @property
     def is_uncertain(self) -> bool:
-        """EN"""
+        """Check if classification confidence is below the uncertainty threshold."""
         return self.confidence < 0.5
 
 
 class SimpleIntentClassifier:
     """
-    EN - EN
+    Simple Intent Classifier - Keyword and pattern-based intent classification.
 
-    ENLLMEN,EN:
-    1. EN
-    2. EN
-    3. EN
+    A lightweight classifier that does not require LLM calls, using instead:
+    1. Keyword matching with weighted scoring
+    2. Regex pattern matching
+    3. Context-based score adjustment
     """
 
     def __init__(self, confidence_threshold: float = 0.7):
         """
-        EN
+        Initialize the simple intent classifier.
 
         Args:
-            confidence_threshold: EN
+            confidence_threshold: Minimum confidence threshold for high-confidence classification
         """
         self.confidence_threshold = confidence_threshold
 
-        # EN
+        # Build keyword matching rules
         self._keyword_rules = self._build_keyword_rules()
 
-        # EN
+        # Classification statistics
         self.stats = {
             "total_classifications": 0,
             "high_confidence_count": 0,
             "intent_distribution": {},
         }
 
-        logger.info("EN")
+        logger.info("Simple intent classifier initialized")
 
     def _build_keyword_rules(self) -> Dict[IntentType, Dict[str, Any]]:
-        """EN"""
+        """Build keyword and pattern rules for each intent type."""
         return {
             IntentType.KNOWLEDGE_RETRIEVAL: {
                 "keywords": [
-                    # EN
+                    # Knowledge retrieval keywords
                     "what is",
                     "how does",
                     "explain",
@@ -109,7 +109,7 @@ class SimpleIntentClassifier:
             },
             IntentType.DATA_ANALYSIS: {
                 "keywords": [
-                    # EN - EN
+                    # Analysis action keywords
                     "analyze",
                     "analysis",
                     "statistics",
@@ -120,7 +120,7 @@ class SimpleIntentClassifier:
                     "aggregate",
                     "trend",
                     "pattern",
-                    # EN - EN
+                    # Data-related keywords
                     "data",
                     "dataset",
                     "csv",
@@ -132,7 +132,7 @@ class SimpleIntentClassifier:
                     "field",
                     "value",
                     "distribution",
-                    # EN - EN
+                    # Statistical operation keywords
                     "average",
                     "mean",
                     "median",
@@ -149,7 +149,7 @@ class SimpleIntentClassifier:
                     "correlation",
                     "variance",
                     "standard deviation",
-                    # EN - EN
+                    # Comparison keywords
                     "compare",
                     "comparison",
                     "versus",
@@ -159,7 +159,7 @@ class SimpleIntentClassifier:
                     "among",
                     "relation",
                     "relationship",
-                    # EN - EN
+                    # Visualization keywords
                     "chart",
                     "graph",
                     "plot",
@@ -200,7 +200,7 @@ class SimpleIntentClassifier:
             },
             IntentType.DOCUMENT_PROCESSING: {
                 "keywords": [
-                    # EN
+                    # Document and file type keywords
                     "pdf",
                     "document",
                     "file",
@@ -260,20 +260,20 @@ class SimpleIntentClassifier:
         self, query: str, context: Optional[Any] = None
     ) -> SimpleIntentResult:
         """
-        EN
+        Classify the intent of a user query using keyword and pattern matching.
 
         Args:
-            query: EN
-            context: EN(EN)
+            query: User query string
+            context: Optional context for score adjustment (e.g. uploaded files)
 
         Returns:
-            SimpleIntentResult: EN
+            SimpleIntentResult: Classification result with intent, confidence, and reasoning
         """
         try:
-            # EN
+            # Preprocess the query
             processed_query = self._preprocess_query(query)
 
-            # EN
+            # Calculate scores for each intent type
             intent_scores = {}
 
             for intent_type, rules in self._keyword_rules.items():
@@ -287,24 +287,24 @@ class SimpleIntentClassifier:
                         "keywords": matched_keywords,
                     }
 
-            # EN
+            # Adjust scores based on context (e.g. uploaded files)
             if context:
                 normalized_context = self._normalize_context(context)
                 intent_scores = self._adjust_scores_with_context(
                     intent_scores, normalized_context
                 )
 
-            # EN
+            # Determine the best matching intent
             if not intent_scores:
-                # EN
+                # No keywords matched any intent
                 result = SimpleIntentResult(
                     intent=IntentType.UNCLEAR_INTENT,
                     confidence=0.3,
-                    reasoning="EN",
-                    suggested_action="EN",
+                    reasoning="No matching keywords found for any known intent",
+                    suggested_action="Please rephrase your question with more specific terms",
                 )
             else:
-                # EN
+                # Select the intent with the highest score
                 best_intent = max(intent_scores.items(), key=lambda x: x[1]["score"])
                 intent_type, intent_data = best_intent
 
@@ -315,7 +315,7 @@ class SimpleIntentClassifier:
                 raw_confidence = min(intent_data["score"] / max_possible_score, 1.0)
                 confidence = max(raw_confidence, 0.5) if intent_data["score"] > 0 else 0.0
 
-                # EN
+                # Build reasoning string
                 reasoning = f"Matched {len(intent_data['keywords'])} keywords: {', '.join(intent_data['keywords'][:3])}"
 
                 result = SimpleIntentResult(
@@ -326,14 +326,14 @@ class SimpleIntentClassifier:
                     suggested_action=self._get_suggested_action(intent_type),
                 )
 
-            # EN
+            # Update classification statistics
             self._update_stats(result)
 
-            logger.info(f"EN: {result.intent.value} (EN: {result.confidence:.2f})")
+            logger.info(f"Intent classified: {result.intent.value} (confidence: {result.confidence:.2f})")
             return result
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Intent classification failed: {e}")
             return SimpleIntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
@@ -342,54 +342,54 @@ class SimpleIntentClassifier:
             )
 
     def _preprocess_query(self, query: str) -> str:
-        """EN"""
-        # EN
+        """Preprocess query: lowercase and normalize whitespace."""
+        # Convert to lowercase
         processed = query.lower()
 
-        # EN
+        # Normalize whitespace
         processed = re.sub(r"\s+", " ", processed).strip()
 
         return processed
 
     def _calculate_intent_score(self, query: str, rules: Dict[str, Any]) -> tuple:
         """
-        EN
+        Calculate the intent score for a query against a set of rules.
 
         Args:
-            query: EN
-            rules: EN
+            query: Preprocessed query string
+            rules: Keyword and pattern rules for an intent type
 
         Returns:
-            tuple: (EN, EN)
+            tuple: (total score, list of matched keywords)
         """
         score = 0.0
         matched_keywords = []
 
-        # EN
+        # Score keyword matches
         keywords = rules.get("keywords", [])
         for keyword in keywords:
             if keyword.lower() in query:
-                # EN
+                # Base score for a keyword match
                 base_score = 10.0
 
-                # EN:EN
+                # Boost: keyword appears at the start of the query
                 if query.startswith(keyword.lower()):
                     base_score *= 1.5
 
-                # EN:EN
+                # Boost: multi-word keyword (more specific match)
                 if len(keyword.split()) > 1:
                     base_score *= 1.2
 
                 score += base_score
                 matched_keywords.append(keyword)
 
-        # EN
+        # Score pattern matches
         patterns = rules.get("patterns", [])
         for pattern in patterns:
             if re.search(pattern, query, re.IGNORECASE):
-                score += 15.0  # EN
+                score += 15.0  # Pattern matches are weighted higher than keyword matches
 
-        # EN
+        # Apply priority multiplier
         priority = rules.get("priority", 1)
         score *= priority
 
@@ -410,8 +410,8 @@ class SimpleIntentClassifier:
     def _adjust_scores_with_context(
         self, intent_scores: Dict[IntentType, Dict], context: Dict[str, Any]
     ) -> Dict[IntentType, Dict]:
-        """EN"""
-        # EN
+        """Adjust intent scores based on contextual information like uploaded files."""
+        # Check for uploaded files
         uploaded_files = context.get("uploaded_files", [])
 
         if uploaded_files:
@@ -419,7 +419,7 @@ class SimpleIntentClassifier:
                 file_type = file_info.get("type", "").lower()
                 file_ext = file_info.get("extension", "").lower()
 
-                # CSV/ExcelEN
+                # CSV/Excel files boost data analysis intent
                 if file_ext in [".csv", ".xlsx", ".xls"] or "spreadsheet" in file_type:
                     if IntentType.DATA_ANALYSIS in intent_scores:
                         intent_scores[IntentType.DATA_ANALYSIS]["score"] *= 1.5
@@ -427,7 +427,7 @@ class SimpleIntentClassifier:
                             "detected_csv_file"
                         )
 
-                # PDF/EN
+                # PDF/image files boost document processing intent
                 elif (
                     file_ext in [".pdf", ".jpg", ".png", ".jpeg", ".tiff"]
                     or "image" in file_type
@@ -442,19 +442,19 @@ class SimpleIntentClassifier:
         return intent_scores
 
     def _get_suggested_action(self, intent: IntentType) -> str:
-        """EN"""
+        """Return a suggested action description for the classified intent."""
         actions = {
-            IntentType.KNOWLEDGE_RETRIEVAL: "ENRAGEN",
-            IntentType.DATA_ANALYSIS: "ENAgentEN",
-            IntentType.COST_ESTIMATION: "EN",
-            IntentType.DOCUMENT_PROCESSING: "ENOCR AgentEN",
-            IntentType.CODE_EXECUTION: "ENAgentEN",
-            IntentType.UNCLEAR_INTENT: "EN",
+            IntentType.KNOWLEDGE_RETRIEVAL: "Route to RAG knowledge retrieval engine",
+            IntentType.DATA_ANALYSIS: "Route to Data Analysis Agent for processing",
+            IntentType.COST_ESTIMATION: "Route to cost estimation service",
+            IntentType.DOCUMENT_PROCESSING: "Route to OCR Agent for document extraction",
+            IntentType.CODE_EXECUTION: "Route to Code Execution Agent for processing",
+            IntentType.UNCLEAR_INTENT: "Request clarification from the user",
         }
-        return actions.get(intent, "EN")
+        return actions.get(intent, "Route to default handler")
 
     def _update_stats(self, result: SimpleIntentResult):
-        """EN"""
+        """Update classification statistics with the latest result."""
         self.stats["total_classifications"] += 1
 
         if result.is_high_confidence:
@@ -466,7 +466,7 @@ class SimpleIntentClassifier:
         self.stats["intent_distribution"][intent_value] += 1
 
     def get_stats(self) -> Dict[str, Any]:
-        """EN"""
+        """Return classification statistics including confidence rate."""
         total = self.stats["total_classifications"]
         return {
             **self.stats,

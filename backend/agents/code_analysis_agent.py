@@ -1,4 +1,4 @@
-"""Code Analysis Agent - EN Python EN"""
+"""Code Analysis Agent - executes and analyzes Python code in a sandboxed environment."""
 
 import logging
 
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 def _get_llm():
     """
-    ENLLMEN
+    Get the LLM instance based on the configured provider.
 
     Returns:
-        ENLLMEN
+        A LangChain-compatible LLM instance.
     """
     if settings.llm_provider == "zhipu":
         try:
@@ -56,62 +56,62 @@ def _get_llm():
 
 def build_code_analysis_agent():
     """
-    EN Agent - EN
+    Build the code analysis agent for sandboxed Python execution.
 
-    EN:
-    1. EN:Docker EN
-    2. EN:EDA,EN,EN
-    3. EN:EN
-    4. EN:EN
-    5. EN:EN
+    Steps:
+    1. Code execution: run Python in a Docker sandbox
+    2. Data analysis: EDA, statistics, and aggregations
+    3. Visualization: generate charts and plots
+    4. Error handling: auto-retry with fixes on failure
+    5. Result formatting: structured output with summaries
 
     Returns:
-        EN Code Analysis Agent EN
+        A configured Code Analysis Agent instance.
     """
 
-    # 1. ENLLM
+    # 1. Initialize LLM
     llm = _get_llm()
 
-    # 2. EN
-    system_prompt = """EN Python EN,EN,EN.
+    # 2. Define system prompt
+    system_prompt = """You are a Python code analysis assistant. You can execute code, analyze data, and create visualizations.
 
-**EN**:
-1. **EN**:EN pandas,numpy EN,EN
-2. **EN**:EN matplotlib,seaborn,plotly EN
-3. **EN**:EN scikit-learn,xgboost EN
-4. **EN**:EN
+**Capabilities**:
+1. **Data Processing**: Use pandas, numpy for data loading, cleaning, and transformation
+2. **Visualization**: Use matplotlib, seaborn, plotly for charts and plots
+3. **Machine Learning**: Use scikit-learn, xgboost for modeling and predictions
+4. **Statistical Analysis**: Compute descriptive and inferential statistics
 
-**EN**:
-1. EN,EN
-2. EN Python EN
-3. EN
-4. EN,EN
-5. EN(3EN)
-6. EN
+**Workflow**:
+1. Understand the user's data analysis request
+2. Write clean, well-documented Python code
+3. Execute the code in the sandbox
+4. Analyze the results and provide insights
+5. If execution fails, retry (up to 3 attempts)
+6. Return a clear summary of findings
 
-**EN**:
-- EN pandas EN
-- EN
-- EN
-- EN
+**Best Practices**:
+- Always use pandas for structured data operations
+- Handle missing values and data quality issues
+- Include proper labels and titles on visualizations
+- Add comments explaining analysis steps
 
-**EN**:
-- EN:EN
-- EN:EN
-- EN:EN
-- EN:EN,EN
+**Error Handling**:
+- ImportError: install or substitute the missing package
+- FileNotFoundError: verify the file path and format
+- ValueError: check data types and ranges
+- MemoryError: reduce dataset size or use chunked processing
 
-**EN**:
-- EN
-- EN
-- EN
-- EN
+**Output Format**:
+- Provide a textual summary of findings
+- Include key statistics and metrics
+- Attach generated visualizations
+- List any data quality warnings
 
-**EN**:
-- EN Docker EN
-- EN {code_execution_timeout} EN
-- EN {code_execution_memory_limit}
-- EN3EN,EN
+**Security Constraints**:
+- Code runs in a Docker sandbox
+- Maximum execution time: {code_execution_timeout} seconds
+- Memory limit: {code_execution_memory_limit}
+- Maximum 3 retry attempts on failure
 """.format(
         code_execution_timeout=getattr(settings, "code_execution_timeout", 300),
         code_execution_memory_limit=getattr(
@@ -119,17 +119,17 @@ def build_code_analysis_agent():
         ),
     )
 
-    # 3. EN Agent
+    # 3. Create the code analysis agent
     agent = create_agent_compat(
         model=llm,
         tools=[code_execution_tool, data_analysis_tool, visualization_tool],
         system_prompt=system_prompt,
-        # state_schema=CodeAnalysisAgentState,  # EN,EN
-        max_iterations=3,  # EN
+        # state_schema=CodeAnalysisAgentState,  # Disabled; using default state schema
+        max_iterations=3,  # Max retry attempts on failure
     )
 
     return agent
 
 
-# EN Agent EN
+# Build the code analysis agent singleton
 code_analysis_agent = build_code_analysis_agent()

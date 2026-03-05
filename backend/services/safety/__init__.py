@@ -1,11 +1,11 @@
 """
-EN
+Safety Module
 
-ENRAGEN:
-- EN
-- EN
-- EN
-- EN
+RAG output quality and safety checking:
+- Groundedness verification
+- Content safety filtering
+- Response quality scoring
+- Hallucination detection
 """
 
 from backend.services.safety.groundedness_checker import (

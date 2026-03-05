@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/prompts", tags=["prompts"], dependencies=[Depends(secure_endpoint)])
 
 
-# PydanticEN
+# Pydantic request/response models
 class PromptVariableCreate(BaseModel):
     name: str = Field(..., description="Description")
     type: str = Field(default="string", description="Description")
@@ -38,7 +38,7 @@ class PromptVariableCreate(BaseModel):
     options: List[Any] = Field(default=None, description="Description")
 
 
-class PromptListResponse(BaseModel):  # P0EN:EN
+class PromptListResponse(BaseModel):  # P0 fix: added response model for list endpoint
     """Prompt"""
     id: UUID
     name: str
@@ -93,7 +93,7 @@ class PromptUpdate(BaseModel):
     priority: Optional[int] = Field(None, description="Description")
     tags: Optional[List[str]] = Field(None, description="Description")
     change_description: Optional[str] = Field(None, description="Description")
-    updated_by: Optional[str] = Field(None, description="Description")  # P0EN:ENupdated_byEN
+    updated_by: Optional[str] = Field(None, description="Description")  # P0 fix: added updated_by field
     create_new_version: bool = Field(default=True, description="Description")
 
 
@@ -135,10 +135,10 @@ class UsageLogCreate(BaseModel):
     temperature: Optional[float] = Field(None, description="Description")
 
 
-# EN:ENPrompt Manager
+# Dependency: Prompt Manager instance
 async def get_prompt_manager() -> PromptManager:
     """Build and return a PromptManager instance."""
-    # EN
+    # Get database connection pool
     from backend.config import get_database_pool
 
     pool = await get_database_pool()
@@ -159,7 +159,7 @@ async def list_prompts(
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # EN
+            # Build query conditions
             conditions = []
             params = []
             param_count = 0
@@ -181,7 +181,7 @@ async def list_prompts(
 
             where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-            # EN
+            # Execute paginated query with tags
             query = f"""
                 SELECT p.*,
                        COALESCE(
@@ -200,7 +200,7 @@ async def list_prompts(
             params.extend([size, (page - 1) * size])
             rows = await conn.fetch(query, *params)
 
-            # EN
+            # Count total matching prompts
             count_query = f"""
                 SELECT COUNT(DISTINCT p.id)
                 FROM prompts p
@@ -211,7 +211,7 @@ async def list_prompts(
             prompts = []
             for row in rows:
                 prompt_data = dict(row)
-                # ENvariables
+                # Parse JSON fields (variables and metadata)
                 if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
                 if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
@@ -245,10 +245,10 @@ async def get_prompt(
         if not prompt_info:
             raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # EN
+        # Get performance metrics
         performance = await prompt_manager.get_prompt_performance(prompt_id)
 
-        # EN
+        # Get version history
         async with prompt_manager.db_pool.acquire() as conn:
             versions_query = """
                 SELECT version, change_description, created_at, created_by
@@ -279,15 +279,15 @@ async def create_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    ENPrompt
+    Create a new prompt.
     """
     try:
-        # EN
+        # Convert variable models
         variables = None
         if prompt_data.variables:
             variables = [PromptVariable(**var.dict()) for var in prompt_data.variables]
 
-        # ENPrompt
+        # Create the prompt
         prompt_info = await prompt_manager.create_prompt(
             name=prompt_data.name,
             category=prompt_data.category,
@@ -321,15 +321,15 @@ async def update_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    ENPrompt
+    Update an existing prompt.
     """
     try:
-        # EN
+        # Convert variable models
         variables = None
         if prompt_data.variables:
             variables = [PromptVariable(**var.dict()) for var in prompt_data.variables]
 
-        # ENPrompt(P0EN:ENupdated_byEN)
+        # Update the prompt (P0 fix: pass updated_by correctly)
         prompt_info = await prompt_manager.update_prompt(
             prompt_id=prompt_id,
             content=prompt_data.content,
@@ -338,7 +338,7 @@ async def update_prompt(
             priority=prompt_data.priority,
             tags=prompt_data.tags,
             change_description=prompt_data.change_description,
-            updated_by=prompt_data.updated_by,  # EN:ENupdated_byENcreated_by
+            updated_by=prompt_data.updated_by,  # Fix: pass updated_by instead of created_by
             create_new_version=prompt_data.create_new_version,
         )
 
@@ -364,7 +364,7 @@ async def delete_prompt(
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # EN:EN
+            # Soft-delete: mark as inactive
             await conn.execute(
                 "UPDATE prompts SET is_active = false, updated_at = NOW() WHERE id = $1",
                 prompt_id,
@@ -387,17 +387,17 @@ async def test_prompt(
     Prompt API endpoint
     """
     try:
-        # ENPrompt
+        # Retrieve the prompt
         prompt_info = await prompt_manager._get_prompt_by_id(prompt_id)
         if not prompt_info:
             raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # EN
+        # Render the template with test variables
         rendered_content = prompt_manager._render_template(
             prompt_info.content, test_data.variables
         )
 
-        # EN
+        # Check for missing required variables
         missing_variables = []
         for var in prompt_info.variables:
             if var.required and var.name not in test_data.variables:
@@ -433,12 +433,12 @@ async def get_prompt_performance(
     Prompt API endpoint
     """
     try:
-        # EN
+        # Get aggregate performance
         performance = await prompt_manager.get_prompt_performance(prompt_id)
         if not performance:
             raise HTTPException(status_code=404, detail="Prompt performance not found.")
 
-        # EN(P0EN:ENdays)
+        # Get daily breakdown (P0 fix: now respects the days parameter)
         async with prompt_manager.db_pool.acquire() as conn:
             detailed_query = """
                 SELECT
@@ -457,7 +457,7 @@ async def get_prompt_performance(
 
             daily_stats = await conn.fetch(detailed_query, prompt_id, days)
 
-            # EN
+            # Get recent usage logs
             recent_logs_query = """
                 SELECT session_id, context, success, execution_time_ms,
                        user_feedback, tokens_used, created_at
@@ -520,7 +520,7 @@ async def create_experiment(
     experiment: ExperimentCreate,
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
-    """ENA/BEN."""
+    """Create a new A/B experiment."""
     try:
         created = await prompt_manager.create_experiment(
             name=experiment.name,
@@ -702,7 +702,7 @@ async def get_prompt_metrics_summary(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/search", response_model=List[PromptListResponse])  # P0EN:EN
+@router.get("/search", response_model=List[PromptListResponse])  # P0 fix: added response model
 async def search_prompts(
     q: str = Query(..., description="Description"),
     category: Optional[str] = Query(None, description="Description"),
@@ -710,13 +710,13 @@ async def search_prompts(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    ENPrompt
+    Search prompts by name, content, or subcategory.
     """
     try:
         async with prompt_manager.db_pool.acquire() as conn:
-            # EN(P0EN:EN)
+            # Escape special SQL LIKE characters (P0 fix: prevent injection)
             escaped_q = q.replace('%', r'\%').replace('_', r'\_')
-            params = [f"%{escaped_q}%"]  # $1: EN
+            params = [f"%{escaped_q}%"]  # $1: search pattern
             conditions = ["(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"]
 
             if category:
@@ -772,15 +772,15 @@ async def clone_prompt(
     prompt_manager: PromptManager = Depends(get_prompt_manager),
 ):
     """
-    ENPrompt
+    Clone an existing prompt with a new name.
     """
     try:
-        # ENPrompt
+        # Retrieve the original prompt
         original_prompt = await prompt_manager._get_prompt_by_id(prompt_id)
         if not original_prompt:
             raise HTTPException(status_code=404, detail="Prompt not found.")
 
-        # ENPrompt
+        # Create the cloned prompt
         cloned_prompt = await prompt_manager.create_prompt(
             name=new_name,
             category=original_prompt.category,

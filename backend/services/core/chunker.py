@@ -5,35 +5,35 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 
 
-# EN(EN)
+# Hierarchical text separators (ordered by priority)
 CONSTRUCTION_SEPARATORS = [
-    "\n\n## ",  # MarkdownEN
-    "\n\n### ",  # MarkdownEN
-    "\n\n#### ",  # MarkdownEN
-    "\n\n",  # EN
-    "\n",  # EN
-    ". ",  # EN+EN
-    "! ",  # EN+EN
-    "? ",  # EN+EN
-    "; ",  # EN+EN
-    ", ",  # EN+EN
-    " ",  # EN
-    "",  # EN
+    "\n\n## ",  # Markdown H2 heading
+    "\n\n### ",  # Markdown H3 heading
+    "\n\n#### ",  # Markdown H4 heading
+    "\n\n",  # Double newline (paragraph break)
+    "\n",  # Single newline
+    ". ",  # Sentence boundary (period)
+    "! ",  # Sentence boundary (exclamation)
+    "? ",  # Sentence boundary (question)
+    "; ",  # Clause boundary (semicolon)
+    ", ",  # Clause boundary (comma)
+    " ",  # Word boundary
+    "",  # Character-level (last resort)
 ]
 
-# EN(EN)
+# Construction document reference patterns (avoid splitting mid-reference)
 CONSTRUCTION_PATTERNS = [
-    r"Section \d+\.\d+\.\d+",  # EN "Section 4.3.2.1"
-    r"CSA [A-Z]\d+\.\d+-\d+",  # EN "CSA A23.1-19"
-    r"Figure \d+-\d+",  # EN "Figure 3-2"
-    r"Table \d+\.\d+",  # EN "Table 4.5"
-    r"Part \d+",  # EN "Part 23"(Alberta OHS)
-    r"Clause \d+\.\d+\.\d+",  # EN "Clause 7.2.4"
+    r"Section \d+\.\d+\.\d+",  # e.g. "Section 4.3.2.1"
+    r"CSA [A-Z]\d+\.\d+-\d+",  # e.g. "CSA A23.1-19"
+    r"Figure \d+-\d+",  # e.g. "Figure 3-2"
+    r"Table \d+\.\d+",  # e.g. "Table 4.5"
+    r"Part \d+",  # e.g. "Part 23" (Alberta OHS)
+    r"Clause \d+\.\d+\.\d+",  # e.g. "Clause 7.2.4"
 ]
 
 
 def _is_construction_reference(text: str) -> bool:
-    """EN(EN)"""
+    """Check if text contains a construction standard reference."""
     for pattern in CONSTRUCTION_PATTERNS:
         if re.search(pattern, text, re.IGNORECASE):
             return True
@@ -46,42 +46,42 @@ def chunk_text(
     chunk_overlap: int = 128,
 ) -> list[dict]:
     """
-    EN:EN + EN
+    Split text into chunks using semantic separators and overlap.
 
-    EN(2026-02-09):
-    - EN300EN512EN,EN
-    - EN,EN
-    - EN
+    Update (2026-02-09):
+    - Increased default chunk size from 300 to 512 characters for better context
+    - Added construction reference awareness to avoid mid-reference splits
+    - Added overlap for context continuity
 
     Args:
-        text: EN
-        chunk_size: EN(EN,EN512)
-        chunk_overlap: EN(EN128)
+        text: Input text to chunk
+        chunk_size: Maximum chunk size in characters (default 512)
+        chunk_overlap: Overlap between consecutive chunks (default 128)
 
     Returns:
-        EN
+        List of chunk dicts with content and metadata
     """
     chunks = []
 
-    # EN(LangChain RecursiveCharacterTextSplitterEN)
+    # Recursive splitting (inspired by LangChain RecursiveCharacterTextSplitter)
     def split_text_by_separators(text: str, separators: List[str]) -> List[str]:
-        """EN"""
+        """Recursively split text using hierarchical separators."""
         if not separators:
             return [text]
 
-        # EN
+        # Use the first separator
         separator = separators[0]
         if separator:
             splits = text.split(separator)
         else:
-            splits = list(text)  # EN
+            splits = list(text)  # Character-level split
 
-        # EN
+        # Process splits
         final_splits = []
         for i, split in enumerate(splits):
             if i > 0 and separator:
-                split = separator + split  # EN
-            # EN,EN
+                split = separator + split  # Re-attach separator
+            # If split is still too large, recurse with next separator
             if len(split) > chunk_size and separators[1:]:
                 sub_splits = split_text_by_separators(split, separators[1:])
                 final_splits.extend(sub_splits)
@@ -91,16 +91,16 @@ def chunk_text(
 
         return final_splits
 
-    # EN
+    # Split text using hierarchical separators
     splits = split_text_by_separators(text, CONSTRUCTION_SEPARATORS)
 
-    # ENchunk_size
+    # Merge splits into chunks respecting chunk_size
     current_chunk = ""
     chunk_id = 0
     start_pos = 0
 
     for split in splits:
-        # ENchunk + ENsplitENchunk_size,ENchunk
+        # If current chunk + new split exceeds chunk_size, save current chunk
         if current_chunk and len(current_chunk) + len(split) > chunk_size:
             # Avoid splitting mid-reference (e.g. "CSA A23.1-14")
             # but cap at 3x chunk_size to prevent unbounded growth
@@ -115,7 +115,7 @@ def chunk_text(
             else:
                 saved_chunk = current_chunk
                 saved_length = len(saved_chunk)
-                # ENchunk
+                # Save the current chunk
                 chunks.append(
                     {
                         "content": saved_chunk.strip(),
@@ -130,20 +130,20 @@ def chunk_text(
                 )
                 chunk_id += 1
 
-                # EN(ENchunk_overlapEN)
+                # Create overlap (keep last chunk_overlap characters)
                 if saved_length > chunk_overlap:
                     overlap_start = saved_length - chunk_overlap
                     current_chunk = saved_chunk[overlap_start:]
-                    # ENchunkEN
+                    # Update start position for the overlap region
                     start_pos += overlap_start
                 else:
                     current_chunk = ""
                     start_pos += saved_length
 
-        # ENsplitENchunk
+        # Append split to current chunk
         current_chunk += split
 
-    # ENchunk
+    # Save the final chunk
     if current_chunk.strip():
         chunks.append(
             {
@@ -162,7 +162,7 @@ def chunk_text(
 
 
 class DocumentChunker:
-    """EN"""
+    """Document chunker with configurable size and overlap."""
 
     def __init__(self):
         from backend.config import settings
@@ -172,29 +172,29 @@ class DocumentChunker:
 
     def chunk_document(self, document) -> list:
         """
-        ENLangChain DocumentEN
+        Chunk a LangChain Document into smaller pieces.
 
         Args:
-            document: LangChain DocumentEN
+            document: LangChain Document object
 
         Returns:
-            ENLangChain DocumentEN
+            List of chunked LangChain Document objects
         """
         try:
             from langchain_core.documents import Document
 
-            # EN
+            # Extract text content
             text_content = document.page_content
             original_metadata = document.metadata or {}
 
-            # EN
+            # Chunk the text
             raw_chunks = chunk_text(
                 text=text_content,
                 chunk_size=self.chunk_size,
                 chunk_overlap=self.chunk_overlap,
             )
 
-            # ENLangChain DocumentEN
+            # Convert to LangChain Document objects
             chunks = []
             for chunk_data in raw_chunks:
                 chunk_metadata = original_metadata.copy()

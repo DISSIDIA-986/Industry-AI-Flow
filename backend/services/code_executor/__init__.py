@@ -30,7 +30,7 @@ except Exception as exc:  # pragma: no cover - fallback for dependency-constrain
     def execute_python_code(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("Docker executor is unavailable in current environment")
 
-# EN(EN)
+# Lazy-initialized global executor (created on first use)
 _global_executor: Optional[Any] = None
 _execution_manager: Optional[CodeExecutionManager] = None
 
@@ -46,7 +46,7 @@ def _docker_requested() -> bool:
 
 
 def get_code_executor() -> Optional[Any]:
-    """EN(EN)"""
+    """Get or create the global Docker code executor (lazy singleton)."""
     global _global_executor
     if _global_executor is None:
         if not _docker_requested():
@@ -56,7 +56,7 @@ def get_code_executor() -> Optional[Any]:
         try:
             _global_executor = DockerExecutor()
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Failed to initialize Docker code executor: {e}")
             _global_executor = None
     return _global_executor
 
@@ -126,9 +126,9 @@ def get_code_execution_manager() -> Optional[CodeExecutionManager]:
     return _execution_manager
 
 
-# EN
+# Package-level error class for code execution failures
 class CodeExecutionError(Exception):
-    """EN"""
+    """Raised when code execution fails in any provider."""
 
     pass
 

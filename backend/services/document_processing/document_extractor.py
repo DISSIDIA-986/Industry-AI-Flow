@@ -1,12 +1,12 @@
 """
-EN
+Document Extractor
 
-EN:
-- PDF (PyPDF2 + OCR)
+Supported formats:
+- PDF (PyPDF2 + OCR fallback)
 - Word (python-docx)
 - Excel (openpyxl)
-- EN (PaddleOCR)
-- EN
+- Images (PaddleOCR)
+- Plain text (UTF-8/GBK/Latin-1)
 """
 
 import logging
@@ -19,19 +19,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DocumentContent:
-    """EN"""
+    """Container for extracted document content and metadata."""
 
-    text: str  # EN
-    metadata: dict  # EN
-    method: str  # EN
-    file_type: str  # EN
+    text: str  # Extracted text content
+    metadata: dict  # Document metadata (pages, author, etc.)
+    method: str  # Extraction method used (e.g., pypdf2, ocr)
+    file_type: str  # Original file type (pdf, word, excel, etc.)
 
 
 class DocumentExtractor:
     """
-    EN
+    Multi-format document text extractor.
 
-    EN
+    Supports PDF, Word, Excel, plain text, and image files with optional OCR fallback.
     """
 
     SUPPORTED_EXTENSIONS = {
@@ -51,10 +51,10 @@ class DocumentExtractor:
 
     def __init__(self, use_ocr: bool = True):
         """
-        EN
+        Initialize the document extractor.
 
         Args:
-            use_ocr: ENOCRENPDF
+            use_ocr: Whether to enable OCR for scanned PDFs and images
         """
         self.use_ocr = use_ocr
         self.ocr_processor = None
@@ -67,21 +67,21 @@ class DocumentExtractor:
 
                 self.ocr_processor = OCRProcessor()
             except Exception as e:
-                logger.warning(f"OCREN: {e}")
+                logger.warning(f"OCR processor initialization failed: {e}")
 
     def extract(self, file_path: Union[str, Path]) -> DocumentContent:
         """
-        EN
+        Extract text content from a document file.
 
         Args:
-            file_path: EN
+            file_path: Path to the document file
 
         Returns:
-            DocumentContentEN
+            DocumentContent with extracted text and metadata
 
         Raises:
-            ValueError: EN
-            FileNotFoundError: EN
+            ValueError: If the file type is unsupported
+            FileNotFoundError: If the file does not exist
         """
         file_path = Path(file_path)
 
@@ -94,7 +94,7 @@ class DocumentExtractor:
 
         file_type = self.SUPPORTED_EXTENSIONS[file_ext]
 
-        # EN
+        # Route to the appropriate extraction method
         if file_type == "pdf":
             return self._extract_pdf(file_path)
         elif file_type == "word":
@@ -109,7 +109,7 @@ class DocumentExtractor:
             raise ValueError(f"Unsupported file type: {file_type}")
 
     def _extract_pdf(self, file_path: Path) -> DocumentContent:
-        """ENPDFEN"""
+        """Extract text from a PDF file."""
         try:
             from PyPDF2 import PdfReader
 
@@ -121,10 +121,10 @@ class DocumentExtractor:
                 if page_text.strip():
                     text_parts.append(page_text)
                 elif self.use_ocr and self.ocr_processor:
-                    # EN,ENOCR
-                    logger.info(f"PDFEN{page_num+1}EN,ENOCR")
-                    # EN: ENpdf2imageEN
-                    # EN
+                    # No extractable text on this page, fall back to OCR
+                    logger.info(f"PDF page {page_num+1} has no extractable text, falling back to OCR")
+                    # TODO: Convert PDF page to image using pdf2image for OCR processing
+                    # Not yet implemented
 
             full_text = "\n\n".join(text_parts)
 
@@ -142,27 +142,27 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"PDFEN: {e}")
+            logger.error(f"Failed to extract PDF content: {e}")
             raise
 
     def _extract_word(self, file_path: Path) -> DocumentContent:
-        """ENWordEN"""
+        """Extract text from a Word document."""
         try:
             from docx import Document
 
             doc = Document(file_path)
 
-            # EN
+            # Extract paragraphs
             paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
 
-            # EN
+            # Extract table content
             tables_text = []
             for table in doc.tables:
                 for row in table.rows:
                     row_text = " | ".join(cell.text for cell in row.cells)
                     tables_text.append(row_text)
 
-            # EN
+            # Combine paragraphs and tables
             all_text = "\n".join(paragraphs)
             if tables_text:
                 all_text += "\n\n" + "\n".join(tables_text)
@@ -180,11 +180,11 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"WordEN: {e}")
+            logger.error(f"Failed to extract Word document content: {e}")
             raise
 
     def _extract_excel(self, file_path: Path) -> DocumentContent:
-        """ENExcelEN"""
+        """Extract text from an Excel spreadsheet."""
         try:
             import openpyxl
 
@@ -194,12 +194,12 @@ class DocumentExtractor:
             for sheet_name in workbook.sheetnames:
                 sheet = workbook[sheet_name]
 
-                # EN
+                # Add sheet header
                 sheet_text = [f"### {sheet_name} ###"]
 
                 for row in sheet.iter_rows(values_only=True):
                     row_values = [str(cell) if cell is not None else "" for cell in row]
-                    if any(row_values):  # EN
+                    if any(row_values):  # Skip empty rows
                         sheet_text.append(" | ".join(row_values))
 
                 sheets_text.append("\n".join(sheet_text))
@@ -219,13 +219,13 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"ExcelEN: {e}")
+            logger.error(f"Failed to extract Excel content: {e}")
             raise
 
     def _extract_text(self, file_path: Path) -> DocumentContent:
-        """EN"""
+        """Extract content from a plain text file."""
         try:
-            # EN
+            # Try multiple encodings
             encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
 
             for encoding in encodings:
@@ -249,26 +249,26 @@ class DocumentExtractor:
                 except UnicodeDecodeError:
                     continue
 
-            raise ValueError("EN")
+            raise ValueError("Unable to decode text file with any supported encoding")
 
         except Exception as e:
-            logger.error(f"EN: {e}")
+            logger.error(f"Failed to extract text file content: {e}")
             raise
 
     def _extract_image(self, file_path: Path) -> DocumentContent:
-        """EN(ENOCR)"""
+        """Extract text from an image file using OCR."""
         if not self.use_ocr or not self.ocr_processor:
-            raise ValueError("OCREN")
+            raise ValueError("OCR is not available for image extraction")
 
         try:
             from PIL import Image
 
-            # EN
+            # Get image dimensions and mode
             with Image.open(file_path) as img:
                 width, height = img.size
                 mode = img.mode
 
-            # ENOCR
+            # Run OCR on the image
             ocr_result = self.ocr_processor.process(file_path)
 
             metadata = {
@@ -287,24 +287,24 @@ class DocumentExtractor:
             )
 
         except Exception as e:
-            logger.error(f"ENOCREN: {e}")
+            logger.error(f"Image OCR extraction failed: {e}")
             raise
 
 
-# EN
+# Convenience function
 def process_document(
     file_path: Union[str, Path],
     use_ocr: bool = True,
 ) -> DocumentContent:
     """
-    EN(EN)
+    Extract text from a document file (convenience wrapper).
 
     Args:
-        file_path: EN
-        use_ocr: ENOCR
+        file_path: Path to the document file
+        use_ocr: Whether to enable OCR for images and scanned PDFs
 
     Returns:
-        DocumentContentEN
+        DocumentContent with extracted text and metadata
     """
     extractor = DocumentExtractor(use_ocr=use_ocr)
     return extractor.extract(file_path)

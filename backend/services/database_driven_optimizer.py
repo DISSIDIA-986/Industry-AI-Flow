@@ -1,5 +1,5 @@
 """
-ENRAGEN - EN
+Database-Driven RAG Optimizer - Analyzes performance data to generate optimization recommendations.
 """
 
 import datetime
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationRecommendation:
-    """EN"""
+    """Represents a single optimization recommendation with expected impact."""
 
     optimization_type: str
     target_config: Dict[str, Any]
@@ -31,7 +31,7 @@ class OptimizationRecommendation:
 
 
 class DatabaseDrivenOptimizer:
-    """ENRAGEN"""
+    """Analyzes RAG performance data and generates optimization recommendations."""
 
     def __init__(self, vectorstore: VectorStore):
         self.vectorstore = vectorstore
@@ -42,42 +42,42 @@ class DatabaseDrivenOptimizer:
         self, optimization_scope: str = "global"
     ) -> List[OptimizationRecommendation]:
         """
-        EN
+        Analyze performance data and generate optimization recommendations.
 
         Args:
-            optimization_scope: EN ("global", "session", "document_type")
+            optimization_scope: Scope of analysis ("global", "session", "document_type").
 
         Returns:
-            EN
+            List of optimization recommendations sorted by expected improvement.
         """
         recommendations = []
 
         try:
-            # 1. EN
+            # 1. Analyze query performance patterns
             performance_recommendations = self._analyze_query_performance_patterns(
                 optimization_scope
             )
             recommendations.extend(performance_recommendations)
 
-            # 2. EN
+            # 2. Analyze feedback-driven optimizations
             feedback_recommendations = self._analyze_feedback_driven_optimizations(
                 optimization_scope
             )
             recommendations.extend(feedback_recommendations)
 
-            # 3. EN
+            # 3. Analyze configuration efficiency
             config_recommendations = self._analyze_configuration_efficiency(
                 optimization_scope
             )
             recommendations.extend(config_recommendations)
 
-            # 4. EN
+            # 4. Analyze document quality patterns
             doc_recommendations = self._analyze_document_quality_patterns(
                 optimization_scope
             )
             recommendations.extend(doc_recommendations)
 
-            # EN
+            # Sort by expected improvement (highest first)
             recommendations.sort(key=lambda x: x.expected_improvement, reverse=True)
 
             logger.info(
@@ -92,11 +92,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_query_performance_patterns(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """EN"""
+        """Analyze query performance patterns and recommend optimizations."""
         recommendations = []
 
         try:
-            # EN
+            # Get performance analytics for last 7 days
             analytics = self.session_manager.get_rag_performance_analytics(days=7)
 
             if not analytics.get("performance_summary"):
@@ -105,9 +105,9 @@ class DatabaseDrivenOptimizer:
             perf_summary = analytics["performance_summary"]
             config_usage = analytics.get("configuration_usage", [])
 
-            # EN
+            # Check response time threshold
             avg_response_time = perf_summary.get("avg_response_time")
-            if avg_response_time and avg_response_time > 3.0:  # EN3EN
+            if avg_response_time and avg_response_time > 3.0:  # Over 3 seconds
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="response_time_optimization",
@@ -125,10 +125,10 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # EN
+            # Check retrieval score threshold
             avg_retrieval_score = perf_summary.get("avg_retrieval_score")
-            if avg_retrieval_score and avg_retrieval_score < 0.6:  # EN
-                # EN
+            if avg_retrieval_score and avg_retrieval_score < 0.6:  # Below quality threshold
+                # Find best performing config for weight adjustment
                 best_config = self._find_best_performing_config(config_usage)
                 if best_config:
                     recommendations.append(
@@ -145,9 +145,9 @@ class DatabaseDrivenOptimizer:
                         )
                     )
 
-            # EN
+            # Check reranking score threshold
             avg_reranking_score = perf_summary.get("avg_reranking_score")
-            if avg_reranking_score and avg_reranking_score < 0.5:  # EN
+            if avg_reranking_score and avg_reranking_score < 0.5:  # Below quality threshold
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="reranking_optimization",
@@ -171,11 +171,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_feedback_driven_optimizations(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """EN"""
+        """Analyze user feedback patterns and recommend optimizations."""
         recommendations = []
 
         try:
-            # EN
+            # Get feedback statistics
             feedback_stats = self.feedback_manager.get_feedback_statistics(days=7)
 
             if feedback_stats.total_queries < settings.min_feedback_for_optimization:
@@ -183,8 +183,8 @@ class DatabaseDrivenOptimizer:
 
             success_rate = feedback_stats.success_rate
 
-            # EN
-            if success_rate < 0.6:  # EN
+            # Low success rate: recommend comprehensive enhancement
+            if success_rate < 0.6:  # Below 60%
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="comprehensive_retrieval_enhancement",
@@ -201,7 +201,7 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # EN
+            # More partial than full success: refine answer quality
             if feedback_stats.partially_helpful_count > feedback_stats.helpful_count:
                 recommendations.append(
                     OptimizationRecommendation(
@@ -218,9 +218,9 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # EN
+            # Negative feedback: target problematic query patterns
             if feedback_stats.not_helpful_count > 0:
-                # EN
+                # Find recurring negative patterns
                 negative_queries = self._get_negative_feedback_patterns()
                 if negative_queries:
                     recommendations.append(
@@ -246,11 +246,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_configuration_efficiency(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """EN"""
+        """Analyze configuration performance and recommend replacements."""
         recommendations = []
 
         try:
-            # EN
+            # Query configuration performance data
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -278,11 +278,11 @@ class DatabaseDrivenOptimizer:
             if not config_analysis:
                 return recommendations
 
-            # EN
+            # Separate high and low performing configs
             best_configs = [row for row in config_analysis if row[2] > 0.7]
             worst_configs = [row for row in config_analysis if row[2] < 0.4]
 
-            # EN
+            # Recommend replacing underperforming configs
             for (
                 config_type,
                 config_key,
@@ -290,7 +290,7 @@ class DatabaseDrivenOptimizer:
                 usage_count,
                 max_score,
             ) in worst_configs:
-                # EN
+                # Find best config of the same type
                 best_match = next(
                     (row for row in best_configs if row[0] == config_type), None
                 )
@@ -318,11 +318,11 @@ class DatabaseDrivenOptimizer:
     def _analyze_document_quality_patterns(
         self, scope: str
     ) -> List[OptimizationRecommendation]:
-        """EN"""
+        """Analyze document quality patterns and recommend improvements."""
         recommendations = []
 
         try:
-            # EN
+            # Find low-quality documents
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -364,7 +364,7 @@ class DatabaseDrivenOptimizer:
                     )
                 )
 
-            # EN
+            # Find high-quality documents to boost
             cur = self.vectorstore.get_connection()
             cur = conn.cursor()
 
@@ -411,17 +411,17 @@ class DatabaseDrivenOptimizer:
         return recommendations
 
     def _find_best_performing_config(self, config_usage: List[Dict]) -> Optional[Dict]:
-        """EN"""
+        """Find the best performing configuration from usage data."""
         if not config_usage:
             return None
 
-        # EN
+        # Score configs by usage count / response time ratio
         best_config = None
         best_score = -1
 
         for config in config_usage:
             if config["avg_response_time"] and config["usage_count"] >= 3:
-                # EN:EN,EN
+                # Combined score: higher usage count and lower response time is better
                 score = config["usage_count"] / (config["avg_response_time"] + 1)
                 if score > best_score:
                     best_score = score
@@ -430,7 +430,7 @@ class DatabaseDrivenOptimizer:
         return best_config
 
     def _get_negative_feedback_patterns(self) -> List[str]:
-        """EN"""
+        """Get queries that received negative feedback in the last 7 days."""
         try:
             conn = self.vectorstore.get_connection()
             cur = conn.cursor()
@@ -456,11 +456,11 @@ class DatabaseDrivenOptimizer:
             return []
 
     def apply_optimization(self, recommendation: OptimizationRecommendation) -> bool:
-        """EN"""
+        """Apply a single optimization recommendation."""
         try:
             logger.info(f"Applying optimization: {recommendation.optimization_type}")
 
-            # EN
+            # Dispatch to specific optimization handler
             if recommendation.optimization_type == "retrieval_weight_adjustment":
                 return self._apply_retrieval_weight_optimization(recommendation)
             elif recommendation.optimization_type == "response_time_optimization":
@@ -484,9 +484,9 @@ class DatabaseDrivenOptimizer:
     def _apply_retrieval_weight_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """EN"""
+        """Apply retrieval weight optimization by saving new config."""
         try:
-            # EN
+            # Save new retrieval weight configuration
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
                 config_type="retrieval_weights",
@@ -505,7 +505,7 @@ class DatabaseDrivenOptimizer:
     def _apply_response_time_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """EN"""
+        """Apply response time optimization by saving performance tuning config."""
         try:
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
@@ -525,7 +525,7 @@ class DatabaseDrivenOptimizer:
     def _apply_reranking_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """EN"""
+        """Apply reranking model optimization by saving tuning config."""
         try:
             config_value = recommendation.target_config
             self.session_manager.save_adaptive_config(
@@ -545,13 +545,13 @@ class DatabaseDrivenOptimizer:
     def _apply_document_quality_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """EN"""
+        """Apply document quality optimization by scheduling reprocessing."""
         try:
-            # EN
+            # Get document IDs to reprocess
             doc_ids = recommendation.target_config.get("document_ids", [])
             logger.info(f"Marked {len(doc_ids)} documents for quality improvement")
 
-            # EN
+            # Schedule reprocessing for each document
             for doc_id in doc_ids:
                 self.session_manager.trigger_optimization(
                     trigger_type="document_reprocessing",
@@ -567,12 +567,12 @@ class DatabaseDrivenOptimizer:
     def _apply_document_boosting_optimization(
         self, recommendation: OptimizationRecommendation
     ) -> bool:
-        """EN"""
+        """Apply document boosting by saving boost config for high-quality documents."""
         try:
             doc_ids = recommendation.target_config.get("document_ids", [])
             boost_factor = recommendation.target_config.get("boost_factor", 1.5)
 
-            # EN
+            # Save boost configuration
             config_value = {"document_ids": doc_ids, "boost_factor": boost_factor}
 
             self.session_manager.save_adaptive_config(
@@ -592,7 +592,7 @@ class DatabaseDrivenOptimizer:
             return False
 
     def process_pending_optimizations(self) -> int:
-        """EN"""
+        """Process all pending optimization triggers and return count of completed."""
         processed_count = 0
 
         try:
@@ -606,7 +606,7 @@ class DatabaseDrivenOptimizer:
                     trigger_type = optimization["trigger_type"]
                     trigger_data = optimization["trigger_data"]
 
-                    # EN
+                    # Dispatch to the appropriate handler based on trigger type
                     if trigger_type == "document_reprocessing":
                         success = self._process_document_reprocessing(trigger_data)
                     elif trigger_type == "query_rewrite":
@@ -619,7 +619,7 @@ class DatabaseDrivenOptimizer:
                         )
                         continue
 
-                    # EN
+                    # Update optimization status based on processing result
                     status = "completed" if success else "failed"
                     result = {"processed": True, "trigger_type": trigger_type}
                     error_message = None if success else "Processing failed"
@@ -645,15 +645,15 @@ class DatabaseDrivenOptimizer:
         return processed_count
 
     def _process_document_reprocessing(self, trigger_data: Dict) -> bool:
-        """EN"""
+        """Process a document reprocessing trigger."""
         try:
             doc_id = trigger_data.get("doc_id")
             reason = trigger_data.get("reason", "unknown")
 
-            # EN
+            # Log reprocessing action with reason
             logger.info(f"Reprocessing document {doc_id} due to: {reason}")
 
-            # EN,EN
+            # Placeholder for actual reprocessing logic; returns success for now
             return True
 
         except Exception as e:
@@ -661,12 +661,12 @@ class DatabaseDrivenOptimizer:
             return False
 
     def _process_query_rewrite(self, trigger_data: Dict) -> bool:
-        """EN"""
+        """Process a query rewrite trigger."""
         try:
             original_query = trigger_data.get("original_query")
             query_id = trigger_data.get("query_id")
 
-            # EN
+            # Log the query rewrite operation
             logger.info(f"Rewriting query {query_id}: {original_query}")
 
             return True
@@ -676,12 +676,12 @@ class DatabaseDrivenOptimizer:
             return False
 
     def _process_config_update(self, trigger_data: Dict) -> bool:
-        """EN"""
+        """Process a configuration update trigger."""
         try:
             config_type = trigger_data.get("config_type")
             config_updates = trigger_data.get("updates", {})
 
-            # EN
+            # Persist each configuration key-value pair
             for key, value in config_updates.items():
                 self.session_manager.save_adaptive_config(
                     config_type=config_type, config_key=key, config_value=value
