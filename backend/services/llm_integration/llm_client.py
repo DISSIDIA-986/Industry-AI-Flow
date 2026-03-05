@@ -78,7 +78,7 @@ class LLMClientFactory:
                 logger.info("✅ EN EN")
                 return ZhipuClient()
             else:
-                raise ValueError(f"EN: {backend}")
+                raise ValueError(f"Unsupported LLM backend: {backend}")
 
         except ImportError as e:
             logger.error(f"EN {backend} EN: {e}")
@@ -90,13 +90,13 @@ class LLMClientFactory:
 
                 return OllamaClient()
             if backend == "zhipu":
-                raise RuntimeError("EN,EN requests EN")
+                raise RuntimeError("Zhipu client requires the requests library")
             else:
-                raise RuntimeError(f"EN,EN: {e}")
+                raise RuntimeError(f"Failed to create LLM client: {e}")
 
         except Exception as e:
             logger.error(f"EN {backend} EN: {e}")
-            raise RuntimeError(f"EN: {e}")
+            raise RuntimeError(f"LLM client initialization failed: {e}")
 
 
 def get_llm_client() -> BaseLLMClient:

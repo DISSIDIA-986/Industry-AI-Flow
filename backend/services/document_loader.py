@@ -77,7 +77,7 @@ class EnhancedDocumentLoader:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"EN: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
 
         # EN
         ext = file_path.suffix.lower()
@@ -89,7 +89,7 @@ class EnhancedDocumentLoader:
         elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
             return self._load_image(file_path)
         else:
-            raise ValueError(f"EN: {ext}")
+            raise ValueError(f"Unsupported file format: {ext}")
 
     def _load_txt(self, file_path: Path) -> str:
         """EN TXT EN"""
@@ -190,7 +190,7 @@ def load_document(file_path: str) -> str:
     elif file_path.endswith(".txt"):
         return load_txt(file_path)
     else:
-        raise ValueError(f"EN: {file_path}")
+        raise ValueError(f"Unsupported file type: {file_path}")
 
 
 class DocumentLoader:

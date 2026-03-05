@@ -195,7 +195,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _context_enrichment_node(self, state: WorkflowState) -> WorkflowState:
@@ -258,7 +258,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _intent_classification_node(self, state: WorkflowState) -> WorkflowState:
@@ -303,7 +303,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _confidence_evaluation_node(self, state: WorkflowState) -> WorkflowState:
@@ -374,7 +374,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _routing_decision_node(self, state: WorkflowState) -> WorkflowState:
@@ -411,7 +411,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _prompt_preparation_node(self, state: WorkflowState) -> WorkflowState:
@@ -538,7 +538,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _clarification_processing_node(
@@ -625,7 +625,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _agent_dispatch_node(self, state: WorkflowState) -> WorkflowState:
@@ -677,7 +677,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"AgentEN: {str(e)}")
-            state["error"] = f"AgentEN: {str(e)}"
+            state["error"] = f"Agent execution error: {str(e)}"
             state["metadata"]["agent_execution_status"] = "error"
             state["metadata"]["agent_execution_error"] = str(e)
             return state
@@ -717,7 +717,7 @@ class IntentClassificationWorkflow:
 
         except Exception as e:
             logger.error(f"EN: {str(e)}")
-            state["error"] = f"EN: {str(e)}"
+            state["error"] = f"Intent processing error: {str(e)}"
             return state
 
     async def _error_handling_node(self, state: WorkflowState) -> WorkflowState:

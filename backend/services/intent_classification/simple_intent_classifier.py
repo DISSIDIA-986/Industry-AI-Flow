@@ -316,7 +316,7 @@ class SimpleIntentClassifier:
                 confidence = max(raw_confidence, 0.5) if intent_data["score"] > 0 else 0.0
 
                 # EN
-                reasoning = f"EN{len(intent_data['keywords'])}EN: {', '.join(intent_data['keywords'][:3])}"
+                reasoning = f"Matched {len(intent_data['keywords'])} keywords: {', '.join(intent_data['keywords'][:3])}"
 
                 result = SimpleIntentResult(
                     intent=intent_type,
@@ -337,8 +337,8 @@ class SimpleIntentClassifier:
             return SimpleIntentResult(
                 intent=IntentType.UNCLEAR_INTENT,
                 confidence=0.0,
-                reasoning=f"EN: {str(e)}",
-                suggested_action="EN",
+                reasoning=f"Classification error: {str(e)}",
+                suggested_action="Please rephrase your question",
             )
 
     def _preprocess_query(self, query: str) -> str:

@@ -38,7 +38,7 @@ class DockerCodeExecutor:
             logger.info("Docker EN")
         except DockerException as e:
             logger.error(f"Docker EN: {e}")
-            raise CodeExecutionError(f"Docker EN: {e}")
+            raise CodeExecutionError(f"Docker connection failed: {e}")
 
         self._pending_cleanups: set[str] = set()
         self._cleanup_lock = _threading.Lock()

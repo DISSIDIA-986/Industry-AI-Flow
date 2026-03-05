@@ -530,7 +530,7 @@ class RoutingDecisionEngine:
             selected_agent=AgentType.GENERAL_AGENT,
             routing_path=RoutingPath.FALLBACK,
             confidence=0.5,
-            reasoning=f"EN,ENAgent.EN: {error}",
+            reasoning=f"Routing error, falling back to General Agent. Error: {error}",
             parameters={
                 "timeout": self.agent_config[AgentType.GENERAL_AGENT][
                     "max_response_time"

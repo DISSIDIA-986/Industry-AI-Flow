@@ -416,7 +416,7 @@ class PromptManager:
         # EN
         existing = await self._get_prompt_by_version(name, category, version)
         if existing:
-            raise ValueError(f"EN: {category}/{name} v{version}")
+            raise ValueError(f"Prompt version already exists: {category}/{name} v{version}")
 
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
@@ -497,7 +497,7 @@ class PromptManager:
                 # ENPrompt
                 current = await self._get_prompt_by_id(prompt_id)
                 if not current:
-                    raise ValueError(f"PromptEN: {prompt_id}")
+                    raise ValueError(f"Prompt not found: {prompt_id}")
 
                 if create_new_version:
                     # EN
