@@ -30,6 +30,6 @@ def test_config_resolution_falls_back_to_safe_defaults(monkeypatch):
 
     s = Settings()
     assert s.resolved_hybrid_mode == "local_only"
-    assert s.resolved_local_backend == "llama_cpp"
+    assert s.resolved_local_backend == "ollama"
     assert s.resolved_cloud_provider == "zhipu"
     assert s.resolved_demo_mode == "live_hybrid"

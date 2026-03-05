@@ -21,6 +21,7 @@ from backend.services.llm_integration.llm_client import (
 from backend.services.memory.manager import ConversationMemoryManager
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
+from backend.services.cache.query_cache import query_cache
 from backend.services.safety import create_safety_guard
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,13 @@ class SimpleRAG:
         if top_k is None:
             top_k = settings.top_k
 
+        # Check query cache first
+        tenant_id = user_id or "default"
+        cached = query_cache.get(tenant_id, question, top_k)
+        if cached is not None:
+            logger.info("RAG query cache hit for: %s", question[:60])
+            return cached
+
         # Generate unique query ID for tracking
         query_id = str(uuid.uuid4())
 
@@ -191,7 +199,7 @@ class SimpleRAG:
                 safety_result = self.safety_guard.process_response(
                     answer=answer,
                     context=context_texts,
-                    llm_client=self.llm_client,
+                    llm_client=None,  # Lexical-only check; skip extra LLM call for speed
                 )
                 answer = safety_result.get("enhanced_answer", answer)
                 if hasattr(safety_result.get("safety_level"), "value"):
@@ -204,7 +212,7 @@ class SimpleRAG:
 
         # 5. Build and return response
         embed_status = embedding_backend_status()
-        return {
+        result = {
             "query_id": query_id,
             "question": question,
             "answer": answer,
@@ -218,10 +226,15 @@ class SimpleRAG:
             "embedding_backend": embed_status.get("backend", "unknown"),
         }
 
+        # Store in cache for subsequent identical queries
+        query_cache.set(tenant_id, question, top_k, result)
+
+        return result
+
     def _get_adaptive_search_weights(self) -> tuple:
         """Get adaptive search weights based on recent feedback statistics."""
         if not self.feedback_manager:
-            return 0.7, 0.3  # Default weights
+            return 0.6, 0.4  # Tuned for small corpus (~12 docs): boost BM25 for keyword precision
 
         try:
             # Adjust weights based on recent feedback performance
@@ -246,23 +259,18 @@ class SimpleRAG:
     ) -> str:
         """Build the RAG prompt with context, memory, and instructions."""
         memory_context = self._format_memory_payload(memory_payload or {})
-        return f"""You are a knowledgeable construction industry assistant. Answer the question based strictly on the provided context.
+        history_block = f"\nPrior conversation:\n{memory_context}\n" if memory_context != "No prior conversation history." else ""
+        return f"""You are a construction industry assistant. Answer strictly from the provided references.
 
-**Instructions**:
-1. Answer based only on the provided reference documents below.
-2. Cite which reference document(s) support your answer.
-3. If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
-4. Be precise with numbers, units, and technical specifications. Do not guess or fabricate values.
-
-**Conversation History**:
-{memory_context}
-
-**Reference Documents**:
+Rules:
+1. Use only [Reference N] content. Cite which reference(s) you used.
+2. Be precise with numbers, units, standards (e.g. CSA A23.1), and dates.
+3. If the references lack the answer, say: "The available documents do not contain this information."
+{history_block}
 {context}
 
-**Question**: {question}
-
-**Answer**:"""
+Question: {question}
+Answer:"""
 
     @staticmethod
     def _format_memory_payload(memory_payload: dict) -> str:

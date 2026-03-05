@@ -55,8 +55,8 @@ FIELD_LABELS: Dict[str, str] = {
 BASE_PROJECT: Dict[str, Any] = {
     "project_type": "commercial_office",
     "location": "Toronto",
-    "sqft": 185000,
-    "floors": 18,
+    "sqft": 29155,
+    "floors": 5,
     "num_units": 1,
     "planned_duration_weeks": 78,
     "estimated_cost_cad": 72000000,
@@ -68,8 +68,8 @@ BASE_PROJECT: Dict[str, Any] = {
     "material_volatility": 0.44,
     "num_subcontractors": 16,
     "budget_pressure": 0.58,
-    "risk_score": 6.8,
-    "risk_score_original": 6.3,
+    "risk_score": 24.2,
+    "risk_score_original": 34.3,
 }
 
 
@@ -159,8 +159,11 @@ def _count(selector: str) -> int:
     return _extract_last_int(output)
 
 
-def _open_cost_page(frontend_url: str) -> None:
+def _open_cost_page(frontend_url: str, force_reload: bool = False) -> None:
     cost_url = frontend_url.rstrip("/") + "/cost-estimation"
+    if force_reload:
+        _run_agent_browser(["open", "about:blank"], timeout=15)
+        _run_agent_browser(["wait", "500"], timeout=10)
     open_ok, open_out = _run_agent_browser(["open", cost_url], timeout=45)
     if not open_ok:
         raise RuntimeError(f"failed_to_open_cost_page: {open_out}")
@@ -173,7 +176,7 @@ def _open_cost_page(frontend_url: str) -> None:
 
 
 def _ensure_logged_in(frontend_url: str, email: str, password: str) -> None:
-    _open_cost_page(frontend_url)
+    _open_cost_page(frontend_url, force_reload=True)
 
     if _count(LOGOUT_BUTTON_SELECTOR) > 0 and _count(PREDICT_BUTTON_SELECTOR) > 0:
         return
@@ -685,8 +688,8 @@ def run_suite(
                     "planned_duration_weeks": 92,
                     "estimated_cost_cad": 51000000,
                     "complexity_score": 8,
-                    "risk_score": 7.2,
-                    "risk_score_original": 6.7,
+                    "risk_score": 32.5,
+                    "risk_score_original": 28.1,
                 }
             ),
         ),
@@ -709,8 +712,8 @@ def run_suite(
                     "weather_risk_factor": 0.61,
                     "material_volatility": 0.72,
                     "budget_pressure": 0.76,
-                    "risk_score": 8.8,
-                    "risk_score_original": 8.3,
+                    "risk_score": 48.5,
+                    "risk_score_original": 42.1,
                 }
             ),
         ),
@@ -734,8 +737,8 @@ def run_suite(
                     "weather_risk_factor": 0.21,
                     "material_volatility": 0.27,
                     "budget_pressure": 0.35,
-                    "risk_score": 4.6,
-                    "risk_score_original": 4.4,
+                    "risk_score": 21.3,
+                    "risk_score_original": 18.5,
                 }
             ),
         ),
@@ -752,8 +755,8 @@ def run_suite(
                         "sqft": 140000,
                         "floors": 20,
                         "estimated_cost_cad": 76000000,
-                        "risk_score": 6.5,
-                        "risk_score_original": 6.1,
+                        "risk_score": 28.0,
+                        "risk_score_original": 24.5,
                     }
                 ),
                 _case_project(
@@ -764,8 +767,8 @@ def run_suite(
                         "floors": 6,
                         "estimated_cost_cad": 39000000,
                         "complexity_score": 6,
-                        "risk_score": 5.4,
-                        "risk_score_original": 5.0,
+                        "risk_score": 25.2,
+                        "risk_score_original": 22.0,
                     }
                 ),
                 _case_project(
@@ -778,8 +781,8 @@ def run_suite(
                         "complexity_score": 9,
                         "weather_risk_factor": 0.58,
                         "material_volatility": 0.66,
-                        "risk_score": 8.1,
-                        "risk_score_original": 7.6,
+                        "risk_score": 45.0,
+                        "risk_score_original": 38.5,
                     }
                 ),
             ],

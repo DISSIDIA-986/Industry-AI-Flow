@@ -7,7 +7,7 @@ export default function MvpLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
       <AppConfigProvider>
-        <div className="min-h-screen bg-gray-50">
+        <div className="h-screen flex flex-col bg-gray-50">
           <Navbar />
           <DashboardShell>{children}</DashboardShell>
         </div>

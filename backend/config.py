@@ -41,8 +41,8 @@ class Settings(BaseSettings):
 
     # LLM后端选择
     llm_backend: str = os.getenv(
-        "LLM_BACKEND", "llama_cpp"
-    )  # llama_cpp | ollama | zhipu
+        "LLM_BACKEND", "ollama"
+    )  # ollama | zhipu (llama_cpp deprecated)
 
     # 智谱AI（支持Anthropic兼容接口）
     zhipu_api_key: str = os.getenv("ZHIPU_API_KEY", "")
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     hybrid_mode: str = os.getenv(
         "HYBRID_MODE", "local_only"
     )  # local_only | hybrid_auto | cloud_only
-    local_primary_backend: str = os.getenv("LOCAL_PRIMARY_BACKEND", "llama_cpp")
+    local_primary_backend: str = os.getenv("LOCAL_PRIMARY_BACKEND", "ollama")
     cloud_provider: str = os.getenv("CLOUD_PROVIDER", "zhipu")
     fallback_on_error: bool = os.getenv("FALLBACK_ON_ERROR", "true").lower() == "true"
     local_confidence_threshold: float = float(
@@ -425,7 +425,7 @@ class Settings(BaseSettings):
             value = self._normalize_token(candidate)
             if value in {"llama_cpp", "ollama"}:
                 return value
-        return "llama_cpp"
+        return "ollama"
 
     @property
     def resolved_cloud_provider(self) -> str:

@@ -94,6 +94,23 @@ _PROJECT_TYPE_KEYWORDS: Dict[str, List[str]] = {
         "tenant improvement",
         "retrofit",
     ],
+    "mixed_use": [
+        "mixed use",
+        "mixed-use",
+        "mixed development",
+    ],
+    "renewable_energy": [
+        "renewable energy",
+        "solar farm",
+        "wind farm",
+        "energy project",
+    ],
+    "transit_station": [
+        "transit station",
+        "train station",
+        "subway station",
+        "transit hub",
+    ],
 }
 
 _LOCATION_KEYWORDS: List[str] = [
@@ -107,6 +124,11 @@ _LOCATION_KEYWORDS: List[str] = [
     "Winnipeg",
     "Victoria",
     "Saskatoon",
+    "Brampton",
+    "Markham",
+    "Mississauga",
+    "Quebec City",
+    "Surrey",
 ]
 
 _NUMERIC_PATTERNS: Dict[str, List[str]] = {
