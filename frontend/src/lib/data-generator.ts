@@ -2,7 +2,7 @@
 export class MockDataGenerator {
   // Generate time series data
   static generateTimeSeriesData(count: number = 12, startValue: number = 100) {
-    const months = ['1moon', '2moon', '3moon', '4moon', '5moon', '6moon', '7moon', '8moon', '9moon', '10moon', '11moon', '12moon']
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     const data = []
     
     for (let i = 0; i < count; i++) {
@@ -19,7 +19,7 @@ export class MockDataGenerator {
   }
   
   // Generate categorical data
-  static generateCategoryData(categories: string[] = ['Residential', 'Business', 'industry', 'infrastructure', 'medical']) {
+  static generateCategoryData(categories: string[] = ['Residential', 'Commercial', 'Industrial', 'Infrastructure', 'Healthcare']) {
     return categories.map(category => ({
       name: category,
       value: Math.round(50 + Math.random() * 200),
@@ -30,7 +30,7 @@ export class MockDataGenerator {
   
   // Generate cost distribution data
   static generateCostDistribution() {
-    const categories = ['Material', 'Artificial', 'equipment', 'manage', 'other']
+    const categories = ['Materials', 'Labor', 'Equipment', 'Management', 'Other']
     return categories.map(category => ({
       name: category,
       value: Math.round(20 + Math.random() * 50)
@@ -39,7 +39,7 @@ export class MockDataGenerator {
   
   // Generate risk radar chart data
   static generateRiskRadarData() {
-    const subjects = ['cost risk', 'time risk', 'quality risk', 'security risk', 'Compliance risk', 'technology risk']
+    const subjects = ['Cost Risk', 'Schedule Risk', 'Quality Risk', 'Safety Risk', 'Compliance Risk', 'Technology Risk']
     return subjects.map(subject => ({
       subject,
       value: Math.round(60 + Math.random() * 40)
@@ -48,7 +48,7 @@ export class MockDataGenerator {
   
   // Generate project progress data
   static generateProjectProgress() {
-    const projects = ['office buildingA', 'HospitalB', 'SchoolC', 'shopping mallD', 'ResidentialE']
+    const projects = ['Office Tower A', 'Hospital B', 'School C', 'Shopping Mall D', 'Residential E']
     return projects.map(project => ({
       name: project,
       progress: Math.round(Math.random() * 100),
@@ -91,7 +91,7 @@ export class MockDataGenerator {
   
   // Generate cost estimate comparison data
   static generateCostComparison() {
-    const methods = ['historical data', 'Expert assessment', 'AIpredict', 'market benchmark']
+    const methods = ['Historical Data', 'Expert Assessment', 'AI Prediction', 'Market Benchmark']
     return methods.map(method => ({
       name: method,
       estimate: Math.round(1000000 + Math.random() * 500000),

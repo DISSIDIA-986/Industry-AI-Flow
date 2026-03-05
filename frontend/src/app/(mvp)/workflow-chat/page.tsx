@@ -331,7 +331,7 @@ export default function WorkflowChatPage() {
       <div className="mb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Workflow chat</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Workflow Chat</h1>
             <p className="text-gray-600 mt-2">
               Chat with the AI assistant for cost estimation, risk analysis and data queries
             </p>

@@ -281,7 +281,7 @@ export default function DocumentsIntegratedPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
               <p className="text-gray-600 mt-2">
                 Upload, manage and process construction project documents
               </p>
@@ -371,21 +371,21 @@ export default function DocumentsIntegratedPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">backend connection</span>
+                    <span className="text-sm">Backend Connection</span>
                     <span className={`px-2 py-1 rounded text-xs ${
                       apiStatus === 'connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {apiStatus === 'connected' ? 'normal' : 'disconnect'}
+                      {apiStatus === 'connected' ? 'Connected' : 'Disconnected'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Total number of documents</span>
-                    <span className="font-medium">{realDocuments.length} indivual</span>
+                    <span className="text-sm">Total Documents</span>
+                    <span className="font-medium">{realDocuments.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Processed</span>
                     <span className="font-medium">
-                      {realDocuments.filter(d => d.status === 'completed' || d.status === 'processed').length} indivual
+                      {realDocuments.filter(d => d.status === 'completed' || d.status === 'processed').length}
                     </span>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export default function DocumentsIntegratedPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Document list</CardTitle>
+                    <CardTitle>Document List</CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       All uploaded documents support search and filtering
                     </p>
@@ -430,13 +430,13 @@ export default function DocumentsIntegratedPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>file name</TableHead>
-                          <TableHead>type</TableHead>
-                          <TableHead>size</TableHead>
-                          <TableHead>Upload time</TableHead>
-                          <TableHead>source</TableHead>
-                          <TableHead>state</TableHead>
-                          <TableHead className="text-right">operate</TableHead>
+                          <TableHead>File Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead>Upload Time</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -488,7 +488,7 @@ export default function DocumentsIntegratedPage() {
                                   size="sm"
                                   onClick={() => handleDownload(document.id, document.name)}
                                 >
-                                  download
+                                  Download
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -496,7 +496,7 @@ export default function DocumentsIntegratedPage() {
                                   onClick={() => handleDelete(document.id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
-                                  delete
+                                  Delete
                                 </Button>
                               </div>
                             </TableCell>

@@ -62,25 +62,25 @@ export default function SimpleDashboardPage() {
         {/* Statistics cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard 
-            title="Total number of items" 
+            title="Total Projects"
             value={stats.totalProjects}
             change="+12%"
           />
           
           <MetricCard 
-            title="active query" 
+            title="Active Queries"
             value={stats.activeQueries}
             change="+3 today"
           />
           
           <MetricCard 
-            title="Process documents" 
+            title="Processed Documents"
             value={stats.documentsProcessed}
             change="+8 this week"
           />
           
           <MetricCard 
-            title="cost savings" 
+            title="Cost Savings"
             value={`$${stats.costSavings.toLocaleString()}`}
             change="+15% Efficiency improvement"
           />
@@ -89,7 +89,7 @@ export default function SimpleDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Cost Trend Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">cost trends</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Trends</h2>
             {chartData ? (
               <LineChart 
                 data={chartData}
@@ -110,9 +110,9 @@ export default function SimpleDashboardPage() {
               <BarChart 
                 data={[
                   { name: 'Residential', value: 35 },
-                  { name: 'Business', value: 28 },
-                  { name: 'industry', value: 22 },
-                  { name: 'infrastructure', value: 15 }
+                  { name: 'Commercial', value: 28 },
+                  { name: 'Industrial', value: 22 },
+                  { name: 'Infrastructure', value: 15 }
                 ]}
                 title="Proportion of project types"
                 height={250}
@@ -127,7 +127,7 @@ export default function SimpleDashboardPage() {
 
         {/* Quick operation */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick operation</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
               <Link

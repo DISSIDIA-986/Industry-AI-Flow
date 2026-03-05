@@ -147,7 +147,7 @@ class FeedbackManager:
         cur = conn.cursor()
 
         try:
-            # EN
+            # Upsert feedback record (update on conflict by query_id)
             cur.execute(
                 """
                 INSERT INTO query_feedback
@@ -178,9 +178,9 @@ class FeedbackManager:
             conn.commit()
 
             if result:
-                # EN
+                # Update quality scores for retrieved document chunks
                 self._update_document_quality_scores(feedback)
-                # EN
+                # Trigger adaptive optimization based on feedback signal
                 self._trigger_adaptive_optimization(feedback)
                 logger.info(f"Feedback recorded for query {feedback.query_id}")
                 return True
@@ -196,7 +196,7 @@ class FeedbackManager:
             conn.close()
 
     def _update_document_quality_scores(self, feedback: UserFeedback):
-        """EN"""
+        """Update quality scores for document chunks based on user feedback."""
         if not feedback.retrieved_chunks:
             return
 
@@ -211,12 +211,12 @@ class FeedbackManager:
                 if not doc_id:
                     continue
 
-                # EN
+                # Calculate quality score adjustment from feedback
                 quality_delta = self._calculate_quality_impact(
                     feedback.feedback_type, feedback.feedback_weight
                 )
 
-                # EN
+                # Upsert quality score with incremental update on conflict
                 cur.execute(
                     """
                     INSERT INTO document_quality_scores (doc_id, chunk_id, quality_score, helpful_count, not_helpful_count)

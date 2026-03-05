@@ -52,13 +52,13 @@ export default function DataDashboardPage() {
       <div className="max-w-7xl mx-auto">
         {/* Title and time filter */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Data analysis dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Data Analysis Dashboard</h1>
           <div className="flex space-x-2">
             <button
               onClick={() => setTimeRange('daily')}
               className={`px-4 py-2 rounded-lg ${timeRange === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
             >
-              day
+              Daily
             </button>
             <button
               onClick={() => setTimeRange('weekly')}
@@ -70,7 +70,7 @@ export default function DataDashboardPage() {
               onClick={() => setTimeRange('monthly')}
               className={`px-4 py-2 rounded-lg ${timeRange === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
             >
-              monthly
+              Monthly
             </button>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function DataDashboardPage() {
         {/* KPI indicator card */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Total number of items"
+            title="Total Projects"
             value={data.kpiMetrics.totalProjects}
             change="+12%"
           />
@@ -88,12 +88,12 @@ export default function DataDashboardPage() {
             change="+5%"
           />
           <MetricCard
-            title="budget utilization"
+            title="Budget Utilization"
             value={`${data.kpiMetrics.budgetUtilization}%`}
             change="+3.2%"
           />
           <MetricCard
-            title="risk score"
+            title="Risk Score"
             value={`${data.kpiMetrics.riskScore}/100`}
             change="-8%"
           />
@@ -103,10 +103,10 @@ export default function DataDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Cost trend chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost trend analysis</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Trend Analysis</h2>
             <LineChartComponent
               data={data.timeSeries}
-              title="monthly cost changes"
+              title="Monthly Cost Changes"
               height={300}
             />
           </div>
@@ -126,20 +126,20 @@ export default function DataDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Cost composition analysis */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost composition analysis</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Breakdown Analysis</h2>
             <BarChartComponent
               data={data.costDistribution}
-              title="Cost composition ratio"
+              title="Cost Breakdown by Category"
               height={300}
             />
           </div>
 
           {/* Risk Assessment Radar Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">risk assessment</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Risk Assessment</h2>
             <RadarChartComponent
               data={data.riskData}
-              title="Risk dimension assessment"
+              title="Risk Dimension Assessment"
               height={300}
             />
           </div>
@@ -148,8 +148,8 @@ export default function DataDashboardPage() {
         {/* Real-time monitoring */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Real-time system monitoring</h2>
-            <div className="text-sm text-gray-500">last 24 hours</div>
+            <h2 className="text-xl font-semibold text-gray-900">Real-Time System Monitoring</h2>
+            <div className="text-sm text-gray-500">Last 24 Hours</div>
           </div>
           <AreaChartComponent
             data={data.realTimeData}
@@ -161,7 +161,7 @@ export default function DataDashboardPage() {
         {/* Project data form */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Project progress details</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Project Progress Details</h2>
             <button
               onClick={loadData}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -172,26 +172,26 @@ export default function DataDashboardPage() {
           <DataTable
             data={data.projectProgress}
             columns={[
-              { key: 'name', label: 'Project name' },
-              { key: 'progress', label: 'schedule', format: (value) => `${value}%` },
+              { key: 'name', label: 'Project Name' },
+              { key: 'progress', label: 'Progress', format: (value) => `${value}%` },
               { key: 'budget', label: 'Budget', format: (value) => `$${value.toLocaleString()}` },
-              { key: 'spent', label: 'spent', format: (value) => `$${value.toLocaleString()}` },
-              { key: 'timeline', label: 'timeline', format: (value) => `${value}months` }
+              { key: 'spent', label: 'Spent', format: (value) => `$${value.toLocaleString()}` },
+              { key: 'timeline', label: 'Timeline', format: (value) => `${value} months` }
             ]}
           />
         </div>
 
         {/* Cost estimate comparison */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Comparison of cost estimating methods</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Estimation Method Comparison</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimation method</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">actual value</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">deviation</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variance</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
                 </tr>
               </thead>
@@ -219,7 +219,7 @@ export default function DataDashboardPage() {
             </table>
           </div>
           <div className="mt-4 text-sm text-gray-500">
-            * AIForecasting methods show the highest accuracy in cost estimation
+            * AI Prediction methods show the highest accuracy in cost estimation
           </div>
         </div>
       </div>

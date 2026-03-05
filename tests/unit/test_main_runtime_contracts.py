@@ -354,7 +354,11 @@ async def test_health_reports_embedding_backend_status(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_rag_query_rejects_chinese_input():
+async def test_rag_query_rejects_chinese_input(monkeypatch):
+    from backend.config import settings
+
+    monkeypatch.setattr(settings, "enable_rag_english_query", True)
+
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
