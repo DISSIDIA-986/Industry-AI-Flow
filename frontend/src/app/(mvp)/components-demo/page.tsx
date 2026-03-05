@@ -88,7 +88,7 @@ export default function ComponentsDemoPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Component demo</h1>
         <p className="text-gray-600 mt-2">
-          show all availableUIComponents and their usage
+          Show all available UI components and their usage
         </p>
       </div>
 
