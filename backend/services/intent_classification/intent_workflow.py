@@ -1095,52 +1095,100 @@ class IntentClassificationWorkflow:
         source_items: List[Dict[str, Any]],
         profiles: List[Dict[str, Any]],
     ) -> List[str]:
+        import random as _random
+
         max_questions = max(
             1,
             min(int(settings.workflow_suggested_questions_count), 5),
         )
         query_norm = str(query or "").strip().lower()
+        # Extract query keywords (4+ chars, skip stopwords) for contextual questions
+        _stopwords = {
+            "what", "which", "where", "when", "that", "this", "these", "those",
+            "from", "with", "about", "have", "does", "there", "their", "they",
+            "been", "being", "were", "will", "would", "could", "should", "your",
+            "list", "give", "show", "tell", "please", "also",
+        }
+        query_keywords = [
+            w for w in "".join(
+                c if c.isalnum() or c.isspace() else " " for c in query_norm
+            ).split() if len(w) >= 4 and w not in _stopwords
+        ]
 
         candidates: List[str] = []
-        top_profile = profiles[0] if profiles else {}
-        profile_name = str(
-            top_profile.get("filename")
-            or top_profile.get("doc_id")
-            or (source_items[0].get("document_name") if source_items else "this source")
-        ).strip()
-        outline = top_profile.get("outline")
-        if isinstance(outline, list):
-            for item in outline[:2]:
-                heading = str(item or "").strip()
-                if not heading:
-                    continue
-                candidates.append(
-                    f'In {profile_name}, what are the requirements for "{heading}"?'
-                )
 
-        keywords = top_profile.get("keywords")
-        if isinstance(keywords, list):
-            filtered_keywords = [str(item).strip() for item in keywords if str(item).strip()]
-            if len(filtered_keywords) >= 2:
-                candidates.append(
-                    f"Can you summarize compliance checks for {filtered_keywords[0]} and {filtered_keywords[1]} in {profile_name}?"
-                )
-
-        if source_items:
-            primary_source = str(
-                source_items[0].get("document_name")
-                or source_items[0].get("document_id")
-                or profile_name
+        # --- Source-aware questions based on actual retrieved documents ---
+        source_names: List[str] = []
+        for item in source_items[:5]:
+            name = str(
+                item.get("document_name") or item.get("document_id") or ""
             ).strip()
+            if name and name not in source_names:
+                source_names.append(name)
+
+        if source_names:
+            primary = source_names[0]
+            # Deep-dive into the primary source
             candidates.append(
-                f"What evidence from {primary_source} directly supports this answer?"
+                f"Which specific sections in {primary} provide the strongest evidence for this answer?"
+            )
+            if len(source_names) >= 2:
+                secondary = source_names[1]
+                candidates.append(
+                    f"How do the requirements in {primary} compare with those in {secondary}?"
+                )
+            if len(source_names) >= 3:
+                candidates.append(
+                    f"Are there any conflicting requirements across {source_names[0]}, {source_names[1]}, and {source_names[2]}?"
+                )
+
+        # --- Profile-aware questions using outline headings ---
+        for profile in profiles[:3]:
+            p_name = str(
+                profile.get("filename") or profile.get("doc_id") or ""
+            ).strip()
+            if not p_name:
+                continue
+            outline = profile.get("outline")
+            if isinstance(outline, list) and len(outline) > 2:
+                # Pick headings beyond the first two to avoid repetition
+                deeper_headings = [
+                    str(h).strip() for h in outline[2:6] if str(h).strip()
+                ]
+                if deeper_headings:
+                    heading = _random.choice(deeper_headings)
+                    candidates.append(
+                        f'What does {p_name} specify about "{heading}"?'
+                    )
+            keywords = profile.get("keywords")
+            if isinstance(keywords, list) and len(keywords) >= 4:
+                # Use keywords that overlap with the user's query for relevance
+                relevant_kw = [
+                    k for k in keywords if str(k).strip().lower() in query_norm
+                ]
+                if not relevant_kw:
+                    relevant_kw = list(keywords[2:5])
+                if len(relevant_kw) >= 2:
+                    kw_pair = _random.sample(relevant_kw[:4], min(2, len(relevant_kw)))
+                    candidates.append(
+                        f"Summarize the {kw_pair[0]} and {kw_pair[1]} requirements in {p_name}."
+                    )
+
+        # --- Query-contextual follow-ups ---
+        if query_keywords:
+            topic = " ".join(query_keywords[:4])
+            candidates.append(
+                f"What are the common exceptions or special cases for {topic}?"
             )
             candidates.append(
-                f"What are the key exceptions or risk points in {primary_source}?"
+                f"Can you create a compliance checklist for {topic}?"
             )
 
-        candidates.append("What details should I provide next for a more precise answer?")
+        # --- Generic fallbacks ---
+        candidates.append("What details should I provide for a more precise answer?")
+        candidates.append("What are the highest-risk items I should prioritize?")
 
+        # Deduplicate and select
         suggestions: List[str] = []
         seen: set[str] = set()
         for question in candidates:
@@ -1152,9 +1200,13 @@ class IntentClassificationWorkflow:
                 continue
             seen.add(lowered)
             suggestions.append(value)
-            if len(suggestions) >= max_questions:
-                break
-        return suggestions
+        # Shuffle beyond the first item to vary suggestions across queries
+        if len(suggestions) > 1:
+            first = suggestions[0]
+            rest = suggestions[1:]
+            _random.shuffle(rest)
+            suggestions = [first] + rest
+        return suggestions[:max_questions]
 
     @staticmethod
     def _parse_json_object(text: str) -> Optional[Dict[str, Any]]:
