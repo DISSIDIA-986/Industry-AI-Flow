@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { workflowApi, realApiService } from '@/lib/api-client'
 import { websocketService, type QueryResponseData } from '@/lib/websocket-service'
 import { buildQuickTipsFromDocuments, parsePinnedQuickTips } from '@/lib/workflow-quick-tips'
+import MarkdownRenderer from '@/components/MarkdownRenderer'
 
 interface Message {
   id: string
@@ -395,7 +396,11 @@ export default function WorkflowChatPage() {
                         : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    {message.sender === 'ai' ? (
+                      <MarkdownRenderer content={message.content} />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+                    )}
                     
                     {/* Intent info (AI messages only) */}
                     {message.sender === 'ai' && message.intent && (
