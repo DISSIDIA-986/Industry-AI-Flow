@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3.5:4b")
     ollama_connect_timeout_seconds: int = int(os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "10"))
-    ollama_request_timeout_seconds: int = int(os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "90"))
+    ollama_request_timeout_seconds: int = int(os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "180"))
 
     # llama.cpp (主要后端)
     llama_model_path: str = os.getenv(
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
         os.getenv("DOCUMENT_PROFILE_CONTEXT_LIMIT", "3")
     )
     workflow_suggested_questions_count: int = int(
-        os.getenv("WORKFLOW_SUGGESTED_QUESTIONS_COUNT", "3")
+        os.getenv("WORKFLOW_SUGGESTED_QUESTIONS_COUNT", "5")
     )
 
     # Workflow 优化配置 (P0 修复)

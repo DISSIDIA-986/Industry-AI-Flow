@@ -71,7 +71,7 @@ export function parsePinnedQuickTips(
 export function buildQuickTipsFromDocuments(
   documents: QuickTipDocument[],
   fallbackQuickTips: string[],
-  maxCount = 5,
+  maxCount = 8,
 ): string[] {
   const readyDocs = documents
     .map((item) => {

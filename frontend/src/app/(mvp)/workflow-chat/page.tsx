@@ -63,7 +63,7 @@ function extractSuggestedQuestions(metadata: unknown): string[] | undefined {
   const normalized = raw
     .map((item) => String(item || '').trim())
     .filter((item) => item.length > 0)
-  return normalized.length > 0 ? normalized.slice(0, 5) : undefined
+  return normalized.length > 0 ? normalized.slice(0, 8) : undefined
 }
 
 function buildFallbackSuggestedQuestions(
@@ -519,10 +519,10 @@ export default function WorkflowChatPage() {
           {/* Quick Tips */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <h3 className="font-medium text-gray-900 mb-3">Quick Tips</h3>
-            <div className="space-y-2">
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
               {quickPrompts.map((prompt, index) => (
                 <button
-                  key={index}
+                  key={`qt-${index}-${prompt.slice(0, 20)}`}
                   onClick={() => handleQuickPrompt(prompt)}
                   className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition"
                 >

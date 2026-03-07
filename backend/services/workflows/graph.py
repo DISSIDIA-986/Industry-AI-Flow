@@ -108,7 +108,7 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
         return state
 
     try:
-        return await asyncio.wait_for(_execute_pipeline(), timeout=120.0)
+        return await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
     except asyncio.TimeoutError:
         state["error"] = "Request timed out. Please try again."
         state["response"] = "Request timed out. Please try again."
