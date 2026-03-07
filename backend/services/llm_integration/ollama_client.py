@@ -36,6 +36,17 @@ class OllamaClient:
         # Reuse TCP connections across requests
         self._session = requests.Session()
 
+    def _post_with_retry(self, url: str, **kwargs) -> requests.Response:
+        """POST with automatic retry on BrokenPipeError (stale TCP connection)."""
+        kwargs.setdefault("timeout", (self.connect_timeout, self.request_timeout))
+        try:
+            return self._session.post(url, **kwargs)
+        except (BrokenPipeError, requests.exceptions.ConnectionError) as first_err:
+            logger.warning("Connection reset (%s), retrying with fresh session", first_err)
+            self._session.close()
+            self._session = requests.Session()
+            return self._session.post(url, **kwargs)
+
     def generate(
         self,
         prompt: str,
@@ -81,10 +92,9 @@ class OllamaClient:
             payload["options"].update(kwargs)
 
         try:
-            response = self._session.post(
+            response = self._post_with_retry(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                timeout=(self.connect_timeout, self.request_timeout)  # (connect, read) timeout
             )
             response.raise_for_status()
 
@@ -152,10 +162,9 @@ class OllamaClient:
         }
 
         try:
-            response = self._session.post(
+            response = self._post_with_retry(
                 f"{self.base_url}/api/chat",
                 json=payload,
-                timeout=(self.connect_timeout, self.request_timeout)
             )
             response.raise_for_status()
             return response.json()["message"]["content"]
