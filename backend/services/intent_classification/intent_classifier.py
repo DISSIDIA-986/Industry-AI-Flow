@@ -531,6 +531,10 @@ class IntentClassifier:
             "what is", "how to", "tell me", "explain", "define", "describe",
             "properties of", "requirements for", "difference between",
             "what are", "how does", "why is", "when should",
+            "summarize", "summary", "according to", "based on",
+            "document say", "in the document", "in the pdf",
+            "regulation", "compliance", "standard", "specification",
+            "safety", "osha", "construction",
         ]):
             intent = "knowledge_retrieval"
             confidence = 0.85
@@ -546,9 +550,14 @@ class IntentClassifier:
             reasoning = "Query contains data analysis keywords"
         elif any(
             keyword in query_lower for keyword in [
-                "pdf", "image", "ocr", "extract", "scan", "upload", "document",
-                "read file", "parse",
+                "ocr", "scan document", "upload file", "upload document",
+                "read file", "extract text from",
             ]
+        ) or (
+            # Only match "pdf" / "image" / "parse" / "extract" when combined
+            # with action verbs suggesting file processing, NOT knowledge queries
+            any(kw in query_lower for kw in ["pdf", "image", "parse", "extract"])
+            and any(verb in query_lower for verb in ["upload", "process", "scan", "convert", "open"])
         ):
             intent = "document_processing"
             confidence = 0.88
