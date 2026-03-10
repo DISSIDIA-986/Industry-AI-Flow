@@ -482,7 +482,8 @@ def _load_indexed_documents_fallback(*, limit: int = 200) -> List[Dict[str, Any]
     try:
         cur.execute(
             """
-            SELECT id, filename, filepath, chunk_count, created_at
+            SELECT id, filename, filepath, chunk_count, created_at,
+                   COALESCE(size_bytes, 0) AS size_bytes
             FROM documents
             ORDER BY created_at DESC
             LIMIT %s
@@ -505,12 +506,14 @@ def _load_indexed_documents_fallback(*, limit: int = 200) -> List[Dict[str, Any]
         created_at = row.get("created_at")
 
         status = "processed"
-        size_bytes = 0
+        size_bytes = int(row.get("size_bytes") or 0)
         if file_path:
             try:
                 normalized = _normalize_file_path(file_path)
                 if normalized.exists():
-                    size_bytes = int(normalized.stat().st_size)
+                    disk_size = int(normalized.stat().st_size)
+                    if disk_size > 0:
+                        size_bytes = disk_size
                 else:
                     status = "missing"
             except Exception:

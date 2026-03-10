@@ -68,6 +68,7 @@ def test_tdo_rag_ingest_retrieve_generate_baseline(monkeypatch) -> None:
             filepath: str,
             chunks: list[str],
             embeddings: list[list[float]],
+            size_bytes: int = 0,
         ) -> str:
             evidence["stored_filename"] = filename
             evidence["stored_filepath"] = filepath
@@ -162,8 +163,9 @@ def test_tdo_rag_delete_removes_retrieval_baseline(monkeypatch) -> None:
             filepath: str,
             chunks: list[str],
             embeddings: list[list[float]],
+            size_bytes: int = 0,
         ) -> str:
-            del filename, filepath, embeddings
+            del filename, filepath, embeddings, size_bytes
             self.rows["manual-doc-delete"] = list(chunks)
             return "manual-doc-delete"
 

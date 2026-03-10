@@ -1153,7 +1153,9 @@ class IntentClassificationWorkflow:
             if isinstance(outline, list) and len(outline) > 2:
                 # Pick headings beyond the first two to avoid repetition
                 deeper_headings = [
-                    str(h).strip() for h in outline[2:6] if str(h).strip()
+                    str(h).strip()
+                    for h in outline[2:6]
+                    if str(h).strip() and len(str(h).split()) >= 2
                 ]
                 if deeper_headings:
                     heading = _random.choice(deeper_headings)

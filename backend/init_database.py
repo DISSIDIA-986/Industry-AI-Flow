@@ -45,10 +45,18 @@ def init_database():
                 filename VARCHAR(255) NOT NULL,
                 filepath TEXT,
                 chunk_count INTEGER NOT NULL DEFAULT 0,
+                size_bytes BIGINT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """
+        )
+
+        # Migrate: add size_bytes column to existing documents tables
+        cur.execute(
+            """
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS size_bytes BIGINT DEFAULT 0
+            """
         )
 
         # 上传文档索引（用于前端文档列表，支持重启后持久化）

@@ -135,6 +135,7 @@ def import_csv_dataset(csv_path: str, vectorstore: VectorStore) -> dict:
             filepath=csv_path,
             chunks=chunk_contents,
             embeddings=embeddings,
+            size_bytes=int(Path(csv_path).stat().st_size),
         )
 
         print(f"✅ Successfully imported {Path(csv_path).name}")

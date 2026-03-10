@@ -66,6 +66,7 @@ def import_documents(directory: str):
                 filepath=str(file_path),
                 chunks=chunks,
                 embeddings=embeddings,
+                size_bytes=int(file_path.stat().st_size),
             )
             print(f"  ✓ 存储成功: doc_id={doc_id}")
 

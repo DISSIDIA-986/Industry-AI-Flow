@@ -68,6 +68,7 @@ class VectorStore:
         filepath: str,
         chunks: list[str],
         embeddings: list[list[float]],
+        size_bytes: int = 0,
     ) -> str:
         """Store a document and its chunks with embeddings."""
         conn = self.get_connection()
@@ -80,10 +81,10 @@ class VectorStore:
             doc_id = str(uuid.uuid4())
             cur.execute(
                 """
-                INSERT INTO documents (id, filename, filepath, chunk_count)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO documents (id, filename, filepath, chunk_count, size_bytes)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (doc_id, filename, filepath, len(chunks)),
+                (doc_id, filename, filepath, len(chunks), size_bytes),
             )
 
             # 2. Insert chunk records with embeddings

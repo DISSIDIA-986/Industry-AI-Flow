@@ -15,6 +15,44 @@ _TOKEN_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)?")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 _HEADING_RE = re.compile(r"^\s*(?:\d+(?:\.\d+){0,3}\s+)?[A-Za-z][A-Za-z0-9\-\s:/]{3,80}$")
 
+# Common website UI / navigation strings that leak through OCR/scraping.
+# Include both clean and garbled (OCR-truncated) variants.
+_UI_ARTIFACT_STEMS = {
+    "select", "language", "skip", "content", "cookie", "privacy",
+    "terms", "service", "loading", "search", "print", "share",
+    "navigation", "menu", "sidebar", "footer", "header", "toolbar",
+    "bookmark", "download", "upload", "subscribe", "login", "logout",
+}
+
+
+def _is_plausible_heading(text: str) -> bool:
+    """Return False for OCR artifacts, UI chrome, and garbled text."""
+    words = text.split()
+    if not words:
+        return False
+    # Reject if most words are very short (< 3 chars) — sign of OCR garbage
+    short_words = sum(1 for w in words if len(w) < 3)
+    if len(words) >= 2 and short_words / len(words) > 0.6:
+        return False
+    # Reject headings where multiple words are prefix-matches of known UI stems.
+    # Catches OCR-truncated UI text like "Selec Targe Language" → stems: select, target, language
+    lowered_words = [w.lower() for w in words]
+    ui_hits = 0
+    for w in lowered_words:
+        for stem in _UI_ARTIFACT_STEMS:
+            if len(w) >= 4 and (stem.startswith(w) or w.startswith(stem)):
+                ui_hits += 1
+                break
+    if len(words) >= 2 and ui_hits >= 2:
+        return False
+    # Reject if it looks like a garbled phrase — multiple words with no vowels
+    _vowels = set("aeiouAEIOU")
+    no_vowel_words = sum(1 for w in words if len(w) > 2 and not (_vowels & set(w)))
+    if len(words) >= 2 and no_vowel_words / len(words) > 0.5:
+        return False
+    return True
+
+
 _STOPWORDS = {
     "about",
     "after",
@@ -185,6 +223,8 @@ class DocumentProfileService:
                 if clean.lower() in seen:
                     continue
                 if not _HEADING_RE.match(clean):
+                    continue
+                if not _is_plausible_heading(clean):
                     continue
                 seen.add(clean.lower())
                 lines.append(clean)
