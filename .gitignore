@@ -217,6 +217,14 @@ models/**/*.gguf
 models/**/*.bin
 models/**/*.safetensors
 
+# Large binary documents — RAG seed docs kept on disk, not in git
+test_resources/documents/**/*.pdf
+test_resources/documents/**/*.doc
+test_resources/documents/**/*.docx
+test_resources/documents/**/*.zip
+test_resources/documents/**/*.rar
+test_resources/documents/**/*.7z
+
 # Model cache
 models/**/.cache/
 # Allow Claude agent skills documentation
