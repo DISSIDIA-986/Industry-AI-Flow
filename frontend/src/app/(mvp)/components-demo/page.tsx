@@ -38,10 +38,10 @@ export default function ComponentsDemoPage() {
   }>>([])
 
   const categories = [
-    { value: 'general', label: 'General inquiries' },
+    { value: 'general', label: 'General Inquiries' },
     { value: 'technical', label: 'Technical support' },
-    { value: 'billing', label: 'billing issues' },
-    { value: 'feedback', label: 'Feedback and suggestions' }
+    { value: 'billing', label: 'Billing Issues' },
+    { value: 'feedback', label: 'Feedback and Suggestions' }
   ]
 
   const priorities = [
@@ -128,7 +128,7 @@ export default function ComponentsDemoPage() {
                     />
                   </FormGroup>
 
-                  <FormGroup label="priority">
+                  <FormGroup label="Priority">
                     <RadioGroup
                       options={priorities}
                       value={formData.priority}

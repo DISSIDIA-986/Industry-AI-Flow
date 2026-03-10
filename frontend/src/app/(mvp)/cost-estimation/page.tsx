@@ -82,6 +82,24 @@ const NUM_FIELDS: Array<keyof CostProjectFeatures> = [
   "risk_score_original",
 ];
 
+const FIELD_LABELS: Record<string, string> = {
+  sqft: "Square Footage (sq ft)",
+  floors: "Number of Floors",
+  num_units: "Number of Units",
+  planned_duration_weeks: "Planned Duration (weeks)",
+  estimated_cost_cad: "Estimated Cost (CAD)",
+  contractor_rating: "Contractor Rating",
+  complexity_score: "Complexity Score",
+  team_experience_years: "Team Experience (years)",
+  num_change_orders: "Number of Change Orders",
+  weather_risk_factor: "Weather Risk Factor",
+  material_volatility: "Material Volatility",
+  num_subcontractors: "Number of Subcontractors",
+  budget_pressure: "Budget Pressure",
+  risk_score: "Risk Score",
+  risk_score_original: "Original Risk Score",
+};
+
 export default function CostEstimationPage() {
   const { config } = useAppConfig();
   const [project, setProject] = useState<CostProjectFeatures>(baseProject);
@@ -189,7 +207,7 @@ export default function CostEstimationPage() {
 
           {NUM_FIELDS.map((field) => (
             <label className="field-group" key={field}>
-              {field}
+              {FIELD_LABELS[field] ?? field}
               <input
                 type="number"
                 step="any"

@@ -98,7 +98,7 @@ export default function WorkflowChatPage() {
   const [loading, setLoading] = useState(false)
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
-  const [useWebSocket, setUseWebSocket] = useState(false)
+  const [useWebSocket, _setUseWebSocket] = useState(false)
   const [quickPrompts, setQuickPrompts] = useState<string[]>(
     pinnedQuickPrompts ?? defaultQuickPrompts,
   )
@@ -338,24 +338,16 @@ export default function WorkflowChatPage() {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            {/* WebSocket toggle */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setUseWebSocket(!useWebSocket)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  useWebSocket 
-                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {useWebSocket ? 'WebSocket: On' : 'WebSocket: Off'}
-              </button>
-              <div className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}></div>
-              <span className="text-xs text-gray-600">
-                {wsStatusLabel}
-              </span>
-            </div>
-            
+            {/* WebSocket status — only visible when WebSocket is actively connected or connecting */}
+            {useWebSocket && wsStatus !== 'disconnected' && (
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}></div>
+                <span className="text-xs text-gray-600">
+                  WebSocket {wsStatusLabel}
+                </span>
+              </div>
+            )}
+
             {/* API status */}
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${
@@ -492,7 +484,7 @@ export default function WorkflowChatPage() {
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   placeholder="Enter your question or query..."
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={2}

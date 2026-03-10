@@ -135,6 +135,7 @@ def run_init(
             filepath=str(path),
             chunks=chunk_contents,
             embeddings=embeddings,
+            size_bytes=int(path.stat().st_size),
         )
         elapsed_ms = (time.perf_counter() - t0) * 1000
         report["ingested"].append(
