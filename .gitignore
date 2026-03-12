@@ -217,6 +217,9 @@ models/**/*.gguf
 models/**/*.bin
 models/**/*.safetensors
 
+# Dogfood testing output (screenshots, videos, reports)
+dogfood-output/
+
 # Large binary documents — RAG seed docs kept on disk, not in git
 test_resources/documents/**/*.pdf
 test_resources/documents/**/*.doc
