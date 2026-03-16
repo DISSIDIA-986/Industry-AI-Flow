@@ -103,29 +103,18 @@ class TestR17B03_SimulateLLMKeywordPriority:
         """'how to estimate construction cost' should route to cost_estimation,
         not knowledge_retrieval. Cost estimation keywords must be checked
         before generic knowledge retrieval keywords like 'how to'."""
-        source = open(
-            "backend/services/intent_classification/intent_classifier.py"
-        ).read()
-        tree = ast.parse(source)
+        from backend.services.intent_classification.capability_registry import (
+            get_capability_registry,
+        )
 
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "_simulate_llm_response":
-                    body_src = ast.get_source_segment(source, node)
-                    # Find the FIRST "if any(" keyword check (any formatting)
-                    first_if_idx = body_src.find("if any(")
-                    assert first_if_idx >= 0, "No 'if any(' found"
-                    # Find the first intent = "..." assignment after it
-                    first_intent_idx = body_src.find('intent = "', first_if_idx)
-                    first_intent_end = body_src.find('"', first_intent_idx + 11)
-                    first_intent = body_src[first_intent_idx + 10 : first_intent_end]
-                    assert first_intent == "cost_estimation", (
-                        f"First keyword check routes to '{first_intent}' — "
-                        "cost_estimation should be checked before knowledge_retrieval "
-                        "to prevent 'how to estimate cost' from misrouting"
-                    )
-                    return
-        pytest.fail("_simulate_llm_response not found")
+        registry = get_capability_registry()
+        intent, confidence, _reasoning = registry.classify_heuristic(
+            "how to estimate construction cost"
+        )
+        assert intent == "cost_estimation", (
+            f"Expected cost_estimation, got {intent} — "
+            "cost estimation keywords must be prioritized over generic 'how to'"
+        )
 
 
 # ---------------------------------------------------------------------------
