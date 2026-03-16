@@ -15,7 +15,7 @@ Users upload construction documents (PDF, images, CSV) → system vectorizes and
 Uses a partner-provided construction cost dataset with Ridge regression to predict project cost overruns. Standard supervised learning on structured data (features: project_type, sqft, floors, location, contractor_rating, risk_score, etc.).
 
 ### 3. Dynamic Data Analysis (Code Generation + Sandbox Execution)
-For user-uploaded datasets outside the pre-built cost model: extracts **metadata only** (not raw data — privacy by design) → sends metadata to cloud LLM (Gemini/Qwen/GLM/Claude) for code generation → executes generated Python in local/Docker sandbox → returns results + visualizations. Cloud models used because local models are too weak for reliable code generation. Docker sandbox has received security hardening (TDI rounds 28-36) but **end-to-end integration testing is still limited — significant demo risk.**
+For user-uploaded datasets outside the pre-built cost model: extracts **metadata only** (not raw data — privacy by design) → sends metadata to cloud LLM (Gemini/Zhipu, with dual fallback) for code generation → executes generated Python in Docker sandbox → returns results + visualizations. Cloud models used because local models are too weak for reliable code generation. Docker sandbox security-hardened (TDI rounds 28-36) and **E2E tested passing at 100% (2026-03-15)**. Docker is required on demo machine.
 
 ### Architecture Innovation
 The AI Workflow pipeline is a core innovation with two stages: an **11-node intent classification StateGraph** (intent_workflow.py) handles user input → intent classification → multi-turn clarification → query reformulation → keyword extraction, then routes to a **10-node fixed-order execution pipeline** (graph.py): intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness. Intent recognition is especially critical for RAG routing.
@@ -33,12 +33,24 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Multi-tenant isolation** (X-Tenant-ID): future-proofing for enterprise deployment, NOT a demo requirement
 - **Prompt A/B testing**: versioned prompt management with performance scoring
 
-### Demo Hardware Candidates
-- Mac Studio (M1 Max, 32GB RAM)
-- Windows machine (32GB RAM + RTX 5060, ~8GB VRAM)
+### Demo Hardware (Confirmed)
+- **Mac Studio (M1 Max, 32GB RAM)** — sole demo machine
+- Stable internet at venue (cloud APIs accessible)
+- Docker installed and required (`CODE_EXECUTION_PROVIDER=docker`)
+- Single-operator demo (evaluators watch, don't interact directly)
+
+### Demo-Critical Requirements
+- **Source citations MUST appear on every RAG answer** — backend must always return `sources` field
+- **Suggested follow-up questions MUST appear on every RAG answer** — backend must always return `suggested_questions`
+- **Cost estimation needs reasonableness validation** — predicted values within dataset range
+- **Cloud LLM dual fallback** — Data Analysis must work with both Gemini and Zhipu; auto-fallback if one fails
+- **Pre-warm before demo** — user will open system beforehand; first-query cold start ~49s is avoided
 
 ### Evaluation Criteria
 Evaluators care about: stable demo (no crashes), clear presentation, sound architecture, logical technical decisions. **Top priority: system stability during live demo.**
+
+### E2E Test Sync Rule
+When frontend pages are modified (CSS classes, form labels, DOM structure), the E2E browser automation scripts in `scripts/testing/run_*_browser_e2e.py` **MUST be updated in the same change**. Run `run_page_result_driven_gate.py --module <module>` to validate. See `scripts/testing/` for module runners.
 
 ## Python Environment
 
