@@ -12,7 +12,6 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-
 NUMERIC_FEATURES: List[str] = [
     "sqft",
     "floors",
@@ -263,7 +262,13 @@ def extract_cost_features_from_query(query: str) -> Dict[str, Any]:
             value = _parse_human_number(match.group(1))
             if value is None:
                 continue
-            if field in {"floors", "num_units", "complexity_score", "num_change_orders", "num_subcontractors"}:
+            if field in {
+                "floors",
+                "num_units",
+                "complexity_score",
+                "num_change_orders",
+                "num_subcontractors",
+            }:
                 extracted[field] = int(round(value))
             else:
                 extracted[field] = float(value)
@@ -297,7 +302,9 @@ def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(1.0 - (ss_res / ss_tot))
 
 
-def _kfold_indices(n_samples: int, folds: int, seed: int) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+def _kfold_indices(
+    n_samples: int, folds: int, seed: int
+) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
     if folds < 2:
         raise CostEstimationError("folds must be >= 2")
     if n_samples < folds:
@@ -324,7 +331,9 @@ def _clean_training_rows(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
     for col in NUMERIC_FEATURES + [TARGET_OVERRUN, TARGET_ACTUAL_COST]:
         cleaned[col] = pd.to_numeric(cleaned[col], errors="coerce")
-    cleaned = cleaned.dropna(subset=[TARGET_OVERRUN, TARGET_ACTUAL_COST, ESTIMATED_COST])
+    cleaned = cleaned.dropna(
+        subset=[TARGET_OVERRUN, TARGET_ACTUAL_COST, ESTIMATED_COST]
+    )
     cleaned = cleaned[cleaned[ESTIMATED_COST] > 0]
     cleaned = cleaned[cleaned[TARGET_ACTUAL_COST] > 0]
     cleaned = cleaned.reset_index(drop=True)
@@ -421,7 +430,9 @@ def _evaluate_actual_cost(
     }
 
 
-def _evaluate_overrun(y_true_overrun: np.ndarray, pred_overrun_pct: np.ndarray) -> Dict[str, float]:
+def _evaluate_overrun(
+    y_true_overrun: np.ndarray, pred_overrun_pct: np.ndarray
+) -> Dict[str, float]:
     return {
         "mae_pct": _mae(y_true_overrun, pred_overrun_pct),
         "rmse_pct": _rmse(y_true_overrun, pred_overrun_pct),
@@ -505,7 +516,9 @@ def train_cost_estimation_model(
         fold_model = _fit_ridge(X_train, y_train, ridge_alpha=ridge_alpha)
         oof_pred_overrun[valid_idx] = _predict_overrun(X_valid, fold_model)
 
-    oof_actual_metrics = _evaluate_actual_cost(y_actual, estimated_cost, oof_pred_overrun)
+    oof_actual_metrics = _evaluate_actual_cost(
+        y_actual, estimated_cost, oof_pred_overrun
+    )
     oof_overrun_metrics = _evaluate_overrun(y_overrun, oof_pred_overrun)
 
     baseline_actual = estimated_cost
@@ -516,7 +529,9 @@ def train_cost_estimation_model(
         "r2": _r2(y_actual, baseline_actual),
     }
 
-    oof_pred_actual = np.maximum(estimated_cost * (1.0 + (oof_pred_overrun / 100.0)), 0.0)
+    oof_pred_actual = np.maximum(
+        estimated_cost * (1.0 + (oof_pred_overrun / 100.0)), 0.0
+    )
     oof_ape = np.abs(y_actual - oof_pred_actual) / np.maximum(y_actual, 1.0)
     residual_quantiles = {
         "0.50": float(np.quantile(oof_ape, 0.50)),
@@ -532,7 +547,9 @@ def train_cost_estimation_model(
     final_model = _fit_ridge(X_full, y_overrun, ridge_alpha=ridge_alpha)
     full_pred_overrun = _predict_overrun(X_full, final_model)
 
-    final_actual_metrics = _evaluate_actual_cost(y_actual, estimated_cost, full_pred_overrun)
+    final_actual_metrics = _evaluate_actual_cost(
+        y_actual, estimated_cost, full_pred_overrun
+    )
     final_overrun_metrics = _evaluate_overrun(y_overrun, full_pred_overrun)
 
     metrics = {
@@ -552,6 +569,16 @@ def train_cost_estimation_model(
         "prediction_interval_ape_quantiles": residual_quantiles,
     }
 
+    # Store training data range for prediction reasonableness validation.
+    dataset_stats = {
+        "estimated_cost_min": float(estimated_cost.min()),
+        "estimated_cost_max": float(estimated_cost.max()),
+        "overrun_pct_min": float(y_overrun.min()),
+        "overrun_pct_max": float(y_overrun.max()),
+        "actual_cost_min": float(y_actual.min()),
+        "actual_cost_max": float(y_actual.max()),
+    }
+
     artifact = _artifact_dict(
         model=final_model,
         category_levels=levels,
@@ -561,6 +588,7 @@ def train_cost_estimation_model(
         dataset_path=str(dataset_path),
         training_rows=len(df),
     )
+    artifact["dataset_stats"] = dataset_stats
 
     output_model_path.parent.mkdir(parents=True, exist_ok=True)
     output_model_path.write_text(
@@ -579,7 +607,13 @@ def train_cost_estimation_model(
 class CostEstimationService:
     """Loads model artifact and serves project-level predictions."""
 
-    DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent.parent / "workspace" / "models" / "cost_estimation" / "latest.json"
+    DEFAULT_MODEL_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / "workspace"
+        / "models"
+        / "cost_estimation"
+        / "latest.json"
+    )
 
     def __init__(self, model_path: Optional[Path] = None):
         self.model_path = model_path or self.DEFAULT_MODEL_PATH
@@ -597,7 +631,12 @@ class CostEstimationService:
             raise CostEstimationError(f"model artifact not found: {path}")
 
         artifact = json.loads(path.read_text(encoding="utf-8"))
-        for required in ("numeric_features", "categorical_features", "category_levels", "model"):
+        for required in (
+            "numeric_features",
+            "categorical_features",
+            "category_levels",
+            "model",
+        ):
             if required not in artifact:
                 raise CostEstimationError(f"invalid artifact; missing '{required}'")
 
@@ -656,7 +695,9 @@ class CostEstimationService:
         estimated_cost = float(row[ESTIMATED_COST])
         pred_actual_cost = max(0.0, estimated_cost * (1.0 + (pred_overrun / 100.0)))
 
-        interval_quantile, ape_quantile = self._resolve_interval_quantile(confidence_quantile)
+        interval_quantile, ape_quantile = self._resolve_interval_quantile(
+            confidence_quantile
+        )
         lower_bound = max(0.0, pred_actual_cost * (1.0 - ape_quantile))
         upper_bound = pred_actual_cost * (1.0 + ape_quantile)
 
@@ -672,6 +713,29 @@ class CostEstimationService:
             cats = ", ".join(f"{k}={v}" for k, v in unknown_categories.items())
             warning = f"Unknown categories detected ({cats}). Prediction confidence is degraded."
 
+        # Reasonableness validation against training data range.
+        reasonableness = {"within_training_range": True, "flags": []}
+        stats = (self._artifact or {}).get("dataset_stats")
+        if isinstance(stats, dict):
+            if estimated_cost < stats.get("estimated_cost_min", 0) * 0.5:
+                reasonableness["flags"].append("estimated_cost_below_training_range")
+                reasonableness["within_training_range"] = False
+            if estimated_cost > stats.get("estimated_cost_max", float("inf")) * 2.0:
+                reasonableness["flags"].append("estimated_cost_above_training_range")
+                reasonableness["within_training_range"] = False
+            if pred_overrun < stats.get("overrun_pct_min", -100) - 20:
+                reasonableness["flags"].append("predicted_overrun_unusually_low")
+                reasonableness["within_training_range"] = False
+            if pred_overrun > stats.get("overrun_pct_max", 100) + 20:
+                reasonableness["flags"].append("predicted_overrun_unusually_high")
+                reasonableness["within_training_range"] = False
+
+        if reasonableness["flags"] and not warning:
+            warning = (
+                "Prediction may be less reliable: input values are outside the "
+                "training data range."
+            )
+
         return {
             "predicted_cost_overrun_pct": pred_overrun,
             "predicted_actual_cost_cad": pred_actual_cost,
@@ -684,6 +748,7 @@ class CostEstimationService:
             "uncertainty": {
                 "ape_quantile": ape_quantile,
             },
+            "reasonableness": reasonableness,
             "unknown_categories": unknown_categories,
             "confidence_degraded": confidence_degraded,
             "warning": warning,
@@ -711,9 +776,8 @@ class CostEstimationService:
         if self._artifact is None:
             return 0.90, 0.10
 
-        quantiles = (
-            self._artifact.get("metrics", {})
-            .get("prediction_interval_ape_quantiles", {})
+        quantiles = self._artifact.get("metrics", {}).get(
+            "prediction_interval_ape_quantiles", {}
         )
         if not quantiles:
             return 0.90, 0.10
