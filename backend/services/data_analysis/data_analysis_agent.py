@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from backend.config import settings
-from backend.services.code_executor import get_code_executor, get_code_execution_manager
+from backend.services.code_executor import get_code_execution_manager, get_code_executor
 from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,10 @@ class DataAnalysisAgent:
                     backend=settings.resolved_local_backend
                 )
             except Exception as exc:
-                logger.warning("LLM client creation failed: %s; data analysis LLM features disabled", exc)
+                logger.warning(
+                    "LLM client creation failed: %s; data analysis LLM features disabled",
+                    exc,
+                )
                 self.llm_client = None
 
         self.code_execution_manager = get_code_execution_manager()
@@ -54,7 +57,9 @@ class DataAnalysisAgent:
         )
 
         if not self.code_execution_manager and not self.code_executor:
-            logger.warning("Code execution provider unavailable, data analysis is degraded")
+            logger.warning(
+                "Code execution provider unavailable, data analysis is degraded"
+            )
 
     def analyze_query(
         self,
@@ -89,7 +94,9 @@ class DataAnalysisAgent:
                 return {
                     "success": False,
                     "error": dataset_metadata["error"],
-                    "answer": dataset_metadata.get("error", "Failed to extract dataset metadata."),
+                    "answer": dataset_metadata.get(
+                        "error", "Failed to extract dataset metadata."
+                    ),
                 }
 
             # 3. Generate analysis code
@@ -196,7 +203,9 @@ class DataAnalysisAgent:
                     except UnicodeDecodeError:
                         continue
                 if df is None:
-                    return {"error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."}
+                    return {
+                        "error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."
+                    }
             elif file_path.endswith((".xlsx", ".xls")):
                 df = pd.read_excel(file_path)
             elif file_path.endswith(".json"):
@@ -286,13 +295,19 @@ class DataAnalysisAgent:
         )
 
         if self.llm_client is None:
-            logger.warning("LLM client unavailable, falling back to template code generation")
-            return self._generate_template_code(question, data_file_path, dataset_metadata)
+            logger.warning(
+                "LLM client unavailable, falling back to template code generation"
+            )
+            return self._generate_template_code(
+                question, data_file_path, dataset_metadata
+            )
 
         try:
             # Call LLM to generate analysis code
             llm_response = self.llm_client.generate(
-                prompt, temperature=0.1, max_tokens=1000  # Low temperature for deterministic code
+                prompt,
+                temperature=0.1,
+                max_tokens=1000,  # Low temperature for deterministic code
             )
 
             # Extract code block from response
@@ -302,16 +317,39 @@ class DataAnalysisAgent:
 
         except Exception as e:
             logger.error(f"LLM code generation failed: {e}")
-            # Fallback: use template-based code generation
-            return self._generate_template_code(
-                question, data_file_path, dataset_metadata
-            )
+
+        # Cloud LLM dual fallback: try alternate cloud providers before template.
+        for fallback_backend in ("zhipu", "gemini"):
+            if (
+                self.llm_client is not None
+                and getattr(self.llm_client, "backend", None) == fallback_backend
+            ):
+                continue
+            try:
+                fallback_client = LLMClientFactory.create_client(
+                    backend=fallback_backend
+                )
+                llm_response = fallback_client.generate(
+                    prompt, temperature=0.1, max_tokens=1000
+                )
+                code = self._extract_code_from_response(llm_response)
+                logger.info("Code generation succeeded with fallback: %s", fallback_backend)
+                return code
+            except Exception as exc:
+                logger.warning("Fallback %s also failed: %s", fallback_backend, exc)
+
+        # Final fallback: template-based code generation
+        return self._generate_template_code(
+            question, data_file_path, dataset_metadata
+        )
 
     def _build_code_generation_prompt(
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> str:
         """Build the code generation prompt for the LLM."""
-        clean_question = question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
+        clean_question = (
+            question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
+        )
         columns_desc = "\n".join(
             [
                 f"  - {col['name'].replace('{', '').replace('}', '').replace('`', '')} ({col['type']})"
@@ -371,6 +409,7 @@ Return ONLY Python code. Wrap the code in ```python and ``` markers."""
         stripped = response.strip()
         if stripped:
             import ast
+
             try:
                 tree = ast.parse(stripped)
                 has_import = any(
@@ -398,22 +437,26 @@ Return ONLY Python code. Wrap the code in ```python and ``` markers."""
             return self._template_average(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["max", "maximum", "largest", "highest"]
+            keyword in question_lower
+            for keyword in ["max", "maximum", "largest", "highest"]
         ):
             return self._template_max(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["min", "minimum", "smallest", "lowest"]
+            keyword in question_lower
+            for keyword in ["min", "minimum", "smallest", "lowest"]
         ):
             return self._template_min(filename, dataset_metadata, question)
 
         elif any(
-            keyword in question_lower for keyword in ["count", "total", "number of", "how many"]
+            keyword in question_lower
+            for keyword in ["count", "total", "number of", "how many"]
         ):
             return self._template_count(filename, dataset_metadata)
 
         elif any(
-            keyword in question_lower for keyword in ["percentage", "proportion", "ratio", "%"]
+            keyword in question_lower
+            for keyword in ["percentage", "proportion", "ratio", "%"]
         ):
             return self._template_percentage(filename, dataset_metadata)
 
@@ -439,7 +482,7 @@ print(df.describe())
     @staticmethod
     def _read_data_code(filename: str) -> str:
         """Return pandas read call appropriate for the file extension."""
-        if filename.endswith(('.xlsx', '.xls')):
+        if filename.endswith((".xlsx", ".xls")):
             return f"pd.read_excel('/workspace/{filename}')"
         return f"pd.read_csv('/workspace/{filename}')"
 
@@ -463,14 +506,24 @@ print(df.describe())
             if any(part in question_lower for part in col_parts if len(part) > 2):
                 return col
         # Fallback: prefer columns with 'cost', 'price', 'amount', 'total'
-        priority_keywords = ["cost", "price", "amount", "total", "value", "salary", "revenue"]
+        priority_keywords = [
+            "cost",
+            "price",
+            "amount",
+            "total",
+            "value",
+            "salary",
+            "revenue",
+        ]
         for keyword in priority_keywords:
             for col in numeric_cols:
                 if keyword in col.lower():
                     return col
         return numeric_cols[0]
 
-    def _template_average(self, filename: str, metadata: Dict, question: str = "") -> str:
+    def _template_average(
+        self, filename: str, metadata: Dict, question: str = ""
+    ) -> str:
         """Generate code for average/mean value calculations."""
         numeric_cols = [
             col["name"] for col in metadata.get("columns_info", []) if "mean" in col
@@ -585,7 +638,9 @@ df = {read_call}
 print(f"Total rows: {{len(df)}}")
 """
 
-    def _template_percentage(self, filename: str, metadata: Dict, question: str = "") -> str:
+    def _template_percentage(
+        self, filename: str, metadata: Dict, question: str = ""
+    ) -> str:
         """Generate code to calculate percentage distribution of categorical columns."""
         categorical_cols = [
             col["name"]
@@ -663,7 +718,9 @@ for val, pct in percentages.items():
         ):
             columns = dataset_metadata.get("column_names", [])
             if columns:
-                return f"The dataset contains the following columns: {', '.join(columns)}"
+                return (
+                    f"The dataset contains the following columns: {', '.join(columns)}"
+                )
 
         # Questions about row count / size
         if (
