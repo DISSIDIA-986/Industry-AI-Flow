@@ -1,0 +1,198 @@
+# Capability Registry — Single source of truth for system capabilities.
+# Inspired by MCP's tools/list pattern.
+# Each capability defines an intent type, its keywords for heuristic classification,
+# the agent that handles it, and example queries for the frontend catalog.
+
+capabilities:
+  - id: cost_estimation
+    name: Cost Estimation
+    description: >-
+      Predict construction project cost overruns using Ridge regression ML model.
+      Handles budget forecasting, pricing queries, and cost analysis.
+    agent_type: cost_estimation_agent
+    keywords:
+      - "cost estimate"
+      - "cost estimation"
+      - "budget"
+      - "overrun"
+      - "construction cost"
+      - "price"
+      - "pricing"
+      - "how much"
+      - "estimate cost"
+      - "project cost"
+      - "budget estimate"
+      - "cost overrun"
+      - "construction costs"
+      - "budget overrun"
+      - "cost risk"
+      - "project budget"
+      - "cost forecast"
+      - "cost prediction"
+      - "how much does it cost"
+      - "how much will it cost"
+      - "price estimate"
+      - "price prediction"
+      - "analyze cost"
+      - "analyze costs"
+    patterns:
+      - "(estimate|estimating|predict|forecast|project).{0,32}(cost|budget|overrun|expense|price)"
+      - "(cost|budget|overrun|expense|price).{0,32}(estimate|estimation|predict|forecast|projection)"
+    example_queries:
+      - "How much does a 10-story commercial office building cost in Toronto?"
+      - "Estimate the construction cost for a residential project with 5 floors and 20,000 sqft."
+      - "What is the typical budget overrun percentage for healthcare hospital projects?"
+    parameters:
+      max_response_time: 30
+      retry_count: 2
+    fallback_ids:
+      - knowledge_retrieval
+    priority: 10
+    confidence: 0.91
+
+  - id: knowledge_retrieval
+    name: Knowledge Retrieval
+    description: >-
+      Search the construction knowledge base for regulations, standards,
+      and technical specifications using hybrid RAG retrieval (BM25 + vector + RRF + reranker).
+    agent_type: rag_agent
+    keywords:
+      - "what is"
+      - "how to"
+      - "tell me"
+      - "explain"
+      - "define"
+      - "describe"
+      - "properties of"
+      - "requirements for"
+      - "difference between"
+      - "what are"
+      - "how does"
+      - "why is"
+      - "when should"
+      - "summarize"
+      - "summary"
+      - "according to"
+      - "based on"
+      - "document say"
+      - "in the document"
+      - "in the pdf"
+      - "regulation"
+      - "compliance"
+      - "standard"
+      - "specification"
+      - "safety"
+      - "osha"
+      - "construction"
+    patterns: []
+    example_queries:
+      - "What are the fall protection requirements under OSHA 1926?"
+      - "Summarize the key requirements in the National Building Code of Canada."
+      - "What safety equipment must workers wear on construction sites?"
+    parameters:
+      max_response_time: 30
+      retry_count: 2
+      supported_formats:
+        - pdf
+        - txt
+        - docx
+    fallback_ids: []
+    priority: 0
+    confidence: 0.85
+
+  - id: data_analysis
+    name: Data Analysis
+    description: >-
+      Analyze datasets, generate statistics, charts, and visualizations.
+      Extracts metadata from uploaded data and generates code for sandbox execution.
+    agent_type: data_analysis_agent
+    keywords:
+      - "analyze"
+      - "analysis"
+      - "statistics"
+      - "chart"
+      - "data"
+      - "dataset"
+      - "compare"
+      - "trend"
+      - "visualization"
+      - "graph"
+      - "csv"
+      - "dataframe"
+      - "data frame"
+      - "data analysis"
+      - "analyze data"
+      - "analyze the data"
+      - "analyze the dataset"
+      - "analyze this dataset"
+      - "statistical analysis"
+    patterns: []
+    example_queries:
+      - "Analyze the trend of construction costs over the past 5 years."
+      - "Create a visualization comparing project budgets by location."
+      - "Show me statistics on cost overruns for different project types."
+    parameters:
+      max_response_time: 120
+      retry_count: 1
+    fallback_ids:
+      - knowledge_retrieval
+    priority: 1
+    confidence: 0.90
+
+  - id: document_processing
+    name: Document Processing
+    description: >-
+      Extract text from PDFs or images using OCR (PaddleOCR).
+      Handles document scanning, table extraction, and image text recognition.
+    agent_type: document_processing_agent
+    keywords:
+      - "ocr"
+      - "scan document"
+      - "upload file"
+      - "upload document"
+      - "read file"
+      - "extract text from"
+    patterns:
+      - "(upload|process|scan|convert|open).{0,20}(pdf|image|document|file)"
+    example_queries:
+      - "Upload and scan this PDF document for text extraction using OCR."
+      - "Process the uploaded image and extract text from the building permit."
+    parameters:
+      max_response_time: 60
+      retry_count: 2
+    fallback_ids:
+      - knowledge_retrieval
+    priority: 1
+    confidence: 0.88
+
+  - id: code_execution
+    name: Code Execution
+    description: >-
+      Execute Python code and computations in a sandboxed Docker environment.
+      Handles script execution, numerical computations, and algorithm testing.
+    agent_type: code_execution_agent
+    keywords:
+      - "run"
+      - "execute"
+      - "code"
+      - "calculate"
+      - "script"
+      - "compute"
+      - "program"
+      - "function"
+      - "python"
+      - "execute code"
+      - "run code"
+      - "code execution"
+      - "python program"
+    patterns: []
+    example_queries:
+      - "Run a Python script to calculate the structural load capacity."
+      - "Execute a computation to determine material requirements for a 50m bridge span."
+    parameters:
+      max_response_time: 90
+      retry_count: 1
+    fallback_ids:
+      - data_analysis
+    priority: 1
+    confidence: 0.87
