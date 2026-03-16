@@ -8,8 +8,8 @@ from langchain_core.tools import tool
 from backend.config import settings
 from backend.services.code_executor import (
     CodeExecutionError,
-    get_code_executor,
     get_code_execution_manager,
+    get_code_executor,
     validate_code,
 )
 
@@ -26,7 +26,9 @@ def _resolve_executor() -> Any | None:
     return get_code_executor()
 
 
-def _validation_failure_payload(validation_error: str, warnings: list[str]) -> Dict[str, Any]:
+def _validation_failure_payload(
+    validation_error: str, warnings: list[str]
+) -> Dict[str, Any]:
     return {
         "success": False,
         "error": "Code safety validation failed.",
@@ -129,9 +131,13 @@ def code_execution_tool(
         if result["success"]:
             logger.info(f"Code execution succeeded in {result['execution_time']:.2f}s")
             if result["visualizations"]:
-                logger.info(f"Generated {len(result['visualizations'])} visualization file(s)")
+                logger.info(
+                    f"Generated {len(result['visualizations'])} visualization file(s)"
+                )
         else:
-            logger.warning(f"Code execution failed: {result.get('error', 'Unknown error')}")
+            logger.warning(
+                f"Code execution failed: {result.get('error', 'Unknown error')}"
+            )
 
         return result
 
@@ -149,7 +155,9 @@ def code_execution_tool(
 
 
 @tool
-def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dict[str, Any]:
+def code_validation_tool(
+    code: Annotated[str, "Python code to validate"]
+) -> Dict[str, Any]:
     """
     代码验证工具 - 检查 Python 代码的安全性和语法正确性
 
@@ -214,7 +222,9 @@ def code_validation_tool(code: Annotated[str, "Python code to validate"]) -> Dic
         # 生成建议
         suggestions = []
         if security_errors:
-            suggestions.append("Remove dangerous operations such as os.system or subprocess.")
+            suggestions.append(
+                "Remove dangerous operations such as os.system or subprocess."
+            )
         if syntax_errors:
             suggestions.append("Fix syntax errors.")
 

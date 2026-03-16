@@ -98,7 +98,9 @@ def _load_optional_json(path: Optional[str]) -> Dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _extract_workflow_latencies_ms(events: Iterable[dict], tenant_id: str) -> List[float]:
+def _extract_workflow_latencies_ms(
+    events: Iterable[dict], tenant_id: str
+) -> List[float]:
     values: List[float] = []
     for event in events:
         if event.get("action") != "workflow.query":

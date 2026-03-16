@@ -11,9 +11,9 @@ import psutil
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 # API route imports
 from backend.api.auth_routes import router as auth_router
@@ -24,7 +24,10 @@ from backend.api.enhanced_query_routes import router as enhanced_query_router
 from backend.api.feedback_routes import router as feedback_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
-from backend.api.prompt_routes import router as prompt_router  # P0: Prompt management routes
+from backend.api.prompt_routes import (
+    router as prompt_router,  # P0: Prompt management routes
+)
+from backend.api.intent_classification_routes import router as intent_router
 from backend.api.workflow_query_routes import (
     router as workflow_query_router,  # Phase 2 scaffold
 )
@@ -468,7 +471,9 @@ def _load_uploaded_documents(
     # Fallback: when metadata index has no rows for the default tenant,
     # expose already-indexed vectorstore documents as read-only list items.
     default_tenant_id = (
-        settings.default_tenant_id if settings and settings.default_tenant_id else "public"
+        settings.default_tenant_id
+        if settings and settings.default_tenant_id
+        else "public"
     )
     if tenant_id == default_tenant_id:
         return _load_indexed_documents_fallback(limit=200)
@@ -641,6 +646,7 @@ app.include_router(demo_mode_router)
 # prompt_routes already has prefix "/api/prompts", avoid double-prefixing to "/api/v1/api/prompts".
 app.include_router(prompt_router, tags=["prompts"])  # P0: Prompt management routes
 app.include_router(workflow_query_router)
+app.include_router(intent_router)  # Intent classification + capabilities API
 
 # RAG engine uses lazy loading for initialization
 
@@ -889,7 +895,9 @@ async def get_environment(tenant: TenantContext = Depends(get_current_tenant)):
             detail={"error": str(e)},
         )
         logger.exception("Environment inspect failed: %s", e)
-        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="An internal error occurred. Please try again."
+        )
 
 
 @app.post("/api/v1/documents/upload")
@@ -962,7 +970,9 @@ async def upload_document(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail="Document upload failed. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Document upload failed. Please try again."
+        )
 
 
 @app.get("/api/v1/documents")
@@ -1038,7 +1048,9 @@ async def upload_data_file(
             status="error",
             detail={"filename": file.filename, "error": str(e)},
         )
-        raise HTTPException(status_code=500, detail="Data upload failed. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Data upload failed. Please try again."
+        )
 
 
 @app.post("/api/v1/rag/query")
@@ -1351,7 +1363,9 @@ async def generate_visualization(
             detail={"error": str(e)},
         )
         logger.exception("Visualization generation failed: %s", e)
-        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="An internal error occurred. Please try again."
+        )
 
 
 @app.post("/api/v1/visualization/advanced")
@@ -1456,7 +1470,8 @@ async def get_visualization_file(
             detail={"filename": filename, "error": str(e)},
         )
         raise HTTPException(
-            status_code=500, detail="Failed to retrieve visualization. Please try again."
+            status_code=500,
+            detail="Failed to retrieve visualization. Please try again.",
         )
 
 

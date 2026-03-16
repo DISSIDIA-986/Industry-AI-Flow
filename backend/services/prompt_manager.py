@@ -130,7 +130,7 @@ class PromptManager:
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        self._jinja_env.policies['ext.require_sandboxed'] = True
+        self._jinja_env.policies["ext.require_sandboxed"] = True
 
         # Regex pattern for simple variable extraction
         self._variable_pattern = re.compile(r"\{\{\s*(\w+)\s*\}\}")
@@ -193,7 +193,9 @@ class PromptManager:
             self._record_usage_start(prompt_info.id, context, variables)
         )
 
-        logger.info(f"Prompt retrieved and rendered: {category}/{name} v{prompt_info.version}")
+        logger.info(
+            f"Prompt retrieved and rendered: {category}/{name} v{prompt_info.version}"
+        )
         return prompt_info, rendered_content
 
     async def _get_best_prompt(
@@ -416,7 +418,9 @@ class PromptManager:
         # Check for duplicate version
         existing = await self._get_prompt_by_version(name, category, version)
         if existing:
-            raise ValueError(f"Prompt version already exists: {category}/{name} v{version}")
+            raise ValueError(
+                f"Prompt version already exists: {category}/{name} v{version}"
+            )
 
         async with self.db_pool.acquire() as conn:
             async with conn.transaction():
@@ -607,7 +611,9 @@ class PromptManager:
                 cache_key = f"{prompt_info.category}:{prompt_info.name}"
                 self._cache.pop(cache_key, None)
 
-                logger.info(f"Prompt updated: {prompt_info.category}/{prompt_info.name}")
+                logger.info(
+                    f"Prompt updated: {prompt_info.category}/{prompt_info.name}"
+                )
                 return prompt_info
 
     async def record_usage_log(self, log: UsageLog) -> None:
@@ -802,9 +808,7 @@ class PromptManager:
                     "success_rate": (
                         float(success_count / usage_count) if usage_count > 0 else 0.0
                     ),
-                    "avg_execution_time_ms": float(
-                        row["avg_execution_time_ms"] or 0.0
-                    ),
+                    "avg_execution_time_ms": float(row["avg_execution_time_ms"] or 0.0),
                     "total_tokens": int(row["total_tokens"] or 0),
                 }
             )
@@ -826,9 +830,7 @@ class PromptManager:
                     "success_rate": (
                         float(success_count / usage_count) if usage_count > 0 else 0.0
                     ),
-                    "avg_execution_time_ms": float(
-                        row["avg_execution_time_ms"] or 0.0
-                    ),
+                    "avg_execution_time_ms": float(row["avg_execution_time_ms"] or 0.0),
                     "total_tokens": int(row["total_tokens"] or 0),
                 }
             )
@@ -883,9 +885,7 @@ class PromptManager:
                 prompt_a["name"] != prompt_b["name"]
                 or prompt_a["category"] != prompt_b["category"]
             ):
-                raise ValueError(
-                    "Experiment prompts must share same name and category"
-                )
+                raise ValueError("Experiment prompts must share same name and category")
 
             insert_query = """
                 INSERT INTO prompt_experiments (
@@ -963,7 +963,9 @@ class PromptManager:
 
         return [self._experiment_row_to_dict(row) for row in rows], total
 
-    async def get_experiment(self, experiment_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+    async def get_experiment(
+        self, experiment_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
         """Get experiment by ID."""
         async with self.db_pool.acquire() as conn:
             query = """

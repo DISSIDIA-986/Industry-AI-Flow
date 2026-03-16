@@ -108,7 +108,8 @@ def evaluate_kpi_gate(
         ),
         KPICheckResult(
             name="sensitive_egress_hits",
-            passed=int(payload.sensitive_egress_hits) <= rules.max_sensitive_egress_hits,
+            passed=int(payload.sensitive_egress_hits)
+            <= rules.max_sensitive_egress_hits,
             actual=int(payload.sensitive_egress_hits),
             expected=f"<= {rules.max_sensitive_egress_hits}",
             message="Sensitive egress must be zero",

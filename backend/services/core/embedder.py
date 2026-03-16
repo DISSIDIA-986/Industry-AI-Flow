@@ -36,7 +36,9 @@ class _FastEmbedAdapter:
         self._model = TextEmbedding(model_name=model_name)
         self._dim: int | None = None
 
-    def encode(self, texts: list[str], show_progress_bar: bool = False) -> list[list[float]]:
+    def encode(
+        self, texts: list[str], show_progress_bar: bool = False
+    ) -> list[list[float]]:
         del show_progress_bar
         vectors = list(self._model.embed(texts))
         return [
@@ -236,7 +238,9 @@ def embedding_backend_status() -> dict:
         "fallback_active": False,
         "reason": "not_initialized",
         "model": str(getattr(settings, "embedding_model", "")),
-        "dimension": int(getattr(settings, "embedding_dim", _FALLBACK_DIM) or _FALLBACK_DIM),
+        "dimension": int(
+            getattr(settings, "embedding_dim", _FALLBACK_DIM) or _FALLBACK_DIM
+        ),
         "loaded": False,
     }
 

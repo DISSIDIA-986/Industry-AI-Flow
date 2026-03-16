@@ -9,12 +9,16 @@ from backend.services.workflows.state import WorkflowState
 
 def _build_default_response(state: WorkflowState) -> str:
     if state.get("error"):
-        return "Your request could not be processed. Please try rephrasing your question."
+        return (
+            "Your request could not be processed. Please try rephrasing your question."
+        )
 
     # Return a safe generic acknowledgment without leaking internal debug
     # information (provider name, intent type, raw query, context snippets).
     intent = state.get("intent") or "unknown"
-    code_exec_result = ((state.get("metadata") or {}).get("code_exec_result") or {}).get("stdout", "")
+    code_exec_result = (
+        (state.get("metadata") or {}).get("code_exec_result") or {}
+    ).get("stdout", "")
 
     if code_exec_result:
         return f"Code output: {code_exec_result}"
@@ -44,7 +48,9 @@ async def response_node(state: WorkflowState, services: Any) -> WorkflowState:
     if builder is not None:
         result = builder(state=state)
         result = await result if hasattr(result, "__await__") else result
-        state["response"] = result if result is not None else _build_default_response(state)
+        state["response"] = (
+            result if result is not None else _build_default_response(state)
+        )
     else:
         state["response"] = _build_default_response(state)
 

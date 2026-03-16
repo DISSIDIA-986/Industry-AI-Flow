@@ -10,10 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from backend.config import settings
 from backend.services.core.embedder import embed_query_text, embed_single_text
-from backend.services.database.driver_compat import (
-    connect as connect_db,
-    register_pgvector,
-)
+from backend.services.database.driver_compat import connect as connect_db
+from backend.services.database.driver_compat import register_pgvector
 
 logger = logging.getLogger(__name__)
 

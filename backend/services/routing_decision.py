@@ -321,15 +321,20 @@ class RoutingDecisionEngine:
             return self._create_fallback_decision(intent_result, str(e))
 
     def _map_intent_to_agent(self, intent: str) -> AgentType:
-        """Map an intent string to the corresponding agent type."""
-        intent_mapping = {
-            "knowledge_retrieval": AgentType.RAG_AGENT,
-            "data_analysis": AgentType.DATA_ANALYSIS_AGENT,
-            "cost_estimation": AgentType.COST_ESTIMATION_AGENT,
-            "document_processing": AgentType.DOCUMENT_PROCESSING_AGENT,
-            "code_execution": AgentType.CODE_EXECUTION_AGENT,
-        }
-        return intent_mapping.get(intent, AgentType.GENERAL_AGENT)
+        """Map an intent string to the corresponding agent type via Capability Registry."""
+        from backend.services.intent_classification.capability_registry import (
+            get_capability_registry,
+        )
+
+        # Build mapping from registry: agent_type string -> AgentType enum
+        _agent_type_map = {at.value: at for at in AgentType}
+        registry = get_capability_registry()
+        for cap_id, agent_str in registry.get_agent_mapping().items():
+            if cap_id == intent and agent_str in _agent_type_map:
+                return _agent_type_map[agent_str]
+
+        # Fallback for unregistered intents
+        return AgentType.GENERAL_AGENT
 
     def _get_fallback_agents(
         self, primary_agent: AgentType, intent: str
@@ -500,13 +505,22 @@ class RoutingDecisionEngine:
         }
 
         questions = clarification_templates.get(
-            intent, ["Could you clarify your request?", "What would you like me to help you with?"]
+            intent,
+            [
+                "Could you clarify your request?",
+                "What would you like me to help you with?",
+            ],
         )
 
         if "dataset" in keywords and intent == "data_analysis":
-            questions.insert(0, "What analysis would you like to perform on your dataset?")
+            questions.insert(
+                0, "What analysis would you like to perform on your dataset?"
+            )
         elif "PDF" in keywords and intent == "document_processing":
-            questions.insert(0, "Would you like to extract text from the PDF or process it another way?")
+            questions.insert(
+                0,
+                "Would you like to extract text from the PDF or process it another way?",
+            )
 
         return questions[:2]  # Return at most 2 clarification questions
 

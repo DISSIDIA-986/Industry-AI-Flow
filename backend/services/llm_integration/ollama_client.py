@@ -42,7 +42,9 @@ class OllamaClient:
         try:
             return self._session.post(url, **kwargs)
         except (BrokenPipeError, requests.exceptions.ConnectionError) as first_err:
-            logger.warning("Connection reset (%s), retrying with fresh session", first_err)
+            logger.warning(
+                "Connection reset (%s), retrying with fresh session", first_err
+            )
             self._session.close()
             self._session = requests.Session()
             return self._session.post(url, **kwargs)
@@ -179,7 +181,7 @@ class OllamaClient:
             response = self._session.post(
                 f"{self.base_url}/api/show",
                 json={"name": self.model},
-                timeout=(self.connect_timeout, self.request_timeout)
+                timeout=(self.connect_timeout, self.request_timeout),
             )
             response.raise_for_status()
             return response.json()
@@ -192,7 +194,7 @@ class OllamaClient:
         try:
             response = self._session.get(
                 f"{self.base_url}/api/tags",
-                timeout=(self.connect_timeout, self.request_timeout)
+                timeout=(self.connect_timeout, self.request_timeout),
             )
             response.raise_for_status()
             return response.json().get("models", [])

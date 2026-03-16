@@ -30,7 +30,9 @@ async def retrieval_node(state: WorkflowState, services: Any) -> WorkflowState:
     if retriever is not None:
         if hasattr(retriever, "retrieve"):
             if inspect.iscoroutinefunction(retriever.retrieve):
-                contexts = await retriever.retrieve(query=query, top_k=top_k, metadata=metadata)
+                contexts = await retriever.retrieve(
+                    query=query, top_k=top_k, metadata=metadata
+                )
             else:
                 contexts = await asyncio.to_thread(
                     retriever.retrieve, query=query, top_k=top_k, metadata=metadata

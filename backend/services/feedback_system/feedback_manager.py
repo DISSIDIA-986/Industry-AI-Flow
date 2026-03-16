@@ -326,7 +326,9 @@ class FeedbackManager:
             )
 
             similar_negative_feedback = cur.fetchone()[0]
-            return similar_negative_feedback >= 2  # Trigger rewrite if 2+ similar negative feedbacks in 24h
+            return (
+                similar_negative_feedback >= 2
+            )  # Trigger rewrite if 2+ similar negative feedbacks in 24h
 
         except Exception as e:
             logger.error(f"Failed to check query rewriting necessity: {e}")

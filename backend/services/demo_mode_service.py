@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 from backend.config import settings
 from backend.services.workflows.policies.routing_policy import resolve_route_mode
-
 
 DEMO_MODE_LIVE_HYBRID = "live_hybrid"
 DEMO_MODE_LOCAL_SAFE = "local_safe"
@@ -146,9 +145,13 @@ class DemoModeService:
             return "local_only"
 
         if requested_mode:
-            return resolve_route_mode(requested_mode, default_mode=profile.default_route_mode)
+            return resolve_route_mode(
+                requested_mode, default_mode=profile.default_route_mode
+            )
 
-        return resolve_route_mode(profile.default_route_mode, default_mode="hybrid_auto")
+        return resolve_route_mode(
+            profile.default_route_mode, default_mode="hybrid_auto"
+        )
 
     def cloud_calls_allowed(self) -> bool:
         state = self.get_state()
@@ -165,7 +168,9 @@ class DemoModeService:
             return None
 
         for scenario in SCRIPTED_REPLAY_SCENARIOS:
-            keywords = [str(item).lower().strip() for item in scenario.get("keywords", [])]
+            keywords = [
+                str(item).lower().strip() for item in scenario.get("keywords", [])
+            ]
             if keywords and all(keyword in normalized_query for keyword in keywords):
                 return scenario
 

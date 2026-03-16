@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv(
         "POSTGRES_USER", ""
     )  # Leave empty for local PostgreSQL (uses current user)
-    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")  # Leave empty for local PostgreSQL (no password)
+    postgres_password: str = os.getenv(
+        "POSTGRES_PASSWORD", ""
+    )  # Leave empty for local PostgreSQL (no password)
 
     # 数据库连接池配置（P0修复：支持Prompt API）
     db_pool_min_size: int = int(os.getenv("DB_POOL_MIN_SIZE", "2"))
@@ -27,8 +29,12 @@ class Settings(BaseSettings):
     # Ollama (备用后端)
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3.5:4b")
-    ollama_connect_timeout_seconds: int = int(os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "10"))
-    ollama_request_timeout_seconds: int = int(os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "180"))
+    ollama_connect_timeout_seconds: int = int(
+        os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "10")
+    )
+    ollama_request_timeout_seconds: int = int(
+        os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "180")
+    )
 
     # llama.cpp (主要后端)
     llama_model_path: str = os.getenv(
@@ -37,7 +43,9 @@ class Settings(BaseSettings):
     llama_context_size: int = int(os.getenv("LLAMA_CONTEXT_SIZE", "16384"))
     llama_threads: int = int(os.getenv("LLAMA_THREADS", str(os.cpu_count() or 8)))
     llama_batch_size: int = int(os.getenv("LLAMA_BATCH_SIZE", "512"))
-    llama_gpu_layers: int = int(os.getenv("LLAMA_GPU_LAYERS", "-1"))  # -1 = use all GPU layers
+    llama_gpu_layers: int = int(
+        os.getenv("LLAMA_GPU_LAYERS", "-1")
+    )  # -1 = use all GPU layers
 
     # LLM后端选择
     llm_backend: str = os.getenv(
@@ -91,9 +99,7 @@ class Settings(BaseSettings):
     enable_rag_english_query: bool = (
         os.getenv("ENABLE_RAG_ENGLISH_QUERY", "false").lower() == "true"
     )
-    require_api_key: bool = (
-        os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
-    )
+    require_api_key: bool = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
     enable_rag_query_rewrite: bool = (
         os.getenv("ENABLE_RAG_QUERY_REWRITE", "true").lower() == "true"
     )
@@ -109,7 +115,9 @@ class Settings(BaseSettings):
     )
 
     # Workflow 优化配置 (P0 修复)
-    workflow_dispatch_max_tokens: int = int(os.getenv("WORKFLOW_DISPATCH_MAX_TOKENS", "512"))
+    workflow_dispatch_max_tokens: int = int(
+        os.getenv("WORKFLOW_DISPATCH_MAX_TOKENS", "512")
+    )
     workflow_recursion_limit: int = int(os.getenv("WORKFLOW_RECURSION_LIMIT", "12"))
 
     # LLM Parameters
@@ -137,7 +145,9 @@ class Settings(BaseSettings):
     )
 
     # OCR (Phase 2: PaddleOCR配置)
-    ocr_lang: str = os.getenv("OCR_LANG", "en")  # 'en' English, 'ch' Chinese, 'en+ch' mixed
+    ocr_lang: str = os.getenv(
+        "OCR_LANG", "en"
+    )  # 'en' English, 'ch' Chinese, 'en+ch' mixed
 
     # 代码执行配置
     code_execution_timeout: int = int(
@@ -223,9 +233,7 @@ class Settings(BaseSettings):
     trust_proxy_headers: bool = (
         os.getenv("TRUST_PROXY_HEADERS", "false").lower() == "true"
     )
-    trusted_proxy_ips_raw: str = os.getenv(
-        "TRUSTED_PROXY_IPS", "127.0.0.1,::1"
-    )
+    trusted_proxy_ips_raw: str = os.getenv("TRUSTED_PROXY_IPS", "127.0.0.1,::1")
     multi_tenant_mode: bool = os.getenv("MULTI_TENANT_MODE", "true").lower() == "true"
     default_tenant_id: str = os.getenv("DEFAULT_TENANT_ID", "public")
     allow_anonymous_tenants: bool = (

@@ -105,7 +105,9 @@ class _LegacyLLMInvokeAdapter:
 class _DispatchLLMInvokeAdapter:
     """Adapter that routes compatibility invocations through dispatch gateway."""
 
-    def __init__(self, dispatch_service: Any, fallback_client: Any | None = None) -> None:
+    def __init__(
+        self, dispatch_service: Any, fallback_client: Any | None = None
+    ) -> None:
         self._dispatch_service = dispatch_service
         self._fallback_client = fallback_client
 
@@ -179,13 +181,19 @@ def build_legacy_llm_invoke_adapter() -> Any:
     try:
         fallback_client = get_llm_client()
     except Exception as exc:
-        logger.warning("Fallback LLM client unavailable for compatibility adapter: %s", exc)
+        logger.warning(
+            "Fallback LLM client unavailable for compatibility adapter: %s", exc
+        )
 
     try:
         dispatch_service = get_dispatch_service()
-        return _DispatchLLMInvokeAdapter(dispatch_service, fallback_client=fallback_client)
+        return _DispatchLLMInvokeAdapter(
+            dispatch_service, fallback_client=fallback_client
+        )
     except Exception as exc:
-        logger.warning("Dispatch gateway unavailable, using legacy adapter fallback: %s", exc)
+        logger.warning(
+            "Dispatch gateway unavailable, using legacy adapter fallback: %s", exc
+        )
         if fallback_client is None:
             raise
         return _LegacyLLMInvokeAdapter(fallback_client)

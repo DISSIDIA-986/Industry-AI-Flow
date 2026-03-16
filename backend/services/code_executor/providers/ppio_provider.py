@@ -97,7 +97,9 @@ class PPIOExecutionProvider:
         timeout_s: int = 60,
     ) -> ExecutionResult:
         if not self.enabled:
-            return self._provider_error("PPIO provider is disabled", "provider_disabled")
+            return self._provider_error(
+                "PPIO provider is disabled", "provider_disabled"
+            )
 
         if not self.base_url:
             return self._provider_error(
@@ -112,7 +114,9 @@ class PPIOExecutionProvider:
                 "circuit_open",
             )
 
-        payload = self._build_execute_payload(code=code, files=files, timeout_s=timeout_s)
+        payload = self._build_execute_payload(
+            code=code, files=files, timeout_s=timeout_s
+        )
         timeout_value = max(int(timeout_s), self.timeout_seconds)
         url = self._resolve_url(self.execute_path)
 
@@ -138,7 +142,9 @@ class PPIOExecutionProvider:
             return self._provider_error(f"PPIO request failed: {exc}", "request_failed")
         except Exception as exc:  # pragma: no cover - defensive guard
             self._record_failure(str(exc))
-            return self._provider_error(f"PPIO execution failed: {exc}", "execution_failed")
+            return self._provider_error(
+                f"PPIO execution failed: {exc}", "execution_failed"
+            )
 
     async def health(self) -> dict:
         if not self.enabled:
@@ -202,7 +208,9 @@ class PPIOExecutionProvider:
                 "output_files": {},
             }
         timeout_s = int(timeout) if timeout else self.timeout_seconds
-        result = self._run_coro_sync(self.execute(code=code, files=files, timeout_s=timeout_s))
+        result = self._run_coro_sync(
+            self.execute(code=code, files=files, timeout_s=timeout_s)
+        )
         visualizations = [
             name
             for name in (result.output_files or {}).keys()

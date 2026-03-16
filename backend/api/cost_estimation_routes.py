@@ -22,7 +22,11 @@ from backend.services.cost_estimation_service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/cost-estimation", tags=["cost-estimation"], dependencies=[Depends(secure_endpoint)])
+router = APIRouter(
+    prefix="/api/v1/cost-estimation",
+    tags=["cost-estimation"],
+    dependencies=[Depends(secure_endpoint)],
+)
 
 _service_lock = asyncio.Lock()
 _service: Optional[CostEstimationService] = None
@@ -57,7 +61,9 @@ def _resolve_allowed_path(path_value: str, *, must_exist: bool) -> Path:
         Path("/tmp").resolve(),
     ]
 
-    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
+    if not any(
+        _is_subpath(candidate, root) or candidate == root for root in allowed_roots
+    ):
         raise HTTPException(
             status_code=400,
             detail="path must be within project workspace, TEMP_DATA_DIR, or /tmp",
@@ -76,8 +82,10 @@ async def _get_service() -> CostEstimationService:
 
     async with _service_lock:
         if _service is None:
+
             def _load():
                 return CostEstimationService(model_path=_default_model_path())
+
             _service = await asyncio.to_thread(_load)
     return _service
 
@@ -156,7 +164,9 @@ async def cost_estimation_health() -> Dict[str, Any]:
 
 
 @router.post("/train")
-async def train_cost_estimation(request: CostEstimationTrainRequest, raw_request: Request) -> Dict[str, Any]:
+async def train_cost_estimation(
+    request: CostEstimationTrainRequest, raw_request: Request
+) -> Dict[str, Any]:
     """Train or retrain the cost estimation model.
 
     Authorization: admin role required.
@@ -199,7 +209,9 @@ async def train_cost_estimation(request: CostEstimationTrainRequest, raw_request
 
 
 @router.post("/predict")
-async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict[str, Any]:
+async def predict_cost_estimation(
+    request: CostEstimationPredictRequest,
+) -> Dict[str, Any]:
     service = await _get_service()
     try:
         prediction = await asyncio.to_thread(
@@ -210,7 +222,8 @@ async def predict_cost_estimation(request: CostEstimationPredictRequest) -> Dict
     except CostEstimationError as exc:
         logger.warning("cost estimation prediction error: %s", exc)
         raise HTTPException(
-            status_code=400, detail="Prediction request invalid. Check input parameters."
+            status_code=400,
+            detail="Prediction request invalid. Check input parameters.",
         ) from exc
 
     return {
@@ -233,7 +246,8 @@ async def batch_predict_cost_estimation(
     except CostEstimationError as exc:
         logger.warning("cost estimation batch prediction error: %s", exc)
         raise HTTPException(
-            status_code=400, detail="Batch prediction request invalid. Check input parameters."
+            status_code=400,
+            detail="Batch prediction request invalid. Check input parameters.",
         ) from exc
 
     return {

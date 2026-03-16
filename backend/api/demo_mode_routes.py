@@ -9,12 +9,11 @@ from pydantic import BaseModel, Field
 
 from backend.security.context import TenantContext
 from backend.security.dependencies import get_current_tenant, secure_endpoint
-from backend.services.demo_mode_service import (
-    ALLOWED_DEMO_MODES,
-    get_demo_mode_service,
-)
+from backend.services.demo_mode_service import ALLOWED_DEMO_MODES, get_demo_mode_service
 
-router = APIRouter(prefix="/api/v1/demo", tags=["demo-mode"], dependencies=[Depends(secure_endpoint)])
+router = APIRouter(
+    prefix="/api/v1/demo", tags=["demo-mode"], dependencies=[Depends(secure_endpoint)]
+)
 
 
 def _can_manage_demo_mode(tenant: TenantContext) -> bool:
@@ -45,7 +44,9 @@ async def update_demo_mode(
     tenant: TenantContext = Depends(get_current_tenant),
 ) -> Dict[str, Any]:
     if not _can_manage_demo_mode(tenant):
-        raise HTTPException(status_code=403, detail="Forbidden demo mode management scope")
+        raise HTTPException(
+            status_code=403, detail="Forbidden demo mode management scope"
+        )
 
     mode = (request.mode or "").strip().lower()
     if mode not in ALLOWED_DEMO_MODES:

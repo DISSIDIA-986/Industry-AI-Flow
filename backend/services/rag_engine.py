@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from backend.config import settings
+from backend.services.cache.query_cache import query_cache
 from backend.services.core.embedder import embed_query_text, embedding_backend_status
 from backend.services.core.vectorstore import VectorStore
 from backend.services.feedback_system.feedback_manager import (
@@ -21,7 +22,6 @@ from backend.services.llm_integration.llm_client import (
 from backend.services.memory.manager import ConversationMemoryManager
 from backend.services.retrieval.hybrid_search import HybridRetriever
 from backend.services.retrieval.reranker import Reranker
-from backend.services.cache.query_cache import query_cache
 from backend.services.safety import create_safety_guard
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,9 @@ class SimpleRAG:
 
         # Log LLM backend status
         backend_status = get_backend_status()
-        logger.info(f"✅ RAG engine initialized - LLM backend: {backend_status.get('backend', 'unknown')}")
+        logger.info(
+            f"✅ RAG engine initialized - LLM backend: {backend_status.get('backend', 'unknown')}"
+        )
 
         # Phase 2 Step 2: Initialize hybrid retriever
         if use_hybrid_search:
@@ -112,7 +114,9 @@ class SimpleRAG:
             try:
                 self.memory_manager = ConversationMemoryManager()
             except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("Failed to initialize conversation memory manager: %s", exc)
+                logger.warning(
+                    "Failed to initialize conversation memory manager: %s", exc
+                )
 
     def query(
         self,
@@ -234,7 +238,10 @@ class SimpleRAG:
     def _get_adaptive_search_weights(self) -> tuple:
         """Get adaptive search weights based on recent feedback statistics."""
         if not self.feedback_manager:
-            return 0.6, 0.4  # Tuned for small corpus (~12 docs): boost BM25 for keyword precision
+            return (
+                0.6,
+                0.4,
+            )  # Tuned for small corpus (~12 docs): boost BM25 for keyword precision
 
         try:
             # Adjust weights based on recent feedback performance
@@ -259,7 +266,11 @@ class SimpleRAG:
     ) -> str:
         """Build the RAG prompt with context, memory, and instructions."""
         memory_context = self._format_memory_payload(memory_payload or {})
-        history_block = f"\nPrior conversation:\n{memory_context}\n" if memory_context != "No prior conversation history." else ""
+        history_block = (
+            f"\nPrior conversation:\n{memory_context}\n"
+            if memory_context != "No prior conversation history."
+            else ""
+        )
         return f"""You are a construction industry assistant. Answer strictly from the provided references.
 
 Rules:
@@ -320,7 +331,9 @@ Answer:"""
                 if len(self._memory_sessions) >= self._max_sessions:
                     oldest_key = next(iter(self._memory_sessions))
                     del self._memory_sessions[oldest_key]
-                session = _MemorySession(session_id=resolved_session_id, user_id=user_id)
+                session = _MemorySession(
+                    session_id=resolved_session_id, user_id=user_id
+                )
                 self._memory_sessions[resolved_session_id] = session
             elif user_id and not session.user_id:
                 session.user_id = user_id
@@ -368,9 +381,13 @@ Answer:"""
             # Propagate summary updates back to live session
             with self._memory_lock:
                 live_session.summary_memory = session_snapshot.summary_memory
-                live_session.last_summary_record_index = session_snapshot.last_summary_record_index
+                live_session.last_summary_record_index = (
+                    session_snapshot.last_summary_record_index
+                )
                 live_session.last_summary_time = session_snapshot.last_summary_time
-                live_session.long_term_memory_refs = list(session_snapshot.long_term_memory_refs)
+                live_session.long_term_memory_refs = list(
+                    session_snapshot.long_term_memory_refs
+                )
 
         try:
             loop = asyncio.get_running_loop()

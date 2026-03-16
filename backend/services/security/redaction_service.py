@@ -37,10 +37,10 @@ class RedactionService:
     def redact(self, text: str) -> RedactionResult:
         """
         EN,EN
-        
+
         Args:
             text: EN
-            
+
         Returns:
             RedactionResult: EN,EN
         """
@@ -70,7 +70,9 @@ class RedactionService:
             )
         except Exception as e:
             # Fail-closed: return empty text to prevent PII leakage to cloud
-            logger.warning("Redaction failed: %s, blocking text to prevent PII leakage", e)
+            logger.warning(
+                "Redaction failed: %s, blocking text to prevent PII leakage", e
+            )
             return RedactionResult(
                 text="",
                 hit_count=0,

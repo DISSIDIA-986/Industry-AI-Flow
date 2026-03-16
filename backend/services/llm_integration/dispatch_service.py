@@ -92,7 +92,9 @@ class DispatchService:
             "might be",
             "could range",
         ]
-        uncertainty_count = sum(1 for phrase in uncertainty_phrases if phrase in lowered)
+        uncertainty_count = sum(
+            1 for phrase in uncertainty_phrases if phrase in lowered
+        )
         if uncertainty_count >= 3:
             return 0.45
 
@@ -104,7 +106,11 @@ class DispatchService:
             return 0.55
 
         # Check for repetition: split into sentences and look for duplicates
-        sentences = [s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()]
+        sentences = [
+            s.strip()
+            for s in text.replace("!", ".").replace("?", ".").split(".")
+            if s.strip()
+        ]
         if len(sentences) >= 3:
             unique_sentences = set(sentences)
             repetition_ratio = 1.0 - (len(unique_sentences) / len(sentences))
@@ -127,10 +133,27 @@ class DispatchService:
 
         # Penalize lack of domain relevance — construction domain terms
         domain_terms = {
-            "concrete", "steel", "foundation", "beam", "column", "rebar",
-            "sqft", "cost", "load", "structural", "building", "code",
-            "spec", "safety", "inspection", "permit", "excavation",
-            "hvac", "plumbing", "electrical", "insulation",
+            "concrete",
+            "steel",
+            "foundation",
+            "beam",
+            "column",
+            "rebar",
+            "sqft",
+            "cost",
+            "load",
+            "structural",
+            "building",
+            "code",
+            "spec",
+            "safety",
+            "inspection",
+            "permit",
+            "excavation",
+            "hvac",
+            "plumbing",
+            "electrical",
+            "insulation",
         }
         domain_hit_count = sum(1 for t in domain_terms if t in lowered)
         if domain_hit_count == 0:
@@ -140,7 +163,9 @@ class DispatchService:
         return round(max(0.0, min(0.95, confidence)), 4)
 
     @staticmethod
-    def _truncate_prompt(prompt: str, max_tokens: int, context_window: int = 4096) -> str:
+    def _truncate_prompt(
+        prompt: str, max_tokens: int, context_window: int = 4096
+    ) -> str:
         reserved_output = max_tokens or 512
         max_input_chars = max(1, (context_window - reserved_output) * 3)
         if len(prompt) > max_input_chars:
@@ -239,7 +264,11 @@ class DispatchService:
         provider = settings.resolved_local_backend
         try:
             client = self._get_local_client()
-            prompt = self._truncate_prompt(req.prompt, req.max_tokens or 512, context_window=settings.llama_context_size)
+            prompt = self._truncate_prompt(
+                req.prompt,
+                req.max_tokens or 512,
+                context_window=settings.llama_context_size,
+            )
             text = client.generate(
                 prompt,
                 temperature=req.temperature,
@@ -379,8 +408,12 @@ class DispatchService:
 
         estimated_cost = 0.0
         if hasattr(self.cost_tracker, "estimate_request_cost"):
-            estimated_cost = self.cost_tracker.estimate_request_cost(req.max_tokens or 512)
-        budget_eval = self.cost_tracker.evaluate_budget(req.tenant_id, additional_cost_usd=estimated_cost)
+            estimated_cost = self.cost_tracker.estimate_request_cost(
+                req.max_tokens or 512
+            )
+        budget_eval = self.cost_tracker.evaluate_budget(
+            req.tenant_id, additional_cost_usd=estimated_cost
+        )
         if not budget_eval.get("allowed", True):
             latency_ms = int((time.time() - started) * 1000)
             policy_decision = str(budget_eval.get("decision") or "block_cloud")
@@ -435,7 +468,9 @@ class DispatchService:
         try:
             client = self._get_cloud_client()
             model = self._resolve_model_name(client, provider)
-            prompt_text = self._truncate_prompt(redaction.text, req.max_tokens or 512, context_window=128000)
+            prompt_text = self._truncate_prompt(
+                redaction.text, req.max_tokens or 512, context_window=128000
+            )
             text = client.generate(
                 prompt_text,
                 temperature=req.temperature,

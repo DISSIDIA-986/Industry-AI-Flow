@@ -116,7 +116,9 @@ class EnhancedDocumentLoader:
 
             # If text is too short (likely scanned), fall back to OCR
             if self.use_ocr and len(page_text.strip()) < 50:
-                logger.debug("Page %s: sparse text detected, using OCR fallback", page_num + 1)
+                logger.debug(
+                    "Page %s: sparse text detected, using OCR fallback", page_num + 1
+                )
                 page_image = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x resolution
                 img_bytes = page_image.tobytes("png")
 

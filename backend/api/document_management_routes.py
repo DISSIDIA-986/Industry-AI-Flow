@@ -437,8 +437,10 @@ async def restore_document_version(
     Returns:
         Restore result
     """
-    tenant_id = tenant.tenant_id if tenant else (
-        request.headers.get("X-Tenant-ID", "") if request else ""
+    tenant_id = (
+        tenant.tenant_id
+        if tenant
+        else (request.headers.get("X-Tenant-ID", "") if request else "")
     )
     if not tenant_id:
         raise HTTPException(status_code=403, detail="Tenant identification required")

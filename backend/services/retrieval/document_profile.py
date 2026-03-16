@@ -13,15 +13,37 @@ logger = logging.getLogger(__name__)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)?")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
-_HEADING_RE = re.compile(r"^\s*(?:\d+(?:\.\d+){0,3}\s+)?[A-Za-z][A-Za-z0-9\-\s:/]{3,80}$")
+_HEADING_RE = re.compile(
+    r"^\s*(?:\d+(?:\.\d+){0,3}\s+)?[A-Za-z][A-Za-z0-9\-\s:/]{3,80}$"
+)
 
 # Common website UI / navigation strings that leak through OCR/scraping.
 # Include both clean and garbled (OCR-truncated) variants.
 _UI_ARTIFACT_STEMS = {
-    "select", "language", "skip", "content", "cookie", "privacy",
-    "terms", "service", "loading", "search", "print", "share",
-    "navigation", "menu", "sidebar", "footer", "header", "toolbar",
-    "bookmark", "download", "upload", "subscribe", "login", "logout",
+    "select",
+    "language",
+    "skip",
+    "content",
+    "cookie",
+    "privacy",
+    "terms",
+    "service",
+    "loading",
+    "search",
+    "print",
+    "share",
+    "navigation",
+    "menu",
+    "sidebar",
+    "footer",
+    "header",
+    "toolbar",
+    "bookmark",
+    "download",
+    "upload",
+    "subscribe",
+    "login",
+    "logout",
 }
 
 
@@ -236,7 +258,9 @@ class DocumentProfileService:
     def _extract_keywords(chunks: Sequence[str], limit: int = 14) -> List[str]:
         counter: Counter[str] = Counter()
         for chunk in chunks:
-            counter.update(token for token in _tokenize(chunk) if _is_keyword_token(token))
+            counter.update(
+                token for token in _tokenize(chunk) if _is_keyword_token(token)
+            )
         if not counter:
             return []
         ranked = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
@@ -361,7 +385,9 @@ class DocumentProfileService:
 
     def refresh_profiles_if_stale(self, doc_ids: Sequence[str]) -> int:
         self._ensure_table()
-        unique_doc_ids = sorted({str(doc_id or "").strip() for doc_id in doc_ids if doc_id})
+        unique_doc_ids = sorted(
+            {str(doc_id or "").strip() for doc_id in doc_ids if doc_id}
+        )
         if not unique_doc_ids:
             return 0
 
@@ -546,7 +572,9 @@ class DocumentProfileService:
             filename = str(item.get("filename") or item.get("doc_id") or "unknown")
             summary = str(item.get("summary") or "").strip()
             keywords = item.get("keywords") or []
-            keyword_text = ", ".join(str(token) for token in keywords[:5] if str(token).strip())
+            keyword_text = ", ".join(
+                str(token) for token in keywords[:5] if str(token).strip()
+            )
             snippet = f"[DocProfile {index}] source={filename}\nsummary={summary[:280]}"
             if keyword_text:
                 snippet += f"\nkeywords={keyword_text}"

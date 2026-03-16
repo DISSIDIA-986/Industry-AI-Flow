@@ -2,11 +2,11 @@
 
 import logging
 
-from backend.agents.state import RAGAgentState
 from backend.agents.langchain_compat import (
     build_legacy_llm_invoke_adapter,
     create_agent_compat,
 )
+from backend.agents.state import RAGAgentState
 from backend.config import settings
 from backend.tools.reranker import rerank_tool
 from backend.tools.retrieval import hybrid_retrieval_tool

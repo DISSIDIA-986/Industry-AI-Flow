@@ -196,7 +196,10 @@ class HybridRetriever:
             self.bm25 = BM25Okapi(tokenized_corpus)
             self._indexed_chunk_count = len(self.doc_chunks)
 
-            logger.info("BM25 index built (NLTK tokenizer), indexed %s chunks", len(self.doc_chunks))
+            logger.info(
+                "BM25 index built (NLTK tokenizer), indexed %s chunks",
+                len(self.doc_chunks),
+            )
 
         finally:
             cur.close()
@@ -283,7 +286,7 @@ class HybridRetriever:
         # Sort BM25 results [(chunk_index, score)]
         bm25_results = [(i, score) for i, score in enumerate(bm25_scores)]
         bm25_results.sort(key=lambda x: x[1], reverse=True)
-        bm25_top = [(i, score) for i, score in bm25_results[:top_k * 2] if score > 0.0]
+        bm25_top = [(i, score) for i, score in bm25_results[: top_k * 2] if score > 0.0]
 
         # 3. Fusion (Reciprocal Rank Fusion - RRF)
         fused_scores = {}
@@ -294,14 +297,16 @@ class HybridRetriever:
             chunk_id = result.get("chunk_id")
             if chunk_id is None:
                 continue
-            fused_scores[chunk_id] = (
-                fused_scores.get(chunk_id, 0) + vector_weight / (rrf_k + rank)
+            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + vector_weight / (
+                rrf_k + rank
             )
 
         # BM25 scores — RRF with k=60
         for rank, (chunk_index, score) in enumerate(bm25_top, 1):
             chunk_id = self.doc_chunks[chunk_index]["id"]
-            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / (rrf_k + rank)
+            fused_scores[chunk_id] = fused_scores.get(chunk_id, 0) + bm25_weight / (
+                rrf_k + rank
+            )
 
         # 4. Select top_k results
         sorted_chunks = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[

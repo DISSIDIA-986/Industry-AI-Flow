@@ -4,10 +4,8 @@ import uuid
 
 from backend.config import settings
 from backend.observability.performance_metrics import record_db_query_duration
-from backend.services.database.driver_compat import (
-    connect as connect_db,
-    register_pgvector,
-)
+from backend.services.database.driver_compat import connect as connect_db
+from backend.services.database.driver_compat import register_pgvector
 
 
 class VectorStore:
@@ -55,7 +53,9 @@ class VectorStore:
             # Do not crash app if indexes cannot be created
             import logging
 
-            logging.getLogger(__name__).warning("Failed to create database indexes: %s", exc)
+            logging.getLogger(__name__).warning(
+                "Failed to create database indexes: %s", exc
+            )
         finally:
             if "cur" in locals():
                 cur.close()

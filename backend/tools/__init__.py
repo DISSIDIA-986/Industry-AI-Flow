@@ -4,7 +4,9 @@ hybrid_retrieval_tool = None
 rerank_tool = None
 
 try:
-    from backend.tools.retrieval import hybrid_retrieval_tool  # type: ignore[assignment]
+    from backend.tools.retrieval import (
+        hybrid_retrieval_tool,  # type: ignore[assignment]
+    )
 except Exception:  # pragma: no cover
     hybrid_retrieval_tool = None
 

@@ -8,8 +8,10 @@ Created: 2026-02-09
 Reference: research/architecture/rag-workflow-implementation-details.md
 """
 
-import asyncpg
 import logging
+
+import asyncpg
+
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,9 @@ async def get_database_pool() -> asyncpg.Pool:
     global _db_pool
 
     if _db_pool is None:
-        logger.info(f"Creating database pool: {settings.postgres_host}:{settings.postgres_port}")
+        logger.info(
+            f"Creating database pool: {settings.postgres_host}:{settings.postgres_port}"
+        )
         _db_pool = await asyncpg.create_pool(
             dsn=settings.database_url,
             min_size=2,

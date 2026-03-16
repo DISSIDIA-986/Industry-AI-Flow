@@ -127,7 +127,9 @@ class DatabaseDrivenOptimizer:
 
             # Check retrieval score threshold
             avg_retrieval_score = perf_summary.get("avg_retrieval_score")
-            if avg_retrieval_score and avg_retrieval_score < 0.6:  # Below quality threshold
+            if (
+                avg_retrieval_score and avg_retrieval_score < 0.6
+            ):  # Below quality threshold
                 # Find best performing config for weight adjustment
                 best_config = self._find_best_performing_config(config_usage)
                 if best_config:
@@ -147,7 +149,9 @@ class DatabaseDrivenOptimizer:
 
             # Check reranking score threshold
             avg_reranking_score = perf_summary.get("avg_reranking_score")
-            if avg_reranking_score and avg_reranking_score < 0.5:  # Below quality threshold
+            if (
+                avg_reranking_score and avg_reranking_score < 0.5
+            ):  # Below quality threshold
                 recommendations.append(
                     OptimizationRecommendation(
                         optimization_type="reranking_optimization",

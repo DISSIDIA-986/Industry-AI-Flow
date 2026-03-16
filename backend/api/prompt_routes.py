@@ -24,7 +24,9 @@ from backend.services.prompt_manager import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/prompts", tags=["prompts"], dependencies=[Depends(secure_endpoint)])
+router = APIRouter(
+    prefix="/api/prompts", tags=["prompts"], dependencies=[Depends(secure_endpoint)]
+)
 
 
 # Pydantic request/response models
@@ -40,6 +42,7 @@ class PromptVariableCreate(BaseModel):
 
 class PromptListResponse(BaseModel):  # P0 fix: added response model for list endpoint
     """Prompt"""
+
     id: UUID
     name: str
     category: str
@@ -79,7 +82,9 @@ class PromptCreate(BaseModel):
     subcategory: Optional[str] = Field(None, description="Description")
     version: str = Field(default="1.0.0", description="Description")
     content: str = Field(..., description="Prompt")
-    variables: Optional[List[PromptVariableCreate]] = Field(None, description="Description")
+    variables: Optional[List[PromptVariableCreate]] = Field(
+        None, description="Description"
+    )
     metadata: Optional[Dict[str, Any]] = Field(None, description="Description")
     priority: int = Field(default=0, description="Description")
     tags: Optional[List[str]] = Field(None, description="Description")
@@ -88,12 +93,16 @@ class PromptCreate(BaseModel):
 
 class PromptUpdate(BaseModel):
     content: Optional[str] = Field(None, description="Prompt")
-    variables: Optional[List[PromptVariableCreate]] = Field(None, description="Description")
+    variables: Optional[List[PromptVariableCreate]] = Field(
+        None, description="Description"
+    )
     metadata: Optional[Dict[str, Any]] = Field(None, description="Description")
     priority: Optional[int] = Field(None, description="Description")
     tags: Optional[List[str]] = Field(None, description="Description")
     change_description: Optional[str] = Field(None, description="Description")
-    updated_by: Optional[str] = Field(None, description="Description")  # P0 fix: added updated_by field
+    updated_by: Optional[str] = Field(
+        None, description="Description"
+    )  # P0 fix: added updated_by field
     create_new_version: bool = Field(default=True, description="Description")
 
 
@@ -107,17 +116,23 @@ class ExperimentCreate(BaseModel):
     description: Optional[str] = Field(None, description="Description")
     prompt_a_id: UUID = Field(..., description="Prompt A ID")
     prompt_b_id: UUID = Field(..., description="Prompt B ID")
-    traffic_split: float = Field(default=0.5, gt=0, lt=1, description="Traffic split for prompt A")
+    traffic_split: float = Field(
+        default=0.5, gt=0, lt=1, description="Traffic split for prompt A"
+    )
     metrics: Optional[Dict[str, Any]] = Field(None, description="Description")
     created_by: Optional[str] = Field(None, description="Description")
 
 
 class ExperimentTrafficUpdate(BaseModel):
-    traffic_split: float = Field(..., gt=0, lt=1, description="Traffic split for prompt A")
+    traffic_split: float = Field(
+        ..., gt=0, lt=1, description="Traffic split for prompt A"
+    )
 
 
 class ExperimentStatusUpdate(BaseModel):
-    status: str = Field(..., description="Experiment status: active/paused/completed/cancelled")
+    status: str = Field(
+        ..., description="Experiment status: active/paused/completed/cancelled"
+    )
 
 
 class UsageLogCreate(BaseModel):
@@ -129,7 +144,9 @@ class UsageLogCreate(BaseModel):
     success: bool = Field(..., description="Description")
     error_message: Optional[str] = Field(None, description="Description")
     user_feedback: Optional[int] = Field(None, ge=1, le=5, description="Description")
-    llm_response: Optional[Dict[str, Any]] = Field(None, description="LLM response payload")
+    llm_response: Optional[Dict[str, Any]] = Field(
+        None, description="LLM response payload"
+    )
     tokens_used: int = Field(default=0, description="Token usage")
     model_name: Optional[str] = Field(None, description="Description")
     temperature: Optional[float] = Field(None, description="Description")
@@ -212,9 +229,15 @@ async def list_prompts(
             for row in rows:
                 prompt_data = dict(row)
                 # Parse JSON fields (variables and metadata)
-                if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
+                if (
+                    isinstance(prompt_data.get("variables"), str)
+                    and prompt_data["variables"]
+                ):
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
-                if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
+                if (
+                    isinstance(prompt_data.get("metadata"), str)
+                    and prompt_data["metadata"]
+                ):
                     prompt_data["metadata"] = json.loads(prompt_data["metadata"])
                 prompts.append(prompt_data)
 
@@ -589,7 +612,9 @@ async def get_experiment(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.patch("/experiments/{experiment_id:uuid}/traffic", response_model=Dict[str, Any])
+@router.patch(
+    "/experiments/{experiment_id:uuid}/traffic", response_model=Dict[str, Any]
+)
 async def update_experiment_traffic(
     experiment_id: UUID,
     payload: ExperimentTrafficUpdate,
@@ -702,7 +727,9 @@ async def get_prompt_metrics_summary(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/search", response_model=List[PromptListResponse])  # P0 fix: added response model
+@router.get(
+    "/search", response_model=List[PromptListResponse]
+)  # P0 fix: added response model
 async def search_prompts(
     q: str = Query(..., description="Description"),
     category: Optional[str] = Query(None, description="Description"),
@@ -715,9 +742,11 @@ async def search_prompts(
     try:
         async with prompt_manager.db_pool.acquire() as conn:
             # Escape special SQL LIKE characters (P0 fix: prevent injection)
-            escaped_q = q.replace('%', r'\%').replace('_', r'\_')
+            escaped_q = q.replace("%", r"\%").replace("_", r"\_")
             params = [f"%{escaped_q}%"]  # $1: search pattern
-            conditions = ["(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"]
+            conditions = [
+                "(p.name ILIKE $1 OR p.content ILIKE $1 OR COALESCE(p.subcategory, '') ILIKE $1)"
+            ]
 
             if category:
                 conditions.append(f"p.category = ${len(params)+1}")
@@ -751,9 +780,15 @@ async def search_prompts(
             results = []
             for row in rows:
                 prompt_data = dict(row)
-                if isinstance(prompt_data.get("variables"), str) and prompt_data["variables"]:
+                if (
+                    isinstance(prompt_data.get("variables"), str)
+                    and prompt_data["variables"]
+                ):
                     prompt_data["variables"] = json.loads(prompt_data["variables"])
-                if isinstance(prompt_data.get("metadata"), str) and prompt_data["metadata"]:
+                if (
+                    isinstance(prompt_data.get("metadata"), str)
+                    and prompt_data["metadata"]
+                ):
                     prompt_data["metadata"] = json.loads(prompt_data["metadata"])
                 results.append(prompt_data)
 

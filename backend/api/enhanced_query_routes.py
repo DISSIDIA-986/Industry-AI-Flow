@@ -247,7 +247,9 @@ async def list_available_models():
 
 
 @router.post("/query/switch-model")
-async def switch_model(model_name: str = Body(..., embed=True), request: Request = None):
+async def switch_model(
+    model_name: str = Body(..., embed=True), request: Request = None
+):
     """
     ENLLM
 

@@ -76,7 +76,9 @@ async def cost_estimation_node(state: WorkflowState, services: Any) -> WorkflowS
     if service is None:
         service = CostEstimationService()
 
-    if not isinstance(service, CostEstimationService) and not hasattr(service, "predict_project"):
+    if not isinstance(service, CostEstimationService) and not hasattr(
+        service, "predict_project"
+    ):
         metadata["cost_estimation_status"] = "unavailable"
         state["response"] = (
             "Cost estimation model service is unavailable. "
@@ -87,7 +89,9 @@ async def cost_estimation_node(state: WorkflowState, services: Any) -> WorkflowS
         return state
 
     try:
-        confidence_quantile = float(metadata.get("cost_estimation_confidence_quantile", 0.90))
+        confidence_quantile = float(
+            metadata.get("cost_estimation_confidence_quantile", 0.90)
+        )
     except (TypeError, ValueError):
         confidence_quantile = 0.90
 

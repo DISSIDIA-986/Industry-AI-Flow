@@ -7,6 +7,7 @@ import logging
 try:
     from prometheus_client import Counter, Histogram
 except Exception:  # pragma: no cover - optional dependency
+
     class _NoopMetric:
         def labels(self, **kwargs):
             del kwargs
@@ -27,6 +28,7 @@ except Exception:  # pragma: no cover - optional dependency
     def Histogram(*args, **kwargs):  # type: ignore[misc]
         del args, kwargs
         return _NoopMetric()
+
 
 logger = logging.getLogger(__name__)
 

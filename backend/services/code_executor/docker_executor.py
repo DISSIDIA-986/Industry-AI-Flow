@@ -79,7 +79,9 @@ def _resolve_allowed_data_file(path_value: str) -> Path:
         candidate = candidate.resolve()
 
     allowed_roots = _allowed_data_roots()
-    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
+    if not any(
+        _is_subpath(candidate, root) or candidate == root for root in allowed_roots
+    ):
         raise ValueError("data file path is outside allowed paths")
 
     if not candidate.exists() or not candidate.is_file():
@@ -288,9 +290,7 @@ class DockerExecutor:
         """Run Docker container with security constraints."""
         # Security: reject workspaces containing symlinks to prevent host escape
         if any(p.is_symlink() for p in workspace.rglob("*")):
-            raise RuntimeError(
-                "Security error: workspace contains symbolic links"
-            )
+            raise RuntimeError("Security error: workspace contains symbolic links")
 
         container = None
         try:

@@ -5,94 +5,17 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
+from backend.services.intent_classification.capability_registry import (
+    get_capability_registry,
+)
 from backend.services.workflows.state import WorkflowState
 
 
-_COST_PATTERNS = (
-    re.compile(
-        r"(estimate|estimating|predict|forecast|project).{0,32}"
-        r"(cost|budget|overrun|expense|price)"
-    ),
-    re.compile(
-        r"(cost|budget|overrun|expense|price).{0,32}"
-        r"(estimate|estimation|predict|forecast|projection)"
-    ),
-)
-
-
 def _heuristic_intent(query: str) -> str:
-    text = (query or "").strip().lower()
-    # Cost estimation checked FIRST — higher business priority and avoids
-    # mis-routing "predict cost using python" to code_execution.
-    if any(
-        token in text
-        for token in (
-            "cost estimate",
-            "cost estimation",
-            "estimate cost",
-            "budget estimate",
-            "cost overrun",
-            "construction cost",
-            "construction costs",
-            "budget overrun",
-            "cost risk",
-            "project budget",
-            "project cost",
-            "cost forecast",
-            "cost prediction",
-            "how much does it cost",
-            "how much will it cost",
-            "price estimate",
-            "price prediction",
-            "analyze cost",
-            "analyze costs",
-        )
-    ) or any(pattern.search(text) for pattern in _COST_PATTERNS):
-        return "cost_estimation"
-    if any(
-        token in text
-        for token in (
-            "python",
-            "script",
-            "execute code",
-            "run code",
-            "code execution",
-            "python program",
-        )
-    ):
-        return "code_execution"
-    if any(
-        token in text
-        for token in (
-            "dataset",
-            "csv",
-            "dataframe",
-            "data frame",
-            "data analysis",
-            "analyze data",
-            "analyze the data",
-            "analyze the dataset",
-            "analyze this dataset",
-            "statistical analysis",
-        )
-    ) or (
-        any(w in text for w in ("analyze", "analysis"))
-        and any(w in text for w in ("data", "dataset", "csv", "table", "spreadsheet", "chart", "plot", "graph", "statistics", "column", "row"))
-    ):
-        return "data_analysis"
-    if any(
-        token in text
-        for token in (
-            "document",
-            "pdf",
-            "ocr",
-            "extract text",
-            "file upload",
-            "scan",
-        )
-    ):
-        return "document_processing"
-    return "knowledge_retrieval"
+    """Classify query using the Capability Registry's heuristic matching."""
+    registry = get_capability_registry()
+    intent, _confidence, _reasoning = registry.classify_heuristic(query)
+    return intent
 
 
 def _extract_intent_value(raw: Any) -> Optional[str]:
@@ -109,10 +32,21 @@ async def _call_classifier(classifier: Any, query: str, metadata: dict) -> Any:
     import inspect
 
     try:
-        from backend.services.intent_classification.intent_classifier import QueryContext
+        from backend.services.intent_classification.intent_classifier import (
+            QueryContext,
+        )
+
         if isinstance(metadata, dict):
-            valid_fields = set(QueryContext.__dataclass_fields__) if hasattr(QueryContext, '__dataclass_fields__') else set()
-            context_obj = QueryContext(**{k: v for k, v in metadata.items() if k in valid_fields}) if valid_fields else metadata
+            valid_fields = (
+                set(QueryContext.__dataclass_fields__)
+                if hasattr(QueryContext, "__dataclass_fields__")
+                else set()
+            )
+            context_obj = (
+                QueryContext(**{k: v for k, v in metadata.items() if k in valid_fields})
+                if valid_fields
+                else metadata
+            )
         else:
             context_obj = metadata
     except (ImportError, TypeError):

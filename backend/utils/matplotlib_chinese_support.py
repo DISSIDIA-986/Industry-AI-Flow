@@ -116,7 +116,9 @@ def test_chinese_display():
             dpi=150,
             bbox_inches="tight",
         )
-        logger.info("Font display test complete, image saved to ~/Documents/py/chinese_test.png")
+        logger.info(
+            "Font display test complete, image saved to ~/Documents/py/chinese_test.png"
+        )
         plt.close()  # Avoid duplicate display in Jupyter
 
         return True

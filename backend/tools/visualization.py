@@ -2,9 +2,11 @@
 
 import json
 import logging
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
+
+from langchain_core.tools import tool
 
 from backend.config import settings
 from backend.tools.dataset_metadata import (
@@ -12,7 +14,6 @@ from backend.tools.dataset_metadata import (
     build_prompt_metadata,
     extract_dataset_metadata,
 )
-from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,15 @@ def _next_available_path(directory: Path, base_name: str) -> Path:
         index += 1
 
 
-def _persist_visualization_artifacts(output_files: Dict[str, Any]) -> List[Dict[str, str]]:
+def _persist_visualization_artifacts(
+    output_files: Dict[str, Any]
+) -> List[Dict[str, str]]:
     if not isinstance(output_files, dict) or not output_files:
         return []
 
-    output_dir = Path(getattr(settings, "temp_data_dir", "/tmp/luncheon_data")).resolve()
+    output_dir = Path(
+        getattr(settings, "temp_data_dir", "/tmp/luncheon_data")
+    ).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     persisted: List[Dict[str, str]] = []
 
@@ -96,7 +101,11 @@ def _is_generated_code_allowed(code: str) -> bool:
     lowered = code.lower()
     if "import pandas as pd" not in lowered:
         return False
-    if "pd.read_" not in lowered and "read_csv(" not in lowered and "read_excel(" not in lowered:
+    if (
+        "pd.read_" not in lowered
+        and "read_csv(" not in lowered
+        and "read_excel(" not in lowered
+    ):
         return False
     blocked_patterns = (
         "locals(",
@@ -189,7 +198,9 @@ Hard requirements:
             raise ValueError("generated_code_failed_safety_or_quality_gate")
         return generated_code, "llm", ""
     except Exception as exc:
-        logger.warning("LLM visualization code generation failed; using template fallback: %s", exc)
+        logger.warning(
+            "LLM visualization code generation failed; using template fallback: %s", exc
+        )
         return fallback_code, "template_fallback", str(exc)
 
 
@@ -204,7 +215,9 @@ def visualization_tool(
     y_column: Annotated[Optional[str], "Y-axis column name"] = None,
     color_column: Annotated[Optional[str], "Color grouping column name"] = None,
     title: Annotated[Optional[str], "Chart title"] = None,
-    instruction: Annotated[Optional[str], "Natural-language visualization instruction"] = None,
+    instruction: Annotated[
+        Optional[str], "Natural-language visualization instruction"
+    ] = None,
     save_format: Annotated[str, "Save format: 'png', 'jpg', 'svg', 'html'"] = "png",
     interactive: Annotated[bool, "Whether to generate interactive charts"] = False,
 ) -> Dict[str, Any]:
@@ -473,7 +486,11 @@ def advanced_visualization_tool(
 
     except Exception as e:
         logger.error(f"Advanced visualization tool error: {e}")
-        return {"success": False, "error": f"Tool error: {str(e)}", "chart_type": viz_type}
+        return {
+            "success": False,
+            "error": f"Tool error: {str(e)}",
+            "chart_type": viz_type,
+        }
 
 
 @tool

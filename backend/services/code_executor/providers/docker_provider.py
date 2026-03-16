@@ -42,7 +42,9 @@ class DockerExecutionProvider:
         data_files: Optional[list[str]] = None,
         timeout: Optional[int] = None,
     ) -> dict:
-        return self.executor.execute_code(code=code, data_files=data_files, timeout=timeout)
+        return self.executor.execute_code(
+            code=code, data_files=data_files, timeout=timeout
+        )
 
     async def health(self) -> dict:
         def _probe() -> dict:
