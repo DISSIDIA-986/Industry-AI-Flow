@@ -275,7 +275,8 @@ class IntentClassifier:
                     prompt_prefix = prompt_content
                 except Exception as prompt_exc:
                     logger.warning(
-                        "Failed to retrieve prompt template, using fallback: %s", prompt_exc
+                        "Failed to retrieve prompt template, using fallback: %s",
+                        prompt_exc,
                     )
 
             # 5. Call the LLM for classification
@@ -407,7 +408,9 @@ class IntentClassifier:
             str: The formatted classification request prompt.
         """
         recent_intents = (
-            ", ".join(context.recent_intents[-3:]) if context.recent_intents else "(none)"
+            ", ".join(context.recent_intents[-3:])
+            if context.recent_intents
+            else "(none)"
         )
         uploaded_files = (
             ", ".join(
@@ -424,15 +427,17 @@ class IntentClassifier:
             else "{}"
         )
 
+        from backend.services.intent_classification.capability_registry import (
+            get_capability_registry,
+        )
+
+        registry = get_capability_registry()
+        intent_list = registry.build_intent_prompt_section()
+
         return (
             "You are an intent classifier for an enterprise RAG workflow.\n"
             "Classify the user request into one of the exact intents:\n"
-            "- knowledge_retrieval\n"
-            "- data_analysis\n"
-            "- cost_estimation\n"
-            "- document_processing\n"
-            "- code_execution\n"
-            "- unclear_intent\n\n"
+            f"{intent_list}\n\n"
             "Return ONLY strict JSON with keys:\n"
             "intent, confidence, reasoning, keywords, context_clues, suggested_action, uncertainty_factors.\n"
             "confidence must be a number between 0 and 1.\n\n"
@@ -470,10 +475,13 @@ class IntentClassifier:
                     else:
                         logger.warning(
                             "P0: Intent LLM response missing JSON structure, falling back to heuristic. "
-                            "Response preview: %s", response[:100] if response else "(empty)"
+                            "Response preview: %s",
+                            response[:100] if response else "(empty)",
                         )
                 else:
-                    logger.warning("P0: Intent LLM classification returned empty text, fallback to heuristic simulator")
+                    logger.warning(
+                        "P0: Intent LLM classification returned empty text, fallback to heuristic simulator"
+                    )
             except Exception as e:
                 logger.warning("P0: LLM classification attempt 1 failed: %s", e)
 
@@ -485,6 +493,7 @@ class IntentClassifier:
     async def _simulate_llm_response(self, prompt: str) -> str:
         """
         Simulate an LLM response using keyword-based heuristics (fallback).
+        Delegates to the Capability Registry for keyword matching.
 
         Args:
             prompt: The classification prompt to analyze.
@@ -492,91 +501,27 @@ class IntentClassifier:
         Returns:
             str: A simulated LLM response as a JSON string.
         """
+        from backend.services.intent_classification.capability_registry import (
+            get_capability_registry,
+        )
+
         # Extract only the user query text — NOT the full prompt (which contains
         # intent names in the preamble that would cause false keyword matches).
         query_text = prompt
         query_marker = "Query:\n"
         marker_idx = prompt.find(query_marker)
         if marker_idx >= 0:
-            query_text = prompt[marker_idx + len(query_marker):]
+            query_text = prompt[marker_idx + len(query_marker) :]
             # Truncate at the next section boundary
             end_idx = query_text.find("\n\n")
             if end_idx >= 0:
                 query_text = query_text[:end_idx]
-        query_lower = query_text.lower()
 
-        # Match intent based on keywords.
-        # Cost estimation is checked BEFORE knowledge retrieval because
-        # generic knowledge prefixes like "how to" overlap with cost queries
-        # (e.g., "how to estimate construction cost").
-        if any(
-            keyword in query_lower
-            for keyword in [
-                "cost estimate",
-                "cost estimation",
-                "budget",
-                "overrun",
-                "construction cost",
-                "price",
-                "pricing",
-                "how much",
-                "estimate cost",
-                "project cost",
-            ]
-        ):
-            intent = "cost_estimation"
-            confidence = 0.91
-            reasoning = "Query contains cost estimation keywords"
-        elif any(keyword in query_lower for keyword in [
-            "what is", "how to", "tell me", "explain", "define", "describe",
-            "properties of", "requirements for", "difference between",
-            "what are", "how does", "why is", "when should",
-            "summarize", "summary", "according to", "based on",
-            "document say", "in the document", "in the pdf",
-            "regulation", "compliance", "standard", "specification",
-            "safety", "osha", "construction",
-        ]):
-            intent = "knowledge_retrieval"
-            confidence = 0.85
-            reasoning = "Query contains knowledge retrieval keywords"
-        elif any(
-            keyword in query_lower for keyword in [
-                "analyze", "analysis", "statistics", "chart", "data", "dataset",
-                "compare", "trend", "visualization", "graph",
-            ]
-        ):
-            intent = "data_analysis"
-            confidence = 0.90
-            reasoning = "Query contains data analysis keywords"
-        elif any(
-            keyword in query_lower for keyword in [
-                "ocr", "scan document", "upload file", "upload document",
-                "read file", "extract text from",
-            ]
-        ) or (
-            # Only match "pdf" / "image" / "parse" / "extract" when combined
-            # with action verbs suggesting file processing, NOT knowledge queries
-            any(kw in query_lower for kw in ["pdf", "image", "parse", "extract"])
-            and any(verb in query_lower for verb in ["upload", "process", "scan", "convert", "open"])
-        ):
-            intent = "document_processing"
-            confidence = 0.88
-            reasoning = "Query contains document/OCR processing keywords"
-        elif any(keyword in query_lower for keyword in [
-            "run", "execute", "code", "calculate", "script", "compute",
-            "program", "function",
-        ]):
-            intent = "code_execution"
-            confidence = 0.87
-            reasoning = "Query contains code execution keywords"
-        else:
-            # P0: When no keywords match (LLM fallback scenario), default to knowledge_retrieval
-            # with confidence > 0.5 to skip clarification loop and avoid recursion limit
-            intent = "knowledge_retrieval"
-            confidence = 0.51  # P0: Just above 0.5 threshold to skip clarification
-            reasoning = "P0: LLM fallback, defaulting to knowledge retrieval to avoid clarification loop"
+        registry = get_capability_registry()
+        intent, confidence, reasoning = registry.classify_heuristic(query_text)
 
         # Extract detected keywords
+        query_lower = query_text.lower()
         keywords = []
         if "cost" in query_lower:
             keywords.append("cost")
@@ -595,7 +540,9 @@ class IntentClassifier:
                 "keywords": keywords,
                 "context_clues": [],
                 "suggested_action": f"Route to {intent} handler",
-                "uncertainty_factors": [] if confidence > 0.7 else ["Low confidence classification"],
+                "uncertainty_factors": []
+                if confidence > 0.7
+                else ["Low confidence classification"],
             },
             ensure_ascii=False,
         )
@@ -623,7 +570,9 @@ class IntentClassifier:
                     raise ValueError("No JSON object found in LLM response")
 
             # Build IntentResult from parsed data
-            intent_value = self._normalize_intent_value(data.get("intent", "unclear_intent"))
+            intent_value = self._normalize_intent_value(
+                data.get("intent", "unclear_intent")
+            )
             intent = (
                 IntentType(intent_value)
                 if intent_value in [e.value for e in IntentType]
@@ -819,11 +768,26 @@ class IntentClassifier:
                     "user_query": query,
                     "possible_intents": json.dumps(
                         [
-                            {"type": "knowledge_retrieval", "desc": "Search and retrieve knowledge"},
-                            {"type": "data_analysis", "desc": "Analyze and visualize data"},
-                            {"type": "cost_estimation", "desc": "Estimate project costs"},
-                            {"type": "document_processing", "desc": "Process documents with OCR"},
-                            {"type": "code_execution", "desc": "Execute code and computations"},
+                            {
+                                "type": "knowledge_retrieval",
+                                "desc": "Search and retrieve knowledge",
+                            },
+                            {
+                                "type": "data_analysis",
+                                "desc": "Analyze and visualize data",
+                            },
+                            {
+                                "type": "cost_estimation",
+                                "desc": "Estimate project costs",
+                            },
+                            {
+                                "type": "document_processing",
+                                "desc": "Process documents with OCR",
+                            },
+                            {
+                                "type": "code_execution",
+                                "desc": "Execute code and computations",
+                            },
                         ],
                         ensure_ascii=False,
                     ),

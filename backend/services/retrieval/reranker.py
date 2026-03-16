@@ -34,9 +34,7 @@ class Reranker:
         except Exception as exc:
             self._torch = None
             self.available = False
-            logger.warning(
-                "Reranker disabled (dependency/model unavailable): %s", exc
-            )
+            logger.warning("Reranker disabled (dependency/model unavailable): %s", exc)
 
     def rerank(self, query: str, documents: list[dict], top_k: int = 5) -> list[dict]:
         if not documents:
@@ -58,7 +56,10 @@ class Reranker:
             if combined_len > 1800:  # ~512 tokens at ~3.5 chars/token
                 logger.warning(
                     "Reranker input pair %d truncated: %d chars (query=%d, content=%d)",
-                    i, combined_len, len(pair[0]), len(pair[1]),
+                    i,
+                    combined_len,
+                    len(pair[0]),
+                    len(pair[1]),
                 )
 
         try:
@@ -73,7 +74,9 @@ class Reranker:
                 logits = self.model(**inputs, return_dict=True).logits.view(-1).float()
                 scores = self._torch.sigmoid(logits).cpu().numpy()
         except Exception as exc:
-            logger.warning("Reranker inference failed, falling back to retrieval order: %s", exc)
+            logger.warning(
+                "Reranker inference failed, falling back to retrieval order: %s", exc
+            )
             sliced = documents[:top_k]
             for rank, doc in enumerate(sliced):
                 if isinstance(doc, dict) and "rerank_score" not in doc:

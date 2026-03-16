@@ -112,7 +112,15 @@ class DockerCodeExecutor:
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
                         func_name = node.func.id
-                        if func_name in ["exec", "eval", "compile", "getattr", "setattr", "delattr", "__import__"]:
+                        if func_name in [
+                            "exec",
+                            "eval",
+                            "compile",
+                            "getattr",
+                            "setattr",
+                            "delattr",
+                            "__import__",
+                        ]:
                             errors.append(f"Forbidden function call: {func_name}")
                     elif isinstance(node.func, ast.Attribute):
                         if isinstance(node.func.value, ast.Name):
@@ -123,11 +131,31 @@ class DockerCodeExecutor:
                 # Check for dangerous imports
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name in ["os", "subprocess", "sys", "importlib", "ctypes", "socket", "http", "requests", "urllib"]:
+                        if alias.name in [
+                            "os",
+                            "subprocess",
+                            "sys",
+                            "importlib",
+                            "ctypes",
+                            "socket",
+                            "http",
+                            "requests",
+                            "urllib",
+                        ]:
                             errors.append(f"Forbidden import: {alias.name}")
 
                 if isinstance(node, ast.ImportFrom):
-                    if node.module in ["os", "subprocess", "sys", "importlib", "ctypes", "socket", "http", "requests", "urllib"]:
+                    if node.module in [
+                        "os",
+                        "subprocess",
+                        "sys",
+                        "importlib",
+                        "ctypes",
+                        "socket",
+                        "http",
+                        "requests",
+                        "urllib",
+                    ]:
                         errors.append(f"Forbidden import: {node.module}")
 
         except SyntaxError as e:
@@ -302,7 +330,16 @@ class DockerCodeExecutor:
         workspace = Path(workspace_path)
 
         # Supported visualization file extensions
-        viz_extensions = [".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf", ".gif", ".webp"]
+        viz_extensions = [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".svg",
+            ".html",
+            ".pdf",
+            ".gif",
+            ".webp",
+        ]
 
         for file_path in workspace.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in viz_extensions:

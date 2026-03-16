@@ -10,11 +10,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from backend.services.database.driver_compat import (
-    connect as connect_db,
-    fetchall_dicts,
-    fetchone_dict,
-)
+from backend.services.database.driver_compat import connect as connect_db
+from backend.services.database.driver_compat import fetchall_dicts, fetchone_dict
 
 # 配置日志
 logging.basicConfig(

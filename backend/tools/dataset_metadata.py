@@ -73,12 +73,16 @@ def extract_dataset_metadata(
     try:
         df = _read_dataframe(source_path)
     except Exception as exc:
-        logger.warning("Dataset metadata extraction failed for %s: %s", source_path, exc)
+        logger.warning(
+            "Dataset metadata extraction failed for %s: %s", source_path, exc
+        )
         return {**base, "status": "error", "error": str(exc)}
 
     total_rows = _safe_int(len(df))
     total_columns = _safe_int(len(df.columns))
-    profiled_columns = max(1, _safe_int(max_profile_columns, DEFAULT_MAX_PROFILE_COLUMNS))
+    profiled_columns = max(
+        1, _safe_int(max_profile_columns, DEFAULT_MAX_PROFILE_COLUMNS)
+    )
 
     columns_info: List[Dict[str, Any]] = []
     for column_name in list(df.columns)[:profiled_columns]:

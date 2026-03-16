@@ -35,7 +35,9 @@ async def route_node(state: WorkflowState, services: Any) -> WorkflowState:
             )
             metadata["budget_evaluation"] = budget_eval
 
-    cloud_allowed = can_use_cloud(budget_eval) if isinstance(budget_eval, dict) else False
+    cloud_allowed = (
+        can_use_cloud(budget_eval) if isinstance(budget_eval, dict) else False
+    )
     provider = select_provider(route_mode, cloud_allowed=cloud_allowed)
 
     state["route_mode"] = route_mode

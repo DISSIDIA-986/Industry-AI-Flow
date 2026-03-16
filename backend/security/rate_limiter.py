@@ -57,7 +57,8 @@ class SlidingWindowRateLimiter:
             # Periodically clean stale keys to prevent unbounded memory growth.
             if len(self._hits) > 0:
                 stale_keys = [
-                    k for k, dq in self._hits.items()
+                    k
+                    for k, dq in self._hits.items()
                     if k != key and dq and now - dq[-1] > self.interval_seconds
                 ]
                 for k in stale_keys:

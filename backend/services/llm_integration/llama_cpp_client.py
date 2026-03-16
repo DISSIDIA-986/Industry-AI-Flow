@@ -90,7 +90,9 @@ class LlamaCppClient:
         if file_size < 1024 * 1024:  # Less than 1MB is suspicious
             logger.warning(f"Model file is suspiciously small: {file_size} bytes")
 
-        logger.info(f"Model file validated: {self.model_path} ({file_size / (1024**3):.2f} GB)")
+        logger.info(
+            f"Model file validated: {self.model_path} ({file_size / (1024**3):.2f} GB)"
+        )
         return True
 
     def _detect_gpu_layers(self) -> int:

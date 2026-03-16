@@ -2,17 +2,18 @@
 Groundedness Checker - 检查生成内容的真实性
 """
 
-import re
 import logging
-from typing import Dict, List, Optional, Tuple, Any
-from enum import Enum
+import re
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class GroundednessLevel(Enum):
     """Groundedness level"""
+
     FULLY_GROUNDED = "fully_grounded"  # Fully grounded in context
     PARTIALLY_GROUNDED = "partially_grounded"  # Partially grounded in context
     NOT_GROUNDED = "not_grounded"  # Not grounded in context
@@ -21,6 +22,7 @@ class GroundednessLevel(Enum):
 
 class ClaimType(Enum):
     """Claim type"""
+
     FACTUAL = "factual"  # Factual claim
     NUMERICAL = "numerical"  # Numerical claim
     TEMPORAL = "temporal"  # Temporal claim
@@ -32,6 +34,7 @@ class ClaimType(Enum):
 @dataclass
 class Claim:
     """Claim"""
+
     text: str
     claim_type: ClaimType
     confidence: float
@@ -47,6 +50,7 @@ class Claim:
 @dataclass
 class GroundednessResult:
     """Groundedness check result"""
+
     claim: Claim
     is_grounded: bool
     supporting_context: List[str]
@@ -63,35 +67,35 @@ class GroundednessChecker:
         r"\b(?:according to|based on|as per)\b\s+\w+\b",
         r"\b(?:shows?|indicates?|demonstrates?|proves?)\b\s+that\b",
     ]
-    
+
     # Numerical claim模式
     numerical_patterns = [
         r"\b\d+(?:\.\d+)?\s*(?:percent|%|dollars?|\$|years?|months?|days?)\b",
         r"\b(?:increase|decrease|growth|decline)\b\s+of\s+\d+(?:\.\d+)?\b",
         r"\b(?:more than|less than|about|approximately)\b\s+\d+(?:\.\d+)?\b",
     ]
-    
+
     # Temporal claim模式
     temporal_patterns = [
         r"\b(?:in|on|at|during)\b\s+\d{4}(?:-\d{2})?(?:-\d{2})?\b",
         r"\b(?:before|after|since|until)\b\s+\d{4}(?:-\d{2})?(?:-\d{2})?\b",
         r"\b(?:recently|previously|currently|formerly)\b",
     ]
-    
+
     # Spatial claim模式
     spatial_patterns = [
         r"\b(?:in|at|on|near)\b\s+\w+\s*(?:city|country|region|area)\b",
         r"\b(?:located|situated|positioned)\b\s+(?:in|at|on)\s+\w+\b",
         r"\b(?:from|to)\b\s+\w+\s+(?:to|from)\s+\w+\b",
     ]
-    
+
     # Causal claim模式
     causal_patterns = [
         r"\b(?:because|since|as|due to|owing to)\b\s+\w+\b",
         r"\b(?:leads? to|results? in|causes?|triggers?)\b\s+\w+\b",
         r"\b(?:therefore|thus|hence|consequently)\b\s+\w+\b",
     ]
-    
+
     # Comparative claim模式
     comparative_patterns = [
         r"\b(?:more|less|better|worse|higher|lower)\b\s+than\s+\w+\b",
@@ -112,15 +116,29 @@ class GroundednessChecker:
     def _compile_patterns(self) -> None:
         """Compile regex patterns"""
         self.patterns = {
-            ClaimType.FACTUAL: [re.compile(p, re.IGNORECASE) for p in self.factual_patterns],
-            ClaimType.NUMERICAL: [re.compile(p, re.IGNORECASE) for p in self.numerical_patterns],
-            ClaimType.TEMPORAL: [re.compile(p, re.IGNORECASE) for p in self.temporal_patterns],
-            ClaimType.SPATIAL: [re.compile(p, re.IGNORECASE) for p in self.spatial_patterns],
-            ClaimType.CAUSAL: [re.compile(p, re.IGNORECASE) for p in self.causal_patterns],
-            ClaimType.COMPARATIVE: [re.compile(p, re.IGNORECASE) for p in self.comparative_patterns],
+            ClaimType.FACTUAL: [
+                re.compile(p, re.IGNORECASE) for p in self.factual_patterns
+            ],
+            ClaimType.NUMERICAL: [
+                re.compile(p, re.IGNORECASE) for p in self.numerical_patterns
+            ],
+            ClaimType.TEMPORAL: [
+                re.compile(p, re.IGNORECASE) for p in self.temporal_patterns
+            ],
+            ClaimType.SPATIAL: [
+                re.compile(p, re.IGNORECASE) for p in self.spatial_patterns
+            ],
+            ClaimType.CAUSAL: [
+                re.compile(p, re.IGNORECASE) for p in self.causal_patterns
+            ],
+            ClaimType.COMPARATIVE: [
+                re.compile(p, re.IGNORECASE) for p in self.comparative_patterns
+            ],
         }
 
-    def extract_claims(self, text: str, check_types: Optional[List[ClaimType]] = None) -> List[Claim]:
+    def extract_claims(
+        self, text: str, check_types: Optional[List[ClaimType]] = None
+    ) -> List[Claim]:
         """
         从文本中提取Claim
 
@@ -152,7 +170,7 @@ class GroundednessChecker:
                         claim_type=claim_type,
                         confidence=confidence,
                         start_pos=match.start(),
-                        end_pos=match.end()
+                        end_pos=match.end(),
                     )
                     claims.append(claim)
 
@@ -211,8 +229,8 @@ class GroundednessChecker:
             details={
                 "keyword_matches": len(supporting_context),
                 "claim_type": claim.claim_type.value,
-                "text_length": len(claim.text)
-            }
+                "text_length": len(claim.text),
+            },
         )
 
         return result
@@ -229,22 +247,77 @@ class GroundednessChecker:
         """
         # 简单的关键词提取：移除停用词，保留名词和动词
         stop_words = {
-            'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall',
-            'should', 'may', 'might', 'must', 'can', 'could', 'that', 'this',
-            'these', 'those', 'it', 'its', 'they', 'them', 'their', 'we', 'us',
-            'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'hers'
+            "a",
+            "an",
+            "the",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "shall",
+            "should",
+            "may",
+            "might",
+            "must",
+            "can",
+            "could",
+            "that",
+            "this",
+            "these",
+            "those",
+            "it",
+            "its",
+            "they",
+            "them",
+            "their",
+            "we",
+            "us",
+            "our",
+            "you",
+            "your",
+            "he",
+            "him",
+            "his",
+            "she",
+            "her",
+            "hers",
         }
 
         # 简单的分词和过滤
-        words = re.findall(r'\b\w+\b', text.lower())
+        words = re.findall(r"\b\w+\b", text.lower())
         keywords = [word for word in words if word not in stop_words and len(word) > 2]
 
         return keywords
 
-    def check(self, generated_text: str, context: List[str],
-             threshold: float = 0.7, check_types: Optional[List[ClaimType]] = None) -> Dict[str, Any]:
+    def check(
+        self,
+        generated_text: str,
+        context: List[str],
+        threshold: float = 0.7,
+        check_types: Optional[List[ClaimType]] = None,
+    ) -> Dict[str, Any]:
         """
         检查生成内容的真实性（简化接口，不使用pydantic）
 
@@ -273,7 +346,7 @@ class GroundednessChecker:
                 "ungrounded_claims": [],
                 "hallucinated_claims": [],
                 "results": [],
-                "details": {"message": "No claims found in generated text"}
+                "details": {"message": "No claims found in generated text"},
             }
 
         # 验证每个Claim
@@ -320,14 +393,18 @@ class GroundednessChecker:
                 "total_claims": len(claims),
                 "grounded_ratio": overall_score,
                 "context_count": len(context),
-                "model_name": self.model_name
-            }
+                "model_name": self.model_name,
+            },
         }
 
-        logger.info(f"Groundedness check completed: {groundedness_level.value} (score: {overall_score:.2f})")
+        logger.info(
+            f"Groundedness check completed: {groundedness_level.value} (score: {overall_score:.2f})"
+        )
         return response
 
-    def check_simple(self, generated_text: str, context: List[str]) -> Tuple[bool, float, List[str]]:
+    def check_simple(
+        self, generated_text: str, context: List[str]
+    ) -> Tuple[bool, float, List[str]]:
         """
         简单的真实性检查（简化接口）
 
@@ -340,7 +417,9 @@ class GroundednessChecker:
         """
         response = self.check(generated_text, context)
 
-        ungrounded_texts = response.get("ungrounded_claims", []) + response.get("hallucinated_claims", [])
+        ungrounded_texts = response.get("ungrounded_claims", []) + response.get(
+            "hallucinated_claims", []
+        )
 
         is_grounded = response["overall_score"] >= 0.7
 
@@ -364,7 +443,9 @@ def get_groundedness_checker() -> GroundednessChecker:
     return _GROUNDEDNESS_CHECKER
 
 
-def check_groundedness(generated_text: str, context: List[str]) -> Tuple[bool, float, List[str]]:
+def check_groundedness(
+    generated_text: str, context: List[str]
+) -> Tuple[bool, float, List[str]]:
     """
     检查生成内容的真实性（简化接口）
 
@@ -388,11 +469,13 @@ if __name__ == "__main__":
     checker = GroundednessChecker()
 
     # 测试数据
-    generated_text = "The capital of France is Paris. The population is 2.1 million people."
+    generated_text = (
+        "The capital of France is Paris. The population is 2.1 million people."
+    )
     context = [
         "France is a country in Europe.",
         "Paris is the capital of France.",
-        "The population of Paris is about 2.1 million."
+        "The population of Paris is about 2.1 million.",
     ]
 
     # 执行检查
@@ -406,7 +489,9 @@ if __name__ == "__main__":
     print(f"Hallucinated Claims: {len(response['hallucinated_claims'])}")
 
     # 打印不真实的Claim
-    if response['ungrounded_claims'] or response['hallucinated_claims']:
+    if response["ungrounded_claims"] or response["hallucinated_claims"]:
         print("\nUngrounded/Hallucinated Claims:")
-        for claim in response['ungrounded_claims'] + response['hallucinated_claims']:
-            print(f"  - {claim} ({claim.claim_type.value if hasattr(claim, 'claim_type') else 'unknown'})")
+        for claim in response["ungrounded_claims"] + response["hallucinated_claims"]:
+            print(
+                f"  - {claim} ({claim.claim_type.value if hasattr(claim, 'claim_type') else 'unknown'})"
+            )

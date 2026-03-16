@@ -32,9 +32,7 @@ class WorkflowOrchestrator:
         if not state.get("response"):
             state["response"] = self._build_response(state)
 
-        metrics["orchestrator_latency_ms"] = int(
-            (time.perf_counter() - started) * 1000
-        )
+        metrics["orchestrator_latency_ms"] = int((time.perf_counter() - started) * 1000)
         return state
 
     @staticmethod
@@ -78,9 +76,7 @@ class DefaultWorkflowRunner:
                 "requested_route_mode": resolved_route_mode,
                 "tenant_id": "public",
                 "workflow_runner": "fallback_orchestrator",
-                "prompt_experiments_enabled": bool(
-                    settings.prompt_experiments_enabled
-                ),
+                "prompt_experiments_enabled": bool(settings.prompt_experiments_enabled),
             },
         }
         state = await self.orchestrator.run(state)

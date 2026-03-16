@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-from datetime import UTC, datetime, timedelta
 import os
 import re
+from datetime import UTC, datetime, timedelta
 from threading import Lock
 from typing import Dict, List
 from uuid import uuid4
@@ -148,9 +148,7 @@ async def register(payload: RegisterRequest) -> AuthResponse:
     key = payload.email.lower()
     with _users_lock:
         if len(_users) >= 1000:
-            raise HTTPException(
-                status_code=429, detail="Registration limit reached"
-            )
+            raise HTTPException(status_code=429, detail="Registration limit reached")
         if key in _users:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

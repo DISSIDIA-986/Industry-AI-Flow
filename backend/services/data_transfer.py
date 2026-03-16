@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
+
 try:
     from sqlalchemy import create_engine, text
 except Exception:  # pragma: no cover - optional dependency
@@ -59,7 +60,9 @@ def _resolve_allowed_source_file(file_path: str) -> Path:
         candidate = candidate.resolve()
 
     allowed_roots = _allowed_source_roots()
-    if not any(_is_subpath(candidate, root) or candidate == root for root in allowed_roots):
+    if not any(
+        _is_subpath(candidate, root) or candidate == root for root in allowed_roots
+    ):
         raise DataFileTransferError("Path outside allowed directories")
 
     if not candidate.exists():
@@ -124,7 +127,9 @@ class DataFileTransfer:
             elif transfer_method == "database":
                 return self._database_transfer(str(safe_file_path), file_info)
             else:
-                raise DataFileTransferError(f"Unsupported transfer method: {transfer_method}")
+                raise DataFileTransferError(
+                    f"Unsupported transfer method: {transfer_method}"
+                )
 
         except Exception as e:
             logger.error(f"File transfer failed: {e}")
@@ -190,7 +195,9 @@ class DataFileTransfer:
     ) -> Dict[str, Any]:
         """Transfer data to the database as a temporary table."""
         if not self.db_engine:
-            raise DataFileTransferError("Database engine not available for data transfer")
+            raise DataFileTransferError(
+                "Database engine not available for data transfer"
+            )
 
         try:
             # Create temporary table name
@@ -327,11 +334,11 @@ class DataFileTransfer:
                 "# Read credentials from env\n"
                 f"connection_string = \"postgresql://{settings.postgres_user or 'current_user'}"
                 f":\" + os.environ.get('POSTGRES_PASSWORD', '') + \""
-                f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}\"\n"
+                f'@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"\n'
                 "engine = create_engine(connection_string)\n"
                 "\n"
-                f"df = pd.read_sql(\"SELECT * FROM {table_name}\", engine)\n"
-                "print(f\"Loaded: {df.shape}\")\n"
+                f'df = pd.read_sql("SELECT * FROM {table_name}", engine)\n'
+                'print(f"Loaded: {df.shape}")\n'
                 "print(df.head())\n"
             ),
         }
@@ -345,7 +352,9 @@ class DataFileTransfer:
         elif transfer_result["method"] == "database":
             return self._create_database_access_script(transfer_result, script_name)
         else:
-            raise DataFileTransferError(f"Unsupported transfer method: {transfer_result['method']}")
+            raise DataFileTransferError(
+                f"Unsupported transfer method: {transfer_result['method']}"
+            )
 
     def _create_file_access_script(
         self, transfer_result: Dict[str, Any], script_name: str
@@ -483,9 +492,7 @@ except Exception as e:
                     table_name = transfer_result.get("transferred_path")
                     if table_name and re.match(r"^temp_data_[0-9a-f]{8}$", table_name):
                         with self.db_engine.connect() as conn:
-                            conn.execute(
-                                text("DROP TABLE IF EXISTS " + table_name)
-                            )
+                            conn.execute(text("DROP TABLE IF EXISTS " + table_name))
                             conn.commit()
                             logger.info(f"Dropped temp table: {table_name}")
                     elif table_name:

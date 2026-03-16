@@ -7,7 +7,10 @@ import threading
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from backend.services.code_executor.providers.base import ExecutionProvider, ExecutionResult
+from backend.services.code_executor.providers.base import (
+    ExecutionProvider,
+    ExecutionResult,
+)
 
 
 @dataclass
@@ -74,7 +77,9 @@ class CodeExecutionManager:
                 return self._error_result(
                     f"PPIO provider unhealthy: {ppio_health.get('status', 'unknown')}"
                 )
-            return self._execute_provider_sync(self.ppio_provider, code, data_files, timeout)
+            return self._execute_provider_sync(
+                self.ppio_provider, code, data_files, timeout
+            )
 
         if requested_mode == "auto":
             docker_result = self._execute_provider_sync(
@@ -104,7 +109,9 @@ class CodeExecutionManager:
                 docker_result,
             )
 
-        return self._execute_provider_sync(self.docker_provider, code, data_files, timeout)
+        return self._execute_provider_sync(
+            self.docker_provider, code, data_files, timeout
+        )
 
     def _execute_provider_sync(
         self,
@@ -114,7 +121,9 @@ class CodeExecutionManager:
         timeout: Optional[int],
     ) -> dict:
         if hasattr(provider, "execute_code"):
-            return provider.execute_code(code=code, data_files=data_files, timeout=timeout)
+            return provider.execute_code(
+                code=code, data_files=data_files, timeout=timeout
+            )
 
         timeout_s = int(timeout) if timeout else 60
         result = self._run_coro_sync(provider.execute(code, None, timeout_s))

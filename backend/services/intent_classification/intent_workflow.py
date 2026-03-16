@@ -174,7 +174,9 @@ class IntentClassificationWorkflow:
     async def _input_preprocessing_node(self, state: WorkflowState) -> WorkflowState:
         """Preprocess user input: clean and normalize the query."""
         try:
-            logger.info(f"Starting input preprocessing, session ID: {state['session_id']}")
+            logger.info(
+                f"Starting input preprocessing, session ID: {state['session_id']}"
+            )
 
             # Get the current query
             current_query = state.get("current_query", "")
@@ -239,7 +241,8 @@ class IntentClassificationWorkflow:
                 recent_intents=recent_intents,
                 uploaded_files=uploaded_files,
                 user_preferences=session_context.user_preferences or {},
-                interaction_history=enhanced_context.get("interaction_history", []) or [],
+                interaction_history=enhanced_context.get("interaction_history", [])
+                or [],
                 time_of_day=datetime.now().strftime("%H:%M"),
                 query_count_in_session=int(session_context.query_count),
             )
@@ -253,7 +256,9 @@ class IntentClassificationWorkflow:
                 "context_quality", "medium"
             )
 
-            logger.debug(f"Context enrichment complete, quality: {state['metadata']['context_quality']}")
+            logger.debug(
+                f"Context enrichment complete, quality: {state['metadata']['context_quality']}"
+            )
             return state
 
         except Exception as e:
@@ -313,7 +318,9 @@ class IntentClassificationWorkflow:
 
             # P0: CRITICAL - Check max rounds BEFORE anything else to prevent recursion
             clarification_round = state.get("clarification_round", 0)
-            MAX_CLARIFICATION_ROUNDS = 2  # P0: Reduced from 3 to prevent hitting 12-step limit
+            MAX_CLARIFICATION_ROUNDS = (
+                2  # P0: Reduced from 3 to prevent hitting 12-step limit
+            )
 
             if clarification_round >= MAX_CLARIFICATION_ROUNDS:
                 logger.warning(
@@ -350,7 +357,7 @@ class IntentClassificationWorkflow:
                 logger.info(
                     "P0: Setting clarification_needed=True, round %d/%d",
                     clarification_round + 1,
-                    MAX_CLARIFICATION_ROUNDS
+                    MAX_CLARIFICATION_ROUNDS,
                 )
             else:
                 # Medium confidence, check uncertainty factors to decide
@@ -360,11 +367,15 @@ class IntentClassificationWorkflow:
                     state["clarification_round"] = clarification_round + 1
                     state["clarification_needed"] = True
                     evaluation_result = "low_confidence"
-                    logger.info("Multiple uncertainty factors detected, requesting clarification")
+                    logger.info(
+                        "Multiple uncertainty factors detected, requesting clarification"
+                    )
                 else:
                     state["clarification_needed"] = False
                     evaluation_result = "high_confidence"
-                    logger.info("Few uncertainty factors, proceeding with current classification")
+                    logger.info(
+                        "Few uncertainty factors, proceeding with current classification"
+                    )
 
             # Record evaluation metadata
             state["metadata"]["confidence_evaluation"] = evaluation_result
@@ -456,7 +467,9 @@ class IntentClassificationWorkflow:
                 state["metadata"]["prompt_meta"] = state["prompt_meta"]
             return state
         except Exception as e:
-            logger.warning(f"Prompt preparation failed, continuing without managed prompt: {e}")
+            logger.warning(
+                f"Prompt preparation failed, continuing without managed prompt: {e}"
+            )
             state["metadata"]["prompt_status"] = "error"
             state["metadata"]["prompt_error"] = str(e)
             return state
@@ -520,7 +533,9 @@ class IntentClassificationWorkflow:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Prompt-based clarification failed, using default: {str(e)}")
+                    logger.warning(
+                        f"Prompt-based clarification failed, using default: {str(e)}"
+                    )
                     clarification_message = self._generate_default_clarification(
                         clarification_context
                     )
@@ -550,7 +565,9 @@ class IntentClassificationWorkflow:
 
             # P0: CRITICAL CHECK - If max rounds reached, immediately force proceed
             clarification_round = state.get("clarification_round", 0)
-            MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+            MAX_CLARIFICATION_ROUNDS = (
+                2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+            )
 
             if clarification_round >= MAX_CLARIFICATION_ROUNDS:
                 logger.warning(
@@ -580,12 +597,16 @@ class IntentClassificationWorkflow:
 
             # Check if the user actually provided new clarification input.
             # If so, enrich the current query and run a best-effort reclassification.
-            user_clarification = str(state.get("user_clarification_input") or "").strip()
+            user_clarification = str(
+                state.get("user_clarification_input") or ""
+            ).strip()
             routing_decision = state.get("routing_decision")
             if user_clarification:
                 base_query = str(state.get("current_query") or "").strip()
                 if base_query:
-                    combined_query = f"{base_query}\nUser clarification: {user_clarification}"
+                    combined_query = (
+                        f"{base_query}\nUser clarification: {user_clarification}"
+                    )
                 else:
                     combined_query = user_clarification
                 state["current_query"] = combined_query
@@ -601,9 +622,9 @@ class IntentClassificationWorkflow:
                         )
                         state["intent_result"] = refreshed_intent
                         state["metadata"]["clarification_reclassified"] = True
-                        state["metadata"]["clarification_reclass_confidence"] = (
-                            refreshed_intent.confidence
-                        )
+                        state["metadata"][
+                            "clarification_reclass_confidence"
+                        ] = refreshed_intent.confidence
                 except Exception as exc:
                     logger.warning("Clarification reclassification failed: %s", exc)
                     state["metadata"]["clarification_reclassified"] = False
@@ -724,9 +745,7 @@ class IntentClassificationWorkflow:
         logger.error(f"Workflow error: {state.get('error', 'Unknown error')}")
 
         # Generate a user-friendly error message
-        error_message = (
-            "The workflow encountered an internal error and could not complete your request."
-        )
+        error_message = "The workflow encountered an internal error and could not complete your request."
         state["agent_response"] = error_message
         state["messages"].append(AIMessage(content=error_message))
         state["workflow_complete"] = True
@@ -782,7 +801,9 @@ class IntentClassificationWorkflow:
 
         # P0: Prevent infinite clarification loops - force proceed after 3 rounds
         clarification_round = state.get("clarification_round", 0)
-        MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+        MAX_CLARIFICATION_ROUNDS = (
+            2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+        )
 
         if clarification_round >= MAX_CLARIFICATION_ROUNDS:
             logger.warning(
@@ -821,7 +842,9 @@ class IntentClassificationWorkflow:
         """P0: Route after clarification processing, with max rounds check."""
         # P0: IMPORTANT: Check if max clarification rounds reached BEFORE any retry logic
         clarification_round = state.get("clarification_round", 0)
-        MAX_CLARIFICATION_ROUNDS = 2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+        MAX_CLARIFICATION_ROUNDS = (
+            2  # P0: Max 2 rounds to stay under 12-step LangGraph limit
+        )
 
         logger.info(
             "P0: _route_after_clarification called with clarification_round=%d, awaiting_user_clarification=%s",
@@ -868,9 +891,13 @@ class IntentClassificationWorkflow:
                 clarification = "I'd like to better understand your request. Here are some clarifying questions:\n\n"
                 for i, question in enumerate(questions, 1):
                     clarification += f"{i}. {question}\n"
-                clarification += "\nPlease provide more details so I can assist you better."
+                clarification += (
+                    "\nPlease provide more details so I can assist you better."
+                )
             else:
-                clarification = "Could you please provide more details about your request?"
+                clarification = (
+                    "Could you please provide more details about your request?"
+                )
 
             return clarification
         except Exception as e:
@@ -968,7 +995,9 @@ class IntentClassificationWorkflow:
     def _extract_code_from_query(query: str) -> Optional[str]:
         import re
 
-        match = re.search(r"```(?:python)?\s*(.*?)```", query, flags=re.DOTALL | re.IGNORECASE)
+        match = re.search(
+            r"```(?:python)?\s*(.*?)```", query, flags=re.DOTALL | re.IGNORECASE
+        )
         if match:
             code = match.group(1).strip()
             return code if code else None
@@ -1058,7 +1087,9 @@ class IntentClassificationWorkflow:
             return chunks, []
 
         profile_map = {
-            str(item.get("doc_id") or "").strip(): float(item.get("profile_score") or 0.0)
+            str(item.get("doc_id") or "").strip(): float(
+                item.get("profile_score") or 0.0
+            )
             for item in profiles
         }
 
@@ -1104,15 +1135,43 @@ class IntentClassificationWorkflow:
         query_norm = str(query or "").strip().lower()
         # Extract query keywords (4+ chars, skip stopwords) for contextual questions
         _stopwords = {
-            "what", "which", "where", "when", "that", "this", "these", "those",
-            "from", "with", "about", "have", "does", "there", "their", "they",
-            "been", "being", "were", "will", "would", "could", "should", "your",
-            "list", "give", "show", "tell", "please", "also",
+            "what",
+            "which",
+            "where",
+            "when",
+            "that",
+            "this",
+            "these",
+            "those",
+            "from",
+            "with",
+            "about",
+            "have",
+            "does",
+            "there",
+            "their",
+            "they",
+            "been",
+            "being",
+            "were",
+            "will",
+            "would",
+            "could",
+            "should",
+            "your",
+            "list",
+            "give",
+            "show",
+            "tell",
+            "please",
+            "also",
         }
         query_keywords = [
-            w for w in "".join(
+            w
+            for w in "".join(
                 c if c.isalnum() or c.isspace() else " " for c in query_norm
-            ).split() if len(w) >= 4 and w not in _stopwords
+            ).split()
+            if len(w) >= 4 and w not in _stopwords
         ]
 
         candidates: List[str] = []
@@ -1144,9 +1203,7 @@ class IntentClassificationWorkflow:
 
         # --- Profile-aware questions using outline headings ---
         for profile in profiles[:3]:
-            p_name = str(
-                profile.get("filename") or profile.get("doc_id") or ""
-            ).strip()
+            p_name = str(profile.get("filename") or profile.get("doc_id") or "").strip()
             if not p_name:
                 continue
             outline = profile.get("outline")
@@ -1159,9 +1216,7 @@ class IntentClassificationWorkflow:
                 ]
                 if deeper_headings:
                     heading = _random.choice(deeper_headings)
-                    candidates.append(
-                        f'What does {p_name} specify about "{heading}"?'
-                    )
+                    candidates.append(f'What does {p_name} specify about "{heading}"?')
             keywords = profile.get("keywords")
             if isinstance(keywords, list) and len(keywords) >= 4:
                 # Use keywords that overlap with the user's query for relevance
@@ -1182,9 +1237,7 @@ class IntentClassificationWorkflow:
             candidates.append(
                 f"What are the common exceptions or special cases for {topic}?"
             )
-            candidates.append(
-                f"Can you create a compliance checklist for {topic}?"
-            )
+            candidates.append(f"Can you create a compliance checklist for {topic}?")
 
         # --- Generic fallbacks ---
         candidates.append("What details should I provide for a more precise answer?")
@@ -1247,7 +1300,9 @@ class IntentClassificationWorkflow:
         elif isinstance(raw, dict):
             for key in ("rewrites", "queries", "variants", "paraphrases"):
                 if key in raw:
-                    candidates.extend(IntentClassificationWorkflow._normalize_rewrites(raw.get(key)))
+                    candidates.extend(
+                        IntentClassificationWorkflow._normalize_rewrites(raw.get(key))
+                    )
         return candidates
 
     async def _build_retrieval_queries(
@@ -1292,7 +1347,7 @@ class IntentClassificationWorkflow:
         prompt = (
             "Rewrite the user query for document retrieval.\n"
             "Do not change intent. Keep domain terms, standard names, and identifiers.\n"
-            "Return strict JSON only: {\"rewrites\": [\"...\"]}\n"
+            'Return strict JSON only: {"rewrites": ["..."]}\n'
             f"Generate at most {rewrite_count} rewrites.\n\n"
             f"Original query:\n{query}\n\n"
             f"Recent conversation hints:\n{chr(10).join(history_lines) if history_lines else '(none)'}\n"
@@ -1308,12 +1363,16 @@ class IntentClassificationWorkflow:
                 max_tokens=220,
             )
         except Exception as exc:
-            logger.warning("Query rewrite generation failed, fallback to original query: %s", exc)
+            logger.warning(
+                "Query rewrite generation failed, fallback to original query: %s", exc
+            )
 
         rewrite_candidates: List[str] = []
         parsed = self._parse_json_object(raw_response)
         if parsed is not None:
-            rewrite_candidates.extend(self._normalize_rewrites(parsed.get("rewrites", parsed)))
+            rewrite_candidates.extend(
+                self._normalize_rewrites(parsed.get("rewrites", parsed))
+            )
 
         # Deterministic fallback: add keyword-enriched retrieval query
         if not rewrite_candidates and keywords:
@@ -1381,7 +1440,9 @@ class IntentClassificationWorkflow:
                 if chunk_key not in chunk_payloads:
                     chunk_payloads[chunk_key] = dict(chunk)
 
-        sorted_keys = sorted(fused_scores.keys(), key=lambda key: fused_scores[key], reverse=True)
+        sorted_keys = sorted(
+            fused_scores.keys(), key=lambda key: fused_scores[key], reverse=True
+        )
         fused_chunks: List[Dict[str, Any]] = []
         for key in sorted_keys[: max(top_k, 1)]:
             payload = dict(chunk_payloads[key])
@@ -1472,7 +1533,10 @@ class IntentClassificationWorkflow:
             if not isinstance(metadata, dict):
                 metadata = {}
             doc_id = str(
-                chunk.get("doc_id") or metadata.get("doc_id") or chunk.get("filename") or ""
+                chunk.get("doc_id")
+                or metadata.get("doc_id")
+                or chunk.get("filename")
+                or ""
             ).strip()
             doc_name = str(
                 chunk.get("filename")
@@ -1526,7 +1590,9 @@ class IntentClassificationWorkflow:
             document_profiles,
             max_items=profile_context_limit,
         )
-        document_profile_text = "\n\n".join(profile_snippets) if profile_snippets else "(none)"
+        document_profile_text = (
+            "\n\n".join(profile_snippets) if profile_snippets else "(none)"
+        )
 
         history_lines: List[str] = []
         for record in (context.interaction_history or [])[-3:]:
@@ -1581,7 +1647,9 @@ class IntentClassificationWorkflow:
                 max_tokens=max_tokens,
             )
         except Exception as exc:
-            logger.warning("RAG generation failed, falling back to extractive answer: %s", exc)
+            logger.warning(
+                "RAG generation failed, falling back to extractive answer: %s", exc
+            )
 
         cited_answer = str(llm_answer or "").strip()
         if not cited_answer:
@@ -1592,8 +1660,7 @@ class IntentClassificationWorkflow:
                     highlight_lines.append(f"{idx}. {preview[:260]}")
             cited_answer = (
                 "Retrieved evidence was found, but generation degraded. "
-                "Key evidence:\n"
-                + "\n".join(highlight_lines)
+                "Key evidence:\n" + "\n".join(highlight_lines)
             ).strip()
 
         return {
@@ -1689,7 +1756,9 @@ class IntentClassificationWorkflow:
         query: str,
         parameters: Dict[str, Any],
     ) -> Dict[str, Any]:
-        code = str(parameters.get("code") or "").strip() or self._extract_code_from_query(query)
+        code = str(
+            parameters.get("code") or ""
+        ).strip() or self._extract_code_from_query(query)
         if not code:
             raise RuntimeError("Code execution requires Python code snippet in query")
 
@@ -1709,7 +1778,13 @@ class IntentClassificationWorkflow:
         if not isinstance(result, dict):
             raise RuntimeError("Code execution returned an invalid payload")
         if not result.get("success"):
-            raise RuntimeError(str(result.get("error") or result.get("stderr") or "code execution failed"))
+            raise RuntimeError(
+                str(
+                    result.get("error")
+                    or result.get("stderr")
+                    or "code execution failed"
+                )
+            )
 
         stdout = str(result.get("stdout") or "").strip()
         response = stdout or "Code executed successfully with no stdout output."
@@ -1755,7 +1830,9 @@ class IntentClassificationWorkflow:
                 "metadata": {"routed_to": "cost_estimation_node"},
             }
         if agent_type == AgentType.DATA_ANALYSIS_AGENT:
-            return await self._dispatch_data_analysis_query(query=query, context=context)
+            return await self._dispatch_data_analysis_query(
+                query=query, context=context
+            )
         if agent_type == AgentType.DOCUMENT_PROCESSING_AGENT:
             return await self._dispatch_document_query(query=query, context=context)
         if agent_type == AgentType.CODE_EXECUTION_AGENT:
@@ -1977,7 +2054,9 @@ class IntentClassificationWorkflow:
 
         except GraphRecursionError as e:
             # P0 修复: 捕获递归异常，返回受控错误
-            logger.error(f"Workflow recursion limit exceeded during continuation: {str(e)}")
+            logger.error(
+                f"Workflow recursion limit exceeded during continuation: {str(e)}"
+            )
             return {
                 "success": False,
                 "error": "The workflow exceeded maximum processing steps. Please rephrase your query or provide more specific details.",

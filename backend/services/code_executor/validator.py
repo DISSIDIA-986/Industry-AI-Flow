@@ -137,12 +137,12 @@ class CodeValidator:
     # Attribute calls blocked on any object (e.g., df.query(), df.eval())
     BLOCKED_METHOD_NAMES = {
         "query",  # DataFrame.query() evaluates arbitrary expressions
-        "eval",   # DataFrame.eval() evaluates arbitrary expressions
-        "pipe",   # DataFrame.pipe() passes arbitrary callables
+        "eval",  # DataFrame.eval() evaluates arbitrary expressions
+        "pipe",  # DataFrame.pipe() passes arbitrary callables
         "apply",  # DataFrame.apply() runs arbitrary functions per element
-        "agg",    # DataFrame.agg() accepts arbitrary callables
+        "agg",  # DataFrame.agg() accepts arbitrary callables
         "transform",  # DataFrame.transform() accepts arbitrary callables
-        "map",    # Series.map() accepts arbitrary callables
+        "map",  # Series.map() accepts arbitrary callables
     }
 
     def __init__(self, strict_mode: bool = True):
@@ -298,7 +298,9 @@ class CodeValidator:
                     candidate = child.id.lower()
                     if candidate in blocked_names or candidate in alias_names:
                         return child.id
-                if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
+                if isinstance(child, ast.Attribute) and isinstance(
+                    child.value, ast.Name
+                ):
                     base = child.value.id.lower()
                     attr = child.attr.lower()
                     if (base, attr) in blocked_attr_calls:
@@ -341,7 +343,10 @@ class CodeValidator:
 
             if isinstance(node, ast.Lambda):
                 for child in ast.walk(node.body):
-                    if isinstance(child, ast.Name) and child.id.lower() in blocked_names:
+                    if (
+                        isinstance(child, ast.Name)
+                        and child.id.lower() in blocked_names
+                    ):
                         return ValidationResult(
                             is_valid=False,
                             error=f"Blocked function reference in lambda: {child.id}",
@@ -350,7 +355,9 @@ class CodeValidator:
         # Block blocked callables hidden in default arguments
         # (e.g., def run(fn=eval): ...).
         for node in ast.walk(tree):
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            if not isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+            ):
                 continue
             defaults = list(node.args.defaults) + [
                 kw for kw in node.args.kw_defaults if kw is not None
@@ -554,7 +561,8 @@ class CodeValidator:
                         if isinstance(func.value, ast.Name):
                             base = func.value.id.lower()
                             if (base, attr) in {
-                                (b.lower(), a.lower()) for b, a in self.BLOCKED_ATTRIBUTE_CALLS
+                                (b.lower(), a.lower())
+                                for b, a in self.BLOCKED_ATTRIBUTE_CALLS
                             }:
                                 return ValidationResult(
                                     is_valid=False,

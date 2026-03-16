@@ -310,7 +310,9 @@ class CodeFixer:
                     insert_index = i
                     break
 
-                lines.insert(insert_index, f"# Auto-defined {var_name}\n{var_definition}\n")
+                lines.insert(
+                    insert_index, f"# Auto-defined {var_name}\n{var_definition}\n"
+                )
                 fixed_code = "\n".join(lines)
                 fixes_applied.append(f"Defined variable: {var_name}")
 
@@ -511,7 +513,13 @@ Requirements:
 - Add comments explaining each step
 """
 
-        messages = [("system", "You are a Python code generation assistant. Write clean, executable Python code."), ("human", prompt)]
+        messages = [
+            (
+                "system",
+                "You are a Python code generation assistant. Write clean, executable Python code.",
+            ),
+            ("human", prompt),
+        ]
 
         response = await self.llm.ainvoke(messages)
         return response.content
@@ -619,7 +627,13 @@ Return your analysis as JSON:
 }}
 """
 
-        messages = [("system", "You are a Python debugging expert. Analyze errors and suggest precise fixes."), ("human", prompt)]
+        messages = [
+            (
+                "system",
+                "You are a Python debugging expert. Analyze errors and suggest precise fixes.",
+            ),
+            ("human", prompt),
+        ]
 
         try:
             response = await self.llm.ainvoke(messages)
@@ -663,7 +677,9 @@ Return your analysis as JSON:
             if 0 <= line_num < len(lines):
                 if original in lines[line_num]:
                     lines[line_num] = lines[line_num].replace(original, fixed)
-                    fixes_applied.append(f"Fixed line {line_num}: {original} -> {fixed}")
+                    fixes_applied.append(
+                        f"Fixed line {line_num}: {original} -> {fixed}"
+                    )
 
             fixed_code = "\n".join(lines)
 

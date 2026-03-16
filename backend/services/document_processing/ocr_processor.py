@@ -116,7 +116,9 @@ class OCRProcessor:
             secret_key = os.getenv("BAIDU_OCR_SECRET_KEY")
 
             if not all([app_id, api_key, secret_key]):
-                logger.warning("OCR API credentials not configured, API fallback disabled")
+                logger.warning(
+                    "OCR API credentials not configured, API fallback disabled"
+                )
                 return None
 
             client = AipOcr(app_id, api_key, secret_key)
@@ -124,7 +126,9 @@ class OCRProcessor:
             return client
 
         except ImportError:
-            logger.warning("Baidu AI SDK (baidu-aip) not installed, API fallback disabled")
+            logger.warning(
+                "Baidu AI SDK (baidu-aip) not installed, API fallback disabled"
+            )
             return None
         except Exception as e:
             logger.warning(f"Failed to initialize OCR API client: {e}")
@@ -189,8 +193,7 @@ class OCRProcessor:
             texts.extend(rec_texts)
             confidences.extend(rec_scores)
             boxes.extend(
-                poly.tolist() if hasattr(poly, "tolist") else poly
-                for poly in dt_polys
+                poly.tolist() if hasattr(poly, "tolist") else poly for poly in dt_polys
             )
 
         # Handle empty results

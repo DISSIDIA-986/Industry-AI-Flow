@@ -239,7 +239,9 @@ class PromptManagerMiddleware:
 
                 if selected_category not in prompt_categories:
                     logger.warning(f"Unknown category selected: {selected_category}")
-                    selected_category = prompt_categories[0]  # Fallback to first category
+                    selected_category = prompt_categories[
+                        0
+                    ]  # Fallback to first category
 
                 # Build prompt context
                 prompt_context = self._build_context(inputs)

@@ -25,7 +25,11 @@ from backend.services.routing_decision import RoutingDecisionEngine
 logger = logging.getLogger(__name__)
 
 # Router
-router = APIRouter(prefix="/api/intent", tags=["Intent Classification"], dependencies=[Depends(secure_endpoint)])
+router = APIRouter(
+    prefix="/api/intent",
+    tags=["Intent Classification"],
+    dependencies=[Depends(secure_endpoint)],
+)
 
 # Singleton workflow instance
 _intent_workflow: Optional[IntentClassificationWorkflow] = None
@@ -63,7 +67,9 @@ class ClassifyResponse(BaseModel):
 class ContinueWorkflowRequest(BaseModel):
     """API schema."""
 
-    user_response: str = Field(..., description="Description", min_length=1, max_length=2000)
+    user_response: str = Field(
+        ..., description="Description", min_length=1, max_length=2000
+    )
     session_id: str = Field(..., description="Session ID", min_length=1, max_length=100)
     thread_id: Optional[str] = Field(None, description="Thread ID")
 
@@ -140,6 +146,21 @@ async def initialize_intent_workflow():
     except Exception as e:
         logger.error(f"Failed to initialize intent workflow: {str(e)}")
         raise
+
+
+@router.get("/capabilities")
+async def get_capabilities():
+    """Return the system capability catalog (MCP-like tools/list)."""
+    from backend.services.intent_classification.capability_registry import (
+        get_capability_registry,
+    )
+
+    registry = get_capability_registry()
+    return {
+        "capabilities": registry.to_catalog(),
+        "version": "1.0",
+        "total": len(registry.list_all()),
+    }
 
 
 @router.post("/classify", response_model=ClassifyResponse)
@@ -318,9 +339,7 @@ async def analyze_session_patterns(
 
     except Exception as e:
         logger.error(f"Failed to analyze session patterns: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Session pattern analysis error"
-        )
+        raise HTTPException(status_code=500, detail="Session pattern analysis error")
 
 
 @router.get("/stats/workflow", response_model=WorkflowStatsResponse)
@@ -355,9 +374,7 @@ async def get_workflow_statistics(
 
     except Exception as e:
         logger.error(f"Failed to get workflow statistics: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Workflow statistics error"
-        )
+        raise HTTPException(status_code=500, detail="Workflow statistics error")
 
 
 @router.post("/test/classification")
@@ -369,7 +386,9 @@ async def test_intent_classification(
 ):
     """Run a direct classifier test endpoint for diagnostics."""
     try:
-        logger.info(f"Classification test request received. query_preview={query[:50]}...")
+        logger.info(
+            f"Classification test request received. query_preview={query[:50]}..."
+        )
 
         # EN
         test_context = QueryContext(
@@ -462,7 +481,9 @@ async def log_classification_usage(
             "clarification_needed": result.get("clarification_needed", False),
         }
 
-        logger.info(f"Classification usage log: {json.dumps(log_entry, ensure_ascii=False)}")
+        logger.info(
+            f"Classification usage log: {json.dumps(log_entry, ensure_ascii=False)}"
+        )
 
     except Exception as e:
         logger.error(f"Failed to write classification usage log: {str(e)}")
@@ -481,7 +502,9 @@ async def log_continuation_usage(
             "clarification_needed": result.get("clarification_needed", False),
         }
 
-        logger.info(f"Continuation usage log: {json.dumps(log_entry, ensure_ascii=False)}")
+        logger.info(
+            f"Continuation usage log: {json.dumps(log_entry, ensure_ascii=False)}"
+        )
 
     except Exception as e:
         logger.error(f"Failed to write continuation usage log: {str(e)}")

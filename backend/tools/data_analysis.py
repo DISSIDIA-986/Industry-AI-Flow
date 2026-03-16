@@ -3,16 +3,17 @@
 import json
 import logging
 import math
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
+
+from langchain_core.tools import tool
 
 from backend.tools.dataset_metadata import (
     build_metadata_audit_report,
     build_prompt_metadata,
     extract_dataset_metadata,
 )
-from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,11 @@ def _is_generated_code_allowed(code: str) -> bool:
     lowered = code.lower()
     if "import pandas as pd" not in lowered:
         return False
-    if "pd.read_" not in lowered and "read_csv(" not in lowered and "read_excel(" not in lowered:
+    if (
+        "pd.read_" not in lowered
+        and "read_csv(" not in lowered
+        and "read_excel(" not in lowered
+    ):
         return False
     return not any(pattern in lowered for pattern in _FORBIDDEN_CODE_PATTERNS)
 
@@ -102,7 +107,9 @@ def _generate_analysis_code_with_llm(
     )
 
     container_data_file = _resolve_container_data_path(data_file)
-    column_hint = ", ".join(columns or []) if columns else "auto-detect suitable columns"
+    column_hint = (
+        ", ".join(columns or []) if columns else "auto-detect suitable columns"
+    )
     user_instruction = instruction or f"Run a concise {analysis_type} analysis."
     metadata_payload = build_prompt_metadata(dataset_metadata or {})
 
@@ -161,9 +168,13 @@ def data_analysis_tool(
     analysis_type: Annotated[
         str, "Analysis type: 'eda', 'correlation', 'summary', 'distribution'"
     ] = "eda",
-    target_column: Annotated[Optional[str], "Target column name (for supervised learning analysis)"] = None,
+    target_column: Annotated[
+        Optional[str], "Target column name (for supervised learning analysis)"
+    ] = None,
     columns: Annotated[Optional[List[str]], "List of column names to analyze"] = None,
-    instruction: Annotated[Optional[str], "Natural-language analysis instruction"] = None,
+    instruction: Annotated[
+        Optional[str], "Natural-language analysis instruction"
+    ] = None,
 ) -> Dict[str, Any]:
     """
     数据分析工具 - 自动化探索性数据分析（EDA）

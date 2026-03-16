@@ -313,7 +313,9 @@ class SimpleIntentClassifier:
                 # 100 caused most queries to land at 0.1 confidence.
                 max_possible_score = 30.0
                 raw_confidence = min(intent_data["score"] / max_possible_score, 1.0)
-                confidence = max(raw_confidence, 0.5) if intent_data["score"] > 0 else 0.0
+                confidence = (
+                    max(raw_confidence, 0.5) if intent_data["score"] > 0 else 0.0
+                )
 
                 # Build reasoning string
                 reasoning = f"Matched {len(intent_data['keywords'])} keywords: {', '.join(intent_data['keywords'][:3])}"
@@ -329,7 +331,9 @@ class SimpleIntentClassifier:
             # Update classification statistics
             self._update_stats(result)
 
-            logger.info(f"Intent classified: {result.intent.value} (confidence: {result.confidence:.2f})")
+            logger.info(
+                f"Intent classified: {result.intent.value} (confidence: {result.confidence:.2f})"
+            )
             return result
 
         except Exception as e:
@@ -387,7 +391,9 @@ class SimpleIntentClassifier:
         patterns = rules.get("patterns", [])
         for pattern in patterns:
             if re.search(pattern, query, re.IGNORECASE):
-                score += 15.0  # Pattern matches are weighted higher than keyword matches
+                score += (
+                    15.0  # Pattern matches are weighted higher than keyword matches
+                )
 
         # Apply priority multiplier
         priority = rules.get("priority", 1)

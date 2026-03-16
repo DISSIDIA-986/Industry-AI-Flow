@@ -132,7 +132,6 @@ class GroundednessChecker:
         support_ratio = len(overlap) / len(answer_vocab)
         context_hit_ratio = len(overlap) / len(context_vocab)
 
-
         length_penalty = 0.0
         if len(answer_tokens) > len(context_tokens) * 2:
             length_penalty = min(
@@ -162,13 +161,17 @@ class GroundednessChecker:
                     f"Context: {' '.join(context[:3])[:1000]}\n\n"
                     f"Answer: {answer[:500]}\n\nScore:"
                 )
-                llm_response = llm_client.generate(verification_prompt, temperature=0.0, max_tokens=10)
-                score_match = re.search(r'(0\.\d+|1\.0|0|1)', str(llm_response))
+                llm_response = llm_client.generate(
+                    verification_prompt, temperature=0.0, max_tokens=10
+                )
+                score_match = re.search(r"(0\.\d+|1\.0|0|1)", str(llm_response))
                 if score_match:
                     llm_score = float(score_match.group(1))
                     confidence = confidence * 0.4 + llm_score * 0.6
             except Exception as exc:
-                logger.warning("LLM groundedness check failed, using lexical score: %s", exc)
+                logger.warning(
+                    "LLM groundedness check failed, using lexical score: %s", exc
+                )
 
         passed = confidence >= self.confidence_threshold
 
@@ -222,11 +225,17 @@ class GroundednessChecker:
                         continue
                     # Check common arithmetic: a*b, a+b, a-b, a/b
                     for derived in (a * b, a + b, abs(a - b)):
-                        if derived > 0 and abs(val - derived) / max(derived, 1.0) < 0.01:
+                        if (
+                            derived > 0
+                            and abs(val - derived) / max(derived, 1.0) < 0.01
+                        ):
                             return True
                     if b != 0:
                         derived = a / b
-                        if derived > 0 and abs(val - derived) / max(derived, 1.0) < 0.01:
+                        if (
+                            derived > 0
+                            and abs(val - derived) / max(derived, 1.0) < 0.01
+                        ):
                             return True
             return False
 
@@ -318,7 +327,6 @@ class GroundednessChecker:
                 "I don't have enough confidence in this answer to provide it reliably. "
                 "Please rephrase your question or consult an authoritative source."
             )
-
 
         if safety_level == SafetyLevel.SAFETY_CRITICAL and confidence < max(
             0.85, self.confidence_threshold + 0.05

@@ -10,11 +10,8 @@ from typing import Dict, List, Optional
 
 from backend.config import settings
 from backend.observability.llm_metrics import record_llm_cost, record_llm_tokens
-from backend.services.database.driver_compat import (
-    connect as connect_db,
-    fetchall_dicts,
-    fetchone_dict,
-)
+from backend.services.database.driver_compat import connect as connect_db
+from backend.services.database.driver_compat import fetchall_dicts, fetchone_dict
 from backend.services.llm_integration.types import CostStats, UsageStats
 
 logger = logging.getLogger(__name__)

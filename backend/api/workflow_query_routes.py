@@ -76,7 +76,9 @@ class WorkflowQueryResponse(BaseModel):
 async def _initialize_workflow_service() -> WorkflowRunner:
     from backend.config import get_database_pool
     from backend.services.context_manager import ContextManager
-    from backend.services.intent_classification.intent_classifier import IntentClassifier
+    from backend.services.intent_classification.intent_classifier import (
+        IntentClassifier,
+    )
     from backend.services.intent_classification.intent_workflow import (
         IntentClassificationWorkflow,
     )
@@ -248,12 +250,16 @@ async def _initialize_fallback_runner() -> WorkflowRunner:
             enable_feedback=settings.enable_feedback_system,
         )
         services.retriever = _RAGRetrieverAdapter(rag)
-        logger.warning("Fallback runner initialized without reranker — retrieval quality may be degraded")
+        logger.warning(
+            "Fallback runner initialized without reranker — retrieval quality may be degraded"
+        )
     except Exception as exc:
         logger.warning("Fallback runner without RAG retriever: %s", exc)
 
     try:
-        from backend.services.llm_integration.dispatch_service import get_dispatch_service
+        from backend.services.llm_integration.dispatch_service import (
+            get_dispatch_service,
+        )
 
         services.response_builder = _DispatchResponseBuilder(get_dispatch_service())
     except Exception as exc:
@@ -416,9 +422,8 @@ async def workflow_query(
 
     # Propagate intent confidence into metadata so frontend can display it
     if "intent_confidence" not in metadata:
-        intent_confidence = (
-            intent_result.get("confidence")
-            or metadata.get("confidence")
+        intent_confidence = intent_result.get("confidence") or metadata.get(
+            "confidence"
         )
         if intent_confidence is not None:
             metadata["intent_confidence"] = intent_confidence
@@ -434,7 +439,9 @@ async def workflow_query(
 
         normalized_mode = resolve_route_mode(effective_route_mode, "local_only")
         budget_eval = metadata.get("budget_evaluation")
-        cloud_allowed = can_use_cloud(budget_eval) if isinstance(budget_eval, dict) else False
+        cloud_allowed = (
+            can_use_cloud(budget_eval) if isinstance(budget_eval, dict) else False
+        )
         metadata["route_mode"] = normalized_mode
         metadata["provider_used"] = select_provider(normalized_mode, cloud_allowed)
 

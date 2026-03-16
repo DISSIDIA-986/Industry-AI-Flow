@@ -6,7 +6,9 @@ import logging
 from typing import Any, Optional
 
 from backend.services.code_executor.manager import CodeExecutionManager
-from backend.services.code_executor.providers.docker_provider import DockerExecutionProvider
+from backend.services.code_executor.providers.docker_provider import (
+    DockerExecutionProvider,
+)
 from backend.services.code_executor.providers.ppio_provider import PPIOExecutionProvider
 from backend.services.code_executor.validator import (
     CodeValidator,
@@ -29,6 +31,7 @@ except Exception as exc:  # pragma: no cover - fallback for dependency-constrain
 
     def execute_python_code(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("Docker executor is unavailable in current environment")
+
 
 # Lazy-initialized global executor (created on first use)
 _global_executor: Optional[Any] = None

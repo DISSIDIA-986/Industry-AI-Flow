@@ -7,7 +7,6 @@ from typing import Any
 
 from backend.services.workflows.state import WorkflowState
 
-
 _BLOCK_RULES = (
     ("rm -rf", re.compile(r"\brm\s+-rf\b", re.IGNORECASE)),
     ("drop table", re.compile(r"\bdrop\s+table\b", re.IGNORECASE)),

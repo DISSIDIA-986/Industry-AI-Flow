@@ -10,7 +10,8 @@ from backend.services.retrieval.hybrid_search import HybridRetriever
 
 @tool
 def hybrid_retrieval_tool(
-    query: Annotated[str, "User query text"], top_k: Annotated[int, "Number of documents to return"] = 10
+    query: Annotated[str, "User query text"],
+    top_k: Annotated[int, "Number of documents to return"] = 10,
 ) -> list[dict]:
     """
     混合检索工具 - 结合BM25和向量搜索检索相关文档

@@ -268,7 +268,9 @@ def build_unified_agent():
         tools=tools,
         system_prompt=system_prompt,
         # state_schema=RAGAgentState,  # Disabled; using default state schema
-        max_iterations=getattr(settings, "max_code_fix_attempts", 5),  # Max tool iterations
+        max_iterations=getattr(
+            settings, "max_code_fix_attempts", 5
+        ),  # Max tool iterations
     )
 
     return agent
@@ -337,11 +339,15 @@ class UnifiedAgentOrchestrator:
                 base_input["question"] += f"\n\nData file: {kwargs['data_file']}"
 
             # Add data analysis instructions
-            base_input["question"] += "\n\nPlease analyze this data, generate statistics, and provide visualizations."
+            base_input[
+                "question"
+            ] += "\n\nPlease analyze this data, generate statistics, and provide visualizations."
 
         elif intent == "knowledge":
             # Add knowledge retrieval instructions
-            base_input["question"] += "\n\nPlease search the knowledge base and cite your sources."
+            base_input[
+                "question"
+            ] += "\n\nPlease search the knowledge base and cite your sources."
 
         elif intent == "mixed":
             # Attach data file and combine both instruction sets
@@ -349,7 +355,9 @@ class UnifiedAgentOrchestrator:
                 base_input["data_file"] = kwargs["data_file"]
                 base_input["question"] += f"\n\nData file: {kwargs['data_file']}"
 
-            base_input["question"] += "\n\nPlease combine knowledge retrieval with data analysis."
+            base_input[
+                "question"
+            ] += "\n\nPlease combine knowledge retrieval with data analysis."
 
         return base_input
 
