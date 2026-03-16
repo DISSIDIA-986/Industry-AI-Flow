@@ -19,8 +19,7 @@ from typing import Any, Dict, List
 import requests
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -28,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TestQuestion:
     """测试问题"""
+
     id: int
     question: str
     category: str
@@ -38,6 +38,7 @@ class TestQuestion:
 @dataclass
 class TestResult:
     """单次测试结果"""
+
     question_id: int
     question: str
     category: str
@@ -71,76 +72,221 @@ class RAGPerformanceTester:
 
         questions = [
             # GSA P100 文档 (建筑项目管理标准)
-            TestQuestion(1, "GSA P100 标准中关于项目交付的主要阶段有哪些？",
-                       "project_delivery", ["planning", "design", "construction", "commissioning"], "gsa_p100"),
-            TestQuestion(2, "根据 GSA P100，项目管理中的关键利益相关者包括哪些？",
-                       "stakeholder", ["owner", "architect", "contractor", "user"], "gsa_p100"),
-            TestQuestion(3, "GSA P100 中对建筑性能评估有哪些要求？",
-                       "performance", ["evaluation", "assessment", "criteria", "standards"], "gsa_p100"),
-            TestQuestion(4, "按照 GSA P100 标准，设计审查流程应该如何进行？",
-                       "design_review", ["review", "process", "approval", "documentation"], "gsa_p100"),
-            TestQuestion(5, "GSA P100 对可持续建筑设计有什么要求？",
-                       "sustainability", ["sustainable", "green", "environmental", "energy"], "gsa_p100"),
-            TestQuestion(6, "根据 GSA P100，项目风险管理的最佳实践是什么？",
-                       "risk_management", ["risk", "mitigation", "assessment", "contingency"], "gsa_p100"),
-            TestQuestion(7, "GSA P100 中关于成本控制的指导原则是什么？",
-                       "cost_control", ["budget", "cost", "control", "estimate"], "gsa_p100"),
-            TestQuestion(8, "按照 GSA P100，项目沟通计划应该包含哪些要素？",
-                       "communication", ["stakeholder", "communication", "reporting", "meetings"], "gsa_p100"),
-
+            TestQuestion(
+                1,
+                "GSA P100 标准中关于项目交付的主要阶段有哪些？",
+                "project_delivery",
+                ["planning", "design", "construction", "commissioning"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                2,
+                "根据 GSA P100，项目管理中的关键利益相关者包括哪些？",
+                "stakeholder",
+                ["owner", "architect", "contractor", "user"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                3,
+                "GSA P100 中对建筑性能评估有哪些要求？",
+                "performance",
+                ["evaluation", "assessment", "criteria", "standards"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                4,
+                "按照 GSA P100 标准，设计审查流程应该如何进行？",
+                "design_review",
+                ["review", "process", "approval", "documentation"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                5,
+                "GSA P100 对可持续建筑设计有什么要求？",
+                "sustainability",
+                ["sustainable", "green", "environmental", "energy"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                6,
+                "根据 GSA P100，项目风险管理的最佳实践是什么？",
+                "risk_management",
+                ["risk", "mitigation", "assessment", "contingency"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                7,
+                "GSA P100 中关于成本控制的指导原则是什么？",
+                "cost_control",
+                ["budget", "cost", "control", "estimate"],
+                "gsa_p100",
+            ),
+            TestQuestion(
+                8,
+                "按照 GSA P100，项目沟通计划应该包含哪些要素？",
+                "communication",
+                ["stakeholder", "communication", "reporting", "meetings"],
+                "gsa_p100",
+            ),
             # UFGS 现浇混凝土规范
-            TestQuestion(9, "UFGS 对现浇混凝土的强度等级有什么要求？",
-                       "concrete_strength", ["compressive", "strength", "psi", "concrete"], "ufgs_concrete"),
-            TestQuestion(10, "根据 UFGS，混凝土浇筑过程中的温度控制要求是什么？",
-                        "temperature", ["temperature", "curing", "protection", "weather"], "ufgs_concrete"),
-            TestQuestion(11, "UFGS 中关于混凝土养护的标准做法是什么？",
-                        "curing", ["curing", "moisture", "time", "protection"], "ufgs_concrete"),
-            TestQuestion(12, "按照 UFGS，现浇混凝土的钢筋间距有什么要求？",
-                        "reinforcement", ["rebar", "spacing", "cover", "concrete"], "ufgs_concrete"),
-            TestQuestion(13, "UFGS 对混凝土样品检测有哪些要求？",
-                        "testing", ["test", "sample", "compressive", "frequency"], "ufgs_concrete"),
-            TestQuestion(14, "根据 UFGS，现浇混凝土施工中的模板要求是什么？",
-                        "formwork", ["formwork", "shoring", "bracing", "removal"], "ufgs_concrete"),
-            TestQuestion(15, "UFGS 中关于混凝土接缝处理的要求是什么？",
-                        "joints", ["joint", "expansion", "contraction", "sealant"], "ufgs_concrete"),
-
+            TestQuestion(
+                9,
+                "UFGS 对现浇混凝土的强度等级有什么要求？",
+                "concrete_strength",
+                ["compressive", "strength", "psi", "concrete"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                10,
+                "根据 UFGS，混凝土浇筑过程中的温度控制要求是什么？",
+                "temperature",
+                ["temperature", "curing", "protection", "weather"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                11,
+                "UFGS 中关于混凝土养护的标准做法是什么？",
+                "curing",
+                ["curing", "moisture", "time", "protection"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                12,
+                "按照 UFGS，现浇混凝土的钢筋间距有什么要求？",
+                "reinforcement",
+                ["rebar", "spacing", "cover", "concrete"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                13,
+                "UFGS 对混凝土样品检测有哪些要求？",
+                "testing",
+                ["test", "sample", "compressive", "frequency"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                14,
+                "根据 UFGS，现浇混凝土施工中的模板要求是什么？",
+                "formwork",
+                ["formwork", "shoring", "bracing", "removal"],
+                "ufgs_concrete",
+            ),
+            TestQuestion(
+                15,
+                "UFGS 中关于混凝土接缝处理的要求是什么？",
+                "joints",
+                ["joint", "expansion", "contraction", "sealant"],
+                "ufgs_concrete",
+            ),
             # OSHA 安全规范
-            TestQuestion(16, "OSHA 1926 标准中关于施工现场个人防护装备的要求是什么？",
-                        "ppe", ["PPE", "safety", "protection", "equipment"], "osha"),
-            TestQuestion(17, "根据 OSHA 1926，高空作业的安全规范有哪些？",
-                        "fall_protection", ["fall", "protection", "harness", "guardrail"], "osha"),
-            TestQuestion(18, "OSHA 对施工用电安全有什么要求？",
-                        "electrical", ["electrical", "grounding", "gfci", "safety"], "osha"),
-            TestQuestion(19, "按照 OSHA 1926，施工现场消防安全要求是什么？",
-                        "fire_safety", ["fire", "extinguisher", "prevention", "emergency"], "osha"),
-            TestQuestion(20, "OSHA 对施工机械操作的安全规定有哪些？",
-                        "equipment_safety", ["equipment", "operator", "training", "certification"], "osha"),
-
+            TestQuestion(
+                16,
+                "OSHA 1926 标准中关于施工现场个人防护装备的要求是什么？",
+                "ppe",
+                ["PPE", "safety", "protection", "equipment"],
+                "osha",
+            ),
+            TestQuestion(
+                17,
+                "根据 OSHA 1926，高空作业的安全规范有哪些？",
+                "fall_protection",
+                ["fall", "protection", "harness", "guardrail"],
+                "osha",
+            ),
+            TestQuestion(
+                18,
+                "OSHA 对施工用电安全有什么要求？",
+                "electrical",
+                ["electrical", "grounding", "gfci", "safety"],
+                "osha",
+            ),
+            TestQuestion(
+                19,
+                "按照 OSHA 1926，施工现场消防安全要求是什么？",
+                "fire_safety",
+                ["fire", "extinguisher", "prevention", "emergency"],
+                "osha",
+            ),
+            TestQuestion(
+                20,
+                "OSHA 对施工机械操作的安全规定有哪些？",
+                "equipment_safety",
+                ["equipment", "operator", "training", "certification"],
+                "osha",
+            ),
             # Caltrans 标准规范
-            TestQuestion(21, "Caltrans 标准规范中对材料质量有什么要求？",
-                        "materials", ["quality", "specification", "testing", "approval"], "caltrans"),
-            TestQuestion(22, "根据 Caltrans，道路施工的交通控制要求是什么？",
-                        "traffic_control", ["traffic", "control", "signing", "barrier"], "caltrans"),
-            TestQuestion(23, "Caltrans 规范中对排水系统的要求是什么？",
-                        "drainage", ["drainage", "stormwater", "culvert", "channel"], "caltrans"),
-            TestQuestion(24, "按照 Caltrans，路面平整度的标准是什么？",
-                        "pavement", ["smoothness", "profile", "roughness", "specification"], "caltrans"),
-
+            TestQuestion(
+                21,
+                "Caltrans 标准规范中对材料质量有什么要求？",
+                "materials",
+                ["quality", "specification", "testing", "approval"],
+                "caltrans",
+            ),
+            TestQuestion(
+                22,
+                "根据 Caltrans，道路施工的交通控制要求是什么？",
+                "traffic_control",
+                ["traffic", "control", "signing", "barrier"],
+                "caltrans",
+            ),
+            TestQuestion(
+                23,
+                "Caltrans 规范中对排水系统的要求是什么？",
+                "drainage",
+                ["drainage", "stormwater", "culvert", "channel"],
+                "caltrans",
+            ),
+            TestQuestion(
+                24,
+                "按照 Caltrans，路面平整度的标准是什么？",
+                "pavement",
+                ["smoothness", "profile", "roughness", "specification"],
+                "caltrans",
+            ),
             # IFC 建筑数据标准
-            TestQuestion(25, "IFC 4.3 标准中建筑元素的基本属性有哪些？",
-                        "ifc_elements", ["attribute", "property", "classification", "type"], "ifc"),
-            TestQuestion(26, "根据 IFC 4.3，几何表示的方法有哪些？",
-                        "geometry", ["geometry", "representation", "extrusion", "brep"], "ifc"),
-
+            TestQuestion(
+                25,
+                "IFC 4.3 标准中建筑元素的基本属性有哪些？",
+                "ifc_elements",
+                ["attribute", "property", "classification", "type"],
+                "ifc",
+            ),
+            TestQuestion(
+                26,
+                "根据 IFC 4.3，几何表示的方法有哪些？",
+                "geometry",
+                ["geometry", "representation", "extrusion", "brep"],
+                "ifc",
+            ),
             # 综合问题
-            TestQuestion(27, "施工项目中如何平衡成本、质量和时间？",
-                        "project_triple_constraint", ["cost", "quality", "time", "trade-off"], "general"),
-            TestQuestion(28, "建筑工程中的可持续性最佳实践是什么？",
-                        "sustainability_best_practices", ["sustainability", "green", "leed", "efficiency"], "general"),
-            TestQuestion(29, "如何有效管理施工项目的风险？",
-                        "risk_management_best", ["identify", "assess", "mitigate", "monitor"], "general"),
-            TestQuestion(30, "施工项目中的质量保证和质量控制有什么区别？",
-                        "qa_vs_qc", ["quality assurance", "quality control", "process", "product"], "general"),
+            TestQuestion(
+                27,
+                "施工项目中如何平衡成本、质量和时间？",
+                "project_triple_constraint",
+                ["cost", "quality", "time", "trade-off"],
+                "general",
+            ),
+            TestQuestion(
+                28,
+                "建筑工程中的可持续性最佳实践是什么？",
+                "sustainability_best_practices",
+                ["sustainability", "green", "leed", "efficiency"],
+                "general",
+            ),
+            TestQuestion(
+                29,
+                "如何有效管理施工项目的风险？",
+                "risk_management_best",
+                ["identify", "assess", "mitigate", "monitor"],
+                "general",
+            ),
+            TestQuestion(
+                30,
+                "施工项目中的质量保证和质量控制有什么区别？",
+                "qa_vs_qc",
+                ["quality assurance", "quality control", "process", "product"],
+                "general",
+            ),
         ]
 
         return questions
@@ -168,7 +314,7 @@ class RAGPerformanceTester:
             response = requests.post(
                 self.api_endpoint,
                 json=request_payload,
-                timeout=(10, 120)  # (connect, read) timeout
+                timeout=(10, 120),  # (connect, read) timeout
             )
 
             result.end_time = time.time()
@@ -191,27 +337,37 @@ class RAGPerformanceTester:
                 if result.has_citation:
                     # 提取 sources
                     import re
-                    citation_match = re.search(r'\[Sources:\s*(.*?)\]', answer)
+
+                    citation_match = re.search(r"\[Sources:\s*(.*?)\]", answer)
                     if citation_match:
                         sources_text = citation_match.group(1)
-                        result.citation_sources = [s.strip() for s in sources_text.split(",")]
+                        result.citation_sources = [
+                            s.strip() for s in sources_text.split(",")
+                        ]
 
                 # 检查关键词匹配
                 result.keyword_matches = [
-                    kw for kw in question.expected_keywords
+                    kw
+                    for kw in question.expected_keywords
                     if kw.lower() in answer.lower()
                 ]
-                result.keyword_match_rate = len(result.keyword_matches) / len(question.expected_keywords)
+                result.keyword_match_rate = len(result.keyword_matches) / len(
+                    question.expected_keywords
+                )
 
                 logger.info(f"  ✅ 响应时间: {result.response_time_ms:.2f}ms")
                 logger.info(f"  答案长度: {result.answer_length} 字符")
                 logger.info(f"  有 citation: {result.has_citation}")
-                logger.info(f"  关键词匹配: {result.keyword_match_rate:.1%} ({len(result.keyword_matches)}/{len(question.expected_keywords)})")
+                logger.info(
+                    f"  关键词匹配: {result.keyword_match_rate:.1%} ({len(result.keyword_matches)}/{len(question.expected_keywords)})"
+                )
 
             else:
                 result.success = False
                 result.error_type = "http_error"
-                result.error_message = f"HTTP {response.status_code}: {response.text[:200]}"
+                result.error_message = (
+                    f"HTTP {response.status_code}: {response.text[:200]}"
+                )
                 logger.error(f"  ❌ HTTP 错误: {result.error_message}")
 
         except requests.exceptions.Timeout as e:
@@ -234,9 +390,9 @@ class RAGPerformanceTester:
 
     def run_all_tests(self) -> Dict[str, Any]:
         """运行所有 30 个测试"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("🚀 开始 RAG 系统 30 问性能与准确性测试")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         results = []
         start_time = time.time()
@@ -253,7 +409,9 @@ class RAGPerformanceTester:
 
         return report
 
-    def _generate_report(self, results: List[TestResult], total_duration: float) -> Dict[str, Any]:
+    def _generate_report(
+        self, results: List[TestResult], total_duration: float
+    ) -> Dict[str, Any]:
         """生成测试报告"""
 
         # 成功率统计
@@ -265,13 +423,19 @@ class RAGPerformanceTester:
         response_times = [r.response_time_ms for r in successful]
         avg_response_time = mean(response_times) if response_times else 0
         median_response_time = median(response_times) if response_times else 0
-        p95_response_time = sorted(response_times)[int(len(response_times) * 0.95)] if response_times else 0
+        p95_response_time = (
+            sorted(response_times)[int(len(response_times) * 0.95)]
+            if response_times
+            else 0
+        )
 
         # 质量统计
         with_citation = sum(1 for r in successful if r.has_citation)
         citation_rate = with_citation / len(successful) if successful else 0
 
-        avg_keyword_match = mean([r.keyword_match_rate for r in successful]) if successful else 0
+        avg_keyword_match = (
+            mean([r.keyword_match_rate for r in successful]) if successful else 0
+        )
 
         # 错误统计
         error_types = {}
@@ -312,7 +476,9 @@ class RAGPerformanceTester:
                     "keyword_matches": r.keyword_matches,
                     "error_type": r.error_type if not r.success else None,
                     "error_message": r.error_message if not r.success else None,
-                    "answer_preview": r.answer[:200] + "..." if len(r.answer) > 200 else r.answer,
+                    "answer_preview": r.answer[:200] + "..."
+                    if len(r.answer) > 200
+                    else r.answer,
                 }
                 for r in results
             ],
@@ -354,9 +520,9 @@ class RAGPerformanceTester:
 
     def _print_summary(self, report: Dict[str, Any]):
         """打印测试汇总"""
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("📋 30 问测试汇总")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         summary = report["summary"]
 
@@ -386,7 +552,7 @@ class RAGPerformanceTester:
             logger.info(f"    平均响应: {cat_data.get('avg_response_time_ms', 0):.2f}ms")
             logger.info(f"    关键词匹配: {cat_data.get('avg_keyword_match_rate', 0):.1%}")
 
-        logger.info("="*80)
+        logger.info("=" * 80)
 
 
 def main():
@@ -411,4 +577,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

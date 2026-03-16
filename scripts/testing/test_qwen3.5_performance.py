@@ -33,8 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -83,9 +82,11 @@ TEST_QUERIES = {
 # 测试结果数据结构
 # ============================================================================
 
+
 @dataclass
 class TestResult:
     """单个测试结果"""
+
     test_name: str
     passed: bool
     duration_ms: float
@@ -96,6 +97,7 @@ class TestResult:
 # ============================================================================
 # 测试套件
 # ============================================================================
+
 
 class Qwen35PerformanceTestSuite:
     """Qwen3.5:9b 性能测试套件"""
@@ -135,9 +137,9 @@ class Qwen35PerformanceTestSuite:
 
     def test_query_efficiency(self) -> TestResult:
         """测试问答效率 - 响应速度和吞吐量"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📊 测试 1: 问答效率测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         # 根据模式选择查询数量
         num_queries = 3 if self.quick_mode else (20 if self.stress_mode else 10)
@@ -147,7 +149,11 @@ class Qwen35PerformanceTestSuite:
         for category, queries in TEST_QUERIES.items():
             all_queries.extend(queries)
 
-        test_queries = all_queries[:num_queries] if num_queries <= len(all_queries) else all_queries
+        test_queries = (
+            all_queries[:num_queries]
+            if num_queries <= len(all_queries)
+            else all_queries
+        )
         total_start = time.time()
 
         response_times = []
@@ -171,11 +177,15 @@ class Qwen35PerformanceTestSuite:
                 if result and result.get("answer"):
                     response_times.append(duration)
                     success_count += 1
-                    logger.info(f"  [{i}/{len(test_queries)}] ✅ {duration:.2f}ms - {query[:50]}...")
+                    logger.info(
+                        f"  [{i}/{len(test_queries)}] ✅ {duration:.2f}ms - {query[:50]}..."
+                    )
                 else:
                     fail_count += 1
                     errors.append(f"Empty response: {query}")
-                    logger.warning(f"  [{i}/{len(test_queries)}] ⚠️  Empty response - {query[:50]}...")
+                    logger.warning(
+                        f"  [{i}/{len(test_queries)}] ⚠️  Empty response - {query[:50]}..."
+                    )
 
             except Exception as e:
                 fail_count += 1
@@ -195,16 +205,22 @@ class Qwen35PerformanceTestSuite:
         if response_times:
             sorted_times = sorted(response_times)
             p95_idx = int(len(sorted_times) * 0.95)
-            p95 = sorted_times[p95_idx] if p95_idx < len(sorted_times) else max(sorted_times)
+            p95 = (
+                sorted_times[p95_idx]
+                if p95_idx < len(sorted_times)
+                else max(sorted_times)
+            )
 
-            metrics.update({
-                "avg_response_time_ms": mean(response_times),
-                "median_response_time_ms": median(response_times),
-                "min_response_time_ms": min(response_times),
-                "max_response_time_ms": max(response_times),
-                "p95_response_time_ms": p95,
-                "throughput_qps": (success_count / total_duration) * 1000,
-            })
+            metrics.update(
+                {
+                    "avg_response_time_ms": mean(response_times),
+                    "median_response_time_ms": median(response_times),
+                    "min_response_time_ms": min(response_times),
+                    "max_response_time_ms": max(response_times),
+                    "p95_response_time_ms": p95,
+                    "throughput_qps": (success_count / total_duration) * 1000,
+                }
+            )
 
         result = TestResult(
             test_name="query_efficiency",
@@ -232,9 +248,9 @@ class Qwen35PerformanceTestSuite:
 
     def test_intent_classification(self) -> TestResult:
         """测试意图分类准确性和稳定性（简化版）"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🎯 测试 2: 意图识别能力测试（关键词匹配）")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         # 简单的关键词匹配意图分类
         intent_patterns = {
@@ -271,13 +287,15 @@ class Qwen35PerformanceTestSuite:
             duration = (time.time() - start) * 1000
 
             is_correct = predicted == expected_intent
-            results.append({
-                "query": query,
-                "predicted": predicted,
-                "expected": expected_intent,
-                "is_correct": is_correct,
-                "response_time_ms": duration,
-            })
+            results.append(
+                {
+                    "query": query,
+                    "predicted": predicted,
+                    "expected": expected_intent,
+                    "is_correct": is_correct,
+                    "response_time_ms": duration,
+                }
+            )
 
             status = "✅" if is_correct else "❌"
             logger.info(f"  {status} {query[:40]:<40} -> {predicted}")
@@ -292,7 +310,9 @@ class Qwen35PerformanceTestSuite:
             "total_cases": len(results),
             "correct_predictions": correct_count,
             "accuracy": accuracy,
-            "avg_response_time_ms": mean([r["response_time_ms"] for r in results]) if results else 0,
+            "avg_response_time_ms": mean([r["response_time_ms"] for r in results])
+            if results
+            else 0,
         }
 
         result = TestResult(
@@ -314,9 +334,9 @@ class Qwen35PerformanceTestSuite:
 
     def test_different_query_types(self) -> TestResult:
         """测试不同类型问题的处理能力"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🔧 测试 3: 不同类型问题的处理能力测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         # 测试不同长度和复杂度的问题
         test_queries = [
@@ -349,15 +369,19 @@ class Qwen35PerformanceTestSuite:
                     answer = result.get("answer", "")
                     answer_quality = len(answer) > 50
 
-                    results.append({
-                        "query_type": query_type,
-                        "original": query,
-                        "has_answer": answer_quality,
-                        "response_time_ms": duration,
-                    })
+                    results.append(
+                        {
+                            "query_type": query_type,
+                            "original": query,
+                            "has_answer": answer_quality,
+                            "response_time_ms": duration,
+                        }
+                    )
 
                     status = "✅" if answer_quality else "⚠️"
-                    logger.info(f"  {status} [{query_type}] '{query}' - {duration:.2f}ms")
+                    logger.info(
+                        f"  {status} [{query_type}] '{query}' - {duration:.2f}ms"
+                    )
                 else:
                     logger.warning(f"  ⚠️  Empty response for: {query}")
 
@@ -392,9 +416,9 @@ class Qwen35PerformanceTestSuite:
 
     def test_rag_quality(self) -> TestResult:
         """测试 RAG 检索准确性和答案生成质量"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📚 测试 4: RAG 检索与答案生成质量测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         quality_test_queries = [
             "建筑项目中常见的成本超支原因有哪些？",
@@ -432,18 +456,22 @@ class Qwen35PerformanceTestSuite:
                     has_citations = source_count > 0
                     is_meaningful = answer_length > 100 and has_citations
 
-                    results.append({
-                        "query": query,
-                        "answer_length": answer_length,
-                        "source_count": source_count,
-                        "has_citations": has_citations,
-                        "is_meaningful": is_meaningful,
-                        "response_time_ms": duration,
-                    })
+                    results.append(
+                        {
+                            "query": query,
+                            "answer_length": answer_length,
+                            "source_count": source_count,
+                            "has_citations": has_citations,
+                            "is_meaningful": is_meaningful,
+                            "response_time_ms": duration,
+                        }
+                    )
 
                     status = "✅" if is_meaningful else "⚠️"
                     logger.info(f"  {status} Q: {query[:40]}...")
-                    logger.info(f"      答案长度: {answer_length} 字符, 来源: {source_count}, 耗时: {duration:.2f}ms")
+                    logger.info(
+                        f"      答案长度: {answer_length} 字符, 来源: {source_count}, 耗时: {duration:.2f}ms"
+                    )
 
             except Exception as e:
                 logger.error(f"  ❌ Error: {e}")
@@ -453,8 +481,12 @@ class Qwen35PerformanceTestSuite:
         # 统计质量指标
         meaningful_count = sum(1 for r in results if r.get("is_meaningful", False))
         has_citations_count = sum(1 for r in results if r.get("has_citations", False))
-        avg_answer_length = mean([r.get("answer_length", 0) for r in results]) if results else 0
-        avg_source_count = mean([r.get("source_count", 0) for r in results]) if results else 0
+        avg_answer_length = (
+            mean([r.get("answer_length", 0) for r in results]) if results else 0
+        )
+        avg_source_count = (
+            mean([r.get("source_count", 0) for r in results]) if results else 0
+        )
 
         metrics = {
             "total_queries": len(quality_test_queries),
@@ -487,11 +519,13 @@ class Qwen35PerformanceTestSuite:
 
     def run_all_tests(self) -> Dict[str, Any]:
         """运行所有测试并返回汇总结果"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 开始 Qwen3.5:9b 性能测试")
-        logger.info(f"   模式: {'快速' if self.quick_mode else '压力' if self.stress_mode else '标准'}")
+        logger.info(
+            f"   模式: {'快速' if self.quick_mode else '压力' if self.stress_mode else '标准'}"
+        )
         logger.info(f"   模型: {self.settings.ollama_model}")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         all_results = []
         start_time = time.time()
@@ -502,12 +536,14 @@ class Qwen35PerformanceTestSuite:
             all_results.append(result)
         except Exception as e:
             logger.error(f"测试 1 失败: {e}")
-            all_results.append(TestResult(
-                test_name="query_efficiency",
-                passed=False,
-                duration_ms=0,
-                error=str(e),
-            ))
+            all_results.append(
+                TestResult(
+                    test_name="query_efficiency",
+                    passed=False,
+                    duration_ms=0,
+                    error=str(e),
+                )
+            )
 
         # 测试 2: 意图识别
         try:
@@ -515,12 +551,14 @@ class Qwen35PerformanceTestSuite:
             all_results.append(result)
         except Exception as e:
             logger.error(f"测试 2 失败: {e}")
-            all_results.append(TestResult(
-                test_name="intent_classification",
-                passed=False,
-                duration_ms=0,
-                error=str(e),
-            ))
+            all_results.append(
+                TestResult(
+                    test_name="intent_classification",
+                    passed=False,
+                    duration_ms=0,
+                    error=str(e),
+                )
+            )
 
         # 测试 3: 不同类型问题
         try:
@@ -528,12 +566,14 @@ class Qwen35PerformanceTestSuite:
             all_results.append(result)
         except Exception as e:
             logger.error(f"测试 3 失败: {e}")
-            all_results.append(TestResult(
-                test_name="different_query_types",
-                passed=False,
-                duration_ms=0,
-                error=str(e),
-            ))
+            all_results.append(
+                TestResult(
+                    test_name="different_query_types",
+                    passed=False,
+                    duration_ms=0,
+                    error=str(e),
+                )
+            )
 
         # 测试 4: RAG 质量
         try:
@@ -541,12 +581,14 @@ class Qwen35PerformanceTestSuite:
             all_results.append(result)
         except Exception as e:
             logger.error(f"测试 4 失败: {e}")
-            all_results.append(TestResult(
-                test_name="rag_quality",
-                passed=False,
-                duration_ms=0,
-                error=str(e),
-            ))
+            all_results.append(
+                TestResult(
+                    test_name="rag_quality",
+                    passed=False,
+                    duration_ms=0,
+                    error=str(e),
+                )
+            )
 
         total_duration = (time.time() - start_time) * 1000
 
@@ -557,7 +599,11 @@ class Qwen35PerformanceTestSuite:
         summary = {
             "test_suite": "Qwen3.5:9b Performance Test",
             "model": self.settings.ollama_model,
-            "mode": "quick" if self.quick_mode else "stress" if self.stress_mode else "standard",
+            "mode": "quick"
+            if self.quick_mode
+            else "stress"
+            if self.stress_mode
+            else "standard",
             "timestamp": datetime.now().isoformat(),
             "total_duration_ms": total_duration,
             "tests_passed": passed_count,
@@ -577,13 +623,13 @@ class Qwen35PerformanceTestSuite:
         }
 
         # 打印最终汇总
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📋 测试汇总")
-        logger.info("="*70)
+        logger.info("=" * 70)
         logger.info(f"  总耗时: {total_duration/1000:.2f} 秒")
         logger.info(f"  通过: {passed_count}/{total_count}")
         logger.info(f"  结果: {'✅ 全部通过' if summary['overall_passed'] else '⚠️  部分失败'}")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         return summary
 
@@ -591,6 +637,7 @@ class Qwen35PerformanceTestSuite:
 # ============================================================================
 # 命令行入口
 # ============================================================================
+
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -604,21 +651,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
   %(prog)s --output report.json  # 保存结果到文件
         """,
     )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="快速测试模式（少量测试样本）"
-    )
-    parser.add_argument(
-        "--stress",
-        action="store_true",
-        help="压力测试模式（大量并发查询）"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        type=str,
-        help="将测试结果保存到 JSON 文件"
-    )
+    parser.add_argument("--quick", action="store_true", help="快速测试模式（少量测试样本）")
+    parser.add_argument("--stress", action="store_true", help="压力测试模式（大量并发查询）")
+    parser.add_argument("--output", "-o", type=str, help="将测试结果保存到 JSON 文件")
     return parser
 
 
@@ -653,6 +688,7 @@ def main():
     except Exception as e:
         logger.error(f"❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

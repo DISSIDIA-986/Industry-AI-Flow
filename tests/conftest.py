@@ -166,7 +166,9 @@ if _missing_attrs("backend.services.llm_integration.cost_tracker", ["LLMCost"]):
 if not _missing_module("backend.services.prompt_manager"):
     try:
         prompt_manager_mod = importlib.import_module("backend.services.prompt_manager")
-        prompt_info_fields = getattr(prompt_manager_mod.PromptInfo, "__dataclass_fields__", {})
+        prompt_info_fields = getattr(
+            prompt_manager_mod.PromptInfo, "__dataclass_fields__", {}
+        )
         if "content" in prompt_info_fields and "template" not in prompt_info_fields:
             collect_ignore.append("unit/test_prompt_manager.py")
     except Exception:

@@ -33,7 +33,9 @@ async def test_classify_intent_uses_llm_when_heuristic_uncertain():
         '"keywords":["csv","trend"],"context_clues":["dataset"],'
         '"suggested_action":"run analysis","uncertainty_factors":[]}'
     )
-    classifier = IntentClassifier(prompt_manager=None, llm_client=llm, enable_cache=False)
+    classifier = IntentClassifier(
+        prompt_manager=None, llm_client=llm, enable_cache=False
+    )
     context = QueryContext(session_id="s-1")
 
     # Use an ambiguous query that the heuristic classifies with low confidence
@@ -49,7 +51,9 @@ async def test_classify_intent_uses_llm_when_heuristic_uncertain():
 async def test_classify_intent_skips_llm_when_heuristic_confident():
     """Heuristic shortcut skips LLM call when confidence is high."""
     llm = _RecordingLLM('{"intent":"knowledge_retrieval","confidence":0.9}')
-    classifier = IntentClassifier(prompt_manager=None, llm_client=llm, enable_cache=False)
+    classifier = IntentClassifier(
+        prompt_manager=None, llm_client=llm, enable_cache=False
+    )
     context = QueryContext(session_id="s-1")
 
     result = await classifier.classify_intent(
@@ -84,7 +88,9 @@ async def test_classify_intent_normalizes_alias_intent_values():
         '{"intent":"knowledge retrieval","confidence":0.76,"reasoning":"faq lookup",'
         '"keywords":[],"context_clues":[],"suggested_action":"rag","uncertainty_factors":[]}'
     )
-    classifier = IntentClassifier(prompt_manager=None, llm_client=llm, enable_cache=False)
+    classifier = IntentClassifier(
+        prompt_manager=None, llm_client=llm, enable_cache=False
+    )
     context = QueryContext(session_id="s-3")
 
     result = await classifier.classify_intent("What does p100 require?", context)

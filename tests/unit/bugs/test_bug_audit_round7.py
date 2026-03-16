@@ -15,10 +15,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R7-1 (High): graph.py skips response_node on error
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR7_1_GraphSkipsResponseNodeOnError:
@@ -44,23 +44,25 @@ class TestR7_1_GraphSkipsResponseNodeOnError:
             response="",
             metadata={},
         )
-        
+
         # We need a fake services object
         class FakeServices:
             pass
-            
+
         # We will mock safety_node to inject an error
         with patch("backend.services.workflows.graph.safety_node") as mock_safety:
+
             async def _fake_safety(st, svcs):
                 st["error"] = "Blocked by safety policy"
                 return st
+
             mock_safety.side_effect = _fake_safety
-            
+
             # Run the pipeline
             # The pipeline should break at safety_node due to error,
             # and then SHOULD call response_node to format the error message.
             final_state = await run_workflow_pipeline(state, FakeServices())
-            
+
             # The response should not be empty. It should be the default error response.
             assert final_state.get("response"), (
                 "R7-1: state['response'] is empty. graph.py incorrectly "
@@ -68,15 +70,16 @@ class TestR7_1_GraphSkipsResponseNodeOnError:
             )
             # Response should be a user-friendly message, NOT the raw internal error
             response = final_state.get("response", "")
-            assert "Blocked by safety policy" not in response, (
-                "Response should not leak raw internal error messages"
-            )
+            assert (
+                "Blocked by safety policy" not in response
+            ), "Response should not leak raw internal error messages"
             assert response, "Response should not be empty after error"
 
 
 # ---------------------------------------------------------------------------
 # R7-2 (High): cost_estimation_routes.py locks event loop
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR7_2_CostEstimationRoutesLockLoop:
@@ -89,19 +92,29 @@ class TestR7_2_CostEstimationRoutesLockLoop:
         or run_in_threadpool."""
         source_path = Path("backend/api/cost_estimation_routes.py")
         source = source_path.read_text(encoding="utf-8")
-        
+
         # Look for threading.Lock
         assert "threading.Lock()" not in source, (
             "R7-2: cost_estimation_routes.py still uses threading.Lock() "
             "which blocks the asyncio event loop in async handlers."
         )
-        
+
         tree = ast.parse(source)
         # Verify predict_project is run in threadpool or service is accessed asynchronously
         for node in ast.walk(tree):
-            if isinstance(node, ast.AsyncFunctionDef) and node.name == "predict_cost_estimation":
+            if (
+                isinstance(node, ast.AsyncFunctionDef)
+                and node.name == "predict_cost_estimation"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
-                assert any(x in func_source for x in ("run_in_threadpool", "await service.predict_project_async", "asyncio.to_thread")), (
+                assert any(
+                    x in func_source
+                    for x in (
+                        "run_in_threadpool",
+                        "await service.predict_project_async",
+                        "asyncio.to_thread",
+                    )
+                ), (
                     "R7-2: predict_cost_estimation calls CPU-bound predict_project synchronously, "
                     "blocking the event loop."
                 )
@@ -110,6 +123,7 @@ class TestR7_2_CostEstimationRoutesLockLoop:
 # ---------------------------------------------------------------------------
 # R7-3 (Medium): reranker.py logits not normalized
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR7_3_RerankerLogitsNotNormalized:
@@ -129,7 +143,7 @@ class TestR7_3_RerankerLogitsNotNormalized:
                 func_source = ast.get_source_segment(source, node) or ""
                 if "sigmoid" in func_source.lower() or "exp(" in func_source.lower():
                     has_sigmoid = True
-                
+
         assert has_sigmoid, (
             "R7-3: reranker.py does not apply sigmoid to raw model logits. "
             "Scores are unbounded and violate the [0, 1] contract."

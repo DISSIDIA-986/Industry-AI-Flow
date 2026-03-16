@@ -23,7 +23,9 @@ def _load_module(name: str, path: str):
 
 
 def _load_validator():
-    return _load_module("validator", "backend/services/code_executor/validator.py").validate_code
+    return _load_module(
+        "validator", "backend/services/code_executor/validator.py"
+    ).validate_code
 
 
 def _load_heuristic_intent():
@@ -52,14 +54,20 @@ class TestR18_12_FallbackRunnerResponseKey:
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            if not (isinstance(node.func, ast.Name) and node.func.id == "WorkflowQueryResponse"):
+            if not (
+                isinstance(node.func, ast.Name)
+                and node.func.id == "WorkflowQueryResponse"
+            ):
                 continue
             # Find the 'response' keyword argument
             for kw in node.keywords:
                 if kw.arg == "response":
                     # Check if it reads ONLY "agent_response" from result
                     src_segment = ast.dump(kw.value)
-                    if "agent_response" in src_segment and "response" not in src_segment.replace("agent_response", ""):
+                    if (
+                        "agent_response" in src_segment
+                        and "response" not in src_segment.replace("agent_response", "")
+                    ):
                         pytest.fail(
                             "WorkflowQueryResponse.response reads only result.get('agent_response') — "
                             "but fallback runner (graph.py) sets state['response']. "
@@ -77,20 +85,20 @@ class TestR18_04_FStringBypassValidator:
     def test_fstring_import_blocked(self):
         validate_code = _load_validator()
 
-        malicious = 'result = f"{__import__(\'os\').getcwd()}"'
+        malicious = "result = f\"{__import__('os').getcwd()}\""
         result = validate_code(malicious, strict_mode=True)
-        assert not result.is_valid, (
-            "f-string containing __import__ should be blocked by validator"
-        )
+        assert (
+            not result.is_valid
+        ), "f-string containing __import__ should be blocked by validator"
 
     def test_fstring_eval_blocked(self):
         validate_code = _load_validator()
 
         malicious = "x = f\"{eval('1+1')}\""
         result = validate_code(malicious, strict_mode=True)
-        assert not result.is_valid, (
-            "f-string containing eval() should be blocked by validator"
-        )
+        assert (
+            not result.is_valid
+        ), "f-string containing eval() should be blocked by validator"
 
 
 # ---------------------------------------------------------------------------
@@ -173,10 +181,16 @@ class TestR18_11_LocalContextWindowHardcoded:
             if isinstance(node, ast.FunctionDef) and node.name == "_run_local":
                 for child in ast.walk(node):
                     if isinstance(child, ast.Call):
-                        if isinstance(child.func, ast.Attribute) and child.func.attr == "_truncate_prompt":
+                        if (
+                            isinstance(child.func, ast.Attribute)
+                            and child.func.attr == "_truncate_prompt"
+                        ):
                             for kw in child.keywords:
                                 if kw.arg == "context_window":
-                                    if isinstance(kw.value, ast.Constant) and kw.value.value == 4096:
+                                    if (
+                                        isinstance(kw.value, ast.Constant)
+                                        and kw.value.value == 4096
+                                    ):
                                         pytest.fail(
                                             "context_window is hardcoded to 4096 in _run_local — "
                                             "should read from model/settings config"
@@ -242,7 +256,11 @@ class TestR18_03_ResponseBuilderNoneAwait:
         # state already has response=None but _build_default_response returns a string.
         # Net effect: user gets a generic "processed" message instead of LLM response.
         # Check that response_node validates None return and falls through to default.
-        assert "if result is None" in source or "is not None" in source or "or _build_default_response" in source, (
+        assert (
+            "if result is None" in source
+            or "is not None" in source
+            or "or _build_default_response" in source
+        ), (
             "response_node does not handle None return from response_builder — "
             "falls through silently setting state['response'] = None"
         )

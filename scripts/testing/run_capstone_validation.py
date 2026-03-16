@@ -23,10 +23,10 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
-from typing import Any, Dict, List, Optional
 
 # 配置日志
 logging.basicConfig(
@@ -96,9 +96,7 @@ class CapstoneValidator:
                 return False
 
             # 2. 检查RAG API端点
-            response = requests.get(
-                f"{self.base_url}/api/v1/docs", timeout=5
-            )
+            response = requests.get(f"{self.base_url}/api/v1/docs", timeout=5)
             if response.status_code != 200:
                 self.log_test_result(
                     test_id,
@@ -331,9 +329,7 @@ class CapstoneValidator:
                         "planned_duration_weeks": planned_duration_weeks,
                         "actual_duration_weeks": planned_duration_weeks
                         * (1.0 + np.clip(overrun / 100.0, -0.1, 0.45)),
-                        "schedule_delay_pct": np.clip(
-                            overrun * 0.5, -10.0, 45.0
-                        ),
+                        "schedule_delay_pct": np.clip(overrun * 0.5, -10.0, 45.0),
                         "estimated_cost_cad": estimated_cost_cad,
                         "actual_cost_cad": actual_cost_cad,
                         "cost_overrun_pct": overrun,
@@ -348,9 +344,7 @@ class CapstoneValidator:
                         "risk_score": rng.uniform(20, 75, size=rows),
                         "risk_score_original": rng.uniform(5, 65, size=rows),
                         "on_budget": overrun <= 5,
-                        "on_schedule": (
-                            np.clip(overrun * 0.5, -10.0, 45.0) <= 5
-                        ),
+                        "on_schedule": (np.clip(overrun * 0.5, -10.0, 45.0) <= 5),
                         "data_source": "synthetic_industry_based",
                     }
                 )
@@ -463,8 +457,7 @@ class CapstoneValidator:
                 f"预测成功，估算成本=${estimated_cost:,.2f}",
                 {
                     "estimated_cost": estimated_cost,
-                    "has_confidence_interval": "confidence_interval"
-                    in result,
+                    "has_confidence_interval": "confidence_interval" in result,
                 },
             )
             return True
@@ -624,9 +617,25 @@ class CapstoneValidator:
         logger.info("=" * 80)
 
         smoke_tests = [
-            ("RAG功能", [self.test_rag_smoke, self.test_rag_document_upload, self.test_rag_query]),
-            ("成本估算", [self.test_cost_estimation_training, self.test_cost_estimation_prediction]),
-            ("代码生成", [self.test_code_generation_upload, self.test_code_generation_query]),
+            (
+                "RAG功能",
+                [
+                    self.test_rag_smoke,
+                    self.test_rag_document_upload,
+                    self.test_rag_query,
+                ],
+            ),
+            (
+                "成本估算",
+                [
+                    self.test_cost_estimation_training,
+                    self.test_cost_estimation_prediction,
+                ],
+            ),
+            (
+                "代码生成",
+                [self.test_code_generation_upload, self.test_code_generation_query],
+            ),
         ]
 
         results = {}
@@ -675,7 +684,9 @@ Capstone项目验证测试报告
    详情: {result['details']}
 """
             if result["metrics"]:
-                report += f"   指标: {json.dumps(result['metrics'], ensure_ascii=False)}\n"
+                report += (
+                    f"   指标: {json.dumps(result['metrics'], ensure_ascii=False)}\n"
+                )
 
         # 最终评分
         if pass_rate >= 90:
@@ -741,11 +752,17 @@ Capstone项目验证测试报告
         report_dir.mkdir(parents=True, exist_ok=True)
 
         # 保存文本报告
-        report_file = report_dir / f"capstone_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        report_file = (
+            report_dir
+            / f"capstone_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        )
         report_file.write_text(report)
 
         # 保存JSON结果
-        json_file = report_dir / f"capstone_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        json_file = (
+            report_dir
+            / f"capstone_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
         json_file.write_text(
             json.dumps(
                 {
@@ -783,9 +800,7 @@ def main():
         if response.status_code == 200:
             logger.info(f"✅ 服务运行正常: {validator.base_url}")
     except Exception:
-        logger.error(
-            f"❌ 服务不可用: {validator.base_url}"
-        )
+        logger.error(f"❌ 服务不可用: {validator.base_url}")
         logger.error("请先启动服务: make run")
         sys.exit(1)
 

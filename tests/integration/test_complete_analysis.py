@@ -391,9 +391,7 @@ def generate_advanced_insights(df):
 
     try:
         # EN
-        df = pd.read_csv(
-            "test_resources/datasets/Housing.csv"
-        )
+        df = pd.read_csv("test_resources/datasets/Housing.csv")
 
         # EN
         exec_locals = {}

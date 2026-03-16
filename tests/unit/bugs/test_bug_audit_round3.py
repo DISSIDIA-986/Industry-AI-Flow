@@ -17,7 +17,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # AUDIT3-2: Hybrid search max-score normalization
 # ---------------------------------------------------------------------------
@@ -44,9 +43,9 @@ class TestAudit3_2_HybridScoreNormalization:
                 r["score"] = round(r["score"] / max_score, 4)
 
         # After normalization the top score is always 1.0
-        assert scores[0]["score"] == 1.0, (
-            "AUDIT3-2: max-score normalization still makes top == 1.0"
-        )
+        assert (
+            scores[0]["score"] == 1.0
+        ), "AUDIT3-2: max-score normalization still makes top == 1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -83,9 +82,7 @@ class TestAudit3_6_GroundednessPlaceholder:
 
     @pytest.mark.asyncio
     async def test_many_contexts_without_answer_do_not_score_perfect(self):
-        from backend.services.workflows.nodes.groundedness_node import (
-            groundedness_node,
-        )
+        from backend.services.workflows.nodes.groundedness_node import groundedness_node
 
         state = {
             "retrieved_context": [{"content": f"doc{i}"} for i in range(5)],
@@ -101,9 +98,7 @@ class TestAudit3_6_GroundednessPlaceholder:
 
     @pytest.mark.asyncio
     async def test_zero_contexts_yields_zero_score(self):
-        from backend.services.workflows.nodes.groundedness_node import (
-            groundedness_node,
-        )
+        from backend.services.workflows.nodes.groundedness_node import groundedness_node
 
         state = {"retrieved_context": [], "metadata": {}}
         result = await groundedness_node(state, SimpleNamespace())
@@ -137,12 +132,12 @@ class TestAudit3_7_ResponseNodeDebugLeak:
 
         response_text = result.get("response", "")
         # These debug markers should NOT appear in production responses
-        assert "[provider=" not in response_text, (
-            "AUDIT3-7: response_node still leaks provider info in default responses"
-        )
-        assert "[intent=" not in response_text, (
-            "AUDIT3-7: response_node still leaks intent info in default responses"
-        )
+        assert (
+            "[provider=" not in response_text
+        ), "AUDIT3-7: response_node still leaks provider info in default responses"
+        assert (
+            "[intent=" not in response_text
+        ), "AUDIT3-7: response_node still leaks intent info in default responses"
 
 
 # ---------------------------------------------------------------------------
@@ -158,18 +153,18 @@ class TestAudit3_8_PipelineOrdering:
     This was fixed by swapping them."""
 
     def test_safety_before_code_exec_in_pipeline(self):
-        from backend.services.workflows.graph import run_workflow_pipeline
-
         # Extract the pipeline by reading the source
         import inspect
+
+        from backend.services.workflows.graph import run_workflow_pipeline
 
         source = inspect.getsource(run_workflow_pipeline)
         safety_pos = source.find('"safety_node"')
         code_exec_pos = source.find('"code_exec_node"')
 
-        assert safety_pos > 0 and code_exec_pos > 0, (
-            "Both safety_node and code_exec_node must exist in pipeline"
-        )
+        assert (
+            safety_pos > 0 and code_exec_pos > 0
+        ), "Both safety_node and code_exec_node must exist in pipeline"
 
         # FIXED: safety_node must run BEFORE code_exec_node
         assert safety_pos < code_exec_pos, (
@@ -203,9 +198,9 @@ class TestAudit3_5_SanitizerEncodedSlashes:
         from backend.security.sanitizer import sanitize_identifier
 
         result = sanitize_identifier("foo%2Fbar", "test_field")
-        assert result == "foo%2Fbar", (
-            "AUDIT3-5: sanitize_identifier allows percent-encoded slashes"
-        )
+        assert (
+            result == "foo%2Fbar"
+        ), "AUDIT3-5: sanitize_identifier allows percent-encoded slashes"
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +225,6 @@ class TestAudit3_1_ProxyTargetLeak:
             "detail": "some error message",
             "target": "http://127.0.0.1:8000/api/v1/some/path",  # LEAKED!
         }
-        assert "target" in expected_error_response, (
-            "AUDIT3-1: Frontend proxy leaks internal 'target' URL in error responses"
-        )
+        assert (
+            "target" in expected_error_response
+        ), "AUDIT3-1: Frontend proxy leaks internal 'target' URL in error responses"

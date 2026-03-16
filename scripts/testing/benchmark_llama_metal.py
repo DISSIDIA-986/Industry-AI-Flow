@@ -10,13 +10,12 @@ import logging
 import time
 from pathlib import Path
 from statistics import mean
-from typing import Dict, Any
+from typing import Any, Dict
 
 from llama_cpp import Llama
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -48,9 +47,9 @@ class LlamaMetalBenchmark:
         self.llm = Llama(
             model_path=self.model_path,
             n_gpu_layers=n_gpu_layers,  # 将所有层加载到 GPU
-            n_ctx=2048,                  # 上下文大小
-            n_threads=8,                 # CPU 线程数
-            verbose=False,               # 关闭详细输出
+            n_ctx=2048,  # 上下文大小
+            n_threads=8,  # CPU 线程数
+            verbose=False,  # 关闭详细输出
         )
 
         load_time = time.time() - start_time
@@ -58,7 +57,9 @@ class LlamaMetalBenchmark:
 
         return load_time
 
-    def benchmark_single_query(self, query: str, max_tokens: int = 256) -> Dict[str, Any]:
+    def benchmark_single_query(
+        self, query: str, max_tokens: int = 256
+    ) -> Dict[str, Any]:
         """测试单个查询的性能"""
         logger.info(f"\n查询: {query[:50]}...")
 
@@ -79,7 +80,9 @@ class LlamaMetalBenchmark:
 
         response_time = time.time() - start_time
         response_text = output["choices"][0]["text"]
-        token_count = output.get("usage", {}).get("completion_tokens", len(response_text) // 2)
+        token_count = output.get("usage", {}).get(
+            "completion_tokens", len(response_text) // 2
+        )
 
         # 估算 TPS
         tps = token_count / response_time if response_time > 0 else 0
@@ -91,7 +94,9 @@ class LlamaMetalBenchmark:
             "token_count": token_count,
             "tps": tps,
             "answer_length": len(response_text),
-            "answer": response_text[:100] + "..." if len(response_text) > 100 else response_text,
+            "answer": response_text[:100] + "..."
+            if len(response_text) > 100
+            else response_text,
         }
 
         logger.info(f"  ✅ 响应时间: {response_time:.2f}秒")
@@ -103,9 +108,9 @@ class LlamaMetalBenchmark:
 
     def run_benchmark(self) -> Dict[str, Any]:
         """运行完整的基准测试"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 llama.cpp + Metal 性能基准测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         # 1. 初始化模型
         init_time = self.initialize_model(n_gpu_layers=32)
@@ -127,7 +132,9 @@ class LlamaMetalBenchmark:
 
         return report
 
-    def _generate_report(self, init_time: float, results: list, total_time: float) -> Dict[str, Any]:
+    def _generate_report(
+        self, init_time: float, results: list, total_time: float
+    ) -> Dict[str, Any]:
         """生成测试报告"""
         # 计算统计数据
         avg_response_time = mean([r["response_time_seconds"] for r in results])
@@ -155,23 +162,23 @@ class LlamaMetalBenchmark:
         }
 
         # 打印汇总
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📋 测试汇总")
-        logger.info("="*70)
+        logger.info("=" * 70)
         logger.info(f"  初始化时间: {init_time:.2f}秒")
         logger.info(f"  总查询数: {len(results)}")
         logger.info(f"  总耗时: {total_time:.2f}秒")
         logger.info(f"  平均响应时间: {avg_response_time:.2f}秒")
         logger.info(f"  平均吞吐量: {avg_tps:.2f} tokens/s")
         logger.info(f"  总生成 Token: {total_tokens}")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         # 性能对比
         logger.info("\n📊 性能对比:")
         logger.info(f"  llama.cpp + Metal: {avg_tps:.2f} tokens/s")
         logger.info(f"  Ollama (qwen3.5:4b): ~20-30 tokens/s (估计)")
         logger.info(f"  Ollama (qwen3.5:9b): ~8-12 tokens/s (估计)")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         return report
 
@@ -202,4 +209,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

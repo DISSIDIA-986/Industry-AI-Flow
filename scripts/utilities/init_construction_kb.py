@@ -75,7 +75,11 @@ def run_init(
 
     supported_ext = {".pdf", ".txt"}
     files = sorted(
-        [p for p in source_dir.iterdir() if p.is_file() and p.suffix.lower() in supported_ext]
+        [
+            p
+            for p in source_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in supported_ext
+        ]
     )
 
     report = {
@@ -122,10 +126,14 @@ def run_init(
         text = loader.load_document(path)
         text = _normalize_text(text)
         if not text:
-            report["skipped"].append({"file": path.name, "reason": "empty extracted text"})
+            report["skipped"].append(
+                {"file": path.name, "reason": "empty extracted text"}
+            )
             continue
 
-        chunk_dicts = chunk_text(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        chunk_dicts = chunk_text(
+            text, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
         chunk_contents = [chunk["content"] for chunk in chunk_dicts]
         embeddings = embed_texts(chunk_contents)
 
@@ -170,9 +178,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Initialize construction KB.")
     parser.add_argument(
         "--source-dir",
-        default=str(PROJECT_ROOT / "test_resources" / "documents" / "construction_seed_2026q1"),
+        default=str(
+            PROJECT_ROOT / "test_resources" / "documents" / "construction_seed_2026q1"
+        ),
     )
-    parser.add_argument("--chunk-size", type=int, default=int(os.getenv("CHUNK_SIZE", "800")))
+    parser.add_argument(
+        "--chunk-size", type=int, default=int(os.getenv("CHUNK_SIZE", "800"))
+    )
     parser.add_argument(
         "--chunk-overlap", type=int, default=int(os.getenv("CHUNK_OVERLAP", "120"))
     )

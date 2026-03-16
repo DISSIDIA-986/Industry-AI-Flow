@@ -170,24 +170,26 @@ def run_sweep(
                                     "factors": factors,
                                     "objective_score": objective,
                                     "acceptance_pass": bool(
-                                        report.get("acceptance", {}).get("overall_pass", False)
+                                        report.get("acceptance", {}).get(
+                                            "overall_pass", False
+                                        )
                                     ),
                                     "metrics": {
                                         "hybrid_hit_at_k": report["retrieval_metrics"][
                                             "hybrid"
                                         ]["hit_at_k"],
-                                        "hybrid_mrr": report["retrieval_metrics"]["hybrid"][
-                                            "mrr"
-                                        ],
-                                        "workflow_source_hit_rate": report["workflow_metrics"][
-                                            "source_hit_rate"
-                                        ],
+                                        "hybrid_mrr": report["retrieval_metrics"][
+                                            "hybrid"
+                                        ]["mrr"],
+                                        "workflow_source_hit_rate": report[
+                                            "workflow_metrics"
+                                        ]["source_hit_rate"],
                                         "workflow_follow_up_source_hit_rate": report[
                                             "workflow_metrics"
                                         ]["follow_up_source_hit_rate"],
-                                        "workflow_non_echo_rate": report["workflow_metrics"][
-                                            "non_echo_rate"
-                                        ],
+                                        "workflow_non_echo_rate": report[
+                                            "workflow_metrics"
+                                        ]["non_echo_rate"],
                                         "workflow_follow_up_repeat_rate": report[
                                             "workflow_metrics"
                                         ]["follow_up_repeat_rate"],
@@ -227,7 +229,9 @@ def run_sweep(
             "workflow_query_rewrite_counts": [
                 int(item) for item in workflow_query_rewrite_counts
             ],
-            "conversation_turn_values": [int(item) for item in conversation_turn_values],
+            "conversation_turn_values": [
+                int(item) for item in conversation_turn_values
+            ],
             "sampling_mode": sampling_mode,
             "query_style_mode": query_style_mode,
             "base_url": base_url,
@@ -306,7 +310,9 @@ def main(argv: List[str] | None = None) -> int:
         seeds=_parse_int_list(args.seeds),
         top_k_values=_parse_int_list(args.top_k_values),
         hybrid_vector_weights=_parse_float_list(args.hybrid_vector_weights),
-        workflow_query_rewrite_counts=_parse_int_list(args.workflow_query_rewrite_counts),
+        workflow_query_rewrite_counts=_parse_int_list(
+            args.workflow_query_rewrite_counts
+        ),
         conversation_turn_values=_parse_int_list(args.conversation_turn_values),
         sampling_mode=str(args.sampling_mode),
         query_style_mode=str(args.query_style_mode),
@@ -322,7 +328,8 @@ def main(argv: List[str] | None = None) -> int:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None) + "\n",
+        json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None)
+        + "\n",
         encoding="utf-8",
     )
 

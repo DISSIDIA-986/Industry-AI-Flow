@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Set, Tuple
 @dataclass
 class TestCase:
     """EN"""
+
     __test__ = False
 
     test_id: str
@@ -172,9 +173,7 @@ class AnswerGenerationTester:
             "reasoning_002": "EN:EN:1)EN;2)EN;3)EN;4)EN;5)EN;6)EN;7)EN.",
         }
 
-        return answer_templates.get(
-            test_case.test_id, f"EN{test_case.topic}EN,EN."
-        )
+        return answer_templates.get(test_case.test_id, f"EN{test_case.topic}EN,EN.")
 
     def evaluate_correctness(self, answer: str, test_case: TestCase) -> float:
         """EN"""

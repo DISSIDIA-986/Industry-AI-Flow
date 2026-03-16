@@ -224,7 +224,9 @@ def run_tuning(seed_dir: Path, report_path: Path) -> dict:
 
 
 def main() -> int:
-    seed_dir = PROJECT_ROOT / "test_resources" / "documents" / "construction_seed_2026q1"
+    seed_dir = (
+        PROJECT_ROOT / "test_resources" / "documents" / "construction_seed_2026q1"
+    )
     report_path = PROJECT_ROOT / "logs" / "construction_rag_tuning_report.json"
     report = run_tuning(seed_dir=seed_dir, report_path=report_path)
     best = report["best_config"]

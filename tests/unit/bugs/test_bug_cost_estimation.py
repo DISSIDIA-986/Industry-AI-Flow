@@ -32,7 +32,6 @@ import pytest
 
 @pytest.mark.unit
 class TestBug2UnseenCategoryZeroVector:
-
     def _train_minimal_model(self, tmp_path: Path) -> Path:
         """Train a model on a tiny dataset with known categories."""
         from backend.services.cost_estimation_service import train_cost_estimation_model
@@ -40,27 +39,31 @@ class TestBug2UnseenCategoryZeroVector:
         # Create minimal training CSV with only 2 project types and 2 locations
         rows = []
         for i in range(20):
-            rows.append({
-                "project_type": "residential_single_family" if i % 2 == 0 else "commercial_office",
-                "location": "Toronto" if i % 2 == 0 else "Vancouver",
-                "sqft": 2000 + i * 100,
-                "floors": 2,
-                "num_units": 1,
-                "planned_duration_weeks": 20 + i,
-                "estimated_cost_cad": 400000 + i * 10000,
-                "contractor_rating": 3.5,
-                "complexity_score": 5,
-                "team_experience_years": 10.0,
-                "num_change_orders": 2,
-                "weather_risk_factor": 1.0,
-                "material_volatility": 0.5,
-                "num_subcontractors": 4,
-                "budget_pressure": 0.3,
-                "risk_score": 3.0,
-                "risk_score_original": 3.0,
-                "cost_overrun_pct": 5 + i * 0.5,
-                "actual_cost_cad": (400000 + i * 10000) * 1.05,
-            })
+            rows.append(
+                {
+                    "project_type": "residential_single_family"
+                    if i % 2 == 0
+                    else "commercial_office",
+                    "location": "Toronto" if i % 2 == 0 else "Vancouver",
+                    "sqft": 2000 + i * 100,
+                    "floors": 2,
+                    "num_units": 1,
+                    "planned_duration_weeks": 20 + i,
+                    "estimated_cost_cad": 400000 + i * 10000,
+                    "contractor_rating": 3.5,
+                    "complexity_score": 5,
+                    "team_experience_years": 10.0,
+                    "num_change_orders": 2,
+                    "weather_risk_factor": 1.0,
+                    "material_volatility": 0.5,
+                    "num_subcontractors": 4,
+                    "budget_pressure": 0.3,
+                    "risk_score": 3.0,
+                    "risk_score_original": 3.0,
+                    "cost_overrun_pct": 5 + i * 0.5,
+                    "actual_cost_cad": (400000 + i * 10000) * 1.05,
+                }
+            )
         df = pd.DataFrame(rows)
         csv_path = tmp_path / "train.csv"
         df.to_csv(csv_path, index=False)
@@ -83,7 +86,9 @@ class TestBug2UnseenCategoryZeroVector:
 
         # The bug: unknown_categories is populated but prediction proceeds
         # without any degradation signal (no confidence reduction, no warning flag).
-        assert "degraded" in prediction or prediction.get("confidence_degraded", False), (
+        assert "degraded" in prediction or prediction.get(
+            "confidence_degraded", False
+        ), (
             "BUG-2: predict_project() returned a prediction for unseen categories "
             f"({prediction.get('unknown_categories')}) without flagging the result "
             "as degraded. The all-zero one-hot encoding silently distorts the prediction."
@@ -114,9 +119,9 @@ class TestBug2UnseenCategoryZeroVector:
 
         # We expect some difference since the one-hot is all zeros for unseen,
         # but the result dict should FLAG this to the caller.
-        assert unseen_pred.get("unknown_categories"), (
-            "BUG-2: unknown_categories should be populated for unseen project_type"
-        )
+        assert unseen_pred.get(
+            "unknown_categories"
+        ), "BUG-2: unknown_categories should be populated for unseen project_type"
         # The key assertion: the prediction should carry a degradation marker
         assert unseen_pred.get("confidence_degraded") is True, (
             f"BUG-2: unseen category 'underwater_tunnel' produced overrun={unseen_overrun:.2f} "

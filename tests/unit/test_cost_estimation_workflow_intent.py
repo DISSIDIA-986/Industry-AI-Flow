@@ -5,8 +5,14 @@ from backend.services.workflows.prompting.template_selector import TemplateSelec
 
 
 def test_cost_estimation_keywords_route_to_cost_estimation_intent() -> None:
-    assert _heuristic_intent("Please estimate construction cost overrun for this project") == "cost_estimation"
-    assert _heuristic_intent("Need a budget estimate for this office project") == "cost_estimation"
+    assert (
+        _heuristic_intent("Please estimate construction cost overrun for this project")
+        == "cost_estimation"
+    )
+    assert (
+        _heuristic_intent("Need a budget estimate for this office project")
+        == "cost_estimation"
+    )
 
 
 def test_template_selector_supports_cost_estimation_intent() -> None:

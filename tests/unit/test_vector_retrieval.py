@@ -453,9 +453,7 @@ class VectorRetrievalTester:
                 "query_count": len(category_queries),
             }
 
-            print(
-                f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}"
-            )
+            print(f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}")
 
         return category_results
 
@@ -524,9 +522,7 @@ class VectorRetrievalTester:
 
             threshold_results[threshold] = metrics
 
-            print(
-                f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}"
-            )
+            print(f"    ✅ EN: {metrics['precision']:.3f}, EN: {metrics['recall']:.3f}")
 
         # EN(ENF1 Score)
         best_threshold = max(

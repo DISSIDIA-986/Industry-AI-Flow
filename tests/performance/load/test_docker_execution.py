@@ -139,7 +139,9 @@ def analyze_housing_data():
 if __name__ == "__main__":
     results = analyze_housing_data()
     print(f"\\nEN: {len(results)} EN")
-'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
+'''.replace(
+        "__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH
+    )
 
     try:
         # EN
@@ -314,7 +316,9 @@ def advanced_housing_analysis():
 if __name__ == "__main__":
     results = advanced_housing_analysis()
     print(f"\\nEN,EN {len(results)} EN")
-'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
+'''.replace(
+        "__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH
+    )
 
     try:
         # EN
@@ -508,7 +512,9 @@ def generate_visualizations():
 if __name__ == "__main__":
     charts, output_dir = generate_visualizations()
     print(f"\\nEN,EN {len(charts)} EN")
-'''.replace("__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH)
+'''.replace(
+        "__HOUSING_DATASET_PATH__", HOUSING_DATASET_PATH
+    )
 
     try:
         # EN

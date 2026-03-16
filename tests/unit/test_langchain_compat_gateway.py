@@ -9,7 +9,9 @@ from backend.config import settings
 
 
 class _FakeDispatchService:
-    def __init__(self, response_text: str, success: bool = True, error: str | None = None):
+    def __init__(
+        self, response_text: str, success: bool = True, error: str | None = None
+    ):
         self.response_text = response_text
         self.success = success
         self.error = error

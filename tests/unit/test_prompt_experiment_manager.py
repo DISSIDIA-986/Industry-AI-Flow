@@ -42,9 +42,17 @@ class _FakeConn:
         if "SELECT id, name, category" in query and "FROM prompts" in query:
             prompt_id = params[0]
             if prompt_id == self.prompt_a_id:
-                return {"id": prompt_id, "name": "construction_rag_grounded_qa", "category": "rag"}
+                return {
+                    "id": prompt_id,
+                    "name": "construction_rag_grounded_qa",
+                    "category": "rag",
+                }
             if prompt_id == self.prompt_b_id:
-                return {"id": prompt_id, "name": "construction_rag_grounded_qa", "category": "rag"}
+                return {
+                    "id": prompt_id,
+                    "name": "construction_rag_grounded_qa",
+                    "category": "rag",
+                }
             return None
 
         if "INSERT INTO prompt_experiments" in query:
@@ -90,7 +98,10 @@ class _FakeConn:
         return None
 
     async def fetch(self, query, *params):
-        if "FROM prompt_experiments pe" in query and "ORDER BY pe.created_at DESC" in query:
+        if (
+            "FROM prompt_experiments pe" in query
+            and "ORDER BY pe.created_at DESC" in query
+        ):
             row = dict(self.experiment)
             row.update(
                 {
@@ -142,11 +153,15 @@ async def test_prompt_experiment_manager_create_list_update_flow():
     assert experiments[0]["prompt_name"] == "construction_rag_grounded_qa"
     assert experiments[0]["prompt_category"] == "rag"
 
-    updated_traffic = await manager.update_experiment_traffic(pool.conn.experiment_id, 0.7)
+    updated_traffic = await manager.update_experiment_traffic(
+        pool.conn.experiment_id, 0.7
+    )
     assert updated_traffic is not None
     assert updated_traffic["traffic_split"] == 0.7
 
-    updated_status = await manager.update_experiment_status(pool.conn.experiment_id, "paused")
+    updated_status = await manager.update_experiment_status(
+        pool.conn.experiment_id, "paused"
+    )
     assert updated_status is not None
     assert updated_status["status"] == "paused"
 

@@ -11,10 +11,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import backend.services.rag_engine as rag_engine_module
-from backend.api.workflow_query_routes import (
-    get_workflow_runner,
-    router as workflow_router,
-)
+from backend.api.workflow_query_routes import get_workflow_runner
+from backend.api.workflow_query_routes import router as workflow_router
 from backend.services.cost_estimation_service import (
     CostEstimationService,
     train_cost_estimation_model,

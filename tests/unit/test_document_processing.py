@@ -24,7 +24,9 @@ def test_ocr_availability():
 
 
 def test_document_extractor():
-    from backend.services.document_processing.document_extractor import DocumentExtractor
+    from backend.services.document_processing.document_extractor import (
+        DocumentExtractor,
+    )
 
     extractor = DocumentExtractor(use_ocr=True)
 

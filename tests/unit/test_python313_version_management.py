@@ -51,7 +51,8 @@ def test_python_version_checker():
     print("=" * 80)
 
     success = run_command(
-        f"{PYTHON_313_CMD} scripts/versioning/python_version_checker.py", "ENPython 3.13EN"
+        f"{PYTHON_313_CMD} scripts/versioning/python_version_checker.py",
+        "ENPython 3.13EN",
     )
 
     print(f"\n📊 EN: {'✅ EN' if success else '❌ EN'}")
@@ -107,7 +108,9 @@ def test_version_checker_with_venv():
     print("🧪 EN 5: EN(EN)")
     print("=" * 80)
 
-    success = run_command(f"{VENV_CMD} scripts/versioning/python_version_checker.py", "EN")
+    success = run_command(
+        f"{VENV_CMD} scripts/versioning/python_version_checker.py", "EN"
+    )
 
     print(f"\n📊 EN: {'✅ EN' if success else '❌ EN'}")
     return success

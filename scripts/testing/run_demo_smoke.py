@@ -70,7 +70,9 @@ INT_FIELDS = {
     "num_subcontractors",
 }
 
-FLOAT_FIELDS = set(PREDICTION_FEATURE_COLUMNS) - INT_FIELDS - {"project_type", "location"}
+FLOAT_FIELDS = (
+    set(PREDICTION_FEATURE_COLUMNS) - INT_FIELDS - {"project_type", "location"}
+)
 
 
 @dataclass
@@ -89,7 +91,9 @@ def _env(key: str, default: str) -> str:
 
 
 def _check_python(allow_non_313: bool) -> CheckResult:
-    version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
     is_313 = (sys.version_info.major, sys.version_info.minor) == (3, 13)
     if is_313:
         return CheckResult("python", True, True, f"Python {version}")
@@ -278,7 +282,9 @@ class _FakeWorkflowRunner:
         }
 
 
-def _run_api_smoke(model_path: Path, sample_project: Dict[str, Any], skip: bool) -> CheckResult:
+def _run_api_smoke(
+    model_path: Path, sample_project: Dict[str, Any], skip: bool
+) -> CheckResult:
     if skip:
         return CheckResult("api_smoke", True, False, "skipped")
 
@@ -317,12 +323,16 @@ def _run_api_smoke(model_path: Path, sample_project: Dict[str, Any], skip: bool)
 
             wf_health_resp = client.get("/api/v1/workflow/health")
             if wf_health_resp.status_code != 200:
-                return CheckResult("api_smoke", False, True, "workflow health endpoint failed")
+                return CheckResult(
+                    "api_smoke", False, True, "workflow health endpoint failed"
+                )
             checks.append("workflow_health")
 
             cost_health_resp = client.get("/api/v1/cost-estimation/health")
             if cost_health_resp.status_code != 200:
-                return CheckResult("api_smoke", False, True, "cost health endpoint failed")
+                return CheckResult(
+                    "api_smoke", False, True, "cost health endpoint failed"
+                )
             checks.append("cost_health")
 
             predict_resp = client.post(
@@ -477,13 +487,8 @@ def main(argv: List[str] | None = None) -> int:
     )
 
     sample_project: Dict[str, Any] = {}
-    can_run_api = (
-        not args.skip_api_smoke
-        and all(
-            r.passed
-            for r in results
-            if r.name in {"python", "dataset", "cost_model"}
-        )
+    can_run_api = not args.skip_api_smoke and all(
+        r.passed for r in results if r.name in {"python", "dataset", "cost_model"}
     )
 
     if can_run_api:

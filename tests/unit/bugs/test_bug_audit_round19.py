@@ -29,14 +29,17 @@ class TestB1901PhantomModelsImport:
             source = f.read()
 
         # Should NOT import from models (which doesn't exist)
-        assert "from backend.services.intent_classification.models import" not in source, (
+        assert (
+            "from backend.services.intent_classification.models import" not in source
+        ), (
             "_call_classifier imports from nonexistent 'models' module — "
             "should import from 'intent_classifier' instead"
         )
         # Should import from intent_classifier instead
-        assert "from backend.services.intent_classification.intent_classifier import" in source, (
-            "_call_classifier should import QueryContext from intent_classifier"
-        )
+        assert (
+            "from backend.services.intent_classification.intent_classifier import"
+            in source
+        ), "_call_classifier should import QueryContext from intent_classifier"
 
 
 # ---------------------------------------------------------------------------
@@ -53,27 +56,27 @@ class TestB1902FilePathDisclosure:
         # Find the upload_document function and check its payload dict
         # The document upload payload should use file_id, not file_path
         doc_upload_match = re.search(
-            r'async def upload_document\b.*?return payload',
+            r"async def upload_document\b.*?return payload",
             source,
             re.DOTALL,
         )
         assert doc_upload_match, "Could not find upload_document function"
         doc_upload_body = doc_upload_match.group(0)
-        assert '"file_path": file_path' not in doc_upload_body, (
-            "Document upload response still exposes file_path — should use file_id"
-        )
+        assert (
+            '"file_path": file_path' not in doc_upload_body
+        ), "Document upload response still exposes file_path — should use file_id"
 
         # Check data upload function too
         data_upload_match = re.search(
-            r'async def upload_data_file\b.*?return payload',
+            r"async def upload_data_file\b.*?return payload",
             source,
             re.DOTALL,
         )
         assert data_upload_match, "Could not find upload_data_file function"
         data_upload_body = data_upload_match.group(0)
-        assert '"file_path": file_path' not in data_upload_body, (
-            "Data upload response still exposes file_path — should use file_id"
-        )
+        assert (
+            '"file_path": file_path' not in data_upload_body
+        ), "Data upload response still exposes file_path — should use file_id"
 
 
 # ---------------------------------------------------------------------------
@@ -133,10 +136,14 @@ class TestB1905FunctoolsReduceBypass:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "WHITELISTED_IMPORTS":
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "WHITELISTED_IMPORTS"
+                    ):
                         if isinstance(node.value, ast.Set):
                             elements = {
-                                elt.value for elt in node.value.elts
+                                elt.value
+                                for elt in node.value.elts
                                 if isinstance(elt, ast.Constant)
                             }
                             assert "functools" not in elements, (
@@ -177,10 +184,14 @@ class TestB1907PandasCallableDispatch:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "BLOCKED_METHOD_NAMES":
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "BLOCKED_METHOD_NAMES"
+                    ):
                         if isinstance(node.value, ast.Set):
                             methods = {
-                                elt.value for elt in node.value.elts
+                                elt.value
+                                for elt in node.value.elts
                                 if isinstance(elt, ast.Constant)
                             }
                             for method in ("pipe", "apply", "agg", "transform", "map"):
@@ -208,9 +219,9 @@ class TestB1908WhileOneLoop:
             "should use truthiness check to catch 'while 1:'"
         )
         # Verify the fix: check for truthy test
-        assert "node.test.value" in source, (
-            "_check_loops should check truthiness of node.test.value"
-        )
+        assert (
+            "node.test.value" in source
+        ), "_check_loops should check truthiness of node.test.value"
 
 
 # ---------------------------------------------------------------------------
@@ -248,9 +259,9 @@ class TestB1909NumUnitsRegex:
         patterns_text = match.group(1)
 
         # Should have a pattern for "num units: N" or "number of units: N"
-        assert "num" in patterns_text.lower(), (
-            "num_units regex should match 'num units: N' pattern"
-        )
+        assert (
+            "num" in patterns_text.lower()
+        ), "num_units regex should match 'num units: N' pattern"
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +278,7 @@ class TestB1910HeuristicPromptLeakage:
 
         # Find the _simulate_llm_response method
         match = re.search(
-            r'async def _simulate_llm_response.*?(?=\n    async def |\n    def |\nclass |\Z)',
+            r"async def _simulate_llm_response.*?(?=\n    async def |\n    def |\nclass |\Z)",
             source,
             re.DOTALL,
         )
@@ -275,13 +286,15 @@ class TestB1910HeuristicPromptLeakage:
         method_source = match.group(0)
 
         # The method should extract the query from the prompt, not use the full prompt
-        assert "Query:" in method_source or "query_marker" in method_source, (
-            "_simulate_llm_response should extract the user query section from the prompt"
-        )
+        assert (
+            "Query:" in method_source or "query_marker" in method_source
+        ), "_simulate_llm_response should extract the user query section from the prompt"
         # Should NOT just do `query_lower = prompt.lower()` on the full prompt
-        assert "prompt.lower()" not in method_source.split("query_marker")[0][-50:] if "query_marker" in method_source else True, (
-            "Method should not search keywords in the full prompt"
-        )
+        assert (
+            "prompt.lower()" not in method_source.split("query_marker")[0][-50:]
+            if "query_marker" in method_source
+            else True
+        ), "Method should not search keywords in the full prompt"
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +305,9 @@ class TestB1911BroadCodeExecutionKeywords:
     def test_broad_keywords_removed_from_code_execution(self):
         """Overly broad keywords like 'run', 'process', 'batch', 'function',
         'compute', 'calculation' should not be standalone CODE_EXECUTION keywords."""
-        source_path = "backend/services/intent_classification/simple_intent_classifier.py"
+        source_path = (
+            "backend/services/intent_classification/simple_intent_classifier.py"
+        )
         with open(source_path) as f:
             source = f.read()
 
@@ -309,7 +324,16 @@ class TestB1911BroadCodeExecutionKeywords:
         keywords = re.findall(r'"([^"]+)"', keywords_text)
 
         # These broad single-word keywords should NOT be in the list
-        too_broad = {"run", "process", "batch", "function", "compute", "calculation", "code", "program"}
+        too_broad = {
+            "run",
+            "process",
+            "batch",
+            "function",
+            "compute",
+            "calculation",
+            "code",
+            "program",
+        }
         found_broad = set(keywords) & too_broad
         assert not found_broad, (
             f"CODE_EXECUTION still has overly broad keywords: {found_broad} — "

@@ -9,7 +9,9 @@ from backend.services.data_transfer import DataFileTransfer
 def test_data_transfer_rejects_outside_allowed_paths() -> None:
     service = DataFileTransfer()
 
-    result = service.transfer_file_for_docker("/etc/hosts", transfer_method="file_mapping")
+    result = service.transfer_file_for_docker(
+        "/etc/hosts", transfer_method="file_mapping"
+    )
 
     assert result["success"] is False
     assert "outside allowed" in (result.get("error") or "").lower()
@@ -22,7 +24,9 @@ def test_data_transfer_accepts_workspace_file_and_cleans_up() -> None:
     source_file = workspace_temp / f"sample_{uuid4().hex[:8]}.csv"
     source_file.write_text("a,b\n1,2\n", encoding="utf-8")
 
-    result = service.transfer_file_for_docker(str(source_file), transfer_method="file_mapping")
+    result = service.transfer_file_for_docker(
+        str(source_file), transfer_method="file_mapping"
+    )
 
     assert result["success"] is True
     transferred_path = Path(result["transferred_path"])

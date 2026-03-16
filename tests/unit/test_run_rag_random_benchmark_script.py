@@ -45,7 +45,9 @@ def test_sample_benchmark_cases_is_deterministic_with_seed():
     assert [case.expected_source_hint for case in cases_1] == [
         case.expected_source_hint for case in cases_2
     ]
-    assert [case.query_style for case in cases_1] == [case.query_style for case in cases_2]
+    assert [case.query_style for case in cases_1] == [
+        case.query_style for case in cases_2
+    ]
 
 
 def test_rank_for_expected_source_matches_normalized_filename():
@@ -64,7 +66,9 @@ def test_query_echo_ratio_identifies_question_repetition():
         "What does the standard say about guardrails and inspections? "
         "What does the standard say about guardrails and inspections?"
     )
-    non_echo_answer = "Guardrails are mandatory above 3 meters and weekly inspections are required."
+    non_echo_answer = (
+        "Guardrails are mandatory above 3 meters and weekly inspections are required."
+    )
 
     assert benchmark._query_echo_ratio(query, echoed_answer) > 0.95
     assert benchmark._query_echo_ratio(query, non_echo_answer) < 0.6

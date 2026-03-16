@@ -25,9 +25,7 @@ _PPIO_PROVIDER_PATH = os.path.join(
     _BACKEND, "services", "code_executor", "providers", "ppio_provider.py"
 )
 _COST_EST_ROUTES_PATH = os.path.join(_BACKEND, "api", "cost_estimation_routes.py")
-_DOC_MGMT_ROUTES_PATH = os.path.join(
-    _BACKEND, "api", "document_management_routes.py"
-)
+_DOC_MGMT_ROUTES_PATH = os.path.join(_BACKEND, "api", "document_management_routes.py")
 _ENHANCED_QUERY_PATH = os.path.join(_BACKEND, "api", "enhanced_query_routes.py")
 _PROMPT_ROUTES_PATH = os.path.join(_BACKEND, "api", "prompt_routes.py")
 _FEEDBACK_ROUTES_PATH = os.path.join(_BACKEND, "api", "feedback_routes.py")
@@ -108,15 +106,21 @@ class TestR14_VAL02_SubclassesCallNotBlocked:
         # chr() combined with string concatenation can construct any dunder
         # attribute name. The validator must either block chr() calls or
         # implement runtime sandboxing beyond static analysis.
-        has_chr_protection = any(
-            kw in source
-            for kw in ['"chr"', "'chr'", "chr", "BLOCKED_BUILTINS"]
-            if kw in source.split("BLOCKED_CALL_NAMES")[1]
-        ) if "BLOCKED_CALL_NAMES" in source else False
+        has_chr_protection = (
+            any(
+                kw in source
+                for kw in ['"chr"', "'chr'", "chr", "BLOCKED_BUILTINS"]
+                if kw in source.split("BLOCKED_CALL_NAMES")[1]
+            )
+            if "BLOCKED_CALL_NAMES" in source
+            else False
+        )
 
         # Alternative: check if there's a general "string construction"
         # defense or runtime sandbox
-        has_runtime_sandbox = "builtins" in source and ("restrict" in source.lower() or "sandbox" in source.lower())
+        has_runtime_sandbox = "builtins" in source and (
+            "restrict" in source.lower() or "sandbox" in source.lower()
+        )
 
         assert has_chr_protection or has_runtime_sandbox, (
             "chr() is not blocked — chr(95)+chr(95)+'import'+chr(95)+chr(95) "
@@ -152,7 +156,10 @@ class TestR14_VAL03_LambdaExecBypass:
 
         # Look for lambda handling in _validate_blocked_calls
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_validate_blocked_calls":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_validate_blocked_calls"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 has_lambda_check = "Lambda" in body_src or "lambda" in body_src.lower()
@@ -216,7 +223,10 @@ class TestR14_VAL05_NonStrictModeCodecsPassthrough:
 
         missing_dangerous = []
         for module in ["codecs", "builtins", "types", "gc", "inspect"]:
-            if f'"{module}"' not in blacklist_section and f"'{module}'" not in blacklist_section:
+            if (
+                f'"{module}"' not in blacklist_section
+                and f"'{module}'" not in blacklist_section
+            ):
                 missing_dangerous.append(module)
 
         assert not missing_dangerous, (
@@ -253,8 +263,7 @@ class TestR14_PATH01_SymlinkBypassInResolve:
     def test_docker_executor_checks_symlinks(self):
         source = _read(_DOCKER_EXEC_PATH)
         has_symlink_check = any(
-            kw in source
-            for kw in ["is_symlink", "symlink", "follow_symlinks", "lstat"]
+            kw in source for kw in ["is_symlink", "symlink", "follow_symlinks", "lstat"]
         )
         assert has_symlink_check, (
             "DockerExecutor does not check for symlinks before mounting "
@@ -295,7 +304,9 @@ class TestR14_PATH02_InputFilenamePathTraversal:
         # Check if there's path traversal protection in the filename handling
         if not has_filename_sanitization:
             # Check for the specific vulnerable pattern
-            vulnerable = "workspace / filename" in source or 'workspace / file' in source
+            vulnerable = (
+                "workspace / filename" in source or "workspace / file" in source
+            )
             assert not vulnerable, (
                 "Input files are written to 'workspace / filename' without "
                 "sanitizing the filename. A filename like '../../etc/cron.d/x' "
@@ -506,8 +517,9 @@ class TestR14_ERR01_ExceptionStrInResponse:
         ]:
             source = _read(path)
             # Pattern: detail=f"...: {str(e)}" or detail=f"...{e}"
-            if re.search(r'detail=f"[^"]*\{str\(e\)\}"', source) or \
-               re.search(r'detail=f"[^"]*\{e\}"', source):
+            if re.search(r'detail=f"[^"]*\{str\(e\)\}"', source) or re.search(
+                r'detail=f"[^"]*\{e\}"', source
+            ):
                 files_with_leak.append(name)
 
         assert not files_with_leak, (
@@ -527,7 +539,7 @@ class TestR14_ERR02_PromptRoutes500LeaksSQLErrors:
     def test_prompt_routes_no_raw_exception(self):
         source = _read(_PROMPT_ROUTES_PATH)
         # Count occurrences of detail=str(e) in 500 error paths
-        leaky_patterns = re.findall(r'detail=str\(e\)', source)
+        leaky_patterns = re.findall(r"detail=str\(e\)", source)
         assert len(leaky_patterns) == 0, (
             f"prompt_routes.py has {len(leaky_patterns)} instances of "
             f"detail=str(e) in error handlers. This leaks SQL errors, "
@@ -549,8 +561,10 @@ class TestR14_ERR03_AuthTokenErrorLeak:
                 if node.name == "me":
                     body_src = ast.get_source_segment(source, node)
                     assert body_src is not None
-                    has_token_leak = "Invalid token: {exc}" in body_src or \
-                                     "Invalid token: {e}" in body_src
+                    has_token_leak = (
+                        "Invalid token: {exc}" in body_src
+                        or "Invalid token: {e}" in body_src
+                    )
                     assert not has_token_leak, (
                         "GET /auth/me leaks JWT error details in response: "
                         "'Invalid token: {exc}'. This reveals algorithm info, "
@@ -608,8 +622,7 @@ class TestR14_SSRF01_PPIOBaseURLFromConfig:
                 # The method should either reject absolute URLs or validate
                 # they match the configured base_url host
                 allows_any_url = (
-                    'return cleaned' in body_src
-                    and 'startswith("http' in body_src
+                    "return cleaned" in body_src and 'startswith("http' in body_src
                 )
                 has_host_validation = any(
                     kw in body_src
@@ -713,7 +726,9 @@ class TestR14_INP02_OperationLogLimitUnbounded:
                     body_src = ast.get_source_segment(source, node)
                     assert body_src is not None
                     # Check function signature for Query(le=...) or similar
-                    has_limit = "le=" in body_src or "max(" in body_src or "min(" in body_src
+                    has_limit = (
+                        "le=" in body_src or "max(" in body_src or "min(" in body_src
+                    )
                     assert has_limit, (
                         "get_operation_log 'limit' parameter has no upper bound. "
                         "limit=1000000 could return entire audit log. "
@@ -737,7 +752,9 @@ class TestR14_INP03_FeedbackDaysUnbounded:
                 if node.name == "get_feedback_statistics":
                     body_src = ast.get_source_segment(source, node)
                     assert body_src is not None
-                    has_bounds = "ge=" in body_src or "le=" in body_src or "Query(" in body_src
+                    has_bounds = (
+                        "ge=" in body_src or "le=" in body_src or "Query(" in body_src
+                    )
                     assert has_bounds, (
                         "get_feedback_statistics 'days' parameter has no bounds. "
                         "days=-1 or days=999999 causes unexpected SQL behavior. "
@@ -802,9 +819,7 @@ class TestR14_SQL01_MemoryStoreTableNameInterpolation:
     def test_table_name_not_fstring_interpolated(self):
         source = _read(_MEMORY_STORE_PATH)
         # Count f-string SQL with TABLE_NAME interpolation
-        interpolation_count = len(
-            re.findall(r'f"""[^"]*\{self\.TABLE_NAME\}', source)
-        )
+        interpolation_count = len(re.findall(r'f"""[^"]*\{self\.TABLE_NAME\}', source))
         if interpolation_count > 0:
             # Check if TABLE_NAME is validated
             has_validation = any(
@@ -842,8 +857,7 @@ class TestR14_PW01_SHA256NotAdequate:
     def test_uses_proper_password_hashing(self):
         source = _read(_AUTH_ROUTES_PATH)
         has_proper_hash = any(
-            kw in source
-            for kw in ["bcrypt", "scrypt", "argon2", "pbkdf2", "passlib"]
+            kw in source for kw in ["bcrypt", "scrypt", "argon2", "pbkdf2", "passlib"]
         )
         assert has_proper_hash, (
             "auth_routes uses SHA256 for password hashing. SHA256 is a fast "

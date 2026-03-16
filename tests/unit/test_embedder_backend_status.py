@@ -50,7 +50,9 @@ def test_embed_texts_uses_fastembed_backend(monkeypatch):
     assert vectors[1] == [5.0, 1.0]
 
 
-def test_embedding_backend_status_reports_fallback_when_no_semantic_backend(monkeypatch):
+def test_embedding_backend_status_reports_fallback_when_no_semantic_backend(
+    monkeypatch,
+):
     _reset_embedder_state(monkeypatch)
     monkeypatch.setattr(embedder, "SentenceTransformer", None)
     monkeypatch.setattr(embedder, "TextEmbedding", None)

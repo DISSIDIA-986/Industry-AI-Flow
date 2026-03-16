@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
-
-from pathlib import Path
 import importlib.util
+import json
+from pathlib import Path
 
 
 def _load_module(module_path: str):

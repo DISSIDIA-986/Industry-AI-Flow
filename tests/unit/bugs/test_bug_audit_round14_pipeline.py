@@ -106,11 +106,12 @@ class TestR14P_P0_01_RetrievalNodeDoubleExecution:
             # and if NOT, call retrieve AGAIN via to_thread.
             has_eager_call = "result = retriever.retrieve(" in body_src
             has_reexec = (
-                "asyncio.to_thread" in body_src
-                and "retriever.retrieve" in body_src
+                "asyncio.to_thread" in body_src and "retriever.retrieve" in body_src
             )
             if has_eager_call and has_reexec:
-                has_guard = "iscoroutinefunction" in body_src or "iscoroutine" in body_src
+                has_guard = (
+                    "iscoroutinefunction" in body_src or "iscoroutine" in body_src
+                )
                 assert has_guard, (
                     "retrieval_node calls retriever.retrieve() eagerly on "
                     "line 22, then calls it AGAIN via asyncio.to_thread on "
@@ -137,12 +138,13 @@ class TestR14P_P0_02_CostEstimationRoutedToRAGInIntentWorkflow:
         source = _read(_ROUTING_DECISION_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_map_intent_to_agent":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_map_intent_to_agent"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
-                match = re.search(
-                    r'"cost_estimation"\s*:\s*AgentType\.(\w+)', body_src
-                )
+                match = re.search(r'"cost_estimation"\s*:\s*AgentType\.(\w+)', body_src)
                 if match:
                     agent = match.group(1)
                     assert agent != "GENERAL_AGENT", (
@@ -200,7 +202,10 @@ class TestR14P_P1_01_ClarificationRetryNeverReached:
         source = _read(_INTENT_WORKFLOW_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_route_after_clarification":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_route_after_clarification"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 assert "retry_classification" in body_src, (
@@ -230,8 +235,7 @@ class TestR14P_P1_02_NoGlobalWorkflowTimeout:
 
         combined = graph_source + routes_source + orchestrator_source
         has_timeout = any(
-            kw in combined
-            for kw in ["wait_for", "timeout", "TIMEOUT", "deadline"]
+            kw in combined for kw in ["wait_for", "timeout", "TIMEOUT", "deadline"]
         )
         assert has_timeout, (
             "Workflow pipeline has no global timeout.  If the LLM provider "
@@ -279,7 +283,7 @@ class TestR14P_P1_03_ResponseNodeCallsLLMOnError:
                 # _build_default_response checks error, but the builder
                 # path does not.
                 pre_builder = body_src[:builder_call_idx]
-                if 'error' not in pre_builder.split('\n')[-5:]:
+                if "error" not in pre_builder.split("\n")[-5:]:
                     assert False, (
                         "response_node calls builder (LLM dispatch) when "
                         "state has error set.  Should use "
@@ -347,7 +351,10 @@ class TestR14P_P1_05_DataAnalysisJSONNotHandled:
         source = _read(_DATA_ANALYSIS_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_extract_dataset_info":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_extract_dataset_info"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 # Must actually handle .json files -- not just mention json
@@ -542,7 +549,11 @@ class TestR14P_P1_10_ShortcutResponseSkipsGroundedness:
         # Check if the pipeline sets defaults for skipped nodes
         has_skip_annotation = any(
             kw in graph_pipeline_src
-            for kw in ["groundedness_status", "groundedness_skipped", "groundedness_passed"]
+            for kw in [
+                "groundedness_status",
+                "groundedness_skipped",
+                "groundedness_passed",
+            ]
         )
         assert has_skip_annotation, (
             "shortcut_response skips groundedness_node without setting "
@@ -615,7 +626,9 @@ class TestR14P_P2_03_RetrievalSearchDoubleCall:
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 eager = "result = retriever.search(" in body_src
-                reexec = "retriever.search" in body_src and "asyncio.to_thread" in body_src
+                reexec = (
+                    "retriever.search" in body_src and "asyncio.to_thread" in body_src
+                )
                 if eager and reexec:
                     has_guard = "iscoroutinefunction" in body_src
                     assert has_guard, (
@@ -665,7 +678,9 @@ class TestR14P_P2_05_SimpleClassifierModuleSingleton:
         for line in lines:
             stripped = line.strip()
             if (
-                stripped.startswith("simple_intent_classifier = SimpleIntentClassifier(")
+                stripped.startswith(
+                    "simple_intent_classifier = SimpleIntentClassifier("
+                )
                 and not line.startswith(" ")
                 and not line.startswith("\t")
             ):
@@ -695,7 +710,11 @@ class TestR14P_P2_06_NoPipelineCompletionStatus:
                 assert body_src is not None
                 has_status = any(
                     kw in body_src
-                    for kw in ["pipeline_status", "pipeline_complete", "execution_status"]
+                    for kw in [
+                        "pipeline_status",
+                        "pipeline_complete",
+                        "execution_status",
+                    ]
                 )
                 assert has_status, (
                     "run_workflow_pipeline does not set a completion status.  "
@@ -715,7 +734,10 @@ class TestR14P_P2_07_RoutingStatsNotThreadSafe:
         source = _read(_ROUTING_DECISION_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_update_routing_stats":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_update_routing_stats"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 has_lock = any(
@@ -741,13 +763,16 @@ class TestR14P_P2_08_ColumnPromptInjection:
         source = _read(_DATA_ANALYSIS_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_build_code_generation_prompt":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_build_code_generation_prompt"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 # Question is sanitized: .replace("{", "").replace("}", "")
                 # But columns_desc uses col['name'] directly
                 question_sanitized = "clean_question" in body_src
-                col_line = body_src[body_src.find("columns_desc"):]
+                col_line = body_src[body_src.find("columns_desc") :]
                 col_sanitized = any(
                     kw in col_line[:300]
                     for kw in ["replace", "sanitize", "escape", "clean"]
@@ -778,8 +803,7 @@ class TestR14P_P2_09_TemplateMaxIloc0NaN:
                     body_src = ast.get_source_segment(source, node)
                     if body_src and ".iloc[0]" in body_src:
                         has_guard = any(
-                            kw in body_src
-                            for kw in ["empty", "len(", "try", "dropna"]
+                            kw in body_src for kw in ["empty", "len(", "try", "dropna"]
                         )
                         assert has_guard, (
                             f"{method} uses .iloc[0] without guarding against "
@@ -871,10 +895,16 @@ class TestR14P_P2_12_InputPreprocessingErrorNoRecovery:
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 func = node.func
-                if isinstance(func, ast.Attribute) and func.attr == "add_conditional_edges":
+                if (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "add_conditional_edges"
+                ):
                     if len(node.args) >= 1:
                         arg0 = node.args[0]
-                        if isinstance(arg0, ast.Constant) and arg0.value == "input_preprocessing":
+                        if (
+                            isinstance(arg0, ast.Constant)
+                            and arg0.value == "input_preprocessing"
+                        ):
                             has_conditional = True
 
         if not has_conditional:
@@ -894,7 +924,9 @@ class TestR14P_P2_12_InputPreprocessingErrorNoRecovery:
                                 # Verify preprocessing can set error
                                 for n2 in ast.walk(tree):
                                     if (
-                                        isinstance(n2, (ast.FunctionDef, ast.AsyncFunctionDef))
+                                        isinstance(
+                                            n2, (ast.FunctionDef, ast.AsyncFunctionDef)
+                                        )
                                         and n2.name == "_input_preprocessing_node"
                                     ):
                                         body = ast.get_source_segment(source, n2)

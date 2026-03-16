@@ -10,18 +10,18 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import ast
+import asyncio
 import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R8-1 (High): _parse_human_number fails on space-grouped numbers
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR8_1_ParseHumanNumberSpacedDigits:
@@ -36,50 +36,45 @@ class TestR8_1_ParseHumanNumberSpacedDigits:
             "R8-1: _parse_human_number('5 000') returned None — "
             "space-grouped thousands are silently dropped"
         )
-        assert result == 5000.0, (
-            f"R8-1: expected 5000.0, got {result}"
-        )
+        assert result == 5000.0, f"R8-1: expected 5000.0, got {result}"
 
     def test_space_grouped_millions(self):
         from backend.services.cost_estimation_service import _parse_human_number
 
         result = _parse_human_number("1 500 000")
-        assert result is not None, (
-            "R8-1: _parse_human_number('1 500 000') returned None"
-        )
-        assert result == 1_500_000.0, (
-            f"R8-1: expected 1500000.0, got {result}"
-        )
+        assert (
+            result is not None
+        ), "R8-1: _parse_human_number('1 500 000') returned None"
+        assert result == 1_500_000.0, f"R8-1: expected 1500000.0, got {result}"
 
     def test_space_grouped_with_suffix_k(self):
         from backend.services.cost_estimation_service import _parse_human_number
 
         result = _parse_human_number("5 000k")
-        assert result is not None, (
-            "R8-1: _parse_human_number('5 000k') returned None"
-        )
-        assert result == 5_000_000.0, (
-            f"R8-1: expected 5000000.0, got {result}"
-        )
+        assert result is not None, "R8-1: _parse_human_number('5 000k') returned None"
+        assert result == 5_000_000.0, f"R8-1: expected 5000000.0, got {result}"
 
     def test_extract_features_spaced_sqft(self):
         """End-to-end: '5 000 square feet' should extract sqft=5000."""
-        from backend.services.cost_estimation_service import extract_cost_features_from_query
+        from backend.services.cost_estimation_service import (
+            extract_cost_features_from_query,
+        )
 
         features = extract_cost_features_from_query(
             "residential single family 5 000 square feet in Toronto"
         )
-        assert "sqft" in features, (
-            "R8-1: extract_cost_features_from_query missed 'sqft' for '5 000 square feet'"
-        )
-        assert features["sqft"] == 5000.0, (
-            f"R8-1: expected sqft=5000.0, got {features['sqft']}"
-        )
+        assert (
+            "sqft" in features
+        ), "R8-1: extract_cost_features_from_query missed 'sqft' for '5 000 square feet'"
+        assert (
+            features["sqft"] == 5000.0
+        ), f"R8-1: expected sqft=5000.0, got {features['sqft']}"
 
 
 # ---------------------------------------------------------------------------
 # R8-2 (Medium): get_data_analysis_agent() singleton race condition
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR8_2_DataAnalysisAgentThreadSafety:
@@ -99,7 +94,10 @@ class TestR8_2_DataAnalysisAgentThreadSafety:
 
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "get_data_analysis_agent":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "get_data_analysis_agent"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 assert "with" in func_source and "lock" in func_source.lower(), (
                     "R8-2: get_data_analysis_agent() does not use a `with lock:` "
@@ -113,6 +111,7 @@ class TestR8_2_DataAnalysisAgentThreadSafety:
 # ---------------------------------------------------------------------------
 # R8-3 (High): sanitize_text bypassed by double-URL-encoding
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR8_3_SanitizeTextDoubleEncoding:
@@ -141,14 +140,14 @@ class TestR8_3_SanitizeTextDoubleEncoding:
             if next_decoded == decoded:
                 break
             decoded = next_decoded
-        assert "<script>" in decoded.lower(), (
-            f"R8-3: iterative unquote did not fully resolve {double_encoded} → got {decoded}"
-        )
+        assert (
+            "<script>" in decoded.lower()
+        ), f"R8-3: iterative unquote did not fully resolve {double_encoded} → got {decoded}"
 
     def test_double_encoded_sql_injection_blocked(self):
         """Verify iterative decode resolves double-encoded SQL injection."""
-        from urllib.parse import unquote
         import re
+        from urllib.parse import unquote
 
         double_encoded = "%2527%253B%2520DROP%2520TABLE%2520users%253B%2520--"
         decoded = double_encoded
@@ -159,14 +158,15 @@ class TestR8_3_SanitizeTextDoubleEncoding:
             decoded = next_decoded
 
         sql_pattern = re.compile(r"drop\s+table", re.IGNORECASE)
-        assert sql_pattern.search(decoded), (
-            f"R8-3: iterative unquote did not fully resolve SQL injection — got {decoded}"
-        )
+        assert sql_pattern.search(
+            decoded
+        ), f"R8-3: iterative unquote did not fully resolve SQL injection — got {decoded}"
 
 
 # ---------------------------------------------------------------------------
 # R8-4 (Medium): _generate_template_code omits question for max/min
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR8_4_TemplateCodeMissingQuestionArg:
@@ -180,10 +180,16 @@ class TestR8_4_TemplateCodeMissingQuestionArg:
         tree = ast.parse(source)
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_generate_template_code":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_generate_template_code"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # Find the _template_max call and check if question is passed
-                assert "self._template_max(filename, dataset_metadata, question)" in func_source, (
+                assert (
+                    "self._template_max(filename, dataset_metadata, question)"
+                    in func_source
+                ), (
                     "R8-4: _generate_template_code calls _template_max without "
                     "passing `question` — column selection ignores user intent"
                 )
@@ -197,9 +203,15 @@ class TestR8_4_TemplateCodeMissingQuestionArg:
         tree = ast.parse(source)
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_generate_template_code":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_generate_template_code"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
-                assert "self._template_min(filename, dataset_metadata, question)" in func_source, (
+                assert (
+                    "self._template_min(filename, dataset_metadata, question)"
+                    in func_source
+                ), (
                     "R8-4: _generate_template_code calls _template_min without "
                     "passing `question` — column selection ignores user intent"
                 )
@@ -211,6 +223,7 @@ class TestR8_4_TemplateCodeMissingQuestionArg:
 # ---------------------------------------------------------------------------
 # R8-5 (Medium): run_workflow_pipeline error-break swallows stale response
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR8_5_PipelineErrorSwallowsStaleResponse:
@@ -242,4 +255,3 @@ class TestR8_5_PipelineErrorSwallowsStaleResponse:
             "R8-5: response_node._build_default_response does not handle "
             "error state — even with the graph.py fix, errors won't surface"
         )
-

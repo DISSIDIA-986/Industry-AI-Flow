@@ -31,30 +31,30 @@ from backend.services.retrieval.hybrid_search import HybridRetriever
 DEFAULT_OUTPUT_PATH = "logs/rag_random_benchmark_report.json"
 QUERY_STYLE_TEMPLATES: Dict[str, Tuple[str, ...]] = {
     "direct": (
-        "What does the construction standard require for \"{topic}\"?",
-        "Summarize the key requirement related to \"{topic}\".",
-        "In practical terms, what guidance is given for \"{topic}\"?",
-        "What requirement is described for \"{topic}\" and \"{topic2}\"?",
+        'What does the construction standard require for "{topic}"?',
+        'Summarize the key requirement related to "{topic}".',
+        'In practical terms, what guidance is given for "{topic}"?',
+        'What requirement is described for "{topic}" and "{topic2}"?',
     ),
     "contextual": (
-        "For a real project delivery scenario, what does the standard say about \"{topic}\"?",
-        "When implementing compliance controls, what guidance applies to \"{topic}\"?",
-        "From a QA perspective, what is the requirement for \"{topic}\"?",
+        'For a real project delivery scenario, what does the standard say about "{topic}"?',
+        'When implementing compliance controls, what guidance applies to "{topic}"?',
+        'From a QA perspective, what is the requirement for "{topic}"?',
     ),
     "conversational": (
-        "I need a quick explanation: what should I do for \"{topic}\"?",
-        "Could you clarify the rule around \"{topic}\" in plain language?",
-        "What does the document actually expect for \"{topic}\"?",
+        'I need a quick explanation: what should I do for "{topic}"?',
+        'Could you clarify the rule around "{topic}" in plain language?',
+        'What does the document actually expect for "{topic}"?',
     ),
     "telegraphic": (
-        "Need rule: \"{topic}\"",
-        "Requirement check for \"{topic}\" and \"{topic2}\"?",
-        "Standard guidance, \"{topic}\"?",
+        'Need rule: "{topic}"',
+        'Requirement check for "{topic}" and "{topic2}"?',
+        'Standard guidance, "{topic}"?',
     ),
     "noisy": (
-        "need quick help for \"{topic}\" what do i do?",
-        "for \"{topic2}\" any must-do rule? short pls",
-        "this doc says what about \"{topic}\".. confused",
+        'need quick help for "{topic}" what do i do?',
+        'for "{topic2}" any must-do rule? short pls',
+        'this doc says what about "{topic}".. confused',
     ),
 }
 FOLLOW_UP_PROMPTS: Tuple[str, ...] = (
@@ -205,7 +205,9 @@ def _is_term_candidate(token: str) -> bool:
 
     if not compact.isalpha():
         # Keep mixed tokens like "a23" where standard identifiers matter.
-        return bool(any(ch.isalpha() for ch in compact) and any(ch.isdigit() for ch in compact))
+        return bool(
+            any(ch.isalpha() for ch in compact) and any(ch.isdigit() for ch in compact)
+        )
 
     if len(compact) < 4:
         return False
@@ -229,7 +231,13 @@ def _resolve_query_style(
     if mode == "mixed_balanced":
         return allowed_styles[int(case_index) % len(allowed_styles)]
     if mode == "hard_focus":
-        hard_focus_sequence = ["noisy", "conversational", "noisy", "contextual", "telegraphic"]
+        hard_focus_sequence = [
+            "noisy",
+            "conversational",
+            "noisy",
+            "contextual",
+            "telegraphic",
+        ]
         return hard_focus_sequence[int(case_index) % len(hard_focus_sequence)]
     if mode in QUERY_STYLE_TEMPLATES:
         return mode
@@ -244,7 +252,9 @@ def _build_question(
     query_style_mode: str,
     case_index: int,
 ) -> Tuple[str, str]:
-    fallback_terms = [token for token in _tokenize(excerpt) if token not in STOPWORDS][:3]
+    fallback_terms = [token for token in _tokenize(excerpt) if token not in STOPWORDS][
+        :3
+    ]
     selected = terms[:3] if terms else fallback_terms
     if not selected:
         selected = ["quality", "control"]
@@ -292,7 +302,9 @@ def _inject_noisy_typo(question: str, rng: random.Random) -> str:
     return " ".join(tokens)
 
 
-def _classify_difficulty(*, query_style: str, expected_terms: List[str], query: str) -> str:
+def _classify_difficulty(
+    *, query_style: str, expected_terms: List[str], query: str
+) -> str:
     score = 0
     style = str(query_style or "").strip().lower()
 
@@ -535,7 +547,9 @@ def _source_hit_from_payload(payload: Dict[str, Any], expected_hint: str) -> boo
     return any(target in token or token in target for token in normalized_values)
 
 
-def _rank_for_expected_source(results: List[Dict[str, Any]], expected_hint: str) -> Optional[int]:
+def _rank_for_expected_source(
+    results: List[Dict[str, Any]], expected_hint: str
+) -> Optional[int]:
     target = _normalize_source_hint(expected_hint)
     for idx, row in enumerate(results, 1):
         candidate = _normalize_source_hint(str(row.get("filename") or ""))
@@ -549,7 +563,9 @@ def _auth_headers() -> Dict[str, str]:
     key = os.getenv("TEST_API_KEY", "").strip()
     if not key:
         keys_raw = os.getenv("API_KEYS", "")
-        key = next((token.strip() for token in keys_raw.split(",") if token.strip()), "")
+        key = next(
+            (token.strip() for token in keys_raw.split(",") if token.strip()), ""
+        )
     if not key:
         return {}
     return {header_name: key}
@@ -636,7 +652,9 @@ def _load_chunk_rows(
             (min_content_chars, max_rows),
         )
         rows = cur.fetchall()
-        return [ChunkRow(chunk_id=row[0], filename=row[1], content=row[2]) for row in rows]
+        return [
+            ChunkRow(chunk_id=row[0], filename=row[1], content=row[2]) for row in rows
+        ]
     finally:
         cur.close()
         conn.close()
@@ -722,7 +740,8 @@ def _evaluate_retrieval(
                 "expected_source_hint": case.expected_source_hint,
                 "source_filename": case.source_filename,
                 "top_filenames": [
-                    str(item.get("filename") or "").lower() for item in results[: min(3, top_k)]
+                    str(item.get("filename") or "").lower()
+                    for item in results[: min(3, top_k)]
                 ],
                 "rank_of_expected_source": rank,
                 "hit_at_k": hit,
@@ -741,7 +760,9 @@ def _evaluate_retrieval(
         "recall_at_k": round(hits / total, 4),
         "mrr": round(mrr_total / total, 4),
         "ndcg_at_k": round(ndcg_total / total, 4),
-        "avg_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else 0.0,
+        "avg_latency_ms": round(sum(latencies) / len(latencies), 2)
+        if latencies
+        else 0.0,
         "by_source": _group_rate(
             per_case,
             group_field="expected_source_hint",
@@ -884,7 +905,9 @@ def _run_workflow_eval_http(
                 follow_repeat_count += 1
             if follow_eval["pass"]:
                 follow_pass_count += 1
-            follow_max_echo = max(follow_max_echo, float(follow_eval["query_echo_ratio"]))
+            follow_max_echo = max(
+                follow_max_echo, float(follow_eval["query_echo_ratio"])
+            )
 
             if turn_index == 2:
                 first_follow_http_code = int(follow_code)
@@ -918,7 +941,9 @@ def _run_workflow_eval_http(
                 **evaluation,
                 "follow_up_http_code": first_follow_http_code,
                 "follow_up_pass": (
-                    follow_pass_count == len(follow_up_queries) if follow_up_queries else True
+                    follow_pass_count == len(follow_up_queries)
+                    if follow_up_queries
+                    else True
                 ),
                 "follow_up_source_hit": first_follow_source_hit,
                 "follow_up_echo_ratio": round(follow_max_echo, 4),
@@ -1002,7 +1027,9 @@ def _run_workflow_eval_testclient(
                 "query_rewrite_count": workflow_query_rewrite_count,
             }
             started = time.perf_counter()
-            response = client.post("/api/v1/workflow/query", json=payload, headers=headers)
+            response = client.post(
+                "/api/v1/workflow/query", json=payload, headers=headers
+            )
             latency_ms = (time.perf_counter() - started) * 1000
             latencies.append(latency_ms)
             try:
@@ -1094,7 +1121,9 @@ def _run_workflow_eval_testclient(
                     **evaluation,
                     "follow_up_http_code": first_follow_http_code,
                     "follow_up_pass": (
-                        follow_pass_count == len(follow_up_queries) if follow_up_queries else True
+                        follow_pass_count == len(follow_up_queries)
+                        if follow_up_queries
+                        else True
                     ),
                     "follow_up_source_hit": first_follow_source_hit,
                     "follow_up_echo_ratio": round(follow_max_echo, 4),
@@ -1208,8 +1237,12 @@ def _run_workflow_eval_direct(
                 }
                 follow_eval = _evaluate_workflow_case(case=case, payload=follow_payload)
                 follow_response = str(follow_payload.get("response") or "")
-                repeat_similarity = _response_similarity(previous_response, follow_response)
-                repeat_flag = repeat_similarity >= 0.88 and bool(follow_response.strip())
+                repeat_similarity = _response_similarity(
+                    previous_response, follow_response
+                )
+                repeat_flag = repeat_similarity >= 0.88 and bool(
+                    follow_response.strip()
+                )
 
                 follow_up_total += 1
                 if follow_eval["query_echo_ratio"] < 0.9:
@@ -1260,7 +1293,9 @@ def _run_workflow_eval_direct(
                     **evaluation,
                     "follow_up_http_code": first_follow_http_code,
                     "follow_up_pass": (
-                        follow_pass_count == len(follow_up_queries) if follow_up_queries else True
+                        follow_pass_count == len(follow_up_queries)
+                        if follow_up_queries
+                        else True
                     ),
                     "follow_up_source_hit": first_follow_source_hit,
                     "follow_up_echo_ratio": round(follow_max_echo, 4),
@@ -1319,7 +1354,9 @@ def _summarize_workflow_eval(
     total = len(per_case) or 1
     success_count = sum(1 for item in per_case if item.get("success"))
     source_hit_count = sum(1 for item in per_case if item.get("source_hit"))
-    non_echo_count = sum(1 for item in per_case if float(item.get("query_echo_ratio", 1.0)) < 0.9)
+    non_echo_count = sum(
+        1 for item in per_case if float(item.get("query_echo_ratio", 1.0)) < 0.9
+    )
     pass_count = sum(1 for item in per_case if item.get("pass"))
     avg_keyword_coverage = (
         sum(float(item.get("keyword_coverage", 0.0)) for item in per_case) / total
@@ -1327,7 +1364,9 @@ def _summarize_workflow_eval(
     avg_reference_overlap = (
         sum(float(item.get("reference_overlap", 0.0)) for item in per_case) / total
     )
-    avg_rouge_l_f1 = sum(float(item.get("rouge_l_f1", 0.0)) for item in per_case) / total
+    avg_rouge_l_f1 = (
+        sum(float(item.get("rouge_l_f1", 0.0)) for item in per_case) / total
+    )
     avg_latency = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
 
     follow_up_denominator = follow_up_total or 1
@@ -1485,7 +1524,9 @@ def _run_workflow_eval(
             conversation_turns=conversation_turns,
         )
     except Exception as fallback_exc:
-        return _failed_summary(f"workflow health non-OK and fallback failed: {fallback_exc}")
+        return _failed_summary(
+            f"workflow health non-OK and fallback failed: {fallback_exc}"
+        )
 
 
 def run_benchmark(
@@ -1552,7 +1593,9 @@ def run_benchmark(
     )
     from backend.config import settings as runtime_settings
 
-    original_enable_rewrite = getattr(runtime_settings, "enable_rag_query_rewrite", True)
+    original_enable_rewrite = getattr(
+        runtime_settings, "enable_rag_query_rewrite", True
+    )
     original_rewrite_count = getattr(runtime_settings, "rag_query_rewrite_count", 1)
     runtime_settings.enable_rag_query_rewrite = bool(workflow_enable_query_rewrite)
     runtime_settings.rag_query_rewrite_count = int(workflow_query_rewrite_count)
@@ -1726,7 +1769,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None) + "\n",
+        json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None)
+        + "\n",
         encoding="utf-8",
     )
 
@@ -1741,7 +1785,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         "difficulty_levels="
         f"{list(report['dataset_snapshot']['difficulty_distribution']['counts'].keys())}"
     )
-    print(f"hybrid_retrieval_hit_at_k={report['retrieval_metrics']['hybrid']['hit_at_k']}")
+    print(
+        f"hybrid_retrieval_hit_at_k={report['retrieval_metrics']['hybrid']['hit_at_k']}"
+    )
     print(f"hybrid_retrieval_mrr={report['retrieval_metrics']['hybrid']['mrr']}")
     print(f"workflow_source_hit_rate={report['workflow_metrics']['source_hit_rate']}")
     print(f"workflow_non_echo_rate={report['workflow_metrics']['non_echo_rate']}")

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
-import importlib.util
 
 
 def _load_demo_module():
@@ -49,7 +49,10 @@ def test_run_prompt_admin_demo_smoke_no_experiment(monkeypatch):
     )
     assert result["base_url"] == "http://localhost:8000"
     assert any(step["step"] == "list_prompts" for step in result["steps"])
-    assert any(step["step"] == "experiment_flow" and step.get("skipped") for step in result["steps"])
+    assert any(
+        step["step"] == "experiment_flow" and step.get("skipped")
+        for step in result["steps"]
+    )
     assert len(calls) == 3
 
 
@@ -71,7 +74,15 @@ def test_run_prompt_admin_demo_executes_experiment_flow(monkeypatch):
             return _FakeResponse({"experiment": {"id": "exp-1"}})
         if url.endswith("/api/prompts/experiments/exp-1/traffic"):
             split = kwargs["json"]["traffic_split"]
-            return _FakeResponse({"experiment": {"id": "exp-1", "status": "active", "traffic_split": split}})
+            return _FakeResponse(
+                {
+                    "experiment": {
+                        "id": "exp-1",
+                        "status": "active",
+                        "traffic_split": split,
+                    }
+                }
+            )
         if url.endswith("/api/prompts/experiments/exp-1/status"):
             return _FakeResponse({"experiment": {"id": "exp-1", "status": "paused"}})
         return _FakeResponse({})
@@ -88,4 +99,6 @@ def test_run_prompt_admin_demo_executes_experiment_flow(monkeypatch):
     assert "create_experiment" in steps
     assert steps.count("ramp_traffic") == 2
     assert "pause_experiment" in steps
-    assert any(url.endswith("/api/prompts/experiments/exp-1/traffic") for _, url, _ in calls)
+    assert any(
+        url.endswith("/api/prompts/experiments/exp-1/traffic") for _, url, _ in calls
+    )

@@ -29,11 +29,13 @@ def test_memory_session_default_language_is_english():
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef) and node.name == "_MemorySession":
             for item in node.body:
-                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                if isinstance(item, ast.AnnAssign) and isinstance(
+                    item.target, ast.Name
+                ):
                     if item.target.id == "language_preference":
-                        assert isinstance(item.value, ast.Constant), (
-                            "language_preference should have a default value"
-                        )
+                        assert isinstance(
+                            item.value, ast.Constant
+                        ), "language_preference should have a default value"
                         assert item.value.value == "en", (
                             f"language_preference defaults to '{item.value.value}' "
                             "but should be 'en' — project uses English documents"
@@ -90,12 +92,9 @@ def test_rrf_formula_uses_k_constant():
     has_correct = bool(correct_pattern.search(source))
 
     assert not has_wrong, (
-        "RRF formula uses weight/rank (wrong) — "
-        "should be weight/(k+rank) with k=60"
+        "RRF formula uses weight/rank (wrong) — " "should be weight/(k+rank) with k=60"
     )
-    assert has_correct, (
-        "RRF formula does not use the standard weight/(k+rank) pattern"
-    )
+    assert has_correct, "RRF formula does not use the standard weight/(k+rank) pattern"
 
 
 # ---------------------------------------------------------------------------
@@ -211,9 +210,7 @@ def test_cost_estimation_train_error_does_not_leak_details():
     source = open("backend/api/cost_estimation_routes.py").read()
 
     # Look for the problematic pattern: detail=f"training failed: {exc}"
-    has_leak = bool(re.search(
-        r'detail\s*=\s*f?"[^"]*\{exc\}', source
-    ))
+    has_leak = bool(re.search(r'detail\s*=\s*f?"[^"]*\{exc\}', source))
     assert not has_leak, (
         "Train endpoint has detail=f'...{exc}' which leaks internal "
         "error messages. Use a generic message instead."

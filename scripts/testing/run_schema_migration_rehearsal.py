@@ -73,7 +73,9 @@ class RehearsalResult:
     def to_dict(self) -> dict:
         return {
             "passed": self.passed,
-            "failed_scenarios": len([item for item in self.scenarios if not item.passed]),
+            "failed_scenarios": len(
+                [item for item in self.scenarios if not item.passed]
+            ),
             "scenarios": [item.to_dict() for item in self.scenarios],
         }
 
@@ -128,7 +130,9 @@ def _run_init_database(table_names: Sequence[str]) -> _FakeConn:
     return conn
 
 
-def _evaluate_scenario(name: str, table_names: Sequence[str]) -> RehearsalScenarioResult:
+def _evaluate_scenario(
+    name: str, table_names: Sequence[str]
+) -> RehearsalScenarioResult:
     checks: List[RehearsalCheck] = []
     conn = _run_init_database(table_names)
     sql = "\n".join(conn.cursor_obj.queries)
@@ -209,7 +213,9 @@ def run_rehearsal(*, scenario: str) -> RehearsalResult:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run prompt schema migration rehearsal")
+    parser = argparse.ArgumentParser(
+        description="Run prompt schema migration rehearsal"
+    )
     parser.add_argument(
         "--scenario",
         choices=("empty", "legacy", "both"),

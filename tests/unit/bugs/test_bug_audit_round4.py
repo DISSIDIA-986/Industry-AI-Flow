@@ -41,18 +41,27 @@ class TestR4_1_DatasetInfoEncodingCrash:
     def test_latin1_csv_should_not_crash(self, tmp_path):
         """A Latin-1 encoded CSV should be read successfully."""
         csv_path = tmp_path / "latin1.csv"
-        csv_path.write_bytes(
-            "name,cost\nCafé,100\nRénovation,200\n".encode("latin-1")
-        )
+        csv_path.write_bytes("name,cost\nCafé,100\nRénovation,200\n".encode("latin-1"))
 
         with (
-            patch("backend.services.data_analysis.data_analysis_agent.settings") as mock_settings,
-            patch("backend.services.data_analysis.data_analysis_agent.LLMClientFactory"),
-            patch("backend.services.data_analysis.data_analysis_agent.get_code_execution_manager", return_value=None),
-            patch("backend.services.data_analysis.data_analysis_agent.code_executor", None),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.settings"
+            ) as mock_settings,
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.LLMClientFactory"
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.get_code_execution_manager",
+                return_value=None,
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.code_executor", None
+            ),
         ):
             mock_settings.resolved_local_backend = "mock"
-            from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
+            from backend.services.data_analysis.data_analysis_agent import (
+                DataAnalysisAgent,
+            )
 
             agent = DataAnalysisAgent.__new__(DataAnalysisAgent)
             agent.llm_client = MagicMock()
@@ -61,28 +70,37 @@ class TestR4_1_DatasetInfoEncodingCrash:
 
             result = agent._extract_dataset_info(str(csv_path))
 
-        assert "error" not in result, (
-            f"R4-1: _extract_dataset_info crashed on Latin-1 CSV: {result.get('error')}"
-        )
-        assert result.get("rows") == 2, (
-            f"R4-1: Expected 2 rows, got {result.get('rows')}"
-        )
+        assert (
+            "error" not in result
+        ), f"R4-1: _extract_dataset_info crashed on Latin-1 CSV: {result.get('error')}"
+        assert (
+            result.get("rows") == 2
+        ), f"R4-1: Expected 2 rows, got {result.get('rows')}"
 
     def test_utf8_sig_csv_should_not_crash(self, tmp_path):
         """A UTF-8-BOM encoded CSV should be read successfully."""
         csv_path = tmp_path / "bom.csv"
-        csv_path.write_bytes(
-            b"\xef\xbb\xbfname,cost\nTest,100\n"
-        )
+        csv_path.write_bytes(b"\xef\xbb\xbfname,cost\nTest,100\n")
 
         with (
-            patch("backend.services.data_analysis.data_analysis_agent.settings") as mock_settings,
-            patch("backend.services.data_analysis.data_analysis_agent.LLMClientFactory"),
-            patch("backend.services.data_analysis.data_analysis_agent.get_code_execution_manager", return_value=None),
-            patch("backend.services.data_analysis.data_analysis_agent.code_executor", None),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.settings"
+            ) as mock_settings,
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.LLMClientFactory"
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.get_code_execution_manager",
+                return_value=None,
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.code_executor", None
+            ),
         ):
             mock_settings.resolved_local_backend = "mock"
-            from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
+            from backend.services.data_analysis.data_analysis_agent import (
+                DataAnalysisAgent,
+            )
 
             agent = DataAnalysisAgent.__new__(DataAnalysisAgent)
             agent.llm_client = MagicMock()
@@ -91,9 +109,9 @@ class TestR4_1_DatasetInfoEncodingCrash:
 
             result = agent._extract_dataset_info(str(csv_path))
 
-        assert "error" not in result, (
-            f"R4-1: _extract_dataset_info crashed on UTF-8-BOM CSV: {result.get('error')}"
-        )
+        assert (
+            "error" not in result
+        ), f"R4-1: _extract_dataset_info crashed on UTF-8-BOM CSV: {result.get('error')}"
 
 
 # ---------------------------------------------------------------------------
@@ -190,13 +208,24 @@ class TestR4_4_TemplateColumnSelection:
         """Asking 'average cost' should pick a cost-related column,
         not the first numeric column."""
         with (
-            patch("backend.services.data_analysis.data_analysis_agent.settings") as mock_settings,
-            patch("backend.services.data_analysis.data_analysis_agent.LLMClientFactory"),
-            patch("backend.services.data_analysis.data_analysis_agent.get_code_execution_manager", return_value=None),
-            patch("backend.services.data_analysis.data_analysis_agent.code_executor", None),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.settings"
+            ) as mock_settings,
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.LLMClientFactory"
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.get_code_execution_manager",
+                return_value=None,
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.code_executor", None
+            ),
         ):
             mock_settings.resolved_local_backend = "mock"
-            from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
+            from backend.services.data_analysis.data_analysis_agent import (
+                DataAnalysisAgent,
+            )
 
             agent = DataAnalysisAgent.__new__(DataAnalysisAgent)
             agent.llm_client = MagicMock()
@@ -209,7 +238,9 @@ class TestR4_4_TemplateColumnSelection:
                 ],
             }
 
-            code = agent._template_average("data.csv", metadata, "what is the average cost")
+            code = agent._template_average(
+                "data.csv", metadata, "what is the average cost"
+            )
 
             # The code should reference 'cost_cad', not 'id'
             assert "cost_cad" in code, (
@@ -232,13 +263,24 @@ class TestR4_5_ExtractCodeLaxFallback:
         """LLM response with prose + 'import' + 'print' should NOT be
         treated as executable code."""
         with (
-            patch("backend.services.data_analysis.data_analysis_agent.settings") as mock_settings,
-            patch("backend.services.data_analysis.data_analysis_agent.LLMClientFactory"),
-            patch("backend.services.data_analysis.data_analysis_agent.get_code_execution_manager", return_value=None),
-            patch("backend.services.data_analysis.data_analysis_agent.code_executor", None),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.settings"
+            ) as mock_settings,
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.LLMClientFactory"
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.get_code_execution_manager",
+                return_value=None,
+            ),
+            patch(
+                "backend.services.data_analysis.data_analysis_agent.code_executor", None
+            ),
         ):
             mock_settings.resolved_local_backend = "mock"
-            from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
+            from backend.services.data_analysis.data_analysis_agent import (
+                DataAnalysisAgent,
+            )
 
             agent = DataAnalysisAgent.__new__(DataAnalysisAgent)
             agent.llm_client = MagicMock()
@@ -275,7 +317,10 @@ class TestR4_6_MemoryHistoryTrimming:
         with (
             patch("backend.services.rag_engine.VectorStore"),
             patch("backend.services.rag_engine.get_llm_client"),
-            patch("backend.services.rag_engine.get_backend_status", return_value={"backend": "mock"}),
+            patch(
+                "backend.services.rag_engine.get_backend_status",
+                return_value={"backend": "mock"},
+            ),
             patch("backend.services.rag_engine.HybridRetriever"),
             patch("backend.services.rag_engine.Reranker"),
             patch("backend.services.rag_engine.FeedbackManager"),
@@ -296,9 +341,7 @@ class TestR4_6_MemoryHistoryTrimming:
 
             # Record 55 interactions
             for i in range(55):
-                rag._record_memory_interaction(
-                    session, f"question_{i}", f"answer_{i}"
-                )
+                rag._record_memory_interaction(session, f"question_{i}", f"answer_{i}")
 
             assert len(session.interaction_history) == 50, (
                 f"R4-6: Expected history capped at 50, got "

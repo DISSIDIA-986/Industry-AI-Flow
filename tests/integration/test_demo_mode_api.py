@@ -74,10 +74,14 @@ def _build_app(*, roles: list[str] | None = None) -> FastAPI:
     app.include_router(workflow_query_routes.router)
 
     async def _mock_secure():
-        return TenantContext(tenant_id="tenant-a", user_id="u-1", roles=roles or ["user"])
+        return TenantContext(
+            tenant_id="tenant-a", user_id="u-1", roles=roles or ["user"]
+        )
 
     async def _mock_tenant():
-        return TenantContext(tenant_id="tenant-a", user_id="u-1", roles=roles or ["user"])
+        return TenantContext(
+            tenant_id="tenant-a", user_id="u-1", roles=roles or ["user"]
+        )
 
     async def _mock_workflow_runner():
         return _FakeWorkflowRunner()
@@ -133,7 +137,10 @@ def test_dispatch_route_uses_scripted_replay_without_cloud_call(monkeypatch):
 
     resp = client.post(
         "/api/v1/query/dispatch",
-        json={"question": "cost estimate for a tower project", "route_mode": "cloud_only"},
+        json={
+            "question": "cost estimate for a tower project",
+            "route_mode": "cloud_only",
+        },
     )
     assert resp.status_code == 200
     payload = resp.json()

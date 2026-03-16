@@ -8,17 +8,19 @@ Tests use source inspection where imports fail (Python 3.14 venv missing deps).
 
 import ast
 import re
-import pytest
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Helper: import with fallback to source-text validation
 # ---------------------------------------------------------------------------
 
+
 def _import_or_skip(module_path, name):
     """Import a name from a module or skip the test if import fails."""
     try:
         import importlib
+
         mod = importlib.import_module(module_path)
         return getattr(mod, name)
     except (ImportError, ModuleNotFoundError) as e:
@@ -28,6 +30,7 @@ def _import_or_skip(module_path, name):
 def _import_validator():
     """Import CodeValidator, bypassing the code_executor package __init__."""
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(
         "validator", "backend/services/code_executor/validator.py"
     )
@@ -39,6 +42,7 @@ def _import_validator():
 # ---------------------------------------------------------------------------
 # Security — Code Validator
 # ---------------------------------------------------------------------------
+
 
 class TestCodeValidatorRound16:
     """Code validator security bypass tests."""
@@ -87,9 +91,7 @@ class TestCodeValidatorRound16:
         v = self._get_validator()
         code = "name = bytearray([111,112,101,110]).decode()\n"
         result = v.validate(code)
-        assert not result.is_valid, (
-            "bytearray() name construction must be blocked"
-        )
+        assert not result.is_valid, "bytearray() name construction must be blocked"
 
     def test_np_load_deserialization(self):
         """C-R16-01 variant: np.load() can deserialize pickle by default."""
@@ -105,6 +107,7 @@ class TestCodeValidatorRound16:
 # ---------------------------------------------------------------------------
 # Security — Admin Endpoints & Info Disclosure
 # ---------------------------------------------------------------------------
+
 
 class TestAdminAndDisclosureRound16:
     """Admin bypass and information disclosure tests."""
@@ -149,7 +152,7 @@ class TestAdminAndDisclosureRound16:
     def test_document_version_no_filepath(self):
         """C-R16-06 (P1): DocumentVersionResponse exposes server filesystem paths."""
         source = open("backend/api/document_management_routes.py").read()
-        assert 'filepath: str' not in source or 'filepath: Optional[str]' in source, (
+        assert "filepath: str" not in source or "filepath: Optional[str]" in source, (
             "DocumentVersionResponse should not expose raw server filepath — "
             "either remove the field or return a safe relative path"
         )
@@ -159,6 +162,7 @@ class TestAdminAndDisclosureRound16:
 # RAG Quality — Groundedness Node (source inspection)
 # ---------------------------------------------------------------------------
 
+
 class TestGroundednessNodeRound16:
     """Groundedness node bugs — verified via source inspection."""
 
@@ -167,15 +171,20 @@ class TestGroundednessNodeRound16:
         attached to tokens. Must use regex tokenizer instead."""
         source = open("backend/services/workflows/nodes/groundedness_node.py").read()
         # After fix, the node should NOT use answer.lower().split()
-        uses_split = "answer.lower().split()" in source or "answer_tokens = set(answer.lower().split())" in source
-        uses_regex = "re.findall" in source or "_tokenize" in source or "_TOKEN_RE" in source
+        uses_split = (
+            "answer.lower().split()" in source
+            or "answer_tokens = set(answer.lower().split())" in source
+        )
+        uses_regex = (
+            "re.findall" in source or "_tokenize" in source or "_TOKEN_RE" in source
+        )
         assert not uses_split, (
             "Groundedness node still uses .split() tokenizer which keeps "
             "punctuation attached to tokens"
         )
-        assert uses_regex, (
-            "Groundedness node should use regex tokenizer that strips punctuation"
-        )
+        assert (
+            uses_regex
+        ), "Groundedness node should use regex tokenizer that strips punctuation"
 
     def test_groundedness_node_dict_without_content_key(self):
         """D-R16-04 (P1): Context dict without 'content' key causes TypeError
@@ -184,10 +193,10 @@ class TestGroundednessNodeRound16:
         # After fix, the fallback should produce a string, not return dict
         # Check for str() wrapping or explicit .get("text", ...) fallback
         has_safe_fallback = (
-            'str(c.get(' in source
+            "str(c.get(" in source
             or 'c.get("text"' in source
             or "c.get('text'" in source
-            or '_extract_context_text' in source
+            or "_extract_context_text" in source
         )
         assert has_safe_fallback, (
             "Groundedness node must safely handle context dicts without 'content' key — "
@@ -198,6 +207,7 @@ class TestGroundednessNodeRound16:
 # ---------------------------------------------------------------------------
 # RAG Quality — Hybrid Search
 # ---------------------------------------------------------------------------
+
 
 class TestHybridSearchRound16:
     """Hybrid search normalization and tokenizer bugs."""
@@ -239,14 +249,15 @@ class TestHybridSearchRound16:
             # Fallback: check source
             source = open("backend/services/retrieval/hybrid_search.py").read()
             # The regex should include a dot character class
-            assert r"[.-]" in source or r"\." in source, (
-                "BM25 regex tokenizer should preserve dotted standard identifiers"
-            )
+            assert (
+                r"[.-]" in source or r"\." in source
+            ), "BM25 regex tokenizer should preserve dotted standard identifiers"
 
 
 # ---------------------------------------------------------------------------
 # RAG Quality — Groundedness Checker
 # ---------------------------------------------------------------------------
+
 
 class TestGroundednessCheckerRound16:
     """Groundedness checker numeric penalty bug."""
@@ -272,16 +283,17 @@ class TestGroundednessCheckerRound16:
 # Intent Classification
 # ---------------------------------------------------------------------------
 
+
 class TestIntentClassificationRound16:
     """Intent classification bugs."""
 
     def test_cost_estimation_agent_mapping(self):
         """B-R16-01 (P1): IntentClassifier._get_agent_type maps COST_ESTIMATION
         to DataAnalysisAgent instead of CostEstimationAgent."""
-        source = open("backend/services/intent_classification/intent_classifier.py").read()
-        match = re.search(
-            r'IntentType\.COST_ESTIMATION\s*:\s*"(\w+)"', source
-        )
+        source = open(
+            "backend/services/intent_classification/intent_classifier.py"
+        ).read()
+        match = re.search(r'IntentType\.COST_ESTIMATION\s*:\s*"(\w+)"', source)
         assert match, "Could not find COST_ESTIMATION mapping in intent_classifier.py"
         agent_name = match.group(1)
         assert agent_name != "DataAnalysisAgent", (
@@ -292,11 +304,19 @@ class TestIntentClassificationRound16:
     def test_clarification_prompt_uses_prompt_content(self):
         """B-R16-02 (P1): get_clarification_prompt discards prompt_manager result
         and always returns simulated response."""
-        source = open("backend/services/intent_classification/intent_classifier.py").read()
+        source = open(
+            "backend/services/intent_classification/intent_classifier.py"
+        ).read()
         idx_get_prompt = source.find("prompt_info, prompt_content")
         idx_simulate = source.find("_simulate_clarification_response", idx_get_prompt)
-        between = source[idx_get_prompt:idx_simulate] if idx_get_prompt >= 0 and idx_simulate >= 0 else ""
-        uses_prompt_content = "if prompt_content" in between or "return prompt_content" in between
+        between = (
+            source[idx_get_prompt:idx_simulate]
+            if idx_get_prompt >= 0 and idx_simulate >= 0
+            else ""
+        )
+        uses_prompt_content = (
+            "if prompt_content" in between or "return prompt_content" in between
+        )
         assert uses_prompt_content, (
             "get_clarification_prompt must check and use prompt_content from "
             "prompt_manager before falling through to _simulate_clarification_response"
@@ -308,14 +328,20 @@ class TestIntentClassificationRound16:
         source = open("backend/services/workflows/nodes/intent_node.py").read()
         # After fix, bare "how much" should not be in the cost token list
         # It should be more specific like "how much does it cost"
-        has_bare_how_much = '"how much"' in source and '"how much does it cost"' not in source
+        has_bare_how_much = (
+            '"how much"' in source and '"how much does it cost"' not in source
+        )
         assert not has_bare_how_much, (
             "Heuristic intent should not use bare 'how much' as cost estimation "
             "trigger — it matches non-cost queries like 'how much water'"
         )
 
         # Also check "price" is not bare
-        has_bare_price = '"price"' in source and '"price estimate"' not in source and '"price prediction"' not in source
+        has_bare_price = (
+            '"price"' in source
+            and '"price estimate"' not in source
+            and '"price prediction"' not in source
+        )
         assert not has_bare_price, (
             "Heuristic intent should not use bare 'price' as cost estimation "
             "trigger — it matches non-cost queries"
@@ -326,6 +352,7 @@ class TestIntentClassificationRound16:
 # Dispatch Service
 # ---------------------------------------------------------------------------
 
+
 class TestDispatchServiceRound16:
     """LLM dispatch service bugs."""
 
@@ -333,9 +360,9 @@ class TestDispatchServiceRound16:
         """B-R16-03 (P1): _truncate_prompt callers must pass appropriate context
         window for their backend, not rely on hardcoded 4096 default."""
         source = open("backend/services/llm_integration/dispatch_service.py").read()
-        cloud_section = source[source.find("def _run_cloud"):]
+        cloud_section = source[source.find("def _run_cloud") :]
         truncate_call = re.search(
-            r'_truncate_prompt\([^)]*context_window\s*=\s*(\d+)',
+            r"_truncate_prompt\([^)]*context_window\s*=\s*(\d+)",
             cloud_section,
         )
         assert truncate_call, (
@@ -343,14 +370,15 @@ class TestDispatchServiceRound16:
             "currently uses hardcoded 4096 default"
         )
         window_value = int(truncate_call.group(1))
-        assert window_value > 4096, (
-            f"Cloud context_window should be >4096 for cloud LLMs — got {window_value}"
-        )
+        assert (
+            window_value > 4096
+        ), f"Cloud context_window should be >4096 for cloud LLMs — got {window_value}"
 
 
 # ---------------------------------------------------------------------------
 # Cost Estimation
 # ---------------------------------------------------------------------------
+
 
 class TestCostEstimationRound16:
     """Cost estimation regex bugs."""
@@ -360,14 +388,12 @@ class TestCostEstimationRound16:
         non-cost numbers like 'cost overrun 10%' extracting 10 as cost."""
         source = open("backend/services/cost_estimation_service.py").read()
         # Find the estimated_cost_cad regex patterns
-        match = re.search(
-            r'"estimated_cost_cad":\s*\[(.*?)\]', source, re.DOTALL
-        )
+        match = re.search(r'"estimated_cost_cad":\s*\[(.*?)\]', source, re.DOTALL)
         assert match, "Could not find estimated_cost_cad patterns"
         patterns_text = match.group(1)
         # Bare "cost" without qualifier should not be present
         # It should require a qualifier like "estimated cost", "project cost", etc.
-        has_bare_cost = re.search(r'\|cost\)', patterns_text)
+        has_bare_cost = re.search(r"\|cost\)", patterns_text)
         assert not has_bare_cost, (
             "estimated_cost_cad regex contains bare 'cost' which matches "
             "non-cost contexts like 'cost overrun 10%' extracting 10 as cost"
@@ -378,6 +404,7 @@ class TestCostEstimationRound16:
 # Pipeline — Prompt Manager
 # ---------------------------------------------------------------------------
 
+
 class TestPromptManagerRound16:
     """Prompt manager bugs."""
 
@@ -385,7 +412,7 @@ class TestPromptManagerRound16:
         """D-R16-01 (P1): Jinja2 autoescape=True HTML-escapes characters like
         <, >, & in prompts sent to LLMs, corrupting the prompt."""
         source = open("backend/services/prompt_manager.py").read()
-        match = re.search(r'autoescape\s*=\s*(True|False)', source)
+        match = re.search(r"autoescape\s*=\s*(True|False)", source)
         assert match, "Could not find autoescape setting in prompt_manager.py"
         assert match.group(1) == "False", (
             "Jinja2 autoescape must be False for LLM prompts — HTML escaping "
@@ -396,6 +423,7 @@ class TestPromptManagerRound16:
 # ---------------------------------------------------------------------------
 # Data Analysis Agent
 # ---------------------------------------------------------------------------
+
 
 class TestDataAnalysisAgentRound16:
     """Data analysis agent bugs."""

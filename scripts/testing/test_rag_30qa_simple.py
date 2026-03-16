@@ -17,8 +17,7 @@ from statistics import mean, median
 from typing import List
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SimpleTestResult:
     """简化的测试结果"""
+
     question_id: int
     question: str
     category: str
@@ -53,7 +53,6 @@ TEST_QUESTIONS = [
     (6, "根据 GSA P100，项目风险管理的最佳实践是什么？", "gsa_p100"),
     (7, "GSA P100 中关于成本控制的指导原则是什么？", "gsa_p100"),
     (8, "按照 GSA P100，项目沟通计划应该包含哪些要素？", "gsa_p100"),
-
     # UFGS 现浇混凝土
     (9, "UFGS 对现浇混凝土的强度等级有什么要求？", "ufgs_concrete"),
     (10, "根据 UFGS，混凝土浇筑过程中的温度控制要求是什么？", "ufgs_concrete"),
@@ -62,24 +61,20 @@ TEST_QUESTIONS = [
     (13, "UFGS 对混凝土样品检测有哪些要求？", "ufgs_concrete"),
     (14, "根据 UFGS，现浇混凝土施工中的模板要求是什么？", "ufgs_concrete"),
     (15, "UFGS 中关于混凝土接缝处理的要求是什么？", "ufgs_concrete"),
-
     # OSHA 安全规范
     (16, "OSHA 1926 标准中关于施工现场个人防护装备的要求是什么？", "osha"),
     (17, "根据 OSHA 1926，高空作业的安全规范有哪些？", "osha"),
     (18, "OSHA 对施工用电安全有什么要求？", "osha"),
     (19, "按照 OSHA 1926，施工现场消防安全要求是什么？", "osha"),
     (20, "OSHA 对施工机械操作的安全规定有哪些？", "osha"),
-
     # Caltrans
     (21, "Caltrans 标准规范中对材料质量有什么要求？", "caltrans"),
     (22, "根据 Caltrans，道路施工的交通控制要求是什么？", "caltrans"),
     (23, "Caltrans 规范中对排水系统的要求是什么？", "caltrans"),
     (24, "按照 Caltrans，路面平整度的标准是什么？", "caltrans"),
-
     # IFC
     (25, "IFC 4.3 标准中建筑元素的基本属性有哪些？", "ifc"),
     (26, "根据 IFC 4.3，几何表示的方法有哪些？", "ifc"),
-
     # 综合问题
     (27, "施工项目中如何平衡成本、质量和时间？", "general"),
     (28, "建筑工程中的可持续性最佳实践是什么？", "general"),
@@ -90,9 +85,9 @@ TEST_QUESTIONS = [
 
 def run_simple_rag_test() -> dict:
     """运行简化的 RAG 测试"""
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("🚀 开始 RAG 系统 30 问简化测试")
-    logger.info("="*80)
+    logger.info("=" * 80)
 
     try:
         from backend.services.rag_engine import SimpleRAG
@@ -135,38 +130,44 @@ def run_simple_rag_test() -> dict:
 
             if response and response.get("answer"):
                 answer = response["answer"]
-                results.append(SimpleTestResult(
-                    question_id=qid,
-                    question=question,
-                    category=category,
-                    response_time_ms=query_time,
-                    success=True,
-                    answer=answer,
-                    answer_length=len(answer),
-                    has_citation="[Sources:" in answer or "[Sources: " in answer,
-                ))
+                results.append(
+                    SimpleTestResult(
+                        question_id=qid,
+                        question=question,
+                        category=category,
+                        response_time_ms=query_time,
+                        success=True,
+                        answer=answer,
+                        answer_length=len(answer),
+                        has_citation="[Sources:" in answer or "[Sources: " in answer,
+                    )
+                )
                 logger.info(f"  ✅ 响应时间: {query_time:.2f}ms, 长度: {len(answer)} 字符")
             else:
-                results.append(SimpleTestResult(
+                results.append(
+                    SimpleTestResult(
+                        question_id=qid,
+                        question=question,
+                        category=category,
+                        response_time_ms=query_time,
+                        success=False,
+                        error_message="空响应",
+                    )
+                )
+                logger.warning(f"  ⚠️  空响应")
+
+        except Exception as e:
+            query_time = (time.time() - query_start) * 1000
+            results.append(
+                SimpleTestResult(
                     question_id=qid,
                     question=question,
                     category=category,
                     response_time_ms=query_time,
                     success=False,
-                    error_message="空响应",
-                ))
-                logger.warning(f"  ⚠️  空响应")
-
-        except Exception as e:
-            query_time = (time.time() - query_start) * 1000
-            results.append(SimpleTestResult(
-                question_id=qid,
-                question=question,
-                category=category,
-                response_time_ms=query_time,
-                success=False,
-                error_message=str(e)[:100],
-            ))
+                    error_message=str(e)[:100],
+                )
+            )
             logger.error(f"  ❌ 错误: {e}")
 
         time.sleep(0.5)  # 避免过快请求
@@ -179,7 +180,9 @@ def run_simple_rag_test() -> dict:
     return report
 
 
-def generate_report(results: List[SimpleTestResult], total_time: float, init_time: float) -> dict:
+def generate_report(
+    results: List[SimpleTestResult], total_time: float, init_time: float
+) -> dict:
     """生成测试报告"""
 
     successful = [r for r in results if r.success]
@@ -205,7 +208,9 @@ def generate_report(results: List[SimpleTestResult], total_time: float, init_tim
             "avg_response_time_ms": avg_response_time,
             "median_response_time_ms": median_response_time,
             "citation_rate": citation_rate,
-            "avg_answer_length": mean([r.answer_length for r in successful]) if successful else 0,
+            "avg_answer_length": mean([r.answer_length for r in successful])
+            if successful
+            else 0,
         },
         "results": [
             {
@@ -217,7 +222,9 @@ def generate_report(results: List[SimpleTestResult], total_time: float, init_tim
                 "answer_length": r.answer_length,
                 "has_citation": r.has_citation,
                 "error": r.error_message if not r.success else None,
-                "answer_preview": r.answer[:200] + "..." if len(r.answer) > 200 else r.answer,
+                "answer_preview": r.answer[:200] + "..."
+                if len(r.answer) > 200
+                else r.answer,
             }
             for r in results
         ],
@@ -231,9 +238,9 @@ def generate_report(results: List[SimpleTestResult], total_time: float, init_tim
 
 def print_summary(report: dict):
     """打印测试汇总"""
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("📋 30 问测试汇总")
-    logger.info("="*80)
+    logger.info("=" * 80)
 
     s = report["summary"]
 
@@ -252,7 +259,7 @@ def print_summary(report: dict):
     logger.info(f"  Citation 率: {s['citation_rate']:.1%}")
     logger.info(f"  平均答案长度: {s['avg_answer_length']:.0f} 字符")
 
-    logger.info("="*80)
+    logger.info("=" * 80)
 
 
 def main():

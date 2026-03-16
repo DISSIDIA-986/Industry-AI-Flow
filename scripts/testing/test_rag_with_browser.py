@@ -17,8 +17,7 @@ from statistics import mean
 from typing import Any, Dict, List
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BrowserTestResult:
     """浏览器测试结果"""
+
     query: str
     success: bool
     response_time_ms: float
@@ -66,20 +66,22 @@ class RAGBrowserTester:
 
     def test_rag_frontend(self) -> Dict[str, Any]:
         """测试 RAG 前端界面"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 开始 RAG 前端浏览器自动化测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         results = []
         start_time = time.time()
 
         # 1. 打开前端页面
         logger.info(f"\n📖 步骤 1: 打开前端页面 {self.base_url}")
-        success, output = self._run_agent_browser([
-            f"open {self.base_url}",
-            "wait --load networkidle",
-            "screenshot /tmp/rag_frontend.png"
-        ])
+        success, output = self._run_agent_browser(
+            [
+                f"open {self.base_url}",
+                "wait --load networkidle",
+                "screenshot /tmp/rag_frontend.png",
+            ]
+        )
 
         if not success:
             logger.error(f"❌ 无法打开前端页面: {output}")
@@ -90,16 +92,16 @@ class RAGBrowserTester:
 
         # 2. 获取页面快照
         logger.info(f"\n🔍 步骤 2: 获取页面快照")
-        success, snapshot = self._run_agent_browser([
-            "snapshot -i --json"
-        ])
+        success, snapshot = self._run_agent_browser(["snapshot -i --json"])
 
         if success:
             logger.info("✅ 页面快照已获取")
             # 解析 JSON 输出
             try:
-                snapshot_data = json.loads(snapshot.split('\n')[-1])
-                logger.info(f"页面元素数量: {len(snapshot_data.get('data', {}).get('refs', {}))}")
+                snapshot_data = json.loads(snapshot.split("\n")[-1])
+                logger.info(
+                    f"页面元素数量: {len(snapshot_data.get('data', {}).get('refs', {}))}"
+                )
             except:
                 logger.warning("无法解析快照 JSON")
         else:
@@ -172,13 +174,19 @@ class RAGBrowserTester:
                 error_message=str(e),
             )
 
-    def _generate_test_report(self, results: List[BrowserTestResult], total_duration: float) -> Dict[str, Any]:
+    def _generate_test_report(
+        self, results: List[BrowserTestResult], total_duration: float
+    ) -> Dict[str, Any]:
         """生成测试报告"""
         successful = [r for r in results if r.success]
         failed = [r for r in results if not r.success]
 
-        avg_response_time = mean([r.response_time_ms for r in successful]) if successful else 0
-        avg_answer_length = mean([r.answer_length for r in successful]) if successful else 0
+        avg_response_time = (
+            mean([r.response_time_ms for r in successful]) if successful else 0
+        )
+        avg_answer_length = (
+            mean([r.answer_length for r in successful]) if successful else 0
+        )
         with_sources = sum(1 for r in successful if r.has_sources)
 
         report = {
@@ -207,16 +215,20 @@ class RAGBrowserTester:
         }
 
         # 打印汇总
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📋 测试汇总")
-        logger.info("="*70)
+        logger.info("=" * 70)
         logger.info(f"  总查询数: {report['total_queries']}")
-        logger.info(f"  成功: {report['successful_queries']}, 失败: {report['failed_queries']}")
+        logger.info(
+            f"  成功: {report['successful_queries']}, 失败: {report['failed_queries']}"
+        )
         logger.info(f"  成功率: {report['success_rate']*100:.1f}%")
         logger.info(f"  平均响应时间: {report['avg_response_time_ms']:.2f}ms")
         logger.info(f"  平均答案长度: {report['avg_answer_length']:.0f} 字符")
-        logger.info(f"  包含来源: {report['queries_with_sources']}/{report['successful_queries']}")
-        logger.info("="*70)
+        logger.info(
+            f"  包含来源: {report['queries_with_sources']}/{report['successful_queries']}"
+        )
+        logger.info("=" * 70)
 
         return report
 
@@ -239,4 +251,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

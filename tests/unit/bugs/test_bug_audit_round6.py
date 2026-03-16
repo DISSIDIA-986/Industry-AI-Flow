@@ -26,7 +26,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R6-1 (Critical): Docker timeout not forwarded
 # ---------------------------------------------------------------------------
@@ -88,7 +87,9 @@ class TestR6_2_ValidateCodeMissesDangerousImports:
                 for inner_node in ast.walk(ast.parse(func_source)):
                     if isinstance(inner_node, ast.List):
                         for elt in inner_node.elts:
-                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                            if isinstance(elt, ast.Constant) and isinstance(
+                                elt.value, str
+                            ):
                                 blocked.add(elt.value)
                 return blocked
         return set()
@@ -164,11 +165,12 @@ class TestR6_3_SanitizeTextUrlEncodedBypass:
             # If we get here without exception, the SQL injection was NOT blocked
             # Check if decoded form would be dangerous
             from urllib.parse import unquote
+
             decoded = unquote(result or "")
             has_sql = bool(re.search(r"drop\s+table", decoded, re.IGNORECASE))
-            assert not has_sql, (
-                "R6-3: sanitize_text allowed URL-encoded SQL injection through"
-            )
+            assert (
+                not has_sql
+            ), "R6-3: sanitize_text allowed URL-encoded SQL injection through"
         except HTTPException:
             pass  # Correctly blocked
 
@@ -193,9 +195,9 @@ class TestR6_4_SqftRegexFalsePositive:
         result = extract_cost_features_from_query(
             "Estimate cost for 5000 square feet residential"
         )
-        assert result.get("sqft") == 5000.0, (
-            f"R6-4: '5000 square feet' not extracted correctly, got {result.get('sqft')}"
-        )
+        assert (
+            result.get("sqft") == 5000.0
+        ), f"R6-4: '5000 square feet' not extracted correctly, got {result.get('sqft')}"
 
     def test_estimate_cost_does_not_extract_bogus_sqft_from_cost_value(self):
         """When query has 'estimated cost 500000', the sqft pattern should NOT
@@ -243,9 +245,11 @@ class TestR6_5_ResponseNodeCalledAfterError:
         response = _build_default_response(error_state)
         # Error response should indicate the request was blocked,
         # NOT produce a normal success-like response
-        assert "could not be processed" in response.lower() or "blocked" in response.lower() or "safety" in response.lower(), (
-            f"R6-5: Error state response looks like success: '{response}'"
-        )
+        assert (
+            "could not be processed" in response.lower()
+            or "blocked" in response.lower()
+            or "safety" in response.lower()
+        ), f"R6-5: Error state response looks like success: '{response}'"
         # And the error key should still be in state
         assert error_state.get("error"), "R6-5: error was cleared from state"
 
@@ -272,11 +276,17 @@ class TestR6_6_ModuleLevelInstantiation:
         for node in ast.iter_child_nodes(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "data_analysis_agent":
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "data_analysis_agent"
+                    ):
                         # Check if it's a direct call (instantiation)
                         if isinstance(node.value, ast.Call):
                             func = node.value.func
-                            if isinstance(func, ast.Name) and func.id == "DataAnalysisAgent":
+                            if (
+                                isinstance(func, ast.Name)
+                                and func.id == "DataAnalysisAgent"
+                            ):
                                 pytest.fail(
                                     "R6-6: DataAnalysisAgent() is instantiated at module level "
                                     "(line 578). This triggers LLM client creation on import. "
@@ -303,13 +313,19 @@ class TestR6_7_MemoryInteractionThreadPerCall:
         tree = ast.parse(source)
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_record_memory_interaction":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_record_memory_interaction"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # Check for threading.Thread creation inside this function
                 has_thread = "Thread(" in func_source or "thread" in func_source.lower()
                 if has_thread:
                     # Verify it's not using a bounded approach
-                    uses_executor = "executor" in func_source.lower() or "pool" in func_source.lower()
+                    uses_executor = (
+                        "executor" in func_source.lower()
+                        or "pool" in func_source.lower()
+                    )
                     assert uses_executor or "Thread(" not in func_source, (
                         "R6-7: _record_memory_interaction spawns a new Thread per call. "
                         "Should use inline update or bounded thread pool."
@@ -369,14 +385,17 @@ class TestR6_9_VizFilesMissingExtensions:
         tree = ast.parse(source)
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_find_visualization_files":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_find_visualization_files"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
-                assert ".gif" in func_source, (
-                    "R6-9: _find_visualization_files missing .gif extension"
-                )
-                assert ".webp" in func_source, (
-                    "R6-9: _find_visualization_files missing .webp extension"
-                )
+                assert (
+                    ".gif" in func_source
+                ), "R6-9: _find_visualization_files missing .gif extension"
+                assert (
+                    ".webp" in func_source
+                ), "R6-9: _find_visualization_files missing .webp extension"
                 return
         pytest.fail("_find_visualization_files not found")
 

@@ -199,8 +199,7 @@ def main() -> int:
         session.headers.update(
             {
                 "User-Agent": (
-                    "Industry-AI-Flow-RAG-SeedDownloader/1.0 "
-                    "(QA initialization)"
+                    "Industry-AI-Flow-RAG-SeedDownloader/1.0 " "(QA initialization)"
                 )
             }
         )

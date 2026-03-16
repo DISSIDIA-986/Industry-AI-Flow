@@ -22,8 +22,8 @@ def test_imports():
     # 测试1: RAG系统导入
     try:
         from backend.api.document_management_routes import router as doc_router
-        from backend.services.retrieval.hybrid_search import HybridSearch
         from backend.services.core.chunker import Chunker
+        from backend.services.retrieval.hybrid_search import HybridSearch
         tests.append(("RAG系统", True, "文档管理、混合检索、分块器导入成功")
     except Exception as e:
         tests.append(("RAG系统", False, f"导入失败: {e}"))
@@ -39,8 +39,8 @@ def test_imports():
     # 测试3: 代码生成导入
     try:
         from backend.api.data_analysis_routes import router as analysis_router
-        from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
         from backend.services.code_executor import code_executor
+        from backend.services.data_analysis.data_analysis_agent import DataAnalysisAgent
         tests.append(("代码生成", True, "API路由、数据分析Agent、代码执行器导入成功"))
     except Exception as e:
         tests.append(("代码生成", False, f"导入失败: {e}"))
@@ -100,6 +100,7 @@ def test_cost_estimation_functionality():
     # 测试1: 检查成本估算服务
     try:
         from backend.services.cost_estimation_service import CostEstimationService
+
         # 检查默认模型路径
         default_path = CostEstimationService.DEFAULT_MODEL_PATH
         tests.append((True, f"成本估算服务存在，默认模型路径: {default_path}"))

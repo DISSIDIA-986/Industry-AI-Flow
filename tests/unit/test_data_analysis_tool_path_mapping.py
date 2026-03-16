@@ -9,7 +9,9 @@ from backend.tools.data_analysis import (
 
 def test_resolve_container_data_path_maps_host_path_to_workspace() -> None:
     host_path = "/private/var/tmp/demo/runtime_gate_sample.csv"
-    assert _resolve_container_data_path(host_path) == "/workspace/runtime_gate_sample.csv"
+    assert (
+        _resolve_container_data_path(host_path) == "/workspace/runtime_gate_sample.csv"
+    )
 
 
 def test_resolve_container_data_path_keeps_workspace_paths() -> None:
