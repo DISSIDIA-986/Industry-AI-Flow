@@ -19,6 +19,7 @@ export default function Navbar() {
   const navItems = [
     { name: 'Dashboard', href: '/simple-dashboard' },
     { name: 'Workflow Chat', href: '/workflow-chat' },
+    { name: 'Intent Demo', href: '/intent-demo' },
     { name: 'Documents', href: '/documents-integrated' },
     { name: 'Data Dashboard', href: '/data-dashboard' },
     { name: 'Cost Estimation', href: '/cost-estimation' },

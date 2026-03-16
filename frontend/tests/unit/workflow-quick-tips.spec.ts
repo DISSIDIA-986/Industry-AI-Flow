@@ -37,7 +37,7 @@ describe('buildQuickTipsFromDocuments', () => {
       fallback,
     )
 
-    expect(result).toHaveLength(5)
+    expect(result).toHaveLength(10)
     expect(result[0]).toContain('gsa_p100_2024_final.pdf')
     expect(result.some((item) => item.includes('osha_29_cfr_1926.txt'))).toBe(true)
     expect(
