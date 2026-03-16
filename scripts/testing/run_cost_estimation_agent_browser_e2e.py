@@ -35,21 +35,21 @@ ERROR_SELECTOR = "p.error-text"
 FIELD_LABELS: Dict[str, str] = {
     "project_type": "Project Type",
     "location": "Location",
-    "sqft": "sqft",
-    "floors": "floors",
-    "num_units": "num_units",
-    "planned_duration_weeks": "planned_duration_weeks",
-    "estimated_cost_cad": "estimated_cost_cad",
-    "contractor_rating": "contractor_rating",
-    "complexity_score": "complexity_score",
-    "team_experience_years": "team_experience_years",
-    "num_change_orders": "num_change_orders",
-    "weather_risk_factor": "weather_risk_factor",
-    "material_volatility": "material_volatility",
-    "num_subcontractors": "num_subcontractors",
-    "budget_pressure": "budget_pressure",
-    "risk_score": "risk_score",
-    "risk_score_original": "risk_score_original",
+    "sqft": "Square Footage (sq ft)",
+    "floors": "Number of Floors",
+    "num_units": "Number of Units",
+    "planned_duration_weeks": "Planned Duration (weeks)",
+    "estimated_cost_cad": "Estimated Cost (CAD)",
+    "contractor_rating": "Contractor Rating",
+    "complexity_score": "Complexity Score",
+    "team_experience_years": "Team Experience (years)",
+    "num_change_orders": "Number of Change Orders",
+    "weather_risk_factor": "Weather Risk Factor",
+    "material_volatility": "Material Volatility",
+    "num_subcontractors": "Number of Subcontractors",
+    "budget_pressure": "Budget Pressure",
+    "risk_score": "Risk Score",
+    "risk_score_original": "Original Risk Score",
 }
 
 BASE_PROJECT: Dict[str, Any] = {
@@ -168,7 +168,9 @@ def _open_cost_page(frontend_url: str, force_reload: bool = False) -> None:
     if not open_ok:
         raise RuntimeError(f"failed_to_open_cost_page: {open_out}")
 
-    wait_ok, wait_out = _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
+    wait_ok, wait_out = _run_agent_browser(
+        ["wait", "--load", "networkidle"], timeout=45
+    )
     if not wait_ok:
         _run_agent_browser(["wait", "1500"], timeout=10)
         if "timeout" in (wait_out or "").lower():
@@ -184,7 +186,9 @@ def _ensure_logged_in(frontend_url: str, email: str, password: str) -> None:
     if _count(LOGIN_EMAIL_SELECTOR) > 0 and _count(LOGIN_BUTTON_SELECTOR) > 0:
         _run_agent_browser(["fill", LOGIN_EMAIL_SELECTOR, email], timeout=20)
         _run_agent_browser(["fill", LOGIN_PASSWORD_SELECTOR, password], timeout=20)
-        click_ok, click_out = _run_agent_browser(["click", LOGIN_BUTTON_SELECTOR], timeout=25)
+        click_ok, click_out = _run_agent_browser(
+            ["click", LOGIN_BUTTON_SELECTOR], timeout=25
+        )
         if not click_ok:
             raise RuntimeError(f"failed_to_click_login_button: {click_out}")
         _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
@@ -219,7 +223,7 @@ def _set_form_values(project: Dict[str, Any], confidence: float) -> tuple[bool, 
     if (!label) {{
       return JSON.stringify({{ ok: false, error: `label_not_found:${{field}}:${{labelText}}` }});
     }}
-    const input = label.querySelector('input');
+    const input = label.querySelector('input') || label.querySelector('select');
     if (!input) {{
       return JSON.stringify({{ ok: false, error: `input_not_found:${{field}}` }});
     }}
@@ -235,15 +239,24 @@ def _set_form_values(project: Dict[str, Any], confidence: float) -> tuple[bool, 
     if not isinstance(tag_parsed, dict) or not tag_parsed.get("ok"):
         return False, f"tag_form_fields_invalid:{tag_out[:220]}"
 
+    # Fields backed by <select> elements need "select" action, not "fill".
+    select_fields = {"project_type", "location"}
     ordered_fields = list(FIELD_LABELS.keys())
     for field in ordered_fields:
         if field not in project:
             continue
-        selector = f'input[data-qa-field="{field}"]'
-        fill_ok, fill_out = _run_agent_browser(
-            ["fill", selector, str(project[field])],
-            timeout=20,
-        )
+        if field in select_fields:
+            selector = f'select[data-qa-field="{field}"]'
+            fill_ok, fill_out = _run_agent_browser(
+                ["select", selector, str(project[field])],
+                timeout=20,
+            )
+        else:
+            selector = f'input[data-qa-field="{field}"]'
+            fill_ok, fill_out = _run_agent_browser(
+                ["fill", selector, str(project[field])],
+                timeout=20,
+            )
         if not fill_ok:
             return False, f"fill_failed:{field}:{fill_out[:220]}"
 
@@ -284,7 +297,7 @@ def _set_form_values(project: Dict[str, Any], confidence: float) -> tuple[bool, 
       const text = String(node.textContent || '').trim();
       return text.startsWith(labelText);
     }});
-    return label ? label.querySelector('input') : null;
+    return label ? (label.querySelector('input') || label.querySelector('select')) : null;
   }}
   const check = {{}};
   for (const [field, labelText] of Object.entries(payload.field_labels || {{}})) {{
@@ -528,7 +541,9 @@ def _single_case_flow(case: Case) -> Dict[str, Any]:
     if not set_ok:
         return {"success": False, "error": f"set_form_failed:{set_out}"}
 
-    click_ok, click_out = _run_agent_browser(["click", PREDICT_BUTTON_SELECTOR], timeout=25)
+    click_ok, click_out = _run_agent_browser(
+        ["click", PREDICT_BUTTON_SELECTOR], timeout=25
+    )
     if not click_ok:
         return {"success": False, "error": f"click_predict_failed:{click_out}"}
 
@@ -536,7 +551,9 @@ def _single_case_flow(case: Case) -> Dict[str, Any]:
     payload = _read_single_payload()
     summary = _build_single_summary(payload)
 
-    success = bool(wait_ok and isinstance(payload.get("values"), dict) and payload.get("values"))
+    success = bool(
+        wait_ok and isinstance(payload.get("values"), dict) and payload.get("values")
+    )
     return {
         "success": success,
         "set_output": set_out,
@@ -560,13 +577,20 @@ def _batch_case_flow(case: Case) -> Dict[str, Any]:
         set_ok, set_out = _set_form_values(project, case.confidence)
         if not set_ok:
             return {"success": False, "error": f"set_form_failed_at_{idx}:{set_out}"}
-        add_ok, add_out = _run_agent_browser(["click", ADD_BATCH_BUTTON_SELECTOR], timeout=20)
+        add_ok, add_out = _run_agent_browser(
+            ["click", ADD_BATCH_BUTTON_SELECTOR], timeout=20
+        )
         if not add_ok:
-            return {"success": False, "error": f"add_to_batch_failed_at_{idx}:{add_out}"}
+            return {
+                "success": False,
+                "error": f"add_to_batch_failed_at_{idx}:{add_out}",
+            }
         add_steps.append(f"item_{idx}:{set_out[:120]}")
         _run_agent_browser(["wait", "350"], timeout=10)
 
-    run_ok, run_out = _run_agent_browser(["click", RUN_BATCH_BUTTON_SELECTOR], timeout=20)
+    run_ok, run_out = _run_agent_browser(
+        ["click", RUN_BATCH_BUTTON_SELECTOR], timeout=20
+    )
     if not run_ok:
         return {"success": False, "error": f"click_run_batch_failed:{run_out}"}
 
@@ -793,7 +817,9 @@ def run_suite(
     out_dir = output_root / f"cost_estimation_agent_test_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    _ensure_logged_in(frontend_url=frontend_url, email=login_email, password=login_password)
+    _ensure_logged_in(
+        frontend_url=frontend_url, email=login_email, password=login_password
+    )
 
     case_results: List[Dict[str, Any]] = []
     started = time.perf_counter()
@@ -821,14 +847,18 @@ def run_suite(
         "output_dir": str(out_dir),
         "total_cases": len(case_results),
         "success_cases": success_count,
-        "success_rate": round(success_count / len(case_results), 4) if case_results else 0.0,
+        "success_rate": round(success_count / len(case_results), 4)
+        if case_results
+        else 0.0,
         "elapsed_ms": elapsed_ms,
         "clear_queue_validation": clear_queue_validation,
         "cases": case_results,
     }
 
     report_path = out_dir / "cost_estimation_agent_report.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     lines = [
         "# Cost Estimation Screenshot Case Index",
@@ -847,7 +877,9 @@ def run_suite(
         lines.append(f"- Summary: {row.get('summary')}")
         lines.append("")
 
-    (out_dir / "CASE_INDEX.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    (out_dir / "CASE_INDEX.md").write_text(
+        "\n".join(lines).strip() + "\n", encoding="utf-8"
+    )
     return report
 
 
@@ -856,8 +888,12 @@ def parse_args() -> argparse.Namespace:
         description="Run Cost Estimation browser test and capture 5 screenshots in temp.",
     )
     parser.add_argument("--frontend-url", default=DEFAULT_FRONTEND_URL)
-    parser.add_argument("--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com"))
-    parser.add_argument("--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123"))
+    parser.add_argument(
+        "--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com")
+    )
+    parser.add_argument(
+        "--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123")
+    )
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     return parser.parse_args()
 

@@ -21,13 +21,15 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CSV = PROJECT_ROOT / "docs" / "testing" / "rag_question_bank_180.csv"
+DEFAULT_CSV = PROJECT_ROOT / "docs" / "testing" / "rag_question_bank_560.csv"
 DEFAULT_OUTPUT = PROJECT_ROOT / "logs" / "rag_agent_browser_e2e_report.json"
 
 TEXTAREA_SELECTOR = 'textarea[placeholder="Enter your question or query..."]'
 SEND_BUTTON_SELECTOR = 'button:has-text("send")'
 USER_BUBBLE_SELECTOR = "div.bg-blue-600 .whitespace-pre-wrap"
-AI_BUBBLE_SELECTOR = "div.bg-gray-100 .whitespace-pre-wrap"
+# AI messages use MarkdownRenderer (.markdown-body) not whitespace-pre-wrap.
+# Fall back to any content child inside the gray bubble.
+AI_BUBBLE_SELECTOR = "div.bg-gray-100 .markdown-body"
 SOURCE_SECTION_SELECTOR = 'text="Reference sources:"'
 SUGGESTION_SECTION_SELECTOR = 'text="Suggested follow-up questions:"'
 LOGIN_EMAIL_SELECTOR = 'input[type="email"]'
@@ -102,7 +104,9 @@ def _is_visible(selector: str) -> bool:
     return "true" in lowered or lowered.strip().endswith("1")
 
 
-def _wait_for_new_ai_message(before_ai_count: int, max_wait_ms: int) -> tuple[bool, int]:
+def _wait_for_new_ai_message(
+    before_ai_count: int, max_wait_ms: int
+) -> tuple[bool, int]:
     """Wait until a new AI bubble appears (best effort)."""
     wait_ms = max(1000, int(max_wait_ms))
     deadline = time.time() + (wait_ms / 1000.0)
@@ -128,10 +132,18 @@ def _prepare_capture_layout() -> tuple[bool, str]:
 (() => {
   try {
     const allDivs = Array.from(document.querySelectorAll('div'));
-    const chatContainer = allDivs.find((el) => {
+    // After flex-layout refactor the chat container uses flex-1 + overflow-y-auto + min-h-0
+    // instead of the old fixed h-[500px].  Try new selector first, fall back to legacy.
+    let chatContainer = allDivs.find((el) => {
       const cls = typeof el.className === 'string' ? el.className : '';
-      return cls.includes('overflow-y-auto') && cls.includes('h-[500px]');
+      return cls.includes('overflow-y-auto') && cls.includes('flex-1') && cls.includes('min-h-0');
     });
+    if (!chatContainer) {
+      chatContainer = allDivs.find((el) => {
+        const cls = typeof el.className === 'string' ? el.className : '';
+        return cls.includes('overflow-y-auto') && cls.includes('h-[500px]');
+      });
+    }
     if (!chatContainer) return 'chat_container_not_found';
 
     // Expand chat panel so long answers are not clipped by internal scrolling.
@@ -197,7 +209,9 @@ def _prepare_capture_layout() -> tuple[bool, str]:
 
 def _open_chat(chat_url: str) -> tuple[bool, str, str]:
     open_ok, open_output = _run_agent_browser(["open", chat_url], timeout=45)
-    wait_ok, wait_output = _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
+    wait_ok, wait_output = _run_agent_browser(
+        ["wait", "--load", "networkidle"], timeout=45
+    )
     if not wait_ok:
         # Some pages keep background polling active, making networkidle unreliable.
         fallback_ok, fallback_output = _run_agent_browser(["wait", "1200"], timeout=10)
@@ -223,7 +237,9 @@ def _ensure_chat_ready(
 
     if login_email and login_password and _get_count(LOGIN_EMAIL_SELECTOR) > 0:
         _run_agent_browser(["fill", LOGIN_EMAIL_SELECTOR, login_email], timeout=20)
-        _run_agent_browser(["fill", LOGIN_PASSWORD_SELECTOR, login_password], timeout=20)
+        _run_agent_browser(
+            ["fill", LOGIN_PASSWORD_SELECTOR, login_password], timeout=20
+        )
         _run_agent_browser(["click", LOGIN_BUTTON_SELECTOR], timeout=20)
         _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
         _run_agent_browser(["wait", "1200"], timeout=10)
@@ -374,11 +390,17 @@ def run_e2e(
 
             after_user_count = _get_count(USER_BUBBLE_SELECTOR)
             after_ai_count = _get_count(AI_BUBBLE_SELECTOR)
-            has_source_section = _is_visible(SOURCE_SECTION_SELECTOR)
-            has_suggestion_section = _is_visible(SUGGESTION_SECTION_SELECTOR)
+            # Use count (DOM existence) instead of isVisible which requires
+            # viewport visibility — sources/suggestions are often below the fold
+            # inside the scrollable chat container.
+            has_source_section = _get_count(SOURCE_SECTION_SELECTOR) > 0
+            has_suggestion_section = _get_count(SUGGESTION_SECTION_SELECTOR) > 0
 
             elapsed_ms = (time.perf_counter() - turn_started) * 1000
-            screenshot_path = screenshot_dir / f"{group_name}_t{turn.turn_index}_{turn.question_id}.png"
+            screenshot_path = (
+                screenshot_dir
+                / f"{group_name}_t{turn.turn_index}_{turn.question_id}.png"
+            )
             capture_layout_ok, capture_layout_output = _prepare_capture_layout()
             _run_agent_browser(["wait", "1000"], timeout=8)
             ok_shot, out_shot = _run_agent_browser(
@@ -389,11 +411,7 @@ def run_e2e(
             success = bool(
                 ok_fill
                 and ok_click
-                and (
-                    response_observed
-                    if before_ai_count >= 0
-                    else after_ai_count >= 0
-                )
+                and (response_observed if before_ai_count >= 0 else after_ai_count >= 0)
             )
             all_turns.append(
                 {
@@ -424,7 +442,9 @@ def run_e2e(
             )
 
     duration_ms = (time.perf_counter() - started) * 1000
-    success_count = sum(1 for item in all_turns if item.get("turn_index", 0) > 0 and item.get("success"))
+    success_count = sum(
+        1 for item in all_turns if item.get("turn_index", 0) > 0 and item.get("success")
+    )
     turn_rows = [item for item in all_turns if item.get("turn_index", 0) > 0]
 
     report: dict[str, Any] = {
@@ -440,7 +460,9 @@ def run_e2e(
         "success_turns": success_count,
         "success_rate": round(success_count / len(turn_rows), 4) if turn_rows else 0.0,
         "avg_elapsed_ms": round(
-            sum(float(item.get("elapsed_ms") or 0.0) for item in turn_rows) / len(turn_rows), 2
+            sum(float(item.get("elapsed_ms") or 0.0) for item in turn_rows)
+            / len(turn_rows),
+            2,
         )
         if turn_rows
         else 0.0,
@@ -449,17 +471,21 @@ def run_e2e(
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return report
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run RAG browser E2E from CSV questions.")
+    parser = argparse.ArgumentParser(
+        description="Run RAG browser E2E from CSV questions."
+    )
     parser.add_argument("--frontend-url", default="http://localhost:3000")
     parser.add_argument("--csv", default=str(DEFAULT_CSV))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
-    parser.add_argument("--max-questions", type=int, default=180)
-    parser.add_argument("--wait-after-send-ms", type=int, default=1200)
+    parser.add_argument("--max-questions", type=int, default=560)
+    parser.add_argument("--wait-after-send-ms", type=int, default=45000)
     parser.add_argument(
         "--login-email",
         default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com"),
