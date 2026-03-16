@@ -46,12 +46,20 @@ def _write_dataset(path: Path, *, rows: int = 12) -> None:
             row["actual_cost_cad"] = row["estimated_cost_cad"] * (
                 1.0 + (row["cost_overrun_pct"] / 100.0)
             )
-            row["contractor_rating"] = max(2.5, min(5.0, base["contractor_rating"] - (i * 0.03)))
-            row["complexity_score"] = int(max(1, min(10, base["complexity_score"] + (i % 3) - 1)))
+            row["contractor_rating"] = max(
+                2.5, min(5.0, base["contractor_rating"] - (i * 0.03))
+            )
+            row["complexity_score"] = int(
+                max(1, min(10, base["complexity_score"] + (i % 3) - 1))
+            )
             row["team_experience_years"] = base["team_experience_years"] + (i * 0.2)
             row["num_change_orders"] = int(base["num_change_orders"] + (i % 5))
-            row["weather_risk_factor"] = min(0.95, base["weather_risk_factor"] + (i * 0.01))
-            row["material_volatility"] = min(0.95, base["material_volatility"] + (i * 0.01))
+            row["weather_risk_factor"] = min(
+                0.95, base["weather_risk_factor"] + (i * 0.01)
+            )
+            row["material_volatility"] = min(
+                0.95, base["material_volatility"] + (i * 0.01)
+            )
             row["num_subcontractors"] = int(base["num_subcontractors"] + (i % 8))
             row["budget_pressure"] = min(0.95, base["budget_pressure"] + (i * 0.01))
             row["risk_score"] = base["risk_score"] + i
@@ -59,7 +67,9 @@ def _write_dataset(path: Path, *, rows: int = 12) -> None:
             writer.writerow(row)
 
 
-def test_demo_smoke_script_passes_with_optional_checks_skipped(tmp_path: Path, capsys) -> None:
+def test_demo_smoke_script_passes_with_optional_checks_skipped(
+    tmp_path: Path, capsys
+) -> None:
     dataset_path = tmp_path / "dataset.csv"
     model_path = tmp_path / "model.json"
     _write_dataset(dataset_path)
@@ -105,7 +115,9 @@ def test_demo_smoke_script_fails_when_dataset_missing(tmp_path: Path, capsys) ->
     assert payload["passed"] is False
 
 
-def test_demo_smoke_script_fails_when_model_missing_without_train(tmp_path: Path, capsys) -> None:
+def test_demo_smoke_script_fails_when_model_missing_without_train(
+    tmp_path: Path, capsys
+) -> None:
     dataset_path = tmp_path / "dataset.csv"
     _write_dataset(dataset_path)
 

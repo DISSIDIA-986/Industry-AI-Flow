@@ -57,7 +57,9 @@ async def test_documents_list_returns_empty_array_when_no_uploads():
 
 
 @pytest.mark.asyncio
-async def test_documents_list_falls_back_to_indexed_docs_for_default_tenant(monkeypatch):
+async def test_documents_list_falls_back_to_indexed_docs_for_default_tenant(
+    monkeypatch,
+):
     tenant_id = main_module.settings.default_tenant_id or "public"
     _cleanup_uploaded_documents_index(tenant_id)
 

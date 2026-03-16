@@ -31,8 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModelBenchmarkResult:
     """单个模型的基准测试结果"""
+
     model_name: str
     model_size_gb: float
     parameters: str
@@ -94,8 +94,9 @@ class QwenModelBenchmark:
 
         # 重新导入模块以使用新配置
         import importlib
-        if 'backend.services.rag_engine' in sys.modules:
-            del sys.modules['backend.services.rag_engine']
+
+        if "backend.services.rag_engine" in sys.modules:
+            del sys.modules["backend.services.rag_engine"]
 
         from backend.services.rag_engine import SimpleRAG
 
@@ -164,13 +165,17 @@ class QwenModelBenchmark:
             result.successful_queries = successful
             result.failed_queries = failed
             result.total_tokens = total_tokens
-            result.total_time_seconds = sum(response_times) / 1000 if response_times else 0
+            result.total_time_seconds = (
+                sum(response_times) / 1000 if response_times else 0
+            )
 
             if response_times:
                 sorted_times = sorted(response_times)
                 result.avg_response_time_ms = mean(response_times)
                 result.median_response_time_ms = median(response_times)
-                result.p95_response_time_ms = sorted_times[int(len(sorted_times) * 0.95)]
+                result.p95_response_time_ms = sorted_times[
+                    int(len(sorted_times) * 0.95)
+                ]
 
             if total_tokens > 0 and result.total_time_seconds > 0:
                 result.tokens_per_second = total_tokens / result.total_time_seconds
@@ -189,15 +194,16 @@ class QwenModelBenchmark:
         except Exception as e:
             logger.error(f"测试失败: {e}")
             import traceback
+
             traceback.print_exc()
 
         return result
 
     def compare_models(self) -> Dict[str, Any]:
         """对比测试所有模型"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 开始 Qwen 模型性能对比测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         models = [
             ("qwen3.5:9b", 6.6),
@@ -224,7 +230,9 @@ class QwenModelBenchmark:
 
         return comparison
 
-    def _generate_comparison_report(self, results: List[ModelBenchmarkResult], total_duration: float) -> Dict[str, Any]:
+    def _generate_comparison_report(
+        self, results: List[ModelBenchmarkResult], total_duration: float
+    ) -> Dict[str, Any]:
         """生成对比报告"""
         return {
             "test_suite": "Qwen Model Performance Comparison",
@@ -247,23 +255,39 @@ class QwenModelBenchmark:
                 for r in results
             ],
             "analysis": {
-                "fastest_model": min(results, key=lambda x: x.avg_response_time_ms).model_name if results else None,
-                "highest_tps": max(results, key=lambda x: x.tokens_per_second).model_name if results else None,
-                "best_quality": max(results, key=lambda x: x.avg_answer_length).model_name if results else None,
-            }
+                "fastest_model": min(
+                    results, key=lambda x: x.avg_response_time_ms
+                ).model_name
+                if results
+                else None,
+                "highest_tps": max(
+                    results, key=lambda x: x.tokens_per_second
+                ).model_name
+                if results
+                else None,
+                "best_quality": max(
+                    results, key=lambda x: x.avg_answer_length
+                ).model_name
+                if results
+                else None,
+            },
         }
 
     def _print_comparison_summary(self, comparison: Dict[str, Any]):
         """打印对比汇总"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📋 模型对比汇总")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         for model in comparison["models"]:
-            logger.info(f"\n📊 {model['name']} ({model['parameters']}, {model['size_gb']} GB):")
+            logger.info(
+                f"\n📊 {model['name']} ({model['parameters']}, {model['size_gb']} GB):"
+            )
             logger.info(f"  平均响应时间: {model['avg_response_time_ms']:.2f}ms")
             logger.info(f"  吞吐量: {model['tokens_per_second']:.2f} tokens/s")
-            logger.info(f"  成功率: {model['successful_queries']}/{model['successful_queries'] + model['failed_queries']}")
+            logger.info(
+                f"  成功率: {model['successful_queries']}/{model['successful_queries'] + model['failed_queries']}"
+            )
 
         logger.info(f"\n🏆 分析结论:")
         logger.info(f"  最快响应: {comparison['analysis']['fastest_model']}")
@@ -277,7 +301,7 @@ class QwenModelBenchmark:
         logger.info(f"  3. 考虑使用 Ollama 的 NUMA 设置优化内存访问")
         logger.info(f"  4. 可以调整 Ollama 的线程数以获得更好性能")
 
-        logger.info("="*70)
+        logger.info("=" * 70)
 
 
 def main():

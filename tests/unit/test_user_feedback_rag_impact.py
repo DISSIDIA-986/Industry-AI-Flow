@@ -492,9 +492,7 @@ class UserFeedbackRAGTester:
                     "type": "positive" if rating > 0.6 else "negative",
                     "rating": rating,
                     "category": "answer_quality",
-                    "comment": f"EN"
-                    if config["detail_level"] == "detailed"
-                    else "EN",
+                    "comment": f"EN" if config["detail_level"] == "detailed" else "EN",
                 }
                 feedback_scenarios.append(scenario)
 

@@ -89,7 +89,9 @@ def _filter_tenant_events(events: Iterable[dict], tenant_id: str) -> List[dict]:
 
 
 def _extract_workflow_stats(events: Iterable[dict]) -> Dict[str, float | int]:
-    workflow_events = [item for item in events if item.get("action") == "workflow.query"]
+    workflow_events = [
+        item for item in events if item.get("action") == "workflow.query"
+    ]
     total = len(workflow_events)
     errors = sum(1 for item in workflow_events if str(item.get("status")) != "success")
     latencies: List[float] = []

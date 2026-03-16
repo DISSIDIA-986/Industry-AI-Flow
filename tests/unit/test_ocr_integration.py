@@ -389,9 +389,7 @@ class OCRIntegrationTester:
             print(
                 f"    ✅ EN: {accuracy_score:.3f}, EN: {quality_score:.3f}, EN: {extraction_time:.4f}s"
             )
-            print(
-                f"    {'✅' if meets_requirements else '❌'} EN: {meets_requirements}"
-            )
+            print(f"    {'✅' if meets_requirements else '❌'} EN: {meets_requirements}")
 
         return {"total_tests": len(results), "results": results}
 
@@ -439,8 +437,7 @@ class OCRIntegrationTester:
             paddleocr_score = (
                 avg_confidence * 0.4
                 + min(1.0, 1.0 / extraction_time) * 0.3
-                + self.evaluate_text_quality(extracted_text, test_case)  # EN
-                * 0.3
+                + self.evaluate_text_quality(extracted_text, test_case) * 0.3  # EN
             )
 
             paddleocr_results.append(
@@ -454,9 +451,7 @@ class OCRIntegrationTester:
                 }
             )
 
-            print(
-                f"    ✅ PaddleOCREN: {paddleocr_score:.3f}, EN: {avg_confidence:.3f}"
-            )
+            print(f"    ✅ PaddleOCREN: {paddleocr_score:.3f}, EN: {avg_confidence:.3f}")
 
         return {
             "total_tests": len(paddleocr_results),

@@ -35,6 +35,7 @@ class QueryCase:
 
 
 QUERY_CASES: list[QueryCase] = [
+    # Existing queries (backward compatibility)
     QueryCase(
         query="What does P100 say about federal facility design standards?",
         expected_source_hint="gsa_p100",
@@ -55,17 +56,67 @@ QUERY_CASES: list[QueryCase] = [
         expected_source_hint="ifc_4_3",
         expected_keywords=["ifc", "schema", "specification"],
     ),
+    # New queries for Jack's documents
+    QueryCase(
+        query="What are the fire resistance requirements in the National Building Code of Canada?",
+        expected_source_hint="nbc_2020",
+        expected_keywords=["fire", "resistance", "building"],
+    ),
+    QueryCase(
+        query="What fall protection requirements does Ontario Regulation 213/91 specify for construction projects?",
+        expected_source_hint="ontario_reg_213",
+        expected_keywords=["fall", "protection", "construction"],
+    ),
+    QueryCase(
+        query="What are the energy efficiency requirements in the National Energy Code of Canada for Buildings 2025?",
+        expected_source_hint="NECB2025",
+        expected_keywords=["energy", "efficiency", "building"],
+    ),
+    QueryCase(
+        query="What workplace safety obligations does the Alberta OHS Code impose on employers?",
+        expected_source_hint="Alberta",
+        expected_keywords=["safety", "employer", "workplace"],
+    ),
+    QueryCase(
+        query="What does the BC Building Code 2024 require for structural design of buildings?",
+        expected_source_hint="bcbc_2024",
+        expected_keywords=["structural", "design", "building"],
+    ),
+    QueryCase(
+        query="What fire protection systems are required under the National Fire Code of Canada?",
+        expected_source_hint="nfc2020",
+        expected_keywords=["fire", "protection", "system"],
+    ),
 ]
 
 
 EXPECTED_INGESTED_DOCS = [
+    "217.06.pdf",
+    "Alberta OHSCode_March_31,_2025_(rep_s850)_only.pdf",
+    "NECB2025p1.pdf",
+    "T94-39-2021-eng.pdf",
+    "T94-51-2023-eng.pdf",
+    "bc_ohs_regulation_part20_construction.txt",
+    "bcbc_2024_web_version_revision2.pdf",
     "buildingsmart_ifc_4_3_schema_specifications.txt",
     "caltrans_2025_standard_plans_digest.pdf",
     "caltrans_2025_standard_specifications_digest.pdf",
+    "canada_labour_code_part2.pdf",
+    "canada_nrc_act.pdf",
+    "canada_ohs_regulations_sor_86_304.pdf",
     "gsa_core_building_standards_memo_2025.pdf",
     "gsa_core_building_training_2025-04-30.pdf",
     "gsa_p100_2024_final.pdf",
+    "nbc_2020_national_building_code_canada.pdf",
+    "necb2020_p1.pdf",
+    "new_brunswick_ohs_general_regulation_91_191.pdf",
+    "nfc2020_p1.pdf",
+    "npc2020_p1.pdf",
+    "ontario_building_code_act_1992.txt",
+    "ontario_reg_213_91_construction_projects.txt",
     "osha_29_cfr_1926.txt",
+    "quebec_building_act_b1_1.txt",
+    "quebec_safety_code_construction_s2_1_r4.txt",
     "ufgs_03_30_00_cast_in_place_concrete.pdf",
     "ufgs_toc.pdf",
 ]
@@ -94,6 +145,16 @@ WORKFLOW_PROBE_CASES: list[QueryCase] = [
         query="What does GSA P100 emphasize for federal facilities?",
         expected_source_hint="gsa_p100",
         expected_keywords=["gsa", "p100", "facility"],
+    ),
+    QueryCase(
+        query="What is the ranked hierarchy of fall protection methods under Ontario Regulation 213/91?",
+        expected_source_hint="ontario_reg_213",
+        expected_keywords=["fall", "protection", "hierarchy"],
+    ),
+    QueryCase(
+        query="How does the National Building Code of Canada classify buildings by occupancy?",
+        expected_source_hint="nbc_2020",
+        expected_keywords=["building", "occupancy", "classification"],
     ),
 ]
 
@@ -303,7 +364,9 @@ def _auth_headers() -> dict[str, str]:
     key = os.getenv("TEST_API_KEY", "").strip()
     if not key:
         keys_raw = os.getenv("API_KEYS", "")
-        key = next((token.strip() for token in keys_raw.split(",") if token.strip()), "")
+        key = next(
+            (token.strip() for token in keys_raw.split(",") if token.strip()), ""
+        )
     if not key:
         return {}
     return {header_name: key}
@@ -341,11 +404,7 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
                 response_text, case.expected_source_hint
             )
             case_pass = (
-                success
-                and non_empty
-                and not_template
-                and grounded
-                and citation_match
+                success and non_empty and not_template and grounded and citation_match
             )
             if case_pass:
                 query_pass_count += 1
@@ -425,7 +484,9 @@ def _check_workflow_api(base_url: str = "http://127.0.0.1:8000") -> dict:
                     result = resp.json()
                 except Exception:
                     result = {}
-                success = bool(resp.status_code == 200 and result.get("success") is True)
+                success = bool(
+                    resp.status_code == 200 and result.get("success") is True
+                )
                 response_text = str(result.get("response") or "")
                 non_empty = len(response_text.strip()) > 0
                 not_template = not _looks_like_template_response(response_text)

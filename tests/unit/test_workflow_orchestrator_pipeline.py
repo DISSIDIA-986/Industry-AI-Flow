@@ -7,7 +7,10 @@ from uuid import uuid4
 import pytest
 
 from backend.services.workflows.graph import run_workflow_pipeline
-from backend.services.workflows.orchestrator import DefaultWorkflowRunner, WorkflowOrchestrator
+from backend.services.workflows.orchestrator import (
+    DefaultWorkflowRunner,
+    WorkflowOrchestrator,
+)
 
 
 @dataclass
@@ -134,7 +137,9 @@ async def test_workflow_pipeline_safety_block():
 
     assert updated["error"] == "Request blocked by safety policy"
     assert updated["metadata"]["safety_status"] == "blocked"
-    assert updated.get("response"), "Safety-blocked query should still produce a response"
+    assert updated.get(
+        "response"
+    ), "Safety-blocked query should still produce a response"
     resp_lower = (updated["response"] or "").lower()
     assert "blocked" in resp_lower or "could not be processed" in resp_lower
 
@@ -174,7 +179,9 @@ async def test_default_workflow_runner_injects_prompt_experiments_flag(monkeypat
         "prompt_experiments_enabled",
         True,
     )
-    runner = DefaultWorkflowRunner(orchestrator=WorkflowOrchestrator(services=SimpleNamespace()))
+    runner = DefaultWorkflowRunner(
+        orchestrator=WorkflowOrchestrator(services=SimpleNamespace())
+    )
 
     result = await runner.run_workflow(
         query="Summarize concrete standard",

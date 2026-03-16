@@ -269,4 +269,6 @@ async def test_response_processing_returns_controlled_failure_when_error_exists(
     updated = await workflow._response_processing_node(state)
     assert updated["workflow_complete"] is True
     assert "encountered an issue" in str(updated["agent_response"])
-    assert updated["messages"], "controlled failure should still emit user-facing response"
+    assert updated[
+        "messages"
+    ], "controlled failure should still emit user-facing response"

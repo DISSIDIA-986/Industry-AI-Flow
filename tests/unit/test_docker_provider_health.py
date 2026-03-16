@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from backend.services.code_executor.providers.docker_provider import DockerExecutionProvider
+from backend.services.code_executor.providers.docker_provider import (
+    DockerExecutionProvider,
+)
 
 
 class _SmokeResult:
-    def __init__(self, success: bool, error: str | None = None, stderr: str = "") -> None:
+    def __init__(
+        self, success: bool, error: str | None = None, stderr: str = ""
+    ) -> None:
         self.success = success
         self.error = error
         self.stderr = stderr

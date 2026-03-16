@@ -114,12 +114,16 @@ def main() -> int:
     for path in frontend_paths:
         offenders = _check_frontend_file(path)
         for line_no, snippet in offenders:
-            violations.append(f"[frontend] {path.relative_to(repo_root)}:{line_no} {snippet}")
+            violations.append(
+                f"[frontend] {path.relative_to(repo_root)}:{line_no} {snippet}"
+            )
 
     for path in backend_paths:
         offenders = _check_backend_file(path)
         for line_no, snippet in offenders:
-            violations.append(f"[backend] {path.relative_to(repo_root)}:{line_no} {snippet}")
+            violations.append(
+                f"[backend] {path.relative_to(repo_root)}:{line_no} {snippet}"
+            )
 
     if violations:
         print("Runtime English compliance check failed.")

@@ -118,7 +118,9 @@ def _sample_project_payload(df: pd.DataFrame, idx: int = 0) -> dict:
     }
 
 
-def test_cost_estimation_api_train_predict_batch_health(client: TestClient, tmp_path: Path) -> None:
+def test_cost_estimation_api_train_predict_batch_health(
+    client: TestClient, tmp_path: Path
+) -> None:
     dataset = _build_dataset()
     dataset_path = tmp_path / "training.csv"
     model_path = tmp_path / "model.json"
@@ -155,8 +157,14 @@ def test_cost_estimation_api_train_predict_batch_health(client: TestClient, tmp_
     assert predict_resp.status_code == 200
     prediction = predict_resp.json()["prediction"]
     assert prediction["predicted_actual_cost_cad"] > 0
-    assert prediction["prediction_interval_cad"]["lower"] <= prediction["predicted_actual_cost_cad"]
-    assert prediction["prediction_interval_cad"]["upper"] >= prediction["predicted_actual_cost_cad"]
+    assert (
+        prediction["prediction_interval_cad"]["lower"]
+        <= prediction["predicted_actual_cost_cad"]
+    )
+    assert (
+        prediction["prediction_interval_cad"]["upper"]
+        >= prediction["predicted_actual_cost_cad"]
+    )
 
     batch_resp = client.post(
         "/api/v1/cost-estimation/predict/batch",

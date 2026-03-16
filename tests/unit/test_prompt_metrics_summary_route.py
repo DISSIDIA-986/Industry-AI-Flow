@@ -11,7 +11,9 @@ class _FakeManager:
     def __init__(self):
         self.calls = []
 
-    async def get_usage_summary(self, *, days: int, category: str | None, top_limit: int):
+    async def get_usage_summary(
+        self, *, days: int, category: str | None, top_limit: int
+    ):
         self.calls.append(
             {
                 "days": days,

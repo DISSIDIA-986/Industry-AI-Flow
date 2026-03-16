@@ -32,9 +32,10 @@ def _build_executor() -> DockerExecutor:
     executor = object.__new__(DockerExecutor)
     executor.timeout = 60
     executor._validate_code = lambda code: []  # noqa: E731
-    executor._run_container = (  # noqa: E731
-        lambda workspace, timeout=None: {"stdout": "ok", "stderr": ""}
-    )
+    executor._run_container = lambda workspace, timeout=None: {  # noqa: E731
+        "stdout": "ok",
+        "stderr": "",
+    }
     return executor
 
 
@@ -53,7 +54,9 @@ def test_execute_rejects_parent_traversal_filename(tmp_path, monkeypatch) -> Non
 
     assert result.success is False, "Traversal filename must be rejected."
     assert "invalid input filename" in (result.error or "").lower()
-    assert not escaped.exists(), "Traversal filename should not create files outside workspace."
+    assert (
+        not escaped.exists()
+    ), "Traversal filename should not create files outside workspace."
 
 
 @pytest.mark.unit

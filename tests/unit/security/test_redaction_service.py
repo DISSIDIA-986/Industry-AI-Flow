@@ -5,10 +5,14 @@ ENRedactionServiceEN
 EN
 """
 
-import pytest
 from unittest.mock import patch
 
-from backend.services.security.redaction_service import RedactionResult, RedactionService
+import pytest
+
+from backend.services.security.redaction_service import (
+    RedactionResult,
+    RedactionService,
+)
 
 
 class _RaisingPattern:
@@ -40,7 +44,7 @@ class TestRedactionService:
         """EN"""
         text = "This is a normal text without any sensitive information."
         result = service.redact(text)
-        
+
         assert result.text == text
         assert result.hit_count == 0
         assert result.categories == []
@@ -50,7 +54,7 @@ class TestRedactionService:
         """EN"""
         text = "Contact me at test@example.com for more information."
         result = service.redact(text)
-        
+
         assert "test@example.com" not in result.text
         assert "<REDACTED_EMAIL>" in result.text
         assert result.hit_count == 1
@@ -61,7 +65,7 @@ class TestRedactionService:
         """EN"""
         text = "Emails: alice@company.com, bob@example.org, charlie@test.net"
         result = service.redact(text)
-        
+
         assert "alice@company.com" not in result.text
         assert "bob@example.org" not in result.text
         assert "charlie@test.net" not in result.text
@@ -77,11 +81,11 @@ class TestRedactionService:
             "+86-13800138000",
             "86 13800138000",
         ]
-        
+
         for phone in test_cases:
             text = f"My phone is {phone}"
             result = service.redact(text)
-            
+
             assert phone not in result.text
             assert "<REDACTED_PHONE_CN>" in result.text
             assert result.hit_count == 1
@@ -95,11 +99,11 @@ class TestRedactionService:
             "123.456.7890",
             "+1-123-456-7890",
         ]
-        
+
         for phone in test_cases:
             text = f"Call me at {phone}"
             result = service.redact(text)
-            
+
             assert phone not in result.text
             assert "<REDACTED_PHONE_US>" in result.text
             assert result.hit_count == 1
@@ -113,11 +117,11 @@ class TestRedactionService:
             "12345678901234567X",  # 18ENX
             "12345678901234567x",  # 18ENx
         ]
-        
+
         for id_num in test_cases:
             text = f"ID: {id_num}"
             result = service.redact(text)
-            
+
             assert id_num not in result.text
             assert "<REDACTED_ID_LIKE>" in result.text
             assert result.hit_count == 1
@@ -131,11 +135,11 @@ class TestRedactionService:
             "172.16.0.1",
             "8.8.8.8",
         ]
-        
+
         for ip in test_cases:
             text = f"Server IP: {ip}"
             result = service.redact(text)
-            
+
             assert ip not in result.text
             assert "<REDACTED_IPV4>" in result.text
             assert result.hit_count == 1
@@ -150,21 +154,21 @@ class TestRedactionService:
         IP: 192.168.1.100
         ID: 123456789012345678
         """
-        
+
         result = service.redact(text)
-        
+
         # EN
         assert "user@example.com" not in result.text
         assert "13800138000" not in result.text
         assert "192.168.1.100" not in result.text
         assert "123456789012345678" not in result.text
-        
+
         # EN
         assert "<REDACTED_EMAIL>" in result.text
         assert "<REDACTED_PHONE_CN>" in result.text
         assert "<REDACTED_IPV4>" in result.text
         assert "<REDACTED_ID_LIKE>" in result.text
-        
+
         # EN
         assert result.hit_count == 4
         assert len(result.categories) == 4
@@ -180,7 +184,7 @@ class TestRedactionService:
             "192.168.1",  # ENIP
             "1380013800",  # 10EN,EN
         ]
-        
+
         for text in test_cases:
             result = service.redact(text)
             assert result.text == text  # EN
@@ -190,21 +194,21 @@ class TestRedactionService:
         """EN"""
         text = 'Email: "test@example.com" <test@example.com> (test@example.com)'
         result = service.redact(text)
-        
+
         # EN,EN
         assert "test@example.com" not in result.text
         assert result.text.count("<REDACTED_EMAIL>") == 3
         assert '"' in result.text
-        assert '<' in result.text
-        assert '>' in result.text
-        assert '(' in result.text
-        assert ')' in result.text
+        assert "<" in result.text
+        assert ">" in result.text
+        assert "(" in result.text
+        assert ")" in result.text
 
     def test_redact_unicode_text(self, service):
         """ENUnicodeEN"""
         text = "EN:EN@EN.com,EN:13800138000"
         result = service.redact(text)
-        
+
         assert "EN@EN.com" not in result.text
         assert "13800138000" not in result.text
         assert "<REDACTED_EMAIL>" in result.text
@@ -217,9 +221,9 @@ class TestRedactionService:
         # EN
         base_text = "Email: user{id}@example.com, Phone: 1380013{id:04d}"
         large_text = "\n".join([base_text.format(id=i) for i in range(100)])
-        
+
         result = service.redact(large_text)
-        
+
         # EN
         assert result.hit_count == 200  # 100EN + 100EN
         assert result.text.count("<REDACTED_EMAIL>") == 100
@@ -235,7 +239,7 @@ class TestRedactionService:
         ):
             text = "Email: test@example.com"
             result = service.redact(text)
-            
+
             # EN:EN
             assert result.text == text
             assert result.hit_count == 0
@@ -266,23 +270,26 @@ class TestRedactionService:
             text="EN",
             hit_count=2,
             categories=["email", "phone"],
-            replacements={"email": 1, "phone": 1}
+            replacements={"email": 1, "phone": 1},
         )
-        
+
         assert result.text == "EN"
         assert result.hit_count == 2
         assert result.categories == ["email", "phone"]
         assert result.replacements == {"email": 1, "phone": 1}
 
-    @pytest.mark.parametrize("text,expected_hits", [
-        ("", 0),
-        ("test@example.com", 1),
-        ("test@example.com 13800138000", 2),
-        ("test@example.com 13800138000 192.168.1.1", 3),
-        ("normal text", 0),
-        ("123456789012345678", 1),
-        ("+1-123-456-7890", 1),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_hits",
+        [
+            ("", 0),
+            ("test@example.com", 1),
+            ("test@example.com 13800138000", 2),
+            ("test@example.com 13800138000 192.168.1.1", 3),
+            ("normal text", 0),
+            ("123456789012345678", 1),
+            ("+1-123-456-7890", 1),
+        ],
+    )
     def test_redact_parametrized(self, service, text, expected_hits):
         """EN"""
         result = service.redact(text)
@@ -298,7 +305,7 @@ class TestRedactionService:
             "id_like": "123456789012345678",
             "ipv4": "192.168.1.1",
         }
-        
+
         for category, test_text in test_cases.items():
             result = service.redact(test_text)
             assert result.hit_count == 1

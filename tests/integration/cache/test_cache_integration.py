@@ -4,9 +4,11 @@ EN
 EN,LLMEN
 """
 
-import pytest
 import time
 from unittest.mock import Mock, patch
+
+import pytest
+
 from backend.services.cache.query_cache import QueryCache
 
 

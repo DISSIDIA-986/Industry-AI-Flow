@@ -4,10 +4,12 @@ EN
 ENQueryCacheEN
 """
 
-import pytest
 import threading
 import time
 from unittest.mock import patch
+
+import pytest
+
 from backend.services.cache.query_cache import QueryCache
 
 

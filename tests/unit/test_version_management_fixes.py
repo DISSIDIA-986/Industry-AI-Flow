@@ -48,7 +48,9 @@ def test_python_version_checker():
     print("🧪 EN 1: PythonEN")
     print("=" * 80)
 
-    success = run_command("python3 scripts/versioning/python_version_checker.py", "ENPythonEN")
+    success = run_command(
+        "python3 scripts/versioning/python_version_checker.py", "ENPythonEN"
+    )
 
     print(f"\n📊 EN: {'✅ EN' if success else '❌ EN'}")
     if not success:
@@ -63,7 +65,8 @@ def test_version_manager():
     print("=" * 80)
 
     success = run_command(
-        "python3 scripts/versioning/version_manager.py --check-deps paddleocr", "ENPaddleOCREN"
+        "python3 scripts/versioning/version_manager.py --check-deps paddleocr",
+        "ENPaddleOCREN",
     )
 
     print(f"\n📊 EN: {'✅ EN' if success else '❌ EN'}")
@@ -125,7 +128,9 @@ def test_installation_script():
     print("🧪 EN 5: Python 3.13EN")
     print("=" * 80)
 
-    success = run_command("./scripts/setup/install_python313_paddleocr.sh", "ENPython 3.13EN")
+    success = run_command(
+        "./scripts/setup/install_python313_paddleocr.sh", "ENPython 3.13EN"
+    )
 
     print(f"\n📊 EN: {'✅ EN' if success else '❌ EN'}")
     if not success:

@@ -41,7 +41,9 @@ class _FakeExecutor:
 
 def test_code_execution_tool_uses_manager_mode(monkeypatch):
     fake_manager = _FakeManager()
-    monkeypatch.setattr(code_execution, "get_code_execution_manager", lambda: fake_manager)
+    monkeypatch.setattr(
+        code_execution, "get_code_execution_manager", lambda: fake_manager
+    )
     monkeypatch.setattr(code_execution, "code_executor", _FakeExecutor())
     monkeypatch.setattr(code_execution.settings, "code_execution_provider", "auto")
 

@@ -125,7 +125,9 @@ class TestPDFExtraction:
         doc = fitz.open()
         page = doc.new_page(width=200, height=100)
         # Insert a small colored rectangle (simulates scanned content)
-        page.draw_rect(fitz.Rect(10, 10, 190, 90), color=(0, 0, 0), fill=(0.9, 0.9, 0.9))
+        page.draw_rect(
+            fitz.Rect(10, 10, 190, 90), color=(0, 0, 0), fill=(0.9, 0.9, 0.9)
+        )
         pdf_path = tmp_path / "scanned.pdf"
         doc.save(str(pdf_path))
         doc.close()
@@ -232,10 +234,12 @@ class TestOCRProcessor:
         good_file = tmp_path / "good.txt"
         good_file.write_text("test")
         proc = OCRProcessor(use_gpu=False, use_api_fallback=False)
-        results = proc.batch_process([
-            "/nonexistent/bad.png",
-            "/nonexistent/also_bad.png",
-        ])
+        results = proc.batch_process(
+            [
+                "/nonexistent/bad.png",
+                "/nonexistent/also_bad.png",
+            ]
+        )
         assert len(results) == 2
         assert all(r.method == "failed" for r in results)
 
@@ -275,8 +279,20 @@ class TestDocumentExtractorEdgeCases:
 
     def test_supported_extensions_complete(self):
         extractor = DocumentExtractor(use_ocr=False)
-        expected = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".txt", ".md",
-                    ".png", ".jpg", ".jpeg", ".bmp", ".tiff"}
+        expected = {
+            ".pdf",
+            ".docx",
+            ".doc",
+            ".xlsx",
+            ".xls",
+            ".txt",
+            ".md",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".bmp",
+            ".tiff",
+        }
         assert set(extractor.SUPPORTED_EXTENSIONS.keys()) == expected
 
     def test_extract_returns_document_content(self, tmp_path: Path):
@@ -342,8 +358,11 @@ class TestPDFOCRFallback:
 
         mock_ocr = MagicMock()
         mock_ocr.process.return_value = OCRResult(
-            text="Scanned page text", confidence=0.8,
-            boxes=[], method="local", language="en",
+            text="Scanned page text",
+            confidence=0.8,
+            boxes=[],
+            method="local",
+            language="en",
         )
 
         extractor = DocumentExtractor(use_ocr=False)

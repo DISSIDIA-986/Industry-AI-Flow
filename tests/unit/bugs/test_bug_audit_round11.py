@@ -27,10 +27,10 @@ from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R11-01 (P1): summary.py build_summary prompt is "EN" placeholder gibberish
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR11_01_SummaryPromptENPlaceholders:
@@ -47,18 +47,28 @@ class TestR11_01_SummaryPromptENPlaceholders:
                 func_source = ast.get_source_segment(source, node) or ""
                 # Extract the f-string prompt — it starts after prompt = f"""
                 prompt_start = func_source.find('prompt = f"""')
-                prompt_end = func_source.find('"""', prompt_start + 12) if prompt_start >= 0 else -1
+                prompt_end = (
+                    func_source.find('"""', prompt_start + 12)
+                    if prompt_start >= 0
+                    else -1
+                )
                 if prompt_start < 0 or prompt_end < 0:
                     pytest.fail("Could not find prompt f-string in build_summary")
                 prompt_text = func_source[prompt_start:prompt_end]
                 # The prompt template (excluding variable interpolations) should
                 # contain real English instruction words, not just "EN" placeholders
                 # Strip out f-string interpolation parts
-                stripped = re.sub(r'\{[^}]+\}', '', prompt_text)
+                stripped = re.sub(r"\{[^}]+\}", "", prompt_text)
                 has_real_instructions = any(
                     word in stripped.lower()
-                    for word in ("summarize", "conversation", "update the summary",
-                                 "existing summary", "new interactions", "summary of")
+                    for word in (
+                        "summarize",
+                        "conversation",
+                        "update the summary",
+                        "existing summary",
+                        "new interactions",
+                        "summary of",
+                    )
                 )
                 assert has_real_instructions, (
                     "R11-01: build_summary prompt uses EN placeholder text instead "
@@ -76,9 +86,9 @@ class TestR11_01_SummaryPromptENPlaceholders:
             "'User:'/'Assistant:'. LLM cannot identify speaker turns."
         )
         # Positive check: should have User/Assistant labels
-        assert "User:" in source or "user:" in source.lower(), (
-            "R11-01: summary.py interaction formatting lacks 'User:' label"
-        )
+        assert (
+            "User:" in source or "user:" in source.lower()
+        ), "R11-01: summary.py interaction formatting lacks 'User:' label"
 
     def test_summary_default_language_is_english(self):
         source = Path("backend/services/memory/summary.py").read_text()
@@ -99,6 +109,7 @@ class TestR11_01_SummaryPromptENPlaceholders:
 # R11-02 (P1): extractor.py EXTRACTION_PROMPT is "EN" placeholder gibberish
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR11_02_ExtractorPromptENPlaceholders:
     """EXTRACTION_PROMPT in extractor.py is entirely 'EN' placeholder text.
@@ -112,7 +123,10 @@ class TestR11_02_ExtractorPromptENPlaceholders:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "EXTRACTION_PROMPT":
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "EXTRACTION_PROMPT"
+                    ):
                         if isinstance(node.value, ast.Constant):
                             prompt_text = str(node.value.value)
                             # The prompt should have real English sentences, not
@@ -124,7 +138,7 @@ class TestR11_02_ExtractorPromptENPlaceholders:
                             # of the placeholder pattern "EN"
                             stripped = prompt_text.replace("EN", "").strip()
                             # After removing all "EN" tokens, real English should remain
-                            real_words = re.findall(r'[a-zA-Z]{4,}', stripped)
+                            real_words = re.findall(r"[a-zA-Z]{4,}", stripped)
                             assert len(real_words) >= 10, (
                                 f"R11-02: EXTRACTION_PROMPT has only {len(real_words)} "
                                 "real English words after removing 'EN' placeholders. "
@@ -146,6 +160,7 @@ class TestR11_02_ExtractorPromptENPlaceholders:
 # R11-03 (P1): groundedness_checker.py disclaimers/refusals are "EN" gibberish
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR11_03_GroundednessENDisclaimers:
     """Safety disclaimers and refusal messages in groundedness_checker.py
@@ -163,12 +178,14 @@ class TestR11_03_GroundednessENDisclaimers:
                 # not "ENAIEN,EN." gibberish
                 # Extract the disclaimers dict section
                 disclaimers_start = func_source.find("disclaimers")
-                disclaimers_section = func_source[disclaimers_start:] if disclaimers_start >= 0 else ""
+                disclaimers_section = (
+                    func_source[disclaimers_start:] if disclaimers_start >= 0 else ""
+                )
                 # Check that disclaimer text has real English words
                 # (excluding variable names / code structure)
                 string_literals = re.findall(r'"([^"]*)"', disclaimers_section)
                 all_text = " ".join(string_literals)
-                real_words = re.findall(r'[a-zA-Z]{4,}', all_text.replace("EN", ""))
+                real_words = re.findall(r"[a-zA-Z]{4,}", all_text.replace("EN", ""))
                 assert len(real_words) >= 5, (
                     f"R11-03: Safety disclaimers have only {len(real_words)} real "
                     "English words after removing 'EN' placeholders. "
@@ -181,7 +198,10 @@ class TestR11_03_GroundednessENDisclaimers:
         source = Path("backend/services/safety/groundedness_checker.py").read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "should_refuse_to_answer":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "should_refuse_to_answer"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # The refusal messages should contain real English
                 # Check that we don't have "EN,EN." patterns as user-facing text
@@ -197,6 +217,7 @@ class TestR11_03_GroundednessENDisclaimers:
 # ---------------------------------------------------------------------------
 # R11-04 (P1): cost_estimation_service.py regex \s in capture group
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR11_04_CostRegexWhitespaceInCapture:
@@ -224,7 +245,7 @@ class TestR11_04_CostRegexWhitespaceInCapture:
         # "500000 b" from "budget" would match as 500 billion.
         # Patterns with \s but NO [kmb] suffix (like sqft) are safe since
         # they only capture space-grouped digits (e.g. "5 000").
-        pattern_matches = re.findall(r'\(([^)]*\\s[^)]*\[kmb\][^)]*)\)', source)
+        pattern_matches = re.findall(r"\(([^)]*\\s[^)]*\[kmb\][^)]*)\)", source)
         for match in pattern_matches:
             assert not match, (
                 f"R11-04: Found \\s + [kmb] in same capture group: ({match}). "
@@ -235,6 +256,7 @@ class TestR11_04_CostRegexWhitespaceInCapture:
 # ---------------------------------------------------------------------------
 # R11-05 (P1): routing_decision.py maps cost_estimation to DATA_ANALYSIS_AGENT
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR11_05_CostEstimationWrongAgentMapping:
@@ -247,11 +269,17 @@ class TestR11_05_CostEstimationWrongAgentMapping:
         source = Path("backend/services/routing_decision.py").read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_map_intent_to_agent":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_map_intent_to_agent"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # cost_estimation should NOT map to DATA_ANALYSIS_AGENT
                 # It should map to GENERAL_AGENT or a dedicated cost agent
-                if "cost_estimation" in func_source and "DATA_ANALYSIS_AGENT" in func_source:
+                if (
+                    "cost_estimation" in func_source
+                    and "DATA_ANALYSIS_AGENT" in func_source
+                ):
                     # Verify the mapping is direct, not just in fallback
                     lines = func_source.split("\n")
                     for line in lines:
@@ -268,6 +296,7 @@ class TestR11_05_CostEstimationWrongAgentMapping:
 # ---------------------------------------------------------------------------
 # R11-06 to R11-09 (P1): Missing secure_endpoint on API routes
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR11_06_PromptRoutesNoAuth:
@@ -321,6 +350,7 @@ class TestR11_09_CostEstimationRoutesNoAuth:
 # R11-10 (P1): validator.py exec bypass via list/dict/tuple indirection
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR11_10_ValidatorExecBypassIndirection:
     """_validate_blocked_calls only checks ast.Name and ast.Attribute targets.
@@ -355,6 +385,7 @@ class TestR11_10_ValidatorExecBypassIndirection:
 # R11-11 (P1): data_analysis_agent.py NaN breaks JSON serialization
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR11_11_DataAnalysisNaNBreaksJSON:
     """_extract_dataset_info produces float('nan') for all-NaN numeric columns.
@@ -362,10 +393,15 @@ class TestR11_11_DataAnalysisNaNBreaksJSON:
     """
 
     def test_extract_dataset_info_no_nan_in_output(self):
-        source = Path("backend/services/data_analysis/data_analysis_agent.py").read_text()
+        source = Path(
+            "backend/services/data_analysis/data_analysis_agent.py"
+        ).read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_extract_dataset_info":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_extract_dataset_info"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # The function computes float(df[col].mean()) etc. but when ALL
                 # values in a column are NaN, mean() returns NaN. The function
@@ -375,9 +411,18 @@ class TestR11_11_DataAnalysisNaNBreaksJSON:
                 # Check for NaN-aware guards around the stat computations
                 has_nan_guard = any(
                     x in func_source
-                    for x in ("isnan(", "isna(", "notna(", "fillna(",
-                              "isnull().all()", "all_nan", "nanmean",
-                              "_safe_float", "!= f)", "math.nan")
+                    for x in (
+                        "isnan(",
+                        "isna(",
+                        "notna(",
+                        "fillna(",
+                        "isnull().all()",
+                        "all_nan",
+                        "nanmean",
+                        "_safe_float",
+                        "!= f)",
+                        "math.nan",
+                    )
                 )
                 assert has_nan_guard, (
                     "R11-11: _extract_dataset_info does not guard against NaN from "
@@ -391,6 +436,7 @@ class TestR11_11_DataAnalysisNaNBreaksJSON:
 # ---------------------------------------------------------------------------
 # R11-12 (P1): _RAGRetrieverAdapter.retrieve blocks event loop
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR11_12_RAGRetrieverAdapterBlocksLoop:
@@ -410,7 +456,11 @@ class TestR11_12_RAGRetrieverAdapterBlocksLoop:
                 # run_in_executor to avoid blocking the event loop
                 has_async_offload = any(
                     x in class_source
-                    for x in ("asyncio.to_thread", "run_in_executor", "run_in_threadpool")
+                    for x in (
+                        "asyncio.to_thread",
+                        "run_in_executor",
+                        "run_in_threadpool",
+                    )
                 )
                 assert has_async_offload, (
                     "R11-12: _RAGRetrieverAdapter.retrieve() calls "
@@ -425,6 +475,7 @@ class TestR11_12_RAGRetrieverAdapterBlocksLoop:
 # R11-13 (P1): _DispatchResponseBuilder.__call__ blocks event loop
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR11_13_DispatchResponseBuilderBlocksLoop:
     """_DispatchResponseBuilder.__call__ is synchronous and calls
@@ -436,13 +487,20 @@ class TestR11_13_DispatchResponseBuilderBlocksLoop:
         source = Path("backend/api/workflow_query_routes.py").read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name == "_DispatchResponseBuilder":
+            if (
+                isinstance(node, ast.ClassDef)
+                and node.name == "_DispatchResponseBuilder"
+            ):
                 class_source = ast.get_source_segment(source, node) or ""
                 # __call__ should either be async or use thread offloading
                 is_async_call = "async def __call__" in class_source
                 has_thread_offload = any(
                     x in class_source
-                    for x in ("asyncio.to_thread", "run_in_executor", "run_in_threadpool")
+                    for x in (
+                        "asyncio.to_thread",
+                        "run_in_executor",
+                        "run_in_threadpool",
+                    )
                 )
                 assert is_async_call or has_thread_offload, (
                     "R11-13: _DispatchResponseBuilder.__call__ is synchronous and "

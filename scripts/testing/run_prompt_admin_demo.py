@@ -36,7 +36,9 @@ def _request(
     return resp.json()
 
 
-def _pick_pair(prompts: list[Dict[str, Any]]) -> Optional[tuple[Dict[str, Any], Dict[str, Any]]]:
+def _pick_pair(
+    prompts: list[Dict[str, Any]]
+) -> Optional[tuple[Dict[str, Any], Dict[str, Any]]]:
     groups: dict[tuple[str, str], list[Dict[str, Any]]] = defaultdict(list)
     for item in prompts:
         key = (str(item.get("name")), str(item.get("category")))
@@ -47,7 +49,9 @@ def _pick_pair(prompts: list[Dict[str, Any]]) -> Optional[tuple[Dict[str, Any], 
     return None
 
 
-def run_demo(base_url: str, api_key: Optional[str], execute_experiment: bool) -> Dict[str, Any]:
+def run_demo(
+    base_url: str, api_key: Optional[str], execute_experiment: bool
+) -> Dict[str, Any]:
     session = requests.Session()
     if api_key:
         session.headers.update({"X-API-Key": api_key})
@@ -122,7 +126,9 @@ def run_demo(base_url: str, api_key: Optional[str], execute_experiment: bool) ->
     if not exp_id:
         raise DemoError("experiment creation did not return experiment id")
 
-    summary["steps"].append({"step": "create_experiment", "experiment_id": exp_id, "traffic_split": 0.1})
+    summary["steps"].append(
+        {"step": "create_experiment", "experiment_id": exp_id, "traffic_split": 0.1}
+    )
 
     for split in (0.3, 0.5):
         updated = _request(
@@ -158,14 +164,18 @@ def run_demo(base_url: str, api_key: Optional[str], execute_experiment: bool) ->
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run prompt admin demo checks.")
-    parser.add_argument("--base-url", default="http://localhost:8000", help="API base url")
+    parser.add_argument(
+        "--base-url", default="http://localhost:8000", help="API base url"
+    )
     parser.add_argument("--api-key", default=None, help="optional API key")
     parser.add_argument(
         "--execute-experiment",
         action="store_true",
         help="execute experiment create and traffic ramp flow",
     )
-    parser.add_argument("--pretty", action="store_true", help="pretty print json output")
+    parser.add_argument(
+        "--pretty", action="store_true", help="pretty print json output"
+    )
     args = parser.parse_args()
 
     try:
@@ -179,7 +189,9 @@ def main() -> int:
         return 1
 
     if args.pretty:
-        print(json.dumps({"status": "ok", "result": result}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps({"status": "ok", "result": result}, ensure_ascii=False, indent=2)
+        )
     else:
         print(json.dumps({"status": "ok", "result": result}, ensure_ascii=False))
     return 0

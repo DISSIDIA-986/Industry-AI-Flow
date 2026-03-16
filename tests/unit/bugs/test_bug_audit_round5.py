@@ -19,7 +19,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R5-1 (Critical): importlib bypass in CodeValidator
 # ---------------------------------------------------------------------------
@@ -34,6 +33,7 @@ class TestR5_1_ImportlibBypass:
     def _get_blacklisted_imports():
         """Parse BLACKLISTED_IMPORTS from validator.py source via AST."""
         import ast
+
         with open("backend/services/code_executor/validator.py") as f:
             source = f.read()
         tree = ast.parse(source)
@@ -48,26 +48,30 @@ class TestR5_1_ImportlibBypass:
                         name = target.id
                     if name == "BLACKLISTED_IMPORTS":
                         if isinstance(node.value, ast.Set):
-                            return {elt.value for elt in node.value.elts if isinstance(elt, ast.Constant)}
+                            return {
+                                elt.value
+                                for elt in node.value.elts
+                                if isinstance(elt, ast.Constant)
+                            }
         return set()
 
     def test_importlib_import_blocked(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "importlib" in blacklisted, (
-            "importlib must be in BLACKLISTED_IMPORTS — it allows importing any blacklisted module"
-        )
+        assert (
+            "importlib" in blacklisted
+        ), "importlib must be in BLACKLISTED_IMPORTS — it allows importing any blacklisted module"
 
     def test_ctypes_import_blocked(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "ctypes" in blacklisted, (
-            "ctypes must be in BLACKLISTED_IMPORTS — allows arbitrary native code execution"
-        )
+        assert (
+            "ctypes" in blacklisted
+        ), "ctypes must be in BLACKLISTED_IMPORTS — allows arbitrary native code execution"
 
     def test_code_module_blocked(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "code" in blacklisted, (
-            "code module must be in BLACKLISTED_IMPORTS — provides interactive interpreter"
-        )
+        assert (
+            "code" in blacklisted
+        ), "code module must be in BLACKLISTED_IMPORTS — provides interactive interpreter"
 
 
 # ---------------------------------------------------------------------------
@@ -83,11 +87,12 @@ class TestR5_2_SQLPatternGaps:
     def _get_sql_pattern():
         """Extract and compile SQL_PATTERN from sanitizer.py source."""
         import re as _re
+
         with open("backend/security/sanitizer.py") as f:
             source = f.read()
         # Find the SQL_PATTERN definition and extract the regex
         match = _re.search(
-            r'SQL_PATTERN\s*=\s*re\.compile\((.*?)\)',
+            r"SQL_PATTERN\s*=\s*re\.compile\((.*?)\)",
             source,
             _re.DOTALL,
         )
@@ -97,27 +102,27 @@ class TestR5_2_SQLPatternGaps:
 
     def test_insert_into_blocked(self):
         source = self._get_sql_pattern()
-        assert "insert" in source.lower() and "into" in source.lower(), (
-            "SQL_PATTERN must catch INSERT INTO"
-        )
+        assert (
+            "insert" in source.lower() and "into" in source.lower()
+        ), "SQL_PATTERN must catch INSERT INTO"
 
     def test_update_set_blocked(self):
         source = self._get_sql_pattern()
-        assert "update" in source.lower() and "set" in source.lower(), (
-            "SQL_PATTERN must catch UPDATE ... SET"
-        )
+        assert (
+            "update" in source.lower() and "set" in source.lower()
+        ), "SQL_PATTERN must catch UPDATE ... SET"
 
     def test_delete_from_blocked(self):
         source = self._get_sql_pattern()
-        assert "delete" in source.lower() and "from" in source.lower(), (
-            "SQL_PATTERN must catch DELETE FROM"
-        )
+        assert (
+            "delete" in source.lower() and "from" in source.lower()
+        ), "SQL_PATTERN must catch DELETE FROM"
 
     def test_alter_table_blocked(self):
         source = self._get_sql_pattern()
-        assert "alter" in source.lower() and "table" in source.lower(), (
-            "SQL_PATTERN must catch ALTER TABLE"
-        )
+        assert (
+            "alter" in source.lower() and "table" in source.lower()
+        ), "SQL_PATTERN must catch ALTER TABLE"
 
     def test_normal_text_still_allowed(self):
         """Ensure normal construction-domain text is not false-positive blocked."""
@@ -147,6 +152,7 @@ class TestR5_3_UnseenCategoryWarning:
 
     def test_unseen_category_response_contains_warning(self):
         import ast
+
         source_path = "backend/services/workflows/nodes/cost_estimation_node.py"
         with open(source_path) as f:
             source = f.read()
@@ -155,10 +161,15 @@ class TestR5_3_UnseenCategoryWarning:
         tree = ast.parse(source)
         func_node = None
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_render_cost_estimation_response":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_render_cost_estimation_response"
+            ):
                 func_node = node
                 break
-        assert func_node is not None, "_render_cost_estimation_response function not found"
+        assert (
+            func_node is not None
+        ), "_render_cost_estimation_response function not found"
 
         # Extract function source lines
         func_lines = source.splitlines()[func_node.lineno - 1 : func_node.end_lineno]
@@ -181,7 +192,10 @@ class TestR5_3_UnseenCategoryWarning:
                 "lower": 400_000.0,
                 "upper": 600_000.0,
             },
-            "unknown_categories": {"project_type": "data_center", "location": "Yellowknife"},
+            "unknown_categories": {
+                "project_type": "data_center",
+                "location": "Yellowknife",
+            },
             "confidence_degraded": True,
         }
 
@@ -189,7 +203,13 @@ class TestR5_3_UnseenCategoryWarning:
         # Response must warn about degraded confidence
         assert any(
             keyword in response.lower()
-            for keyword in ("warning", "reduced accuracy", "degraded", "caution", "lower accuracy")
+            for keyword in (
+                "warning",
+                "reduced accuracy",
+                "degraded",
+                "caution",
+                "lower accuracy",
+            )
         ), (
             f"Response must warn user about degraded confidence for unseen categories. "
             f"Got: {response}"
@@ -211,6 +231,7 @@ class TestR5_4_BlacklistContainsNonModules:
     def _get_blacklisted_imports():
         """Parse BLACKLISTED_IMPORTS from validator.py source via AST."""
         import ast
+
         with open("backend/services/code_executor/validator.py") as f:
             source = f.read()
         tree = ast.parse(source)
@@ -224,45 +245,49 @@ class TestR5_4_BlacklistContainsNonModules:
                         name = target.id
                     if name == "BLACKLISTED_IMPORTS":
                         if isinstance(node.value, ast.Set):
-                            return {elt.value for elt in node.value.elts if isinstance(elt, ast.Constant)}
+                            return {
+                                elt.value
+                                for elt in node.value.elts
+                                if isinstance(elt, ast.Constant)
+                            }
         return set()
 
     def test_eval_not_in_blacklisted_imports(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "eval" not in blacklisted, (
-            "'eval' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "eval" not in blacklisted
+        ), "'eval' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
 
     def test_exec_not_in_blacklisted_imports(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "exec" not in blacklisted, (
-            "'exec' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "exec" not in blacklisted
+        ), "'exec' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
 
     def test_compile_not_in_blacklisted_imports(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "compile" not in blacklisted, (
-            "'compile' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "compile" not in blacklisted
+        ), "'compile' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
 
     def test_open_not_in_blacklisted_imports(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "open" not in blacklisted, (
-            "'open' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "open" not in blacklisted
+        ), "'open' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
 
     def test_dunder_import_not_in_blacklisted_imports(self):
         blacklisted = self._get_blacklisted_imports()
-        assert "__import__" not in blacklisted, (
-            "'__import__' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "__import__" not in blacklisted
+        ), "'__import__' is not a module — it should NOT be in BLACKLISTED_IMPORTS"
 
     def test_importlib_in_blacklisted_imports(self):
         """importlib IS a real dangerous module and must be blocked."""
         blacklisted = self._get_blacklisted_imports()
-        assert "importlib" in blacklisted, (
-            "'importlib' is a dangerous module that MUST be in BLACKLISTED_IMPORTS"
-        )
+        assert (
+            "importlib" in blacklisted
+        ), "'importlib' is a dangerous module that MUST be in BLACKLISTED_IMPORTS"
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +332,7 @@ class TestR5_6_TemplateMaxMinColumnSelection:
         """Verify _template_max source calls _pick_relevant_column
         instead of hardcoding numeric_cols[0]."""
         import ast
+
         source_path = "backend/services/data_analysis/data_analysis_agent.py"
         with open(source_path) as f:
             source = f.read()
@@ -327,6 +353,7 @@ class TestR5_6_TemplateMaxMinColumnSelection:
         """Verify _template_min source calls _pick_relevant_column
         instead of hardcoding numeric_cols[0]."""
         import ast
+
         source_path = "backend/services/data_analysis/data_analysis_agent.py"
         with open(source_path) as f:
             source = f.read()

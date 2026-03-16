@@ -30,10 +30,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # R10-01 (P0): rerank_node passes wrong kwargs to Reranker.rerank()
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_01_RerankNodeWrongKwargs:
@@ -51,15 +51,15 @@ class TestR10_01_RerankNodeWrongKwargs:
             # Find reranker.rerank(...) call
             if isinstance(node.func, ast.Attribute) and node.func.attr == "rerank":
                 kwarg_names = [kw.arg for kw in node.keywords]
-                assert "documents" in kwarg_names, (
-                    "R10-01: rerank_node passes contexts= but Reranker expects documents="
-                )
-                assert "contexts" not in kwarg_names, (
-                    "R10-01: rerank_node should not pass contexts= kwarg"
-                )
-                assert "metadata" not in kwarg_names, (
-                    "R10-01: rerank_node should not pass metadata= kwarg"
-                )
+                assert (
+                    "documents" in kwarg_names
+                ), "R10-01: rerank_node passes contexts= but Reranker expects documents="
+                assert (
+                    "contexts" not in kwarg_names
+                ), "R10-01: rerank_node should not pass contexts= kwarg"
+                assert (
+                    "metadata" not in kwarg_names
+                ), "R10-01: rerank_node should not pass metadata= kwarg"
                 return  # Found the call, test passes
 
         pytest.fail("Could not find reranker.rerank() call in source")
@@ -68,6 +68,7 @@ class TestR10_01_RerankNodeWrongKwargs:
 # ---------------------------------------------------------------------------
 # R10-02 (P0): SQL_PATTERN blocks ; and -- in normal queries
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_02_SqlPatternBlocksNormalText:
@@ -79,22 +80,23 @@ class TestR10_02_SqlPatternBlocksNormalText:
         from backend.security.sanitizer import SQL_PATTERN
 
         normal_text = "What is the cost -- including labor and materials"
-        assert not SQL_PATTERN.search(normal_text), (
-            "R10-02: SQL_PATTERN blocks normal English text containing --"
-        )
+        assert not SQL_PATTERN.search(
+            normal_text
+        ), "R10-02: SQL_PATTERN blocks normal English text containing --"
 
     def test_normal_text_with_semicolon_not_blocked(self):
         from backend.security.sanitizer import SQL_PATTERN
 
         normal_text = "concrete mix; rebar spacing; foundation depth"
-        assert not SQL_PATTERN.search(normal_text), (
-            "R10-02: SQL_PATTERN blocks normal English text containing semicolons"
-        )
+        assert not SQL_PATTERN.search(
+            normal_text
+        ), "R10-02: SQL_PATTERN blocks normal English text containing semicolons"
 
 
 # ---------------------------------------------------------------------------
 # R10-03 (P1): IVFFlat probes never set before similarity_search
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_03_IvfflatProbesNotSet:
@@ -121,6 +123,7 @@ class TestR10_03_IvfflatProbesNotSet:
 # R10-04 (P1): Memory manager language fallback still "zh"
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_04_MemoryManagerLanguageFallback:
     """ConversationMemoryManager._update_summary passes
@@ -140,6 +143,7 @@ class TestR10_04_MemoryManagerLanguageFallback:
 # R10-05 (P1): _format_memory_payload uses "EN" placeholders
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_05_FormatMemoryPayloadENPlaceholders:
     """rag_engine.py _format_memory_payload returns 'EN.' when empty,
@@ -150,13 +154,16 @@ class TestR10_05_FormatMemoryPayloadENPlaceholders:
         source = Path("backend/services/rag_engine.py").read_text()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_format_memory_payload":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_format_memory_payload"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # Check for "EN" as a standalone label (not part of longer words)
                 en_matches = re.findall(r'"EN[.:]?"', func_source)
-                assert not en_matches, (
-                    f"R10-05: _format_memory_payload contains EN placeholders: {en_matches}"
-                )
+                assert (
+                    not en_matches
+                ), f"R10-05: _format_memory_payload contains EN placeholders: {en_matches}"
                 return
         pytest.fail("Could not find _format_memory_payload method")
 
@@ -165,6 +172,7 @@ class TestR10_05_FormatMemoryPayloadENPlaceholders:
 # R10-06 (P1): feedback_manager INTERVAL parameterization broken
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_06_FeedbackIntervalParam:
     """feedback_manager.py uses INTERVAL '%s days' with parameterized %s.
@@ -172,7 +180,9 @@ class TestR10_06_FeedbackIntervalParam:
     """
 
     def test_interval_not_parameterized_inside_literal(self):
-        source = Path("backend/services/feedback_system/feedback_manager.py").read_text()
+        source = Path(
+            "backend/services/feedback_system/feedback_manager.py"
+        ).read_text()
         # The pattern INTERVAL '%s days' is wrong — %s inside a string literal
         # is not replaced by parameterized queries. Should use:
         # INTERVAL '1 day' * %s or NOW() - %s * INTERVAL '1 day'
@@ -192,6 +202,7 @@ class TestR10_06_FeedbackIntervalParam:
 # R10-07 (P1): Load balancing always overrides intent routing
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_07_LoadBalancingOverridesIntent:
     """RoutingDecisionEngine.make_routing_decision with enable_load_balancing=True
@@ -201,7 +212,8 @@ class TestR10_07_LoadBalancingOverridesIntent:
 
     def test_high_confidence_not_overridden_by_load_balancing(self):
         import asyncio
-        from backend.services.routing_decision import RoutingDecisionEngine, AgentType
+
+        from backend.services.routing_decision import AgentType, RoutingDecisionEngine
 
         engine = RoutingDecisionEngine()
 
@@ -226,6 +238,7 @@ class TestR10_07_LoadBalancingOverridesIntent:
 # R10-08 (P1): $ prefix breaks cost estimation regex
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_08_DollarPrefixBreaksCostRegex:
     """extract_cost_features_from_query cannot parse '$500000' because the
@@ -233,7 +246,9 @@ class TestR10_08_DollarPrefixBreaksCostRegex:
     """
 
     def test_dollar_prefix_parsed(self):
-        from backend.services.cost_estimation_service import extract_cost_features_from_query
+        from backend.services.cost_estimation_service import (
+            extract_cost_features_from_query,
+        )
 
         result = extract_cost_features_from_query(
             "residential project budget $500000 in Toronto"
@@ -242,14 +257,15 @@ class TestR10_08_DollarPrefixBreaksCostRegex:
             "R10-08: extract_cost_features_from_query fails to parse '$500000'. "
             "The regex does not handle $ prefix."
         )
-        assert result["estimated_cost_cad"] == pytest.approx(500000, rel=0.01), (
-            f"R10-08: Parsed value {result.get('estimated_cost_cad')} != 500000"
-        )
+        assert result["estimated_cost_cad"] == pytest.approx(
+            500000, rel=0.01
+        ), f"R10-08: Parsed value {result.get('estimated_cost_cad')} != 500000"
 
 
 # ---------------------------------------------------------------------------
 # R10-09 (P1): Whitespace before ( bypasses DANGEROUS_PATTERNS
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_09_WhitespaceBypassesDangerousPatterns:
@@ -271,14 +287,15 @@ class TestR10_09_WhitespaceBypassesDangerousPatterns:
         ]
         for code in evasion_codes:
             result = validator.validate(code)
-            assert not result.is_valid, (
-                f"R10-09: '{code}' bypassed DANGEROUS_PATTERNS via whitespace before ("
-            )
+            assert (
+                not result.is_valid
+            ), f"R10-09: '{code}' bypassed DANGEROUS_PATTERNS via whitespace before ("
 
 
 # ---------------------------------------------------------------------------
 # R10-10 (P1): type() metaclass trick not blocked
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_10_TypeMetaclassTrickNotBlocked:
@@ -292,14 +309,15 @@ class TestR10_10_TypeMetaclassTrickNotBlocked:
         validator = CodeValidator(strict_mode=False)
         code = "Evil = type('Evil', (object,), {'run': lambda self: None})"
         result = validator.validate(code)
-        assert not result.is_valid, (
-            "R10-10: type() used as metaclass constructor is not blocked by validator"
-        )
+        assert (
+            not result.is_valid
+        ), "R10-10: type() used as metaclass constructor is not blocked by validator"
 
 
 # ---------------------------------------------------------------------------
 # R10-11 (P1): Redaction fail-open leaks PII
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_11_RedactionFailOpenLeaksPII:
@@ -314,7 +332,11 @@ class TestR10_11_RedactionFailOpenLeaksPII:
         text_with_pii = "Contact john@example.com for details"
 
         # Force an exception in redaction
-        with patch.object(svc, "PATTERNS", property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))):
+        with patch.object(
+            svc,
+            "PATTERNS",
+            property(lambda self: (_ for _ in ()).throw(RuntimeError("boom"))),
+        ):
             result = svc.redact(text_with_pii)
 
         # On failure, the result should NOT contain the original PII text
@@ -327,6 +349,7 @@ class TestR10_11_RedactionFailOpenLeaksPII:
 # ---------------------------------------------------------------------------
 # R10-12 (P1): Safety block bypassed when cost_estimation_node sets response
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_12_SafetyBypassedWithShortcutResponse:
@@ -352,12 +375,17 @@ class TestR10_12_SafetyBypassedWithShortcutResponse:
 
         # Find the pipeline list in run_workflow_pipeline
         for node in ast.walk(tree):
-            if isinstance(node, ast.AsyncFunctionDef) and node.name == "run_workflow_pipeline":
+            if (
+                isinstance(node, ast.AsyncFunctionDef)
+                and node.name == "run_workflow_pipeline"
+            ):
                 func_source = ast.get_source_segment(source, node) or ""
                 # Find the pipeline order
                 cost_idx = func_source.find("cost_estimation_node")
                 safety_idx = func_source.find("safety_node")
-                assert cost_idx > 0 and safety_idx > 0, "Could not find nodes in pipeline"
+                assert (
+                    cost_idx > 0 and safety_idx > 0
+                ), "Could not find nodes in pipeline"
                 # safety_node should come BEFORE cost_estimation_node to prevent
                 # dangerous queries from getting responses
                 assert safety_idx < cost_idx, (
@@ -372,6 +400,7 @@ class TestR10_12_SafetyBypassedWithShortcutResponse:
 # ---------------------------------------------------------------------------
 # R10-13 (P1): code_exec_node blocks event loop
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestR10_13_CodeExecNodeBlocksEventLoop:
@@ -415,6 +444,7 @@ class TestR10_13_CodeExecNodeBlocksEventLoop:
 # R10-14 (P1): retrieval_node blocks event loop
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestR10_14_RetrievalNodeBlocksEventLoop:
     """retrieval_node calls retriever.retrieve() which may be synchronous.
@@ -432,7 +462,11 @@ class TestR10_14_RetrievalNodeBlocksEventLoop:
                 # Should use run_in_executor or asyncio.to_thread for sync retrievers
                 has_thread_safety = any(
                     x in func_source
-                    for x in ("run_in_executor", "asyncio.to_thread", "run_in_threadpool")
+                    for x in (
+                        "run_in_executor",
+                        "asyncio.to_thread",
+                        "run_in_threadpool",
+                    )
                 )
                 assert has_thread_safety, (
                     "R10-14: retrieval_node calls retriever.retrieve() which blocks "

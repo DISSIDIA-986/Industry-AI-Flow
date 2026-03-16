@@ -120,7 +120,9 @@ async def evaluate_rehearsal(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run workflow rollback rehearsal checks")
+    parser = argparse.ArgumentParser(
+        description="Run workflow rollback rehearsal checks"
+    )
     parser.add_argument(
         "--skip-prompt-check",
         action="store_true",

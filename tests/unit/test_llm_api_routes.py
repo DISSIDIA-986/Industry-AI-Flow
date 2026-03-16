@@ -7,14 +7,14 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from backend.api import enhanced_query_routes, llm_cost_routes, llm_dispatch_routes
+from backend.security.context import TenantContext
+from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.demo_mode_service import (
     DEMO_MODE_LIVE_HYBRID,
     DEMO_MODE_LOCAL_SAFE,
     get_demo_mode_service,
 )
 from backend.services.language_policy import RAG_CHINESE_QUERY_UNSUPPORTED
-from backend.security.context import TenantContext
-from backend.security.dependencies import get_current_tenant, secure_endpoint
 from backend.services.llm_integration.types import (
     CostStats,
     DispatchResponse,

@@ -5,9 +5,10 @@
 用于验证 Metal GPU 加速是否正常工作
 """
 
-import time
-import sys
 import os
+import sys
+import time
+
 
 def test_llama_cpp_metal():
     """测试 llama-cpp-python Metal 性能"""
@@ -16,7 +17,7 @@ def test_llama_cpp_metal():
     except ImportError:
         print("❌ llama-cpp-python 未安装")
         print("\n请运行以下命令安装：")
-        print("  export CMAKE_ARGS=\"-DGGML_METAL=on -DCMAKE_OSX_ARCHITECTURES=arm64\"")
+        print('  export CMAKE_ARGS="-DGGML_METAL=on -DCMAKE_OSX_ARCHITECTURES=arm64"')
         print("  .venv/bin/pip install llama-cpp-python==0.2.90")
         return False
 
@@ -27,6 +28,7 @@ def test_llama_cpp_metal():
     # 检查 Metal 支持
     try:
         import llama_cpp.llama_cpp as llama
+
         print("✅ llama_cpp 核心库加载成功")
         print()
     except Exception as e:
@@ -37,7 +39,9 @@ def test_llama_cpp_metal():
     print("=== 测试 Metal 加速性能 ===")
     print()
 
-    model_path = os.path.expanduser("~/.ollama/models/qwen3.5:4b/ggml-model-q4_k_m.gguf")
+    model_path = os.path.expanduser(
+        "~/.ollama/models/qwen3.5:4b/ggml-model-q4_k_m.gguf"
+    )
 
     if not os.path.exists(model_path):
         print(f"❌ 模型文件不存在: {model_path}")
@@ -51,11 +55,7 @@ def test_llama_cpp_metal():
         start = time.time()
 
         llama = llama_cpp.llama(
-            model_path=model_path,
-            n_ctx=2048,
-            n_batch=512,
-            n_threads=8,
-            verbose=False
+            model_path=model_path, n_ctx=2048, n_batch=512, n_threads=8, verbose=False
         )
 
         load_time = time.time() - start
@@ -74,12 +74,7 @@ def test_llama_cpp_metal():
 
         # 生成（限制输出长度）
         max_tokens = 50
-        output = llama.generate(
-            tokens,
-            temp=0.7,
-            top_p=0.9,
-            repeat_penalty=1.0
-        )
+        output = llama.generate(tokens, temp=0.7, top_p=0.9, repeat_penalty=1.0)
 
         # 解码结果
         generated = llama.detokenize(output[:max_tokens])
@@ -104,6 +99,7 @@ def test_llama_cpp_metal():
         print(f"❌ 测试失败: {e}")
         return False
 
+
 def test_ollama_fallback():
     """测试 Ollama 作为回退方案"""
     import requests
@@ -118,17 +114,14 @@ def test_ollama_fallback():
     start = time.time()
     try:
         response = requests.post(
-            'http://localhost:11434/api/generate',
+            "http://localhost:11434/api/generate",
             json={
-                'model': 'qwen3.5:4b',
-                'prompt': 'What is concrete? Answer in one sentence.',
-                'stream': False,
-                'options': {
-                    'num_predict': 50,
-                    'temperature': 0.7
-                }
+                "model": "qwen3.5:4b",
+                "prompt": "What is concrete? Answer in one sentence.",
+                "stream": False,
+                "options": {"num_predict": 50, "temperature": 0.7},
             },
-            timeout=90  # 90 秒超时
+            timeout=90,  # 90 秒超时
         )
         elapsed = time.time() - start
 
@@ -148,6 +141,7 @@ def test_ollama_fallback():
     except Exception as e:
         print(f"❌ Ollama 测试失败: {e}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -189,6 +183,7 @@ def main():
     else:
         print("export OLLAMA_MODEL=qwen3.5:4b")
         print("export OLLAMA_REQUEST_TIMEOUT_SECONDS=90")
+
 
 if __name__ == "__main__":
     main()

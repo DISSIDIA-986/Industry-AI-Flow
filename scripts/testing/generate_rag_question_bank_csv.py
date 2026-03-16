@@ -60,29 +60,57 @@ STOPWORDS = {
 
 TURN_TEMPLATES: dict[int, tuple[str, ...]] = {
     1: (
-        "What does this document require for \"{topic1}\"?",
-        "Explain the core rule around \"{topic1}\" in this standard.",
-        "From this source, what is the key expectation for \"{topic1}\"?",
+        'What does this document require for "{topic1}"?',
+        'Explain the core rule around "{topic1}" in this standard.',
+        'From this source, what is the key expectation for "{topic1}"?',
     ),
     2: (
-        "Summarize the main points about \"{topic1}\" and \"{topic2}\" from this document.",
-        "Give a concise summary of the guidance related to \"{topic1}\".",
-        "What are the most important requirements tied to \"{topic1}\" here?",
+        'Summarize the main points about "{topic1}" and "{topic2}" from this document.',
+        'Give a concise summary of the guidance related to "{topic1}".',
+        'What are the most important requirements tied to "{topic1}" here?',
     ),
     3: (
-        "Based on your previous answer, provide one concrete evidence detail for \"{topic1}\".",
-        "Continue the thread and cite a specific clause or detail about \"{topic1}\".",
-        "From the same source, what exact evidence supports the point about \"{topic1}\"?",
+        'Based on your previous answer, provide one concrete evidence detail for "{topic1}".',
+        'Continue the thread and cite a specific clause or detail about "{topic1}".',
+        'From the same source, what exact evidence supports the point about "{topic1}"?',
     ),
     4: (
-        "Considering \"{topic1}\" and \"{topic2}\", what risk or trade-off should a project team watch?",
-        "How should teams balance \"{topic1}\" versus \"{topic2}\" in practice?",
-        "What conflict or dependency can occur between \"{topic1}\" and \"{topic2}\"?",
+        'Considering "{topic1}" and "{topic2}", what risk or trade-off should a project team watch?',
+        'How should teams balance "{topic1}" versus "{topic2}" in practice?',
+        'What conflict or dependency can occur between "{topic1}" and "{topic2}"?',
     ),
     5: (
-        "Using this conversation context, propose a 3-step checklist for \"{topic1}\".",
-        "From this thread, suggest next actions to implement the requirements for \"{topic1}\".",
-        "What follow-up questions should be asked next to validate \"{topic1}\" execution?",
+        'Using this conversation context, propose a 3-step checklist for "{topic1}".',
+        'From this thread, suggest next actions to implement the requirements for "{topic1}".',
+        'What follow-up questions should be asked next to validate "{topic1}" execution?',
+    ),
+}
+
+REGULATORY_TURN_TEMPLATES: dict[int, tuple[str, ...]] = {
+    1: (
+        'What does Section "{topic1}" require for construction projects?',
+        'What are the mandatory obligations regarding "{topic1}" under this regulation?',
+        'How does this code define compliance for "{topic1}"?',
+    ),
+    2: (
+        'Summarize the enforcement and penalty provisions related to "{topic1}".',
+        'What exemptions or exceptions exist for "{topic1}" in this regulation?',
+        'List the key definitions this act provides for "{topic1}".',
+    ),
+    3: (
+        'Cite the exact section number and wording for the "{topic1}" requirement.',
+        'What specific documentation must be maintained for "{topic1}" compliance?',
+        'Provide the verbatim regulatory text that governs "{topic1}".',
+    ),
+    4: (
+        'How do "{topic1}" requirements interact with "{topic2}" provisions?',
+        'If "{topic1}" and "{topic2}" conflict, which takes precedence under this act?',
+        'What are the practical implications of complying with both "{topic1}" and "{topic2}"?',
+    ),
+    5: (
+        'Create a compliance checklist for "{topic1}" that a site supervisor could use.',
+        'What inspection steps verify "{topic1}" compliance on a construction site?',
+        'Draft a pre-audit preparation guide based on the "{topic1}" requirements.',
     ),
 }
 
@@ -156,6 +184,13 @@ def _is_term_candidate(token: str) -> bool:
         return False
     if compact.isalpha() and sum(1 for ch in compact if ch in "aeiou") == 0:
         return False
+    # Reject tokens that are mostly digits with scattered letters (OCR noise)
+    digit_ratio = sum(1 for ch in compact if ch.isdigit()) / len(compact)
+    if digit_ratio > 0.6 and len(compact) > 4:
+        return False
+    # Reject tokens with too many consecutive consonants (garbled OCR)
+    if re.search(r"[bcdfghjklmnpqrstvwxyz]{5,}", compact):
+        return False
     return True
 
 
@@ -183,6 +218,23 @@ def _topic_from_terms(terms: Iterable[str], fallback: str) -> str:
     return f"{filtered[0]} {filtered[1]}"
 
 
+def _is_quality_chunk(content: str) -> bool:
+    """Reject chunks that are likely page headers, footers, or TOC entries."""
+    text = content.strip()
+    if len(text) < 200:
+        return False
+    alpha_count = sum(1 for ch in text if ch.isalpha())
+    if alpha_count < len(text) * 0.4:
+        return False
+    return True
+
+
+def _is_regulatory_doc(filename: str) -> bool:
+    lower = filename.lower()
+    keywords = ["act", "regulation", "code", "ohs", "cfr", "reg_"]
+    return any(kw in lower for kw in keywords)
+
+
 def _doc_label(filename: str) -> str:
     stem = Path(filename).stem
     return re.sub(r"[_-]+", " ", stem).strip()
@@ -203,13 +255,18 @@ def _load_documents(vector_store: VectorStore) -> list[DocumentRow]:
             """
         )
         rows = cur.fetchall()
-        return [DocumentRow(doc_id=row[0], filename=row[1], chunk_count=int(row[2])) for row in rows]
+        return [
+            DocumentRow(doc_id=row[0], filename=row[1], chunk_count=int(row[2]))
+            for row in rows
+        ]
     finally:
         cur.close()
         conn.close()
 
 
-def _load_chunks(vector_store: VectorStore, doc_id: str, *, min_chars: int) -> list[ChunkRow]:
+def _load_chunks(
+    vector_store: VectorStore, doc_id: str, *, min_chars: int
+) -> list[ChunkRow]:
     conn = vector_store.get_connection()
     cur = conn.cursor()
     try:
@@ -236,12 +293,22 @@ def build_question_bank(
     questions_per_doc: int,
     seed: int,
     min_chars: int,
+    doc_filter: list[str] | None = None,
 ) -> tuple[list[dict[str, str]], dict[str, int]]:
     rng = random.Random(seed)
     vector_store = VectorStore()
     docs = _load_documents(vector_store)
     if not docs:
         raise RuntimeError("No vectorized documents found in database.")
+
+    if doc_filter:
+        filter_lower = [f.lower() for f in doc_filter]
+        docs = [d for d in docs if d.filename.lower() in filter_lower]
+        if not docs:
+            raise RuntimeError(
+                f"No documents matched filter: {doc_filter}. "
+                f"Available: {[d.filename for d in _load_documents(vector_store)]}"
+            )
 
     records: list[dict[str, str]] = []
     counts: dict[str, int] = {}
@@ -254,12 +321,24 @@ def build_question_bank(
         if not chunks:
             continue
 
+        # Filter to quality chunks for better topic extraction
+        quality_chunks = [c for c in chunks if _is_quality_chunk(c.content)]
+        if len(quality_chunks) >= 2:
+            chunks = quality_chunks
+
+        is_regulatory = _is_regulatory_doc(doc.filename)
+        turn_templates = REGULATORY_TURN_TEMPLATES if is_regulatory else TURN_TEMPLATES
+
         groups = math.ceil(questions_per_doc / 5)
         doc_records: list[dict[str, str]] = []
 
         for group_index in range(1, groups + 1):
             chunk_a = rng.choice(chunks)
-            chunk_b = rng.choice(chunks) if len(chunks) == 1 else rng.choice([c for c in chunks if c.chunk_id != chunk_a.chunk_id])
+            chunk_b = (
+                rng.choice(chunks)
+                if len(chunks) == 1
+                else rng.choice([c for c in chunks if c.chunk_id != chunk_a.chunk_id])
+            )
 
             excerpt_a = _extract_excerpt(chunk_a.content, rng)
             excerpt_b = _extract_excerpt(chunk_b.content, rng)
@@ -271,7 +350,7 @@ def build_question_bank(
             topic2 = _topic_from_terms(terms_b, fallback="implementation detail")
 
             for turn_index in range(1, 6):
-                template = rng.choice(TURN_TEMPLATES[turn_index])
+                template = rng.choice(turn_templates[turn_index])
                 question = template.format(
                     topic1=topic1,
                     topic2=topic2,
@@ -316,6 +395,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--questions-per-doc", type=int, default=20)
     parser.add_argument("--seed", type=int, default=20260303)
     parser.add_argument("--min-content-chars", type=int, default=180)
+    parser.add_argument(
+        "--doc-filter",
+        nargs="+",
+        default=None,
+        help="Only generate questions for these document filenames (space-separated).",
+    )
     return parser.parse_args()
 
 
@@ -325,6 +410,7 @@ def main() -> int:
         questions_per_doc=max(1, int(args.questions_per_doc)),
         seed=int(args.seed),
         min_chars=max(1, int(args.min_content_chars)),
+        doc_filter=args.doc_filter,
     )
 
     generated_at = datetime.now(timezone.utc).isoformat()

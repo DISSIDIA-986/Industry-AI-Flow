@@ -33,8 +33,8 @@ def sample_construction_project() -> dict:
 def unseen_category_project(sample_construction_project) -> dict:
     """A project with a category value NOT present in training data."""
     project = dict(sample_construction_project)
-    project["project_type"] = "data_center"       # Not in _PROJECT_TYPE_KEYWORDS
-    project["location"] = "Yellowknife"            # Not in _LOCATION_KEYWORDS
+    project["project_type"] = "data_center"  # Not in _PROJECT_TYPE_KEYWORDS
+    project["location"] = "Yellowknife"  # Not in _LOCATION_KEYWORDS
     return project
 
 

@@ -6,7 +6,9 @@ from uuid import uuid4
 import pytest
 
 langgraph = pytest.importorskip("langgraph")
-from backend.services.intent_classification.intent_workflow import IntentClassificationWorkflow
+from backend.services.intent_classification.intent_workflow import (
+    IntentClassificationWorkflow,
+)
 
 
 class _FakePromptManager:
@@ -33,7 +35,9 @@ async def test_prompt_preparation_node_sets_prompt_fields():
         "session_id": "s1",
         "user_id": "u1",
         "current_query": "What is CSA A23.1?",
-        "intent_result": SimpleNamespace(intent=SimpleNamespace(value="knowledge_retrieval")),
+        "intent_result": SimpleNamespace(
+            intent=SimpleNamespace(value="knowledge_retrieval")
+        ),
         "query_context": SimpleNamespace(interaction_history=[]),
         "metadata": {},
     }

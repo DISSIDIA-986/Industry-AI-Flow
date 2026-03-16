@@ -24,8 +24,7 @@ import psutil
 import requests
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BenchmarkResult:
     """单次测试结果"""
+
     backend: str  # "ollama" or "llama.cpp"
     model: str
     query: str
@@ -71,7 +71,9 @@ class BenchmarkResult:
             "memory_mb": self.memory_mb,
             "cpu_percent": self.cpu_percent,
             "answer_length": self.answer_length,
-            "answer_preview": self.answer[:100] + "..." if len(self.answer) > 100 else self.answer,
+            "answer_preview": self.answer[:100] + "..."
+            if len(self.answer) > 100
+            else self.answer,
         }
 
 
@@ -107,7 +109,7 @@ class OllamaBenchmark:
                     "options": {
                         "num_predict": max_tokens,
                         "temperature": 0.7,
-                    }
+                    },
                 },
                 stream=True,
                 timeout=120,
@@ -119,7 +121,9 @@ class OllamaBenchmark:
                     data = json.loads(line)
                     if data.get("done"):
                         # 最终响应包含统计信息
-                        output_tokens = data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
+                        output_tokens = data.get("prompt_eval_count", 0) + data.get(
+                            "eval_count", 0
+                        )
                     else:
                         content = data.get("response", "")
                         if content and first_chunk:
@@ -138,7 +142,11 @@ class OllamaBenchmark:
         total_time = time.time() - start_time
 
         # 计算指标
-        ttft = (first_token_time - start_time) * 1000 if first_token_time else total_time * 1000
+        ttft = (
+            (first_token_time - start_time) * 1000
+            if first_token_time
+            else total_time * 1000
+        )
         final_memory = process.memory_info().rss / 1024 / 1024
         memory_used = final_memory - initial_memory
 
@@ -237,7 +245,9 @@ class LlamaCppBenchmark:
 
             # 计算 TPS
             tps = output_tokens / total_time if total_time > 0 else 0
-            time_per_token = (total_time * 1000) / output_tokens if output_tokens > 0 else 0
+            time_per_token = (
+                (total_time * 1000) / output_tokens if output_tokens > 0 else 0
+            )
 
             final_memory = process.memory_info().rss / 1024 / 1024
             memory_used = final_memory - initial_memory
@@ -268,6 +278,7 @@ class LlamaCppBenchmark:
         except Exception as e:
             logger.error(f"llama.cpp 查询失败: {e}")
             import traceback
+
             traceback.print_exc()
             return BenchmarkResult(
                 backend="llama.cpp",
@@ -293,9 +304,9 @@ class ComparisonBenchmark:
 
     def run_ollama_benchmark(self) -> List[BenchmarkResult]:
         """运行 Ollama 测试"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 Ollama 性能测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         results = []
         for i, query in enumerate(self.test_queries, 1):
@@ -308,9 +319,9 @@ class ComparisonBenchmark:
 
     def run_llama_cpp_benchmark(self, model_path: str) -> List[BenchmarkResult]:
         """运行 llama.cpp 测试"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 llama.cpp 性能测试")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         try:
             self.llama_cpp = LlamaCppBenchmark(model_path, n_gpu_layers=32)
@@ -331,7 +342,7 @@ class ComparisonBenchmark:
     def generate_comparison_report(
         self,
         ollama_results: List[BenchmarkResult],
-        llama_results: List[BenchmarkResult]
+        llama_results: List[BenchmarkResult],
     ) -> Dict:
         """生成对比报告"""
 
@@ -365,7 +376,9 @@ class ComparisonBenchmark:
                 "enabled": len(llama_results) > 0,
                 "stats": {},
                 "results": [r.to_dict() for r in llama_results],
-            } if llama_results else None,
+            }
+            if llama_results
+            else None,
         }
 
         # 如果有 llama.cpp 结果，计算统计
@@ -381,8 +394,14 @@ class ComparisonBenchmark:
             }
 
             # 性能对比
-            if ollama_stats["avg_tps"] > 0 and report["llama_cpp"]["stats"]["avg_tps"] > 0:
-                tps_diff = (report["llama_cpp"]["stats"]["avg_tps"] / ollama_stats["avg_tps"] - 1) * 100
+            if (
+                ollama_stats["avg_tps"] > 0
+                and report["llama_cpp"]["stats"]["avg_tps"] > 0
+            ):
+                tps_diff = (
+                    report["llama_cpp"]["stats"]["avg_tps"] / ollama_stats["avg_tps"]
+                    - 1
+                ) * 100
                 report["comparison"] = {
                     "tps_diff_percent": tps_diff,
                     "faster_backend": "llama.cpp" if tps_diff > 0 else "Ollama",
@@ -395,9 +414,9 @@ class ComparisonBenchmark:
 
     def _print_summary(self, report: Dict):
         """打印测试汇总"""
-        logger.info("\n" + "="*70)
+        logger.info("\n" + "=" * 70)
         logger.info("📋 性能对比汇总")
-        logger.info("="*70)
+        logger.info("=" * 70)
 
         ollama_stats = report["ollama"]["stats"]
 
@@ -420,7 +439,7 @@ class ComparisonBenchmark:
                 logger.info(f"  TPS 差异: {comp['tps_diff_percent']:+.1f}%")
                 logger.info(f"  更快: {comp['faster_backend']}")
 
-        logger.info("="*70)
+        logger.info("=" * 70)
 
 
 def main():
@@ -457,4 +476,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

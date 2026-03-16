@@ -18,7 +18,6 @@ import pytest
 
 @pytest.mark.unit
 class TestBug1DockerValidationNotCalled:
-
     def test_execute_calls_validate_code_before_running(self):
         """execute() must invoke _validate_code() and reject blocked code."""
         # Arrange: create a DockerExecutor with mocked Docker client
@@ -61,6 +60,6 @@ class TestBug1DockerValidationNotCalled:
 
             result = executor.execute_code(dangerous_code)
 
-            assert not result["success"], (
-                "BUG-1: execute_code() ran dangerous code without validation"
-            )
+            assert not result[
+                "success"
+            ], "BUG-1: execute_code() ran dangerous code without validation"

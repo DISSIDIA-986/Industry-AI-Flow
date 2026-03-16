@@ -21,6 +21,7 @@ Covers 14 P0/P1 bugs discovered across 4 audit agents:
 import ast
 import json
 import re
+
 import pytest
 
 
@@ -34,7 +35,9 @@ class TestR17B01_ClarificationLoop:
         """After clarification processing, if no new user input was provided,
         the route should NOT be retry_classification (which re-runs the same
         intent classification on unchanged query, spinning indefinitely)."""
-        source = open("backend/services/intent_classification/intent_workflow.py").read()
+        source = open(
+            "backend/services/intent_classification/intent_workflow.py"
+        ).read()
 
         # Find _clarification_processing_node
         tree = ast.parse(source)
@@ -69,9 +72,7 @@ class TestR17B02_BudgetForceLocalBypass:
         evaluate_budget should return allowed=False to actually prevent
         cloud calls. Currently returns allowed=True with decision=force_local
         which dispatch_service ignores."""
-        source = open(
-            "backend/services/llm_integration/cost_tracker.py"
-        ).read()
+        source = open("backend/services/llm_integration/cost_tracker.py").read()
         tree = ast.parse(source)
 
         # Find evaluate_budget method
@@ -83,8 +84,10 @@ class TestR17B02_BudgetForceLocalBypass:
                     # the returned 'allowed' should be False
                     # Currently: "allowed": policy.policy_mode != "block"
                     # For local_only: "local_only" != "block" is True -> allowed=True
-                    assert '"allowed": policy.policy_mode != "block"' not in body_src or \
-                        "force_local" not in body_src, (
+                    assert (
+                        '"allowed": policy.policy_mode != "block"' not in body_src
+                        or "force_local" not in body_src
+                    ), (
                         "force_local decision returns allowed=True — dispatch_service "
                         "only checks 'allowed' field and proceeds with cloud call"
                     )
@@ -115,7 +118,7 @@ class TestR17B03_SimulateLLMKeywordPriority:
                     # Find the first intent = "..." assignment after it
                     first_intent_idx = body_src.find('intent = "', first_if_idx)
                     first_intent_end = body_src.find('"', first_intent_idx + 11)
-                    first_intent = body_src[first_intent_idx + 10:first_intent_end]
+                    first_intent = body_src[first_intent_idx + 10 : first_intent_end]
                     assert first_intent == "cost_estimation", (
                         f"First keyword check routes to '{first_intent}' — "
                         "cost_estimation should be checked before knowledge_retrieval "
@@ -222,7 +225,9 @@ class TestR17A03_UnboundedChunkGrowth:
         # Each segment is ~450 chars, with a Part reference at the end
         text = ""
         for i in range(1, 25):
-            text += ("Requirements for safety. " * 16) + f"See Part {i} for details.\n\n"
+            text += (
+                "Requirements for safety. " * 16
+            ) + f"See Part {i} for details.\n\n"
 
         chunks = chunk_text(text, chunk_size=512, chunk_overlap=128)
         max_chunk_len = max(len(c["content"]) for c in chunks)
@@ -270,13 +275,13 @@ class TestR17C02_MetaclassHooksBlocked:
 
         validator = CodeValidator(strict_mode=False)
         # __init_subclass__ runs when Trigger class is defined
-        code = '''
+        code = """
 class Evil:
     def __init_subclass__(cls, **kw):
         print("Code executed at class definition time!")
 class Trigger(Evil):
     pass
-'''
+"""
         result = validator.validate(code)
         assert not result.is_valid, (
             "__init_subclass__ should be blocked — it executes arbitrary code "
@@ -294,7 +299,7 @@ class TestR17C03_Atexit_ThreadBlacklisted:
         from backend.services.code_executor.validator import CodeValidator
 
         validator = CodeValidator(strict_mode=False)
-        code = 'import atexit\natexit.register(lambda: None)\n'
+        code = "import atexit\natexit.register(lambda: None)\n"
         result = validator.validate(code)
         assert not result.is_valid, (
             "atexit module should be blacklisted — allows registering callbacks "
@@ -307,7 +312,7 @@ class TestR17C03_Atexit_ThreadBlacklisted:
         from backend.services.code_executor.validator import CodeValidator
 
         validator = CodeValidator(strict_mode=False)
-        code = 'import _thread\n_thread.start_new_thread(lambda: None, ())\n'
+        code = "import _thread\n_thread.start_new_thread(lambda: None, ())\n"
         result = validator.validate(code)
         assert not result.is_valid, (
             "_thread module should be blacklisted — low-level threading that "
@@ -323,6 +328,7 @@ class TestR17C05_QueryRequestValidation:
         """QueryRequest.question should have a max_length constraint to prevent
         memory exhaustion from arbitrarily large payloads."""
         from pydantic import ValidationError
+
         from backend.api.enhanced_query_routes import QueryRequest
 
         # A 100K char question should be rejected by a max_length constraint
@@ -332,6 +338,7 @@ class TestR17C05_QueryRequestValidation:
     def test_query_request_top_k_has_upper_bound(self):
         """top_k should have an upper bound to prevent overloading vector store."""
         from pydantic import ValidationError
+
         from backend.api.enhanced_query_routes import QueryRequest
 
         with pytest.raises(ValidationError):
@@ -365,12 +372,26 @@ class TestR17D01_ABExperimentCacheBypass:
                         # The cache read block should check enable_experiments
                         # before returning cached value
                         pre_cache = body_src[:cache_read]
-                        cache_block_end = body_src.find("return prompt_info", cache_read)
+                        cache_block_end = body_src.find(
+                            "return prompt_info", cache_read
+                        )
                         if cache_block_end < 0:
                             cache_block_end = body_src.find("# EN", cache_read + 10)
-                        cache_block = body_src[cache_read:cache_block_end] if cache_block_end > 0 else ""
-                        assert "enable_experiments" in cache_block or \
-                            "experiment" in body_src[body_src.find("cache_key ="):body_src.find("cache_key =") + 100].lower(), (
+                        cache_block = (
+                            body_src[cache_read:cache_block_end]
+                            if cache_block_end > 0
+                            else ""
+                        )
+                        assert (
+                            "enable_experiments" in cache_block
+                            or "experiment"
+                            in body_src[
+                                body_src.find("cache_key =") : body_src.find(
+                                    "cache_key ="
+                                )
+                                + 100
+                            ].lower()
+                        ), (
                             "Cache key is generic '{category}:{name}' and cache read "
                             "does not check enable_experiments — A/B experiment variant "
                             "is cached under generic key and served to all callers"
@@ -397,9 +418,9 @@ class TestR17D02_UnifiedAgentIntentKeywords:
                     body_src = ast.get_source_segment(source, node)
                     # Count "EN" literals in keyword lists
                     en_count = body_src.count('"EN"')
-                    real_keyword_count = len(re.findall(
-                        r'"(?!EN")[a-z ]{3,}"', body_src
-                    ))
+                    real_keyword_count = len(
+                        re.findall(r'"(?!EN")[a-z ]{3,}"', body_src)
+                    )
                     assert real_keyword_count > en_count, (
                         f"Found {en_count} 'EN' placeholders vs {real_keyword_count} "
                         "real keywords — intent classification is non-functional"
@@ -425,9 +446,9 @@ class TestR17D03_UnifiedAgentSystemPrompt:
                 if node.name == "build_unified_agent":
                     body_src = ast.get_source_segment(source, node)
                     # Count EN placeholders vs real English words
-                    en_placeholders = len(re.findall(r'\bEN\b', body_src))
+                    en_placeholders = len(re.findall(r"\bEN\b", body_src))
                     # Real content should significantly outnumber EN placeholders
-                    real_words = len(re.findall(r'\b[a-z]{4,}\b', body_src.lower()))
+                    real_words = len(re.findall(r"\b[a-z]{4,}\b", body_src.lower()))
                     ratio = real_words / max(en_placeholders, 1)
                     assert ratio > 2.0, (
                         f"System prompt has {en_placeholders} 'EN' placeholders "

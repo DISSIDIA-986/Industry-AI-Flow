@@ -9,12 +9,16 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from backend.api.workflow_query_routes import get_workflow_runner, router as workflow_router
+from backend.api.workflow_query_routes import get_workflow_runner
+from backend.api.workflow_query_routes import router as workflow_router
 from backend.services.cost_estimation_service import (
     CostEstimationService,
     train_cost_estimation_model,
 )
-from backend.services.workflows.orchestrator import DefaultWorkflowRunner, WorkflowOrchestrator
+from backend.services.workflows.orchestrator import (
+    DefaultWorkflowRunner,
+    WorkflowOrchestrator,
+)
 
 
 def _build_dataset(rows: int = 220, seed: int = 33) -> pd.DataFrame:
@@ -120,7 +124,9 @@ def client(tmp_path: Path) -> TestClient:
     app.dependency_overrides.clear()
 
 
-def test_workflow_query_cost_estimation_from_natural_language(client: TestClient) -> None:
+def test_workflow_query_cost_estimation_from_natural_language(
+    client: TestClient,
+) -> None:
     resp = client.post(
         "/api/v1/workflow/query",
         json={
@@ -141,10 +147,15 @@ def test_workflow_query_cost_estimation_from_natural_language(client: TestClient
     assert "Cost estimation result" in payload["response"]
     assert payload["metadata"]["cost_estimation_status"] == "ok"
     assert payload["metadata"]["shortcut_response"] is True
-    assert payload["metadata"]["cost_estimation_prediction"]["predicted_actual_cost_cad"] > 0
+    assert (
+        payload["metadata"]["cost_estimation_prediction"]["predicted_actual_cost_cad"]
+        > 0
+    )
 
 
-def test_workflow_query_cost_estimation_requires_budget_feature(client: TestClient) -> None:
+def test_workflow_query_cost_estimation_requires_budget_feature(
+    client: TestClient,
+) -> None:
     resp = client.post(
         "/api/v1/workflow/query",
         json={
@@ -161,7 +172,9 @@ def test_workflow_query_cost_estimation_requires_budget_feature(client: TestClie
     assert payload["metadata"]["shortcut_response"] is True
 
 
-def test_workflow_query_estimate_cost_phrase_routes_to_cost_intent(client: TestClient) -> None:
+def test_workflow_query_estimate_cost_phrase_routes_to_cost_intent(
+    client: TestClient,
+) -> None:
     resp = client.post(
         "/api/v1/workflow/query",
         json={

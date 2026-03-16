@@ -159,9 +159,9 @@ class TestR15B02_ClarificationRetryBranchDead:
             source,
             re.DOTALL,
         )
-        assert func_match is not None, (
-            "_route_after_clarification function not found in source."
-        )
+        assert (
+            func_match is not None
+        ), "_route_after_clarification function not found in source."
         func_body = func_match.group(1)
 
         returns_retry = (
@@ -219,9 +219,9 @@ class TestR15B03_RateLimitWindowAppendOutsideLock:
                         append_inside_lock = True
                         break
 
-            assert append_inside_lock, (
-                "Bug NOT fixed: cloud_window.append() is still outside the lock."
-            )
+            assert (
+                append_inside_lock
+            ), "Bug NOT fixed: cloud_window.append() is still outside the lock."
             return
 
         pytest.fail("_run_cloud method not found in dispatch_service.py")
@@ -239,15 +239,13 @@ class TestR15B04_HybridAutoRaisesWhenFallbackOnErrorFalse:
             r"if\s+soft_fail\s+and\s+settings\.fallback_on_error\s*:",
             source,
         )
-        assert gated_guard is None, (
-            "Bug NOT fixed: soft_fail is still gated by settings.fallback_on_error."
-        )
+        assert (
+            gated_guard is None
+        ), "Bug NOT fixed: soft_fail is still gated by settings.fallback_on_error."
 
         # Confirm the simpler guard exists
         simple_guard = re.search(r"if\s+soft_fail\s*:", source)
-        assert simple_guard is not None, (
-            "Expected `if soft_fail:` guard but not found."
-        )
+        assert simple_guard is not None, "Expected `if soft_fail:` guard but not found."
 
 
 # ===========================================================================
@@ -263,12 +261,10 @@ class TestR15C01_AdminKeyChecksPresenceNotValue:
         source = _read(_ENHANCED_QUERY)
 
         # After fix: should use hmac.compare_digest
-        has_compare_digest = bool(
-            re.search(r"hmac\.compare_digest", source)
-        )
-        assert has_compare_digest, (
-            "Bug NOT fixed: admin key still doesn't use hmac.compare_digest."
-        )
+        has_compare_digest = bool(re.search(r"hmac\.compare_digest", source))
+        assert (
+            has_compare_digest
+        ), "Bug NOT fixed: admin key still doesn't use hmac.compare_digest."
 
 
 class TestR15C02_RestoreDocumentVersionBypassesTenantAuth:
@@ -315,11 +311,14 @@ class TestR15C03_ChatEndpointNoMessagesLengthLimit:
 
         # After fix: should have MAX_CHAT_MESSAGES and length validation
         has_limit = bool(
-            re.search(r"MAX_CHAT_MESSAGES|MAX_MESSAGE_LENGTH|max_items|len\(messages\)", source)
+            re.search(
+                r"MAX_CHAT_MESSAGES|MAX_MESSAGE_LENGTH|max_items|len\(messages\)",
+                source,
+            )
         )
-        assert has_limit, (
-            "Bug NOT fixed: chat endpoint still has no message count/size constraint."
-        )
+        assert (
+            has_limit
+        ), "Bug NOT fixed: chat endpoint still has no message count/size constraint."
 
 
 # ===========================================================================
@@ -349,14 +348,14 @@ class TestR15D01_WorkflowLockCreatedBeforeEventLoop:
                     lock_at_module_level = True
                     break
 
-        assert not lock_at_module_level, (
-            "Bug NOT fixed: asyncio.Lock() is still assigned at module level."
-        )
+        assert (
+            not lock_at_module_level
+        ), "Bug NOT fixed: asyncio.Lock() is still assigned at module level."
 
         # Verify lazy getter exists
-        assert "_get_workflow_lock" in source, (
-            "Expected lazy _get_workflow_lock() function but not found."
-        )
+        assert (
+            "_get_workflow_lock" in source
+        ), "Expected lazy _get_workflow_lock() function but not found."
 
 
 class TestR15D02_PromptNodeDeadGuardUserVisibleInternalError:
@@ -385,9 +384,9 @@ class TestR15D04_ColumnNameInjectionInTemplateCode:
         source = _read(_DATA_ANALYSIS)
 
         # After fix: should have _sanitize_column_name method
-        assert "_sanitize_column_name" in source, (
-            "Bug NOT fixed: _sanitize_column_name method not found."
-        )
+        assert (
+            "_sanitize_column_name" in source
+        ), "Bug NOT fixed: _sanitize_column_name method not found."
 
         # Verify it escapes single quotes (the critical character)
         sanitize_match = re.search(
@@ -395,9 +394,9 @@ class TestR15D04_ColumnNameInjectionInTemplateCode:
             source,
             re.DOTALL,
         )
-        assert sanitize_match is not None, (
-            "_sanitize_column_name doesn't appear to escape single quotes."
-        )
+        assert (
+            sanitize_match is not None
+        ), "_sanitize_column_name doesn't appear to escape single quotes."
 
         # Verify the sanitizer is actually called before template interpolation
         sanitize_calls = re.findall(r"_sanitize_column_name\s*\(", source)

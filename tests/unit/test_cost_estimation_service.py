@@ -111,8 +111,14 @@ def test_train_and_predict_cost_estimation_model(tmp_path: Path) -> None:
     prediction = service.predict_project(sample, confidence_quantile=0.9)
 
     assert prediction["predicted_actual_cost_cad"] > 0
-    assert prediction["prediction_interval_cad"]["lower"] <= prediction["predicted_actual_cost_cad"]
-    assert prediction["prediction_interval_cad"]["upper"] >= prediction["predicted_actual_cost_cad"]
+    assert (
+        prediction["prediction_interval_cad"]["lower"]
+        <= prediction["predicted_actual_cost_cad"]
+    )
+    assert (
+        prediction["prediction_interval_cad"]["upper"]
+        >= prediction["predicted_actual_cost_cad"]
+    )
 
 
 def test_predict_reports_unknown_categories(tmp_path: Path) -> None:

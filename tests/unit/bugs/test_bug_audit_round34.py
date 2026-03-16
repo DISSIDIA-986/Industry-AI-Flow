@@ -20,9 +20,9 @@ class TestR34_ValidatorSubscriptIndirectionBypass:
     def test_alias_in_list_subscript_call_is_blocked(self):
         code = "f = eval\na = [f]\na[0]('1+1')"
         result = validate_code(code, strict_mode=True)
-        assert not result.is_valid, (
-            "Calling aliased eval through list subscript should be blocked."
-        )
+        assert (
+            not result.is_valid
+        ), "Calling aliased eval through list subscript should be blocked."
 
     def test_list_comprehension_subscript_call_is_blocked(self):
         code = "f = eval\n[g for g in [f]][0]('1+1')"

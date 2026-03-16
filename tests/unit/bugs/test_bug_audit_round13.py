@@ -69,9 +69,9 @@ class TestR13_RAG01_MemoryStoreIVFFlatProbes:
         # The search_memories method must call SET ivfflat.probes before the
         # ORDER BY embedding <=> query.  Without it, pgvector defaults to
         # probes=1 which examines only 1/N of the IVFFlat lists.
-        assert "ivfflat.probes" in source, (
-            "search_memories must SET ivfflat.probes before vector similarity query"
-        )
+        assert (
+            "ivfflat.probes" in source
+        ), "search_memories must SET ivfflat.probes before vector similarity query"
 
 
 class TestR13_RAG02_MemorySessionsUnbounded:
@@ -101,7 +101,10 @@ class TestR13_RAG03_MemoryInteractionRace:
         # acquires _memory_lock before mutating interaction_history.
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_record_memory_interaction":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_record_memory_interaction"
+            ):
                 # Check that _memory_lock is used within this method
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
@@ -123,8 +126,10 @@ class TestR13_RAG04_SummaryWrittenToSnapshot:
         # be in the method body or an inner async function.
         # Check that within _record_memory_interaction, there's code that
         # writes back snapshot.summary_memory to live_session or session.
-        assert "summary_memory = session_snapshot.summary_memory" in source or \
-            "summary_memory = snapshot.summary_memory" in source, (
+        assert (
+            "summary_memory = session_snapshot.summary_memory" in source
+            or "summary_memory = snapshot.summary_memory" in source
+        ), (
             "After process_interaction(), summary_memory must be "
             "propagated from snapshot back to the live session"
         )
@@ -183,8 +188,13 @@ class TestR13_RAG07_RerankerTruncation:
         # silent truncation rather than warning about it.
         has_truncation_handling = any(
             kw in source
-            for kw in ["sliding_window", "max_chunk_length", "truncation_warning",
-                        "chunk too long", "truncated"]
+            for kw in [
+                "sliding_window",
+                "max_chunk_length",
+                "truncation_warning",
+                "chunk too long",
+                "truncated",
+            ]
         )
         assert has_truncation_handling, (
             "Reranker should warn when truncating input pairs or use a "
@@ -229,7 +239,10 @@ class TestR13_SEC02_DataAnalysisNoValidation:
         # before passing code to any executor
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "analyze_query":
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == "analyze_query"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 assert "validate_code" in body_src, (
@@ -290,7 +303,11 @@ class TestR13_DSP01_TruncatePromptEmpty:
                 # Must guard against max_tokens >= context_window
                 assert "max_input_chars" in body_src
                 # Check that there's a guard for <= 0
-                assert "<= 0" in body_src or "< 0" in body_src or "max(" in body_src.split("max_input_chars")[1], (
+                assert (
+                    "<= 0" in body_src
+                    or "< 0" in body_src
+                    or "max(" in body_src.split("max_input_chars")[1]
+                ), (
                     "_truncate_prompt must guard against max_input_chars <= 0 "
                     "when max_tokens >= context_window"
                 )
@@ -305,7 +322,10 @@ class TestR13_DSP02_FalseHighConfidence:
         source = _read(_DISPATCH_PATH)
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "_estimate_confidence":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_estimate_confidence"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
                 # Must have content quality checks beyond length and hedging
@@ -353,12 +373,13 @@ class TestR13_DSP04_SingletonNoLock:
         # Find get_dispatch_service and verify it uses a lock
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "get_dispatch_service":
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "get_dispatch_service"
+            ):
                 body_src = ast.get_source_segment(source, node)
                 assert body_src is not None
-                has_lock = any(
-                    kw in body_src for kw in ["Lock", "lock", "threading"]
-                )
+                has_lock = any(kw in body_src for kw in ["Lock", "lock", "threading"])
                 assert has_lock, (
                     "get_dispatch_service() must use a threading.Lock for "
                     "double-checked locking — concurrent startup creates "
@@ -384,14 +405,17 @@ class TestR13_CST01_SingleDigitDuration:
         pattern_lines = []
         in_duration = False
         for line in lines:
-            if '"planned_duration_weeks": [' in line or "'planned_duration_weeks': [" in line:
+            if (
+                '"planned_duration_weeks": [' in line
+                or "'planned_duration_weeks': [" in line
+            ):
                 in_duration = True
                 continue
             if in_duration:
                 stripped = line.strip()
                 if stripped.startswith("]"):
                     break
-                if "r\"" in stripped or "r'" in stripped:
+                if 'r"' in stripped or "r'" in stripped:
                     match = re.search(r'r["\'](.+?)["\']', stripped)
                     if match:
                         pattern_lines.append(match.group(1))
@@ -450,7 +474,9 @@ class TestR13_WF01_GroundednessBeforeResponse:
                 for elt in node.elts:
                     if isinstance(elt, ast.Tuple) and len(elt.elts) >= 1:
                         first = elt.elts[0]
-                        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                        if isinstance(first, ast.Constant) and isinstance(
+                            first.value, str
+                        ):
                             pipeline_order.append(first.value)
         if not pipeline_order:
             pytest.fail("Could not extract pipeline order from graph.py")
@@ -533,8 +559,7 @@ class TestR13_DA01_SafeFloatInfinity:
         # Must explicitly check for infinity — NaN check (f != f) does NOT
         # catch inf.  Need math.isfinite, math.isinf, or explicit comparison.
         has_inf_check = any(
-            kw in func_text
-            for kw in ["isfinite", "isinf", "== float("]
+            kw in func_text for kw in ["isfinite", "isinf", "== float("]
         )
         assert has_inf_check, (
             "_safe_float must guard against float('inf') and float('-inf') — "

@@ -18,7 +18,6 @@ import pytest
 
 @pytest.mark.unit
 class TestBug4IntentPriorityImbalance:
-
     def test_run_python_script_should_be_code_execution(self):
         """'run a python script to compute statistics' should route to code_execution."""
         from backend.services.intent_classification.simple_intent_classifier import (
@@ -62,7 +61,9 @@ class TestBug4IntentPriorityImbalance:
         )
 
         classifier = SimpleIntentClassifier()
-        result = classifier.classify_intent("analyze this CSV dataset and show statistics")
+        result = classifier.classify_intent(
+            "analyze this CSV dataset and show statistics"
+        )
 
         assert result.intent == IntentType.DATA_ANALYSIS, (
             f"Regression check: 'analyze this CSV dataset' should remain "

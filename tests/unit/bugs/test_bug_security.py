@@ -19,7 +19,6 @@ import pytest
 
 @pytest.mark.unit
 class TestBug3DunderRegexOverlyAggressive:
-
     def test_name_main_guard_should_pass_validation(self, sample_code_with_dunder):
         """Standard `if __name__ == '__main__':` guard should pass validation."""
         from backend.services.code_executor.validator import validate_code
@@ -48,9 +47,9 @@ class TestBug3DunderRegexOverlyAggressive:
         # This should pass — len() is a builtin, no dunder usage.
         # But the regex r"__.*__" may match string representations in
         # error messages or comments.
-        assert result.is_valid, (
-            f"BUG-3: Valid code using len(df) was rejected. Error: {result.error}"
-        )
+        assert (
+            result.is_valid
+        ), f"BUG-3: Valid code using len(df) was rejected. Error: {result.error}"
 
     def test_string_containing_dunder_in_print_should_pass(self):
         """A print statement mentioning __init__ in a string should not be blocked."""

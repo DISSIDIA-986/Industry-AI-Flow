@@ -95,7 +95,9 @@ async def test_prompt_experiment_routes_contract():
             "/api/prompts/experiments",
             params={"status": "active", "category": "rag", "page": 1, "size": 20},
         )
-        detail_resp = await client.get(f"/api/prompts/experiments/{manager.experiment_id}")
+        detail_resp = await client.get(
+            f"/api/prompts/experiments/{manager.experiment_id}"
+        )
         traffic_resp = await client.patch(
             f"/api/prompts/experiments/{manager.experiment_id}/traffic",
             json={"traffic_split": 0.7},

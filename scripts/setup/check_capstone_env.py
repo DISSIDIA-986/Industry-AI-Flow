@@ -37,14 +37,14 @@ def parse_lock_file(lock_path: Path) -> Dict[str, str]:
 
 
 def check_python_version(strict: bool) -> Tuple[bool, str]:
-    current = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    current = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
     valid = (sys.version_info.major, sys.version_info.minor) == (3, 13)
     if valid:
         return True, f"Python version OK: {current}"
 
-    message = (
-        f"Python version is {current}; expected 3.13.x for Capstone standard."
-    )
+    message = f"Python version is {current}; expected 3.13.x for Capstone standard."
     if strict:
         return False, message
     return True, f"[WARN] {message}"

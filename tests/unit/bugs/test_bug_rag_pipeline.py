@@ -27,7 +27,6 @@ pytestmark = pytest.mark.filterwarnings(
 
 @pytest.mark.unit
 class TestBug5MemoryInteractionThreadLeak:
-
     def test_record_memory_does_not_spawn_thread_per_call(self):
         """Recording 20 memory interactions should NOT create 20 threads."""
         # Count threads before and after
@@ -37,7 +36,10 @@ class TestBug5MemoryInteractionThreadLeak:
         with (
             patch("backend.services.rag_engine.VectorStore"),
             patch("backend.services.rag_engine.get_llm_client"),
-            patch("backend.services.rag_engine.get_backend_status", return_value={"backend": "mock"}),
+            patch(
+                "backend.services.rag_engine.get_backend_status",
+                return_value={"backend": "mock"},
+            ),
             patch("backend.services.rag_engine.HybridRetriever"),
             patch("backend.services.rag_engine.Reranker"),
             patch("backend.services.rag_engine.FeedbackManager"),
@@ -48,7 +50,9 @@ class TestBug5MemoryInteractionThreadLeak:
             mock_settings.enable_conversation_memory = True
 
             # Mock ConversationMemoryManager
-            with patch("backend.services.rag_engine.ConversationMemoryManager") as MockMemoryManager:
+            with patch(
+                "backend.services.rag_engine.ConversationMemoryManager"
+            ) as MockMemoryManager:
                 mock_manager = MagicMock()
                 # Make process_interaction a coroutine
                 mock_manager.process_interaction = AsyncMock()
@@ -72,7 +76,9 @@ class TestBug5MemoryInteractionThreadLeak:
                     try:
                         loop.run_until_complete(asyncio.sleep(2))
                     except RuntimeError as exc:
-                        if "Event loop stopped before Future completed." not in str(exc):
+                        if "Event loop stopped before Future completed." not in str(
+                            exc
+                        ):
                             raise
 
                 loop_thread = threading.Thread(target=run_in_loop, daemon=True)

@@ -62,14 +62,18 @@ async def test_ppio_provider_execute_success(monkeypatch):
         api_key="k",
         verify_tls=False,
     )
-    result = await provider.execute("print('x')", files={"input.txt": b"123"}, timeout_s=7)
+    result = await provider.execute(
+        "print('x')", files={"input.txt": b"123"}, timeout_s=7
+    )
 
     assert result.success is True
     assert result.stdout == "ok"
     assert result.output_files["out.txt"] == b"hello"
     assert sent["url"] == "https://ppio.example/v1/code/execute"
     assert sent["verify"] is False
-    assert sent["json"]["files"]["input.txt"] == base64.b64encode(b"123").decode("utf-8")
+    assert sent["json"]["files"]["input.txt"] == base64.b64encode(b"123").decode(
+        "utf-8"
+    )
 
 
 @pytest.mark.asyncio

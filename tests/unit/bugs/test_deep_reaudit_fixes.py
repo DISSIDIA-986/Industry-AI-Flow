@@ -19,7 +19,6 @@ import pytest
 
 @pytest.mark.unit
 class TestP0A_IterativeCodeValidation:
-
     def test_self_healing_tool_rejects_dangerous_code(self):
         """self_healing_code_execution_tool must reject os.system before execution."""
         from backend.tools.iterative_code_execution import (
@@ -27,18 +26,20 @@ class TestP0A_IterativeCodeValidation:
         )
 
         dangerous_code = "import os; os.system('whoami')"
-        result = self_healing_code_execution_tool.invoke({
-            "code": dangerous_code,
-            "description": "test",
-        })
+        result = self_healing_code_execution_tool.invoke(
+            {
+                "code": dangerous_code,
+                "description": "test",
+            }
+        )
 
         assert not result["success"], (
             "P0-A: self_healing_code_execution_tool executed dangerous code "
             "without validation"
         )
-        assert "validation" in result.get("error", "").lower(), (
-            f"P0-A: Expected validation error, got: {result.get('error')}"
-        )
+        assert (
+            "validation" in result.get("error", "").lower()
+        ), f"P0-A: Expected validation error, got: {result.get('error')}"
 
     def test_self_healing_tool_rejects_open(self):
         """self_healing_code_execution_tool must reject open('/etc/passwd')."""
@@ -47,19 +48,20 @@ class TestP0A_IterativeCodeValidation:
         )
 
         dangerous_code = "data = open('/etc/passwd').read()"
-        result = self_healing_code_execution_tool.invoke({
-            "code": dangerous_code,
-            "description": "test",
-        })
-
-        assert not result["success"], (
-            "P0-A: self_healing_code_execution_tool allowed open('/etc/passwd')"
+        result = self_healing_code_execution_tool.invoke(
+            {
+                "code": dangerous_code,
+                "description": "test",
+            }
         )
+
+        assert not result[
+            "success"
+        ], "P0-A: self_healing_code_execution_tool allowed open('/etc/passwd')"
 
 
 @pytest.mark.unit
 class TestP0B_SQLInjectionGuard:
-
     def test_cleanup_rejects_malicious_table_name(self):
         """cleanup_transferred_data must reject non-standard table names."""
         from backend.services.data_transfer import DataFileTransfer
@@ -93,7 +95,6 @@ class TestP0B_SQLInjectionGuard:
 
 @pytest.mark.unit
 class TestP0B_CredentialLeak:
-
     def test_create_db_config_does_not_contain_password(self):
         """_create_db_config must not write raw password to config."""
         from unittest.mock import patch
@@ -118,22 +119,21 @@ class TestP0B_CredentialLeak:
             )
 
             connection = config["connection"]
-            assert "password" not in connection, (
-                "P1-D: raw 'password' key still exists in db config"
-            )
-            assert connection.get("password_env") == "POSTGRES_PASSWORD", (
-                "P1-D: config should reference POSTGRES_PASSWORD env var"
-            )
+            assert (
+                "password" not in connection
+            ), "P1-D: raw 'password' key still exists in db config"
+            assert (
+                connection.get("password_env") == "POSTGRES_PASSWORD"
+            ), "P1-D: config should reference POSTGRES_PASSWORD env var"
             # Make sure the actual password string doesn't appear anywhere
             config_str = str(config)
-            assert "super_secret_password_123" not in config_str, (
-                "P1-D: raw password leaked into config dict"
-            )
+            assert (
+                "super_secret_password_123" not in config_str
+            ), "P1-D: raw password leaked into config dict"
 
 
 @pytest.mark.unit
 class TestP1A_SafetyNodeCoverage:
-
     @pytest.mark.asyncio
     async def test_safety_node_blocks_eval(self):
         """safety_node must block eval() calls."""
@@ -142,9 +142,9 @@ class TestP1A_SafetyNodeCoverage:
         state = {"query": "Please run eval('malicious_code')", "metadata": {}}
         result = await safety_node(state, SimpleNamespace())
 
-        assert result["metadata"]["safety_status"] == "blocked", (
-            "P1-A: safety_node did not block eval()"
-        )
+        assert (
+            result["metadata"]["safety_status"] == "blocked"
+        ), "P1-A: safety_node did not block eval()"
 
     @pytest.mark.asyncio
     async def test_safety_node_blocks_exec(self):
@@ -154,9 +154,9 @@ class TestP1A_SafetyNodeCoverage:
         state = {"query": "exec('import os; os.remove(\"file\")')", "metadata": {}}
         result = await safety_node(state, SimpleNamespace())
 
-        assert result["metadata"]["safety_status"] == "blocked", (
-            "P1-A: safety_node did not block exec()"
-        )
+        assert (
+            result["metadata"]["safety_status"] == "blocked"
+        ), "P1-A: safety_node did not block exec()"
 
     @pytest.mark.asyncio
     async def test_safety_node_blocks_dunder_import(self):
@@ -166,9 +166,9 @@ class TestP1A_SafetyNodeCoverage:
         state = {"query": "__import__('os').system('id')", "metadata": {}}
         result = await safety_node(state, SimpleNamespace())
 
-        assert result["metadata"]["safety_status"] == "blocked", (
-            "P1-A: safety_node did not block __import__()"
-        )
+        assert (
+            result["metadata"]["safety_status"] == "blocked"
+        ), "P1-A: safety_node did not block __import__()"
 
     @pytest.mark.asyncio
     async def test_safety_node_blocks_pickle(self):
@@ -178,9 +178,9 @@ class TestP1A_SafetyNodeCoverage:
         state = {"query": "pickle.loads(data)", "metadata": {}}
         result = await safety_node(state, SimpleNamespace())
 
-        assert result["metadata"]["safety_status"] == "blocked", (
-            "P1-A: safety_node did not block pickle.loads()"
-        )
+        assert (
+            result["metadata"]["safety_status"] == "blocked"
+        ), "P1-A: safety_node did not block pickle.loads()"
 
     @pytest.mark.asyncio
     async def test_safety_node_allows_normal_queries(self):
@@ -193,14 +193,13 @@ class TestP1A_SafetyNodeCoverage:
         }
         result = await safety_node(state, SimpleNamespace())
 
-        assert result["metadata"]["safety_status"] == "ok", (
-            "P1-A: Normal query was incorrectly blocked"
-        )
+        assert (
+            result["metadata"]["safety_status"] == "ok"
+        ), "P1-A: Normal query was incorrectly blocked"
 
 
 @pytest.mark.unit
 class TestP1B_DoubleNormalization:
-
     def test_extract_sources_preserves_raw_score(self):
         """_extract_sources must NOT re-normalize already-normalized scores."""
         from backend.api.workflow_query_routes import _extract_sources
@@ -220,14 +219,13 @@ class TestP1B_DoubleNormalization:
             f"P1-B: Expected 0.87, got {sources[0]['relevance']}. "
             "Double normalization is still active."
         )
-        assert sources[1]["relevance"] == 0.65, (
-            f"P1-B: Expected 0.65, got {sources[1]['relevance']}"
-        )
+        assert (
+            sources[1]["relevance"] == 0.65
+        ), f"P1-B: Expected 0.65, got {sources[1]['relevance']}"
 
 
 @pytest.mark.unit
 class TestP1C_IntentHeuristicOrdering:
-
     @pytest.mark.asyncio
     async def test_predict_cost_with_python_is_cost_estimation(self):
         """'predict construction cost using python' should be cost_estimation,
