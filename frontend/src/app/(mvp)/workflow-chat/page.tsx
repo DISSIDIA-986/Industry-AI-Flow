@@ -1,238 +1,274 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { workflowApi, realApiService } from '@/lib/api-client'
-import { websocketService, type QueryResponseData } from '@/lib/websocket-service'
-import { buildQuickTipsFromDocuments, parsePinnedQuickTips } from '@/lib/workflow-quick-tips'
-import MarkdownRenderer from '@/components/MarkdownRenderer'
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { workflowApi, realApiService } from "@/lib/api-client";
+import {
+  websocketService,
+  type QueryResponseData,
+} from "@/lib/websocket-service";
+import {
+  buildQuickTipsFromDocuments,
+  parsePinnedQuickTips,
+} from "@/lib/workflow-quick-tips";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import PipelineInsight from "@/components/PipelineInsight";
 
 interface Message {
-  id: string
-  content: string
-  sender: 'user' | 'ai'
-  timestamp: Date
+  id: string;
+  content: string;
+  sender: "user" | "ai";
+  timestamp: Date;
   intent?: {
-    type: string
-    confidence: number
-    description: string
-  }
+    type: string;
+    confidence: number;
+    description: string;
+  };
   sources?: Array<{
-    document_id: string
-    document_name: string
-    relevance: number
-    content: string
-  }>
-  suggestedQuestions?: string[]
-  metadata?: Record<string, unknown>
+    document_id: string;
+    document_name: string;
+    relevance: number;
+    content: string;
+  }>;
+  suggestedQuestions?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 function createWorkflowSessionId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `wf-${crypto.randomUUID()}`
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return `wf-${crypto.randomUUID()}`;
   }
-  return `wf-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return `wf-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 const defaultQuickPrompts = [
-  'Summarize the key compliance requirements from the uploaded construction documents and cite evidence.',
-  'Generate a site safety inspection checklist based on the current knowledge base.',
-  'Compare two core standards in the indexed documents and highlight conflicts or gaps.',
-  'List the highest-risk compliance issues that could delay construction approval.',
-  'Create a pre-construction quality-control checklist grounded in the indexed documents.',
-]
+  // Ontario Reg. 213/91 (text, reliable single-doc retrieval)
+  "What is the ranked hierarchy of fall protection methods required under Ontario Regulation 213/91?",
+  "When is a guardrail system required on a construction project under Ontario Regulation 213/91?",
+  "What training requirements does Ontario Regulation 213/91 mandate for workers using fall protection systems?",
+  "What personal protective equipment must a worker wear on an Ontario construction project under Regulation 213/91?",
+  "What notification must a constructor file before beginning a construction project under Ontario Regulation 213/91?",
+  // NBC 2020 (OCR'd PDF, impressive scale)
+  'How does the National Building Code of Canada define "fire compartment" and what fire-resistance rating is required?',
+  "Under the National Building Code of Canada, when can separate portions of a building be treated as separate buildings?",
+  "How does the National Building Code of Canada classify buildings by major occupancy groups?",
+  'What does the National Building Code of Canada define as "means of egress" and what are its components?',
+  "What are the five stated objectives of the National Building Code of Canada?",
+];
 
 const pinnedQuickPrompts = parsePinnedQuickTips(
   process.env.NEXT_PUBLIC_DEMO_PINNED_QUICK_TIPS,
   defaultQuickPrompts.length,
-)
+);
 
 function extractSuggestedQuestions(metadata: unknown): string[] | undefined {
-  if (!metadata || typeof metadata !== 'object') {
-    return undefined
+  if (!metadata || typeof metadata !== "object") {
+    return undefined;
   }
-  const payload = metadata as Record<string, unknown>
+  const payload = metadata as Record<string, unknown>;
   const agentExecution =
-    payload.agent_execution && typeof payload.agent_execution === 'object'
+    payload.agent_execution && typeof payload.agent_execution === "object"
       ? (payload.agent_execution as Record<string, unknown>)
-      : undefined
-  const raw = payload.suggested_questions ?? agentExecution?.suggested_questions
+      : undefined;
+  const raw =
+    payload.suggested_questions ?? agentExecution?.suggested_questions;
   if (!Array.isArray(raw)) {
-    return undefined
+    return undefined;
   }
   const normalized = raw
-    .map((item) => String(item || '').trim())
-    .filter((item) => item.length > 0)
-  return normalized.length > 0 ? normalized.slice(0, 8) : undefined
+    .map((item) => String(item || "").trim())
+    .filter((item) => item.length > 0);
+  return normalized.length > 0 ? normalized.slice(0, 8) : undefined;
 }
 
 function buildFallbackSuggestedQuestions(
   query: string,
   sourceName?: string,
 ): string[] {
-  const normalizedQuery = query.trim().replace(/\s+/g, ' ')
-  const shortQuery = normalizedQuery.length > 72
-    ? `${normalizedQuery.slice(0, 72)}...`
-    : normalizedQuery
-  const sourceLabel = sourceName && sourceName.trim().length > 0
-    ? sourceName.trim()
-    : 'the referenced documents'
+  const normalizedQuery = query.trim().replace(/\s+/g, " ");
+  const shortQuery =
+    normalizedQuery.length > 72
+      ? `${normalizedQuery.slice(0, 72)}...`
+      : normalizedQuery;
+  const sourceLabel =
+    sourceName && sourceName.trim().length > 0
+      ? sourceName.trim()
+      : "the referenced documents";
 
   return [
     `Which section in ${sourceLabel} most directly supports this answer?`,
     `What assumptions should I validate next for "${shortQuery}"?`,
     `Can you provide a step-by-step checklist to execute this recommendation?`,
-  ]
+  ];
 }
 
 export default function WorkflowChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      content: 'Hello! I am the Industry AI Flow assistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?',
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
-  const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
-  const [useWebSocket, _setUseWebSocket] = useState(false)
+      id: "1",
+      content:
+        "Hello! I am the Industry AI Flow assistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?",
+      sender: "ai",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState<
+    "checking" | "connected" | "disconnected"
+  >("checking");
+  const [wsStatus, setWsStatus] = useState<
+    "disconnected" | "connecting" | "connected"
+  >("disconnected");
+  const [useWebSocket, _setUseWebSocket] = useState(false);
   const [quickPrompts, setQuickPrompts] = useState<string[]>(
     pinnedQuickPrompts ?? defaultQuickPrompts,
-  )
-  const [sessionId] = useState<string>(createWorkflowSessionId)
-  const pendingQueryRef = useRef<string>('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
+  );
+  const [sessionId] = useState<string>(createWorkflowSessionId);
+  const pendingQueryRef = useRef<string>("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   // Check API connection status
   useEffect(() => {
     const checkApiHealth = async () => {
       try {
-        const health = await realApiService.checkHealth()
-        setApiStatus(health.status === 'ok' ? 'connected' : 'disconnected')
+        const health = await realApiService.checkHealth();
+        setApiStatus(health.status === "ok" ? "connected" : "disconnected");
       } catch {
-        setApiStatus('disconnected')
+        setApiStatus("disconnected");
       }
-    }
-    
-    checkApiHealth()
+    };
+
+    checkApiHealth();
     // Check API status every 30 seconds
-    const interval = setInterval(checkApiHealth, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    const interval = setInterval(checkApiHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (pinnedQuickPrompts && pinnedQuickPrompts.length > 0) {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const loadDocumentAwareQuickTips = async () => {
       try {
-        const docs = await realApiService.getDocuments()
+        const docs = await realApiService.getDocuments();
         if (cancelled) {
-          return
+          return;
         }
 
-        const generated = buildQuickTipsFromDocuments(docs, defaultQuickPrompts)
-        setQuickPrompts((prev) => (prev === defaultQuickPrompts ? generated : prev))
+        const generated = buildQuickTipsFromDocuments(
+          docs,
+          defaultQuickPrompts,
+        );
+        setQuickPrompts((prev) =>
+          prev === defaultQuickPrompts ? generated : prev,
+        );
       } catch (error) {
-        console.warn('Failed to build document-aware quick tips:', error)
+        console.warn("Failed to build document-aware quick tips:", error);
       }
-    }
+    };
 
-    loadDocumentAwareQuickTips()
+    loadDocumentAwareQuickTips();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   // WebSocket connection management
   useEffect(() => {
-    if (!useWebSocket) return
-    
-    setWsStatus('connecting')
-    
+    if (!useWebSocket) return;
+
+    setWsStatus("connecting");
+
     const connectWebSocket = async () => {
-      const connected = await websocketService.connect()
-      setWsStatus(connected ? 'connected' : 'disconnected')
-    }
-    
-    connectWebSocket()
-    
+      const connected = await websocketService.connect();
+      setWsStatus(connected ? "connected" : "disconnected");
+    };
+
+    connectWebSocket();
+
     // Monitor connection status changes
     const unsubscribe = websocketService.onConnectionChange((connected) => {
-      setWsStatus(connected ? 'connected' : 'disconnected')
-    })
-    
+      setWsStatus(connected ? "connected" : "disconnected");
+    });
+
     // Listen for query responses
-    const unsubscribeResponse = websocketService.onMessage('query_response', (data: QueryResponseData) => {
-      const suggestedQuestions =
-        extractSuggestedQuestions(data.metadata) ??
-        buildFallbackSuggestedQuestions(pendingQueryRef.current)
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response,
-        sender: 'ai',
-        timestamp: new Date(data.timestamp),
-        suggestedQuestions,
-        metadata: data.metadata
-      }
-      
-      setMessages(prev => [...prev, aiMessage])
-      setQuickPrompts(suggestedQuestions)
-      setLoading(false)
-    })
-    
+    const unsubscribeResponse = websocketService.onMessage(
+      "query_response",
+      (data: QueryResponseData) => {
+        const suggestedQuestions =
+          extractSuggestedQuestions(data.metadata) ??
+          buildFallbackSuggestedQuestions(pendingQueryRef.current);
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: data.response,
+          sender: "ai",
+          timestamp: new Date(data.timestamp),
+          suggestedQuestions,
+          metadata: data.metadata,
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+        setQuickPrompts(suggestedQuestions);
+        setLoading(false);
+      },
+    );
+
     // Listen for notifications
-    const unsubscribeNotification = websocketService.onMessage('notification', (data: unknown) => {
-      console.log('Notification received:', data)
-      // Here you can add notification display logic
-    })
-    
+    const unsubscribeNotification = websocketService.onMessage(
+      "notification",
+      (data: unknown) => {
+        console.log("Notification received:", data);
+        // Here you can add notification display logic
+      },
+    );
+
     return () => {
-      unsubscribe()
-      unsubscribeResponse()
-      unsubscribeNotification()
-      websocketService.disconnect()
-    }
-  }, [useWebSocket])
+      unsubscribe();
+      unsubscribeResponse();
+      unsubscribeNotification();
+      websocketService.disconnect();
+    };
+  }, [useWebSocket]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
-    const queryText = input.trim()
-    pendingQueryRef.current = queryText
+    if (!input.trim() || loading) return;
+    const queryText = input.trim();
+    pendingQueryRef.current = queryText;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       content: queryText,
-      sender: 'user',
-      timestamp: new Date()
-    }
+      sender: "user",
+      timestamp: new Date(),
+    };
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
 
     try {
-      if (useWebSocket && wsStatus === 'connected') {
+      if (useWebSocket && wsStatus === "connected") {
         // Send query via WebSocket
-        const sent = websocketService.sendChatMessage(queryText)
+        const sent = websocketService.sendChatMessage(queryText);
         if (!sent) {
-          throw new Error('WebSocket send failed')
+          throw new Error("WebSocket send failed");
         }
         // Responses will be handled via WebSocket event listeners
       } else {
@@ -246,86 +282,88 @@ export default function WorkflowChatPage() {
           {
             userId: user?.id,
           },
-        )
-        
+        );
+
         const suggestedQuestions =
-          (response.suggested_questions && response.suggested_questions.length > 0)
+          response.suggested_questions &&
+          response.suggested_questions.length > 0
             ? response.suggested_questions
             : buildFallbackSuggestedQuestions(
                 queryText,
                 response.sources && response.sources.length > 0
                   ? response.sources[0].document_name
                   : undefined,
-              )
+              );
 
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: response.response,
-          sender: 'ai',
+          sender: "ai",
           timestamp: new Date(),
           intent: response.intent,
           sources: response.sources,
           suggestedQuestions,
-          metadata: response.metadata
-        }
+          metadata: response.metadata,
+        };
 
-        setMessages(prev => [...prev, aiMessage])
-        setQuickPrompts(suggestedQuestions)
-        setLoading(false)
+        setMessages((prev) => [...prev, aiMessage]);
+        setQuickPrompts(suggestedQuestions);
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Query error:', error)
-      
+      console.error("Query error:", error);
+
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
-        content: 'Sorry, an error occurred while processing your query. Please try again later.',
-        sender: 'ai',
-        timestamp: new Date()
-      }
-      
-      setMessages(prev => [...prev, errorMessage])
-      setLoading(false)
+        content:
+          "Sorry, an error occurred while processing your query. Please try again later.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+      setLoading(false);
     }
-  }
+  };
 
   const handleQuickPrompt = (prompt: string) => {
-    setInput(prompt)
-  }
+    setInput(prompt);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
 
   const wsStatusDotClass =
-    wsStatus === 'connected'
-      ? 'bg-green-500'
-      : wsStatus === 'connecting'
-      ? 'bg-yellow-500'
-      : 'bg-gray-400'
+    wsStatus === "connected"
+      ? "bg-green-500"
+      : wsStatus === "connecting"
+        ? "bg-yellow-500"
+        : "bg-gray-400";
 
   const wsStatusLabel =
-    wsStatus === 'connected'
-      ? 'Connected'
-      : wsStatus === 'connecting'
-      ? 'Connecting...'
-      : 'Disconnected (HTTP fallback active)'
+    wsStatus === "connected"
+      ? "Connected"
+      : wsStatus === "connecting"
+        ? "Connecting..."
+        : "Disconnected (HTTP fallback active)";
 
   const wsBannerClass =
-    wsStatus === 'connected'
-      ? 'bg-green-50 text-green-800 border border-green-200'
-      : wsStatus === 'connecting'
-      ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
-      : 'bg-blue-50 text-blue-800 border border-blue-200'
+    wsStatus === "connected"
+      ? "bg-green-50 text-green-800 border border-green-200"
+      : wsStatus === "connecting"
+        ? "bg-yellow-50 text-yellow-800 border border-yellow-200"
+        : "bg-blue-50 text-blue-800 border border-blue-200";
 
   const wsBannerText =
-    wsStatus === 'connected'
-      ? 'WebSocket real-time channel is active.'
-      : wsStatus === 'connecting'
-      ? 'Connecting to WebSocket service...'
-      : 'WebSocket service is unavailable. Switched to HTTP API automatically; queries continue to work.'
+    wsStatus === "connected"
+      ? "WebSocket real-time channel is active."
+      : wsStatus === "connecting"
+        ? "Connecting to WebSocket service..."
+        : "WebSocket service is unavailable. Switched to HTTP API automatically; queries continue to work.";
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 h-full flex flex-col">
@@ -334,14 +372,17 @@ export default function WorkflowChatPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Workflow Chat</h1>
             <p className="text-gray-600 mt-2">
-              Chat with the AI assistant for cost estimation, risk analysis and data queries
+              Chat with the AI assistant for cost estimation, risk analysis and
+              data queries
             </p>
           </div>
           <div className="flex items-center space-x-4">
             {/* WebSocket status — only visible when WebSocket is actively connected or connecting */}
-            {useWebSocket && wsStatus !== 'disconnected' && (
+            {useWebSocket && wsStatus !== "disconnected" && (
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}
+                ></div>
                 <span className="text-xs text-gray-600">
                   WebSocket {wsStatusLabel}
                 </span>
@@ -350,18 +391,26 @@ export default function WorkflowChatPage() {
 
             {/* API status */}
             <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                apiStatus === 'connected' ? 'bg-green-500' :
-                apiStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
-              }`}></div>
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  apiStatus === "connected"
+                    ? "bg-green-500"
+                    : apiStatus === "disconnected"
+                      ? "bg-red-500"
+                      : "bg-yellow-500"
+                }`}
+              ></div>
               <span className="text-sm text-gray-600">
-                {apiStatus === 'connected' ? 'API Connected' :
-                 apiStatus === 'disconnected' ? 'API Disconnected (please check backend)' : 'Checking API status...'}
+                {apiStatus === "connected"
+                  ? "API Connected"
+                  : apiStatus === "disconnected"
+                    ? "API Disconnected (please check backend)"
+                    : "Checking API status..."}
               </span>
             </div>
           </div>
         </div>
-        
+
         {/* WebSocket status banner */}
         {useWebSocket && (
           <div className={`mt-3 p-3 rounded-lg text-sm ${wsBannerClass}`}>
@@ -379,90 +428,111 @@ export default function WorkflowChatPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`mb-6 ${message.sender === 'user' ? 'text-right' : 'text-left'}`}
+                  className={`mb-6 ${message.sender === "user" ? "text-right" : "text-left"}`}
                 >
                   <div
                     className={`inline-block max-w-[80%] rounded-2xl px-4 py-4 ${
-                      message.sender === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-800'
+                      message.sender === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-800"
                     }`}
                   >
-                    {message.sender === 'ai' ? (
+                    {message.sender === "ai" ? (
                       <MarkdownRenderer content={message.content} />
                     ) : (
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap">
+                        {message.content}
+                      </div>
                     )}
-                    
+
                     {/* Intent info (AI messages only) */}
-                    {message.sender === 'ai' && message.intent && (
+                    {message.sender === "ai" && message.intent && (
                       <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">Intent recognition:</span>
+                          <span className="font-medium">
+                            Intent recognition:
+                          </span>
                           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
                             {message.intent.description}
                           </span>
                         </div>
                         <div className="mt-1 text-xs text-gray-600">
-                          Confidence: {(message.intent.confidence * 100).toFixed(1)}%
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Source citations (AI messages only) */}
-                    {message.sender === 'ai' && message.sources && message.sources.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                        <div className="text-sm font-medium mb-2">Reference sources:</div>
-                        <div className="space-y-2">
-                          {message.sources.map((source, index) => (
-                            <div key={index} className="text-xs bg-white bg-opacity-50 p-2 rounded">
-                              <div className="font-medium">{source.document_name}</div>
-                              <div className="text-gray-600 truncate">{source.content}</div>
-                              <div className="text-gray-500 mt-1">
-                                Relevance: {(source.relevance * 100).toFixed(0)}%
-                              </div>
-                            </div>
-                          ))}
+                          Confidence:{" "}
+                          {(message.intent.confidence * 100).toFixed(1)}%
                         </div>
                       </div>
                     )}
 
-                    {message.sender === 'ai' &&
-                      message.suggestedQuestions &&
-                      message.suggestedQuestions.length > 0 && (
+                    {/* Source citations (AI messages only) */}
+                    {message.sender === "ai" &&
+                      message.sources &&
+                      message.sources.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                          <div className="text-sm font-medium mb-2">Suggested follow-up questions:</div>
-                          <div className="flex flex-wrap gap-2">
-                            {message.suggestedQuestions.map((question, index) => (
-                              <button
-                                key={`${message.id}-suggestion-${index}`}
-                                type="button"
-                                onClick={() => handleQuickPrompt(question)}
-                                className="text-xs px-3 py-1.5 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 border border-gray-300 text-gray-700 transition"
+                          <div className="text-sm font-medium mb-2">
+                            Reference sources:
+                          </div>
+                          <div className="space-y-2">
+                            {message.sources.map((source, index) => (
+                              <div
+                                key={index}
+                                className="text-xs bg-white bg-opacity-50 p-2 rounded"
                               >
-                                {question}
-                              </button>
+                                <div className="font-medium">
+                                  {source.document_name}
+                                </div>
+                                <div className="text-gray-600 truncate">
+                                  {source.content}
+                                </div>
+                                <div className="text-gray-500 mt-1">
+                                  Relevance:{" "}
+                                  {(source.relevance * 100).toFixed(0)}%
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
                       )}
-                    
+
+                    {message.sender === "ai" &&
+                      message.suggestedQuestions &&
+                      message.suggestedQuestions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
+                          <div className="text-sm font-medium mb-2">
+                            Suggested follow-up questions:
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {message.suggestedQuestions.map(
+                              (question, index) => (
+                                <button
+                                  key={`${message.id}-suggestion-${index}`}
+                                  type="button"
+                                  onClick={() => handleQuickPrompt(question)}
+                                  className="text-xs px-3 py-1.5 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 border border-gray-300 text-gray-700 transition"
+                                >
+                                  {question}
+                                </button>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                     <div
                       className={`text-xs mt-3 ${
-                        message.sender === 'user'
-                          ? 'text-blue-200'
-                          : 'text-gray-500'
+                        message.sender === "user"
+                          ? "text-blue-200"
+                          : "text-gray-500"
                       }`}
                     >
-                      {message.timestamp.toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </div>
                   </div>
                 </div>
               ))}
-              
+
               {loading && (
                 <div className="text-left mb-4">
                   <div className="inline-block max-w-[80%] rounded-2xl px-4 py-3 bg-gray-100">
@@ -474,7 +544,7 @@ export default function WorkflowChatPage() {
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -495,10 +565,10 @@ export default function WorkflowChatPage() {
                   disabled={loading || !input.trim()}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
                 >
-                  {loading ? 'Sending...' : 'Send'}
+                  {loading ? "Sending..." : "Send"}
                 </button>
               </div>
-              
+
               <div className="mt-3 text-sm text-gray-500">
                 Press Enter to send, Shift + Enter for new line
               </div>
@@ -511,7 +581,7 @@ export default function WorkflowChatPage() {
           {/* Quick Tips */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <h3 className="font-medium text-gray-900 mb-3">Quick Tips</h3>
-            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={`qt-${index}-${prompt.slice(0, 20)}`}
@@ -542,7 +612,8 @@ export default function WorkflowChatPage() {
                 </div>
                 <div className="pt-3 border-t border-gray-200">
                   <div className="text-sm text-gray-600">
-                    Sent {messages.filter(m => m.sender === 'user').length} messages
+                    Sent {messages.filter((m) => m.sender === "user").length}{" "}
+                    messages
                   </div>
                 </div>
               </div>
@@ -551,30 +622,15 @@ export default function WorkflowChatPage() {
             )}
           </div>
 
-          {/* Function description */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">Function description</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></div>
-                <span>Construction Cost Estimation and Analysis</span>
-              </li>
-              <li className="flex items-start">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></div>
-                <span>Risk assessment and forecasting</span>
-              </li>
-              <li className="flex items-start">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 mr-2"></div>
-                <span>Data query and visualization</span>
-              </li>
-              <li className="flex items-start">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 mr-2"></div>
-                <span>Report generation and export</span>
-              </li>
-            </ul>
-          </div>
+          {/* Pipeline Insight — replaces static Function description */}
+          <PipelineInsight
+            metadata={
+              [...messages].reverse().find((m) => m.sender === "ai" && m.metadata)?.metadata ?? null
+            }
+            loading={loading}
+          />
         </div>
       </div>
     </div>
-  )
+  );
 }

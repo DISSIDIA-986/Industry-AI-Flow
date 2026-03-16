@@ -1,128 +1,167 @@
 export interface QuickTipDocument {
-  name?: string
-  status?: string
-  chunk_count?: number
+  name?: string;
+  status?: string;
+  chunk_count?: number;
 }
 
-const READY_STATUSES = new Set(['processed', 'completed'])
+const READY_STATUSES = new Set(["processed", "completed"]);
 
 function toFiniteNumber(value: unknown): number {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function normalizeName(name: string): string {
-  return name.trim().replace(/\s+/g, ' ')
+  return name.trim().replace(/\s+/g, " ");
 }
 
 function hasKeyword(name: string, keywords: string[]): boolean {
-  const lowered = name.toLowerCase()
-  return keywords.some((keyword) => lowered.includes(keyword))
+  const lowered = name.toLowerCase();
+  return keywords.some((keyword) => lowered.includes(keyword));
 }
 
 function appendUnique(target: string[], value?: string): void {
   if (!value) {
-    return
+    return;
   }
-  const normalized = value.trim()
+  const normalized = value.trim();
   if (!normalized) {
-    return
+    return;
   }
   if (!target.includes(normalized)) {
-    target.push(normalized)
+    target.push(normalized);
   }
 }
 
 function normalizeQuickTips(items: unknown[], maxCount: number): string[] {
-  const normalized: string[] = []
+  const normalized: string[] = [];
   for (const item of items) {
-    appendUnique(normalized, String(item || ''))
+    appendUnique(normalized, String(item || ""));
     if (normalized.length >= maxCount) {
-      break
+      break;
     }
   }
-  return normalized
+  return normalized;
 }
 
 export function parsePinnedQuickTips(
   rawValue: string | undefined,
   maxCount = 5,
 ): string[] | null {
-  const raw = String(rawValue || '').trim()
+  const raw = String(rawValue || "").trim();
   if (!raw) {
-    return null
+    return null;
   }
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      const normalized = normalizeQuickTips(parsed, maxCount)
-      return normalized.length > 0 ? normalized : null
+      const normalized = normalizeQuickTips(parsed, maxCount);
+      return normalized.length > 0 ? normalized : null;
     }
   } catch {
     // Continue to non-JSON parsing fallback.
   }
 
-  const items = raw.split('||').map((item) => item.trim())
-  const normalized = normalizeQuickTips(items, maxCount)
-  return normalized.length > 0 ? normalized : null
+  const items = raw.split("||").map((item) => item.trim());
+  const normalized = normalizeQuickTips(items, maxCount);
+  return normalized.length > 0 ? normalized : null;
 }
 
 export function buildQuickTipsFromDocuments(
   documents: QuickTipDocument[],
   fallbackQuickTips: string[],
-  maxCount = 8,
+  maxCount = 10,
 ): string[] {
   const readyDocs = documents
     .map((item) => {
-      const name = normalizeName(String(item?.name || ''))
-      const status = String(item?.status || '').trim().toLowerCase()
+      const name = normalizeName(String(item?.name || ""));
+      const status = String(item?.status || "")
+        .trim()
+        .toLowerCase();
       return {
         name,
         status,
         chunkCount: toFiniteNumber(item?.chunk_count),
-      }
+      };
     })
     .filter((item) => item.name.length > 0 && READY_STATUSES.has(item.status))
-    .sort((a, b) => b.chunkCount - a.chunkCount)
+    .sort((a, b) => b.chunkCount - a.chunkCount);
 
   if (readyDocs.length === 0) {
-    return fallbackQuickTips.slice(0, maxCount)
+    return fallbackQuickTips.slice(0, maxCount);
   }
 
-  const top = readyDocs[0]
-  const second = readyDocs[1]
-  const third = readyDocs[2]
+  const top = readyDocs[0];
+  const second = readyDocs[1];
+  const third = readyDocs[2];
   const safetyDoc =
-    readyDocs.find((item) => hasKeyword(item.name, ['osha', 'cfr', 'safety'])) || undefined
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["osha", "cfr", "safety"]),
+    ) || undefined;
   const concreteDoc =
-    readyDocs.find((item) => hasKeyword(item.name, ['concrete', 'cast_in_place', 'ufgs_03_30_00'])) ||
-    undefined
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["concrete", "cast_in_place", "ufgs_03_30_00"]),
+    ) || undefined;
   const standardsDoc =
-    readyDocs.find((item) => hasKeyword(item.name, ['gsa', 'p100', 'standard', 'specification', 'caltrans'])) ||
-    undefined
+    readyDocs.find((item) =>
+      hasKeyword(item.name, [
+        "gsa",
+        "p100",
+        "standard",
+        "specification",
+        "caltrans",
+      ]),
+    ) || undefined;
   const ifcDoc =
-    readyDocs.find((item) => hasKeyword(item.name, ['ifc', 'buildingsmart', 'schema'])) || undefined
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["ifc", "buildingsmart", "schema"]),
+    ) || undefined;
+  const buildingCodeDoc =
+    readyDocs.find((item) =>
+      hasKeyword(item.name, [
+        "nbc",
+        "national_building_code",
+        "bcbc",
+        "building_code",
+      ]),
+    ) || undefined;
+  const ohsDoc =
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["ohs", "occupational", "labour_code", "labour"]),
+    ) || undefined;
+  const energyCodeDoc =
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["necb", "energy_code", "energy"]),
+    ) || undefined;
+  const fireCodeDoc =
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["nfc", "fire_code", "fire"]),
+    ) || undefined;
+  const provincialDoc =
+    readyDocs.find((item) =>
+      hasKeyword(item.name, ["ontario", "quebec", "alberta", "brunswick"]),
+    ) || undefined;
 
-  const generated: string[] = []
+  const generated: string[] = [];
 
   appendUnique(
     generated,
     `Summarize the key requirements in "${top.name}" and cite the most relevant passages.`,
-  )
+  );
 
   if (top && second) {
     appendUnique(
       generated,
       `Compare "${top.name}" and "${second.name}" on scope, mandatory requirements, and acceptance criteria.`,
-    )
+    );
   }
 
   if (safetyDoc) {
     appendUnique(
       generated,
       `Based on "${safetyDoc.name}", create a practical site safety inspection checklist for a field engineer.`,
-    )
+    );
   }
 
   if (concreteDoc) {
@@ -130,45 +169,80 @@ export function buildQuickTipsFromDocuments(
       standardsDoc && standardsDoc.name !== concreteDoc.name
         ? standardsDoc
         : second && second.name !== concreteDoc.name
-        ? second
-        : undefined
+          ? second
+          : undefined;
 
     appendUnique(
       generated,
       referenceDoc
         ? `For cast-in-place concrete work, which quality-control checkpoints in "${concreteDoc.name}" should align with "${referenceDoc.name}"?`
         : `From "${concreteDoc.name}", list the must-have quality-control and testing steps before pour approval.`,
-    )
+    );
   }
 
   if (ifcDoc) {
     appendUnique(
       generated,
       `From "${ifcDoc.name}", which IFC entities and attributes are most important for BIM handover validation?`,
-    )
+    );
   }
 
   if (standardsDoc && standardsDoc.name !== top.name) {
     appendUnique(
       generated,
       `What are the highest-priority compliance items in "${standardsDoc.name}" that teams often miss in design review?`,
-    )
+    );
   }
 
   if (top && third) {
     appendUnique(
       generated,
       `Generate a pre-construction compliance checklist using "${top.name}" and "${third.name}".`,
-    )
+    );
   }
 
-  const merged = [...generated]
+  if (buildingCodeDoc) {
+    appendUnique(
+      generated,
+      `What are the fire resistance and structural safety requirements in "${buildingCodeDoc.name}"?`,
+    );
+  }
+
+  if (ohsDoc && ohsDoc.name !== safetyDoc?.name) {
+    appendUnique(
+      generated,
+      `What are the employer obligations for workplace hazard prevention under "${ohsDoc.name}"?`,
+    );
+  }
+
+  if (energyCodeDoc) {
+    appendUnique(
+      generated,
+      `What energy efficiency standards does "${energyCodeDoc.name}" mandate for commercial buildings?`,
+    );
+  }
+
+  if (fireCodeDoc) {
+    appendUnique(
+      generated,
+      `From "${fireCodeDoc.name}", what fire protection systems are required for high-rise construction?`,
+    );
+  }
+
+  if (provincialDoc && safetyDoc && provincialDoc.name !== safetyDoc.name) {
+    appendUnique(
+      generated,
+      `Compare the fall protection requirements between "${provincialDoc.name}" and "${safetyDoc.name}".`,
+    );
+  }
+
+  const merged = [...generated];
   for (const fallback of fallbackQuickTips) {
-    appendUnique(merged, fallback)
+    appendUnique(merged, fallback);
     if (merged.length >= maxCount) {
-      break
+      break;
     }
   }
 
-  return merged.slice(0, maxCount)
+  return merged.slice(0, maxCount);
 }

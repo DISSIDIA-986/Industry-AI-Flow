@@ -777,6 +777,65 @@ const hybridWorkflowApi = createHybridApiClient(workflowApi)
 const hybridDocumentApi = createHybridApiClient(documentApi)
 const hybridCostEstimationApi = createHybridApiClient(costEstimationApi)
 
+// ── Intent Classification API ─────────────────────────────────────
+
+export interface IntentClassifyRequest {
+  query: string
+  session_id: string
+  user_id?: string
+  context?: Record<string, unknown>
+}
+
+export interface IntentClassifyResponse {
+  success: boolean
+  intent: string | null
+  confidence: number | null
+  reasoning: string | null
+  routing_decision: Record<string, unknown> | null
+  agent_response: string | null
+  clarification_needed: boolean
+  clarification_message: string | null
+  processing_time_ms: number | null
+  metadata: Record<string, unknown>
+  error: string | null
+}
+
+export interface CapabilityCatalog {
+  capabilities: Array<{
+    id: string
+    name: string
+    description: string
+    example_queries: string[]
+    parameters: Record<string, unknown>
+    enabled: boolean
+  }>
+  version: string
+  total: number
+}
+
+export const intentApi = {
+  async classify(
+    request: IntentClassifyRequest,
+    config: RuntimeAppConfig = {},
+  ): Promise<IntentClassifyResponse> {
+    return requestBackend<IntentClassifyResponse>('/api/intent/classify', {
+      method: 'POST',
+      config,
+      body: request,
+      timeoutMs: 30_000,
+    })
+  },
+
+  async getCapabilities(
+    config: RuntimeAppConfig = {},
+  ): Promise<CapabilityCatalog> {
+    return requestBackend<CapabilityCatalog>('/api/intent/capabilities', {
+      method: 'GET',
+      config,
+    })
+  },
+}
+
 export { realApiService, hybridWorkflowApi, hybridDocumentApi, hybridCostEstimationApi }
 
 export default {
@@ -786,6 +845,7 @@ export default {
   documentApi,
   costEstimationApi,
   workflowApi,
+  intentApi,
   realApiService,
   hybridWorkflowApi,
   hybridDocumentApi,
