@@ -31,19 +31,28 @@ class ModuleAdapter:
 MODULE_ADAPTERS: Dict[str, ModuleAdapter] = {
     "data_dashboard": ModuleAdapter(
         module="data_dashboard",
-        script_path=PROJECT_ROOT / "scripts" / "testing" / "run_data_dashboard_agent_browser_e2e.py",
+        script_path=PROJECT_ROOT
+        / "scripts"
+        / "testing"
+        / "run_data_dashboard_agent_browser_e2e.py",
         report_filename="data_dashboard_agent_report.json",
         default_threshold=1.0,
     ),
     "cost_estimation": ModuleAdapter(
         module="cost_estimation",
-        script_path=PROJECT_ROOT / "scripts" / "testing" / "run_cost_estimation_agent_browser_e2e.py",
+        script_path=PROJECT_ROOT
+        / "scripts"
+        / "testing"
+        / "run_cost_estimation_agent_browser_e2e.py",
         report_filename="cost_estimation_agent_report.json",
         default_threshold=1.0,
     ),
     "rag": ModuleAdapter(
         module="rag",
-        script_path=PROJECT_ROOT / "scripts" / "testing" / "run_rag_agent_browser_e2e.py",
+        script_path=PROJECT_ROOT
+        / "scripts"
+        / "testing"
+        / "run_rag_agent_browser_e2e.py",
         report_filename=None,
         default_threshold=0.7,
     ),
@@ -100,7 +109,9 @@ def _resolve_report_path(
             return Path(kv["report"]).expanduser().resolve()
         if known_rag_output is not None:
             return known_rag_output.resolve()
-        raise FileNotFoundError("Unable to resolve rag report path from command output.")
+        raise FileNotFoundError(
+            "Unable to resolve rag report path from command output."
+        )
 
     output_dir = kv.get("output_dir")
     if not output_dir:
@@ -143,7 +154,9 @@ def _evaluate_data_dashboard(report: Dict[str, Any], min_rate: float) -> Dict[st
     }
 
 
-def _evaluate_cost_estimation(report: Dict[str, Any], min_rate: float) -> Dict[str, Any]:
+def _evaluate_cost_estimation(
+    report: Dict[str, Any], min_rate: float
+) -> Dict[str, Any]:
     total = int(report.get("total_cases") or 0)
     success = int(report.get("success_cases") or 0)
     success_rate = float(report.get("success_rate") or _safe_rate(success, total))
@@ -162,7 +175,9 @@ def _evaluate_cost_estimation(report: Dict[str, Any], min_rate: float) -> Dict[s
     clear_queue = report.get("clear_queue_validation")
     clear_queue_ok = bool(isinstance(clear_queue, dict) and clear_queue.get("ok"))
     if not clear_queue_ok:
-        failures.append({"case_id": "clear_queue_validation", "error": clear_queue, "summary": ""})
+        failures.append(
+            {"case_id": "clear_queue_validation", "error": clear_queue, "summary": ""}
+        )
 
     passed = bool(
         total > 0 and success == total and success_rate >= min_rate and clear_queue_ok
@@ -214,7 +229,9 @@ def _evaluate_rag(report: Dict[str, Any], min_rate: float) -> Dict[str, Any]:
     }
 
 
-def _evaluate_report(module: str, report: Dict[str, Any], min_rate: float) -> Dict[str, Any]:
+def _evaluate_report(
+    module: str, report: Dict[str, Any], min_rate: float
+) -> Dict[str, Any]:
     if module == "data_dashboard":
         return _evaluate_data_dashboard(report, min_rate)
     if module == "cost_estimation":
@@ -294,7 +311,9 @@ def _write_summary_markdown(report: Dict[str, Any], summary_path: Path) -> None:
         lines.append(f"- Report path: {cycle.get('report_path')}")
         lines.append(f"- Success rate: {cycle.get('success_rate')}")
         lines.append(f"- Success/Total: {cycle.get('success')}/{cycle.get('total')}")
-        failures = cycle.get("failures") if isinstance(cycle.get("failures"), list) else []
+        failures = (
+            cycle.get("failures") if isinstance(cycle.get("failures"), list) else []
+        )
         lines.append(f"- Failure count: {len(failures)}")
         if failures:
             lines.append(f"- First failure: {failures[0]}")
@@ -314,7 +333,9 @@ def parse_args() -> argparse.Namespace:
         help="Target module: data_dashboard | cost_estimation | rag",
     )
     parser.add_argument("--frontend-url", default=DEFAULT_FRONTEND_URL)
-    parser.add_argument("--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com"))
+    parser.add_argument(
+        "--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com")
+    )
     parser.add_argument(
         "--login-password",
         default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123"),
@@ -512,7 +533,9 @@ def main() -> int:
     }
 
     report_path = gate_root / f"{module}_gate_report.json"
-    report_path.write_text(json.dumps(gate_report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(gate_report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     summary_path = gate_root / f"{module}_gate_summary.md"
     _write_summary_markdown(gate_report, summary_path)

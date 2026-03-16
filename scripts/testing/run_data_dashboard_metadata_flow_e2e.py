@@ -19,8 +19,12 @@ DEFAULT_FRONTEND_URL = "http://127.0.0.1:3001"
 
 
 def _load_base_module():
-    base_path = PROJECT_ROOT / "scripts" / "testing" / "run_data_dashboard_agent_browser_e2e.py"
-    spec = importlib.util.spec_from_file_location("data_dashboard_agent_base", base_path)
+    base_path = (
+        PROJECT_ROOT / "scripts" / "testing" / "run_data_dashboard_agent_browser_e2e.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "data_dashboard_agent_base", base_path
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("Unable to load base agent-browser test module")
     module = importlib.util.module_from_spec(spec)
@@ -29,7 +33,9 @@ def _load_base_module():
     return module
 
 
-def _bool_check(payload: Dict[str, Any], *, require_file: bool = False) -> Dict[str, Any]:
+def _bool_check(
+    payload: Dict[str, Any], *, require_file: bool = False
+) -> Dict[str, Any]:
     result_json = payload.get("result_json") if isinstance(payload, dict) else None
     if not isinstance(result_json, dict):
         return {
@@ -42,11 +48,17 @@ def _bool_check(payload: Dict[str, Any], *, require_file: bool = False) -> Dict[
         }
 
     code_generation = result_json.get("code_generation")
-    code_mode = str(code_generation.get("mode") or "") if isinstance(code_generation, dict) else ""
+    code_mode = (
+        str(code_generation.get("mode") or "")
+        if isinstance(code_generation, dict)
+        else ""
+    )
 
     metadata_extraction = result_json.get("metadata_extraction")
     metadata_status = (
-        str(metadata_extraction.get("status") or "") if isinstance(metadata_extraction, dict) else ""
+        str(metadata_extraction.get("status") or "")
+        if isinstance(metadata_extraction, dict)
+        else ""
     )
 
     llm_input_policy = result_json.get("llm_input_policy")
@@ -55,7 +67,11 @@ def _bool_check(payload: Dict[str, Any], *, require_file: bool = False) -> Dict[
         if isinstance(llm_input_policy, dict)
         else None
     )
-    policy_mode = str(llm_input_policy.get("mode") or "") if isinstance(llm_input_policy, dict) else ""
+    policy_mode = (
+        str(llm_input_policy.get("mode") or "")
+        if isinstance(llm_input_policy, dict)
+        else ""
+    )
 
     file_path = str(result_json.get("file_path") or "")
     if not file_path:
@@ -105,9 +121,7 @@ def run_suite(
 
     data_files = base._prepare_demo_datasets()
     data_file = data_files["projects"]
-    question = (
-        "Use metadata to generate dynamic analysis code and provide a concise project dataset summary."
-    )
+    question = "Use metadata to generate dynamic analysis code and provide a concise project dataset summary."
     analysis_type = "summary"
     chart_type = "scatter"
 
@@ -115,7 +129,9 @@ def run_suite(
     out_dir = output_root / f"data_dashboard_metadata_flow_test_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    base._ensure_logged_in(frontend_url=frontend_url, email=login_email, password=login_password)
+    base._ensure_logged_in(
+        frontend_url=frontend_url, email=login_email, password=login_password
+    )
     base._open_data_page(frontend_url)
 
     refs = base._snapshot_refs()
@@ -135,7 +151,9 @@ def run_suite(
 
     # Step 2: run analysis and verify metadata extraction + LLM policy
     run_analysis_target = refs.get("run_analysis") or base.RUN_ANALYSIS_BUTTON_SELECTOR
-    click_ok, click_out = base._run_agent_browser(["click", run_analysis_target], timeout=25)
+    click_ok, click_out = base._run_agent_browser(
+        ["click", run_analysis_target], timeout=25
+    )
     if not click_ok:
         raise RuntimeError(f"click_run_analysis_failed: {click_out}")
 
@@ -147,7 +165,9 @@ def run_suite(
         f"code_mode={analysis_check['code_mode']}; metadata={analysis_check['metadata_status']}; "
         f"raw_data_sent={analysis_check['raw_data_sent_to_llm']}; wait={done_ok}/{done_state}"
     )
-    base._inject_qa_banner(question=question, answer=analysis_summary, case_id="metadata_flow_analysis")
+    base._inject_qa_banner(
+        question=question, answer=analysis_summary, case_id="metadata_flow_analysis"
+    )
     base._run_agent_browser(["wait", "700"], timeout=10)
     analysis_shot = out_dir / "02_analysis_metadata_checks.png"
     base._run_agent_browser(["screenshot", str(analysis_shot), "--full"], timeout=50)
@@ -155,7 +175,9 @@ def run_suite(
     # Step 3: run visualization and verify metadata extraction + LLM policy + artifact
     refs = base._snapshot_refs()
     generate_viz_target = refs.get("generate_viz") or base.GENERATE_VIZ_BUTTON_SELECTOR
-    viz_click_ok, viz_click_out = base._run_agent_browser(["click", generate_viz_target], timeout=25)
+    viz_click_ok, viz_click_out = base._run_agent_browser(
+        ["click", generate_viz_target], timeout=25
+    )
     if not viz_click_ok:
         raise RuntimeError(f"click_generate_viz_failed: {viz_click_out}")
 
@@ -169,7 +191,9 @@ def run_suite(
         f"wait={viz_done_ok}/{viz_done_state}"
     )
     merged_summary = f"{analysis_summary} | {viz_summary}"
-    base._inject_qa_banner(question=question, answer=merged_summary, case_id="metadata_flow_viz")
+    base._inject_qa_banner(
+        question=question, answer=merged_summary, case_id="metadata_flow_viz"
+    )
     base._run_agent_browser(["wait", "700"], timeout=10)
     viz_shot = out_dir / "03_visualization_metadata_checks.png"
     base._run_agent_browser(["screenshot", str(viz_shot), "--full"], timeout=50)
@@ -203,7 +227,9 @@ def run_suite(
 
     report["overall_success"] = bool(analysis_check["ok"] and viz_check["ok"])
     report_path = out_dir / "metadata_flow_report.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     case_index = out_dir / "CASE_INDEX.md"
     case_index.write_text(
@@ -230,8 +256,12 @@ def parse_args() -> argparse.Namespace:
         description="Run focused Data Dashboard metadata-flow browser test and screenshots.",
     )
     parser.add_argument("--frontend-url", default=DEFAULT_FRONTEND_URL)
-    parser.add_argument("--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com"))
-    parser.add_argument("--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123"))
+    parser.add_argument(
+        "--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com")
+    )
+    parser.add_argument(
+        "--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123")
+    )
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     return parser.parse_args()
 

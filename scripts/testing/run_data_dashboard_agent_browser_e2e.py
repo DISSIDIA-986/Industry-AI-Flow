@@ -132,7 +132,9 @@ def _open_data_page(frontend_url: str) -> None:
     if not open_ok:
         raise RuntimeError(f"failed_to_open_data_page: {open_out}")
 
-    wait_ok, wait_out = _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
+    wait_ok, wait_out = _run_agent_browser(
+        ["wait", "--load", "networkidle"], timeout=45
+    )
     if not wait_ok:
         # Some pages keep polling in background, so networkidle can fail.
         _run_agent_browser(["wait", "1500"], timeout=10)
@@ -174,7 +176,9 @@ def _ensure_logged_in(frontend_url: str, email: str, password: str) -> None:
     if _count(LOGIN_EMAIL_SELECTOR) > 0 and _count(LOGIN_BUTTON_SELECTOR) > 0:
         _run_agent_browser(["fill", LOGIN_EMAIL_SELECTOR, email], timeout=20)
         _run_agent_browser(["fill", LOGIN_PASSWORD_SELECTOR, password], timeout=20)
-        click_ok, click_out = _run_agent_browser(["click", LOGIN_BUTTON_SELECTOR], timeout=25)
+        click_ok, click_out = _run_agent_browser(
+            ["click", LOGIN_BUTTON_SELECTOR], timeout=25
+        )
         if not click_ok:
             raise RuntimeError(f"failed_to_click_login_button: {click_out}")
         _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
@@ -190,7 +194,9 @@ def _prepare_demo_datasets() -> dict[str, str]:
     src_one = datasets_dir / "architecture_building_projects.csv"
     src_two = datasets_dir / "construction_materials_properties.csv"
     if not src_one.exists() or not src_two.exists():
-        raise FileNotFoundError("Required demo datasets are missing in test_resources/datasets")
+        raise FileNotFoundError(
+            "Required demo datasets are missing in test_resources/datasets"
+        )
 
     tmp_root = Path(os.getenv("TMPDIR", "/tmp")).resolve()
     demo_dir = tmp_root / "luncheon_data_demo"
@@ -215,8 +221,12 @@ def _set_form_values(
     refs: dict[str, str],
 ) -> tuple[bool, str]:
     path_target = refs.get("uploaded_path") or 'label:has-text("Uploaded Path") input'
-    instruction_target = refs.get("instruction") or 'label:has-text("Analysis Instruction") input'
-    analysis_target = refs.get("analysis_type") or 'label:has-text("Analysis Type") select'
+    instruction_target = (
+        refs.get("instruction") or 'label:has-text("Analysis Instruction") input'
+    )
+    analysis_target = (
+        refs.get("analysis_type") or 'label:has-text("Analysis Type") select'
+    )
     chart_target = refs.get("chart_type") or 'label:has-text("Chart Type") select'
 
     fill_ok, fill_out = _run_agent_browser(["fill", path_target, data_file], timeout=25)
@@ -237,7 +247,9 @@ def _set_form_values(
     if not select_ok:
         return False, f"select_analysis_type_failed: {select_out}"
 
-    chart_ok, chart_out = _run_agent_browser(["select", chart_target, chart_type], timeout=20)
+    chart_ok, chart_out = _run_agent_browser(
+        ["select", chart_target, chart_type], timeout=20
+    )
     if not chart_ok:
         return False, f"select_chart_type_failed: {chart_out}"
 
@@ -513,7 +525,9 @@ def _build_answer_summary(payload: Any) -> str:
 
 def _build_viz_summary(payload: Any) -> str:
     if not isinstance(payload, dict):
-        return str(payload)[:320] if payload is not None else "No visualization returned."
+        return (
+            str(payload)[:320] if payload is not None else "No visualization returned."
+        )
 
     result_json = payload.get("result_json")
     error_text = str(payload.get("error_text") or "").strip()
@@ -524,7 +538,9 @@ def _build_viz_summary(payload: Any) -> str:
         file_path = str(result_json.get("file_path") or "")
         chart_info = result_json.get("chart_info")
         chart_type = (
-            chart_info.get("chart_type") if isinstance(chart_info, dict) else result_json.get("chart_type")
+            chart_info.get("chart_type")
+            if isinstance(chart_info, dict)
+            else result_json.get("chart_type")
         )
         code_generation = result_json.get("code_generation")
         code_mode = (
@@ -628,7 +644,9 @@ def _inject_qa_banner(question: str, answer: str, case_id: str) -> tuple[bool, s
     return _run_eval(js, timeout=20)
 
 
-def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> dict[str, Any]:
+def _run_case(
+    case: Case, data_files: dict[str, str], screenshot_path: Path
+) -> dict[str, Any]:
     data_file = data_files[case.dataset_key]
     refs: dict[str, str] = {}
     set_out = ""
@@ -669,15 +687,15 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
                 continue
             return {
                 "case_id": case.case_id,
-                    "question": case.question,
-                    "analysis_type": case.analysis_type,
-                    "chart_type": case.chart_type,
-                    "data_file": data_file,
-                    "success": False,
-                    "attempt_used": attempt_used,
-                    "error": f"set_form_failed: {set_out}",
-                    "screenshot_path": "",
-                }
+                "question": case.question,
+                "analysis_type": case.analysis_type,
+                "chart_type": case.chart_type,
+                "data_file": data_file,
+                "success": False,
+                "attempt_used": attempt_used,
+                "error": f"set_form_failed: {set_out}",
+                "screenshot_path": "",
+            }
 
         run_analysis_target = refs.get("run_analysis") or RUN_ANALYSIS_BUTTON_SELECTOR
         analysis_click_ok, analysis_click_out = _run_agent_browser(
@@ -700,12 +718,16 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
                 "screenshot_path": "",
             }
 
-        analysis_done_ok, analysis_done_state = _wait_for_analysis_complete(max_wait_seconds=180)
+        analysis_done_ok, analysis_done_state = _wait_for_analysis_complete(
+            max_wait_seconds=180
+        )
         analysis_payload = _read_result_payload()
         analysis_answer = _build_answer_summary(analysis_payload)
 
         analysis_result_json = (
-            analysis_payload.get("result_json") if isinstance(analysis_payload, dict) else None
+            analysis_payload.get("result_json")
+            if isinstance(analysis_payload, dict)
+            else None
         )
         analysis_ui_error_text = (
             str(analysis_payload.get("error_text") or "").strip()
@@ -718,14 +740,14 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
         if isinstance(analysis_result_json, dict):
             analysis_backend_success = analysis_result_json.get("success")
             analysis_match = (
-                str(analysis_result_json.get("analysis_type") or "") == case.analysis_type
+                str(analysis_result_json.get("analysis_type") or "")
+                == case.analysis_type
             )
-            analysis_has_result = analysis_backend_success is not False and analysis_match
+            analysis_has_result = (
+                analysis_backend_success is not False and analysis_match
+            )
 
-        if (
-            not analysis_done_ok
-            or not analysis_has_result
-        ):
+        if not analysis_done_ok or not analysis_has_result:
             if attempt < 3 and "Upload data file first" in analysis_ui_error_text:
                 _run_agent_browser(["wait", "900"], timeout=10)
                 continue
@@ -749,9 +771,13 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
         viz_payload = _read_viz_payload()
         viz_answer = _build_viz_summary(viz_payload)
 
-        viz_result_json = viz_payload.get("result_json") if isinstance(viz_payload, dict) else None
+        viz_result_json = (
+            viz_payload.get("result_json") if isinstance(viz_payload, dict) else None
+        )
         viz_ui_error_text = (
-            str(viz_payload.get("error_text") or "").strip() if isinstance(viz_payload, dict) else ""
+            str(viz_payload.get("error_text") or "").strip()
+            if isinstance(viz_payload, dict)
+            else ""
         )
         viz_backend_success = None
         viz_chart_match = False
@@ -770,13 +796,12 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
             if not viz_file_path and isinstance(chart_info, dict):
                 viz_file_path = str(chart_info.get("output_file") or "")
             viz_has_result = (
-                viz_backend_success is not False and viz_chart_match and bool(viz_file_path)
+                viz_backend_success is not False
+                and viz_chart_match
+                and bool(viz_file_path)
             )
 
-        if (
-            viz_done_ok
-            and viz_has_result
-        ):
+        if viz_done_ok and viz_has_result:
             break
 
         if attempt < 3:
@@ -793,9 +818,13 @@ def _run_case(case: Case, data_files: dict[str, str], screenshot_path: Path) -> 
     )
 
     analysis_result_json = (
-        analysis_payload.get("result_json") if isinstance(analysis_payload, dict) else None
+        analysis_payload.get("result_json")
+        if isinstance(analysis_payload, dict)
+        else None
     )
-    viz_result_json = viz_payload.get("result_json") if isinstance(viz_payload, dict) else None
+    viz_result_json = (
+        viz_payload.get("result_json") if isinstance(viz_payload, dict) else None
+    )
     overall_success = bool(
         analysis_done_ok
         and viz_done_ok
@@ -893,14 +922,18 @@ def run_suite(
     out_dir = output_root / f"data_dashboard_agent_test_{timestamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    _ensure_logged_in(frontend_url=frontend_url, email=login_email, password=login_password)
+    _ensure_logged_in(
+        frontend_url=frontend_url, email=login_email, password=login_password
+    )
 
     case_results: list[dict[str, Any]] = []
     started = time.perf_counter()
     for idx, case in enumerate(cases, start=1):
         _open_data_page(frontend_url)
         screenshot_path = out_dir / f"{idx:02d}_{case.case_id}.png"
-        case_result = _run_case(case=case, data_files=data_files, screenshot_path=screenshot_path)
+        case_result = _run_case(
+            case=case, data_files=data_files, screenshot_path=screenshot_path
+        )
         case_results.append(case_result)
 
     elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -911,14 +944,18 @@ def run_suite(
         "output_dir": str(out_dir),
         "total_cases": len(case_results),
         "success_cases": success_count,
-        "success_rate": round(success_count / len(case_results), 4) if case_results else 0.0,
+        "success_rate": round(success_count / len(case_results), 4)
+        if case_results
+        else 0.0,
         "elapsed_ms": elapsed_ms,
         "data_files": data_files,
         "cases": case_results,
     }
 
     report_path = out_dir / "data_dashboard_agent_report.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     case_index_lines = [
         "# Data Dashboard Screenshot Case Index",
@@ -937,7 +974,9 @@ def run_suite(
         case_index_lines.append(
             f"- Analysis summary: {row.get('analysis_answer_summary', row.get('answer_summary'))}"
         )
-        case_index_lines.append(f"- Visualization summary: {row.get('viz_answer_summary')}")
+        case_index_lines.append(
+            f"- Visualization summary: {row.get('viz_answer_summary')}"
+        )
         case_index_lines.append(f"- Visualization file: {row.get('viz_file_path')}")
         case_index_lines.append("")
 
@@ -954,8 +993,12 @@ def parse_args() -> argparse.Namespace:
         description="Run Data Dashboard browser test and capture 5 screenshots in temp.",
     )
     parser.add_argument("--frontend-url", default=DEFAULT_FRONTEND_URL)
-    parser.add_argument("--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com"))
-    parser.add_argument("--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123"))
+    parser.add_argument(
+        "--login-email", default=os.getenv("RAG_E2E_LOGIN_EMAIL", "demo@example.com")
+    )
+    parser.add_argument(
+        "--login-password", default=os.getenv("RAG_E2E_LOGIN_PASSWORD", "demo123")
+    )
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     return parser.parse_args()
 
