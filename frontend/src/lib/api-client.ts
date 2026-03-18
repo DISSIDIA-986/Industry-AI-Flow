@@ -300,7 +300,11 @@ export const documentApi = {
   },
 
   async deleteDocument(id: string): Promise<{ success: boolean; id: string }> {
-    return { success: true, id }
+    const payload = await requestBackend<{ success?: boolean; message?: string }>(
+      `/api/v1/documents/${encodeURIComponent(id)}`,
+      { method: 'DELETE' },
+    )
+    return { success: payload.success !== false, id }
   },
 
   async getDocumentStatus(id: string): Promise<{ id: string; status: string; progress: number }> {
@@ -741,6 +745,49 @@ export async function listPrompts(
     method: 'GET',
     config,
   })
+}
+
+export const dashboardApi = {
+  async getDocumentStats(): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>('/api/v1/documents/statistics', {
+      method: 'GET',
+    })
+  },
+
+  async getHealth(): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>('/api/v1/health', { method: 'GET' })
+  },
+
+  async getLlmUsage(days = 30): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>(`/llm/usage?days=${days}`, {
+      method: 'GET',
+    })
+  },
+
+  async getOperationsLog(limit = 10): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>(
+      `/api/v1/documents/operations/log?limit=${limit}`,
+      { method: 'GET' },
+    )
+  },
+
+  async getCostEstimationHealth(): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>('/api/v1/cost-estimation/health', {
+      method: 'GET',
+    })
+  },
+
+  async getFeedbackStats(days = 30): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>(`/api/v1/feedback/statistics?days=${days}`, {
+      method: 'GET',
+    })
+  },
+
+  async getWorkflowStats(): Promise<Record<string, unknown>> {
+    return requestBackend<Record<string, unknown>>('/api/v1/stats/workflow', {
+      method: 'GET',
+    })
+  },
 }
 
 export interface DemoModeState {

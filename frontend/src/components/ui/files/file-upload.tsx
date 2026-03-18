@@ -26,7 +26,7 @@ function normalizeMaxBytes(maxSize?: number): number {
 export function FileUpload({
   onFilesSelected,
   onFileSelect,
-  accept = '.csv,.xlsx,.xls,.pdf,.txt,.json',
+  accept = '.csv,.xlsx,.xls,.pdf,.txt,.md,.json',
   maxSize,
   multiple = false,
   label = 'Select file',
