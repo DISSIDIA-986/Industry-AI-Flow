@@ -82,7 +82,7 @@ class EnhancedDocumentLoader:
         # Determine file type by extension
         ext = file_path.suffix.lower()
 
-        if ext == ".txt":
+        if ext in (".txt", ".md"):
             return self._load_txt(file_path)
         elif ext == ".pdf":
             return self._load_pdf(file_path)
@@ -189,7 +189,7 @@ def load_document(file_path: str) -> str:
     """Load a document by file type (Phase 1 compatibility function)."""
     if file_path.endswith(".pdf"):
         return load_pdf(file_path)
-    elif file_path.endswith(".txt"):
+    elif file_path.endswith(".txt") or file_path.endswith(".md"):
         return load_txt(file_path)
     else:
         raise ValueError(f"Unsupported file type: {file_path}")
