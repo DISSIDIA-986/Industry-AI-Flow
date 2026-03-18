@@ -20,8 +20,8 @@ For user-uploaded datasets outside the pre-built cost model: extracts **metadata
 ### Architecture Innovation
 The AI Workflow pipeline is a core innovation with two stages: an **11-node intent classification StateGraph** (intent_workflow.py) handles user input → intent classification → multi-turn clarification → query reformulation → keyword extraction, then routes to a **10-node fixed-order execution pipeline** (graph.py): intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness. Intent recognition is especially critical for RAG routing.
 
-### LLM Backend: Ollama (Primary)
-**Ollama is the sole local backend for demo.** llama.cpp was evaluated early on but abandoned — Ollama is simpler to manage and its bottom layer is llama.cpp anyway. Cloud APIs (Zhipu/Gemini) are used only for code generation tasks. Demo backend: Ollama with Qwen3.5:4b (default) or Qwen3.5:9b for higher quality.
+### LLM Backend: Ollama (Primary) + Zhipu (Intent Classification)
+**Ollama is the sole local backend for demo.** llama.cpp was evaluated early on but abandoned — Ollama is simpler to manage and its bottom layer is llama.cpp anyway. Cloud APIs (Zhipu/Gemini) are used for code generation tasks **and intent classification** (local 4B model was misclassifying intents). Demo backend: Ollama with Qwen3.5:4b (default) or Qwen3.5:9b for higher quality.
 
 **Performance-critical settings:**
 - **Thinking mode (`OLLAMA_ENABLE_THINKING`)**: Default `false`. Qwen3.5 supports a "thinking" mode that significantly increases first-token latency. Keep disabled for demo responsiveness.
@@ -44,6 +44,7 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Suggested follow-up questions MUST appear on every RAG answer** — backend must always return `suggested_questions`
 - **Cost estimation needs reasonableness validation** — predicted values within dataset range
 - **Cloud LLM dual fallback** — Data Analysis must work with both Gemini and Zhipu; auto-fallback if one fails
+- **Intent classification uses Zhipu cloud LLM** — local 4B model had misclassification issues (e.g. RAG queries routed to code_execution); heuristic shortcut (confidence >= 0.85) skips LLM for clear-cut queries
 - **Pre-warm before demo** — user will open system beforehand; first-query cold start ~49s is avoided
 
 ### Evaluation Criteria
@@ -206,6 +207,7 @@ Client → FastAPI (main.py)
 - **LLM backend abstraction**: `LLMClientFactory.create_client(backend)` with `LLM_BACKEND` env var (`ollama|zhipu`; `llama_cpp` deprecated)
 - **Hybrid dispatch**: `hybrid_mode` config (`local_only|hybrid_auto|cloud_only`) with confidence-based fallback (`local_confidence_threshold: 0.75`)
 - **Memory guard**: `MEMORY_GUARD_LIMIT_MB` setting triggers GC or request rejection
+- **Intent workflow lifecycle**: Initialized in `main.py` `lifespan()` via `initialize_intent_routes()` — required for `/api/intent/classify` endpoint to work
 
 ### Database Schema
 
@@ -219,6 +221,10 @@ PostgreSQL 14+ with pgvector extension. Schema managed via `backend/init_databas
 ### Frontend
 
 Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[...path]/route.ts`. Run with `make frontend-dev`.
+
+**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, Data Dashboard, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`).
+
+**Data Analysis page** (`/data-analysis`): Results displayed in stacked `.result-stack` layout with `CollapsibleCode` component (`<details>/<summary>` + `react-syntax-highlighter` Prism). Generated Python code and JSON responses are collapsible with syntax highlighting and max-height scroll. E2E selectors in `run_data_analysis_browser_e2e.py` query `.result-stack details` by summary text.
 
 ## Configuration
 
