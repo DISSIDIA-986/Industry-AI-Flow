@@ -399,12 +399,26 @@ def _wait_for_complete(max_wait: int = 180) -> tuple[bool, str]:
 def _read_result_payload() -> dict[str, Any]:
     js = r"""
 (() => {
-  const sections = Array.from(document.querySelectorAll('.result-grid > div'));
-  const section = sections[0];
   const payload = { ok: true, result_text: '', error_text: '', parse_error: '' };
-  if (section) {
-    const pre = section.querySelector('pre');
-    payload.result_text = pre ? (pre.textContent || '').trim() : '';
+  // New layout: JSON is inside <details> with title "Full Response (JSON)"
+  const details = Array.from(document.querySelectorAll('.result-stack details'));
+  for (const d of details) {
+    const summary = d.querySelector('summary');
+    if (summary && summary.textContent.includes('Full Response')) {
+      d.open = true;
+      const code = d.querySelector('code') || d.querySelector('pre');
+      payload.result_text = code ? (code.textContent || '').trim() : '';
+      break;
+    }
+  }
+  // Fallback: legacy .result-grid layout
+  if (!payload.result_text) {
+    const sections = Array.from(document.querySelectorAll('.result-grid > div'));
+    const section = sections[0];
+    if (section) {
+      const pre = section.querySelector('pre');
+      payload.result_text = pre ? (pre.textContent || '').trim() : '';
+    }
   }
   const err = document.querySelector('p.error-text');
   if (err) payload.error_text = (err.textContent || '').trim();
@@ -425,12 +439,26 @@ def _read_result_payload() -> dict[str, Any]:
 def _read_viz_payload() -> dict[str, Any]:
     js = r"""
 (() => {
-  const sections = Array.from(document.querySelectorAll('.result-grid > div'));
-  const section = sections[1];
   const payload = { ok: true, result_text: '', error_text: '', parse_error: '' };
-  if (section) {
-    const pre = section.querySelector('pre');
-    payload.result_text = pre ? (pre.textContent || '').trim() : '';
+  // New layout: JSON is inside <details> with title "Visualization Response (JSON)"
+  const details = Array.from(document.querySelectorAll('.result-stack details'));
+  for (const d of details) {
+    const summary = d.querySelector('summary');
+    if (summary && summary.textContent.includes('Visualization Response')) {
+      d.open = true;
+      const code = d.querySelector('code') || d.querySelector('pre');
+      payload.result_text = code ? (code.textContent || '').trim() : '';
+      break;
+    }
+  }
+  // Fallback: legacy .result-grid layout
+  if (!payload.result_text) {
+    const sections = Array.from(document.querySelectorAll('.result-grid > div'));
+    const section = sections[1];
+    if (section) {
+      const pre = section.querySelector('pre');
+      payload.result_text = pre ? (pre.textContent || '').trim() : '';
+    }
   }
   const err = document.querySelector('p.error-text');
   if (err) payload.error_text = (err.textContent || '').trim();
