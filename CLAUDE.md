@@ -9,7 +9,7 @@ Industry AI Flow is a **SAIT Capstone project** (Integrated AI program) — a co
 **The system has three core capabilities, all of which must work flawlessly during the Capstone Showcase demo:**
 
 ### 1. RAG Knowledge QA (Primary Feature)
-Users upload construction documents (PDF, images, CSV) → system vectorizes and stores in pgvector → users ask questions → system returns accurate, cited answers via hybrid retrieval (BM25 + vector + RRF + bge-reranker). Currently ~12 construction documents loaded.
+Users upload construction documents (PDF, images, CSV) → system vectorizes and stores in pgvector → users ask questions → system returns accurate, cited answers via hybrid retrieval (BM25 + vector + RRF + bge-reranker). Currently 28 construction documents loaded (21 processed, 7 missing).
 
 ### 2. Construction Cost Estimation (ML Prediction)
 Uses a partner-provided construction cost dataset with Ridge regression to predict project cost overruns. Standard supervised learning on structured data (features: project_type, sqft, floors, location, contractor_rating, risk_score, etc.).
@@ -225,7 +225,7 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 
 **Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, Data Dashboard, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
 
-**Data Analysis page** (`/data-analysis`): Results displayed in stacked `.result-stack` layout with `CollapsibleCode` component (`<details>/<summary>` + `react-syntax-highlighter` Prism). Generated Python code and JSON responses are collapsible with syntax highlighting and max-height scroll. E2E selectors in `run_data_analysis_browser_e2e.py` query `.result-stack details` by summary text.
+**Data Analysis page** (`/data-analysis`): "Include Visualization" toggle replaces old "3) Generate Visualization" button — one click runs analysis + optional visualization. 8 chart types (line, bar, scatter, histogram, box, heatmap, violin, pie). Chart Type dropdown only visible when toggle is ON. Backend `/api/v1/data/analyze` accepts `generate_visualization` and `chart_type` params. Results use `CollapsibleCode` for Generated Code (`generated_code_preview` fallback), Analysis Output (`raw_output` fallback), and Full Response JSON. Pre-filled path: `tips.csv` (not full path — sanitizer rejects `/`). E2E selectors in `run_data_analysis_browser_e2e.py` use checkbox selector for viz toggle.
 
 ## Configuration
 
