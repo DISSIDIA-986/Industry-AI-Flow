@@ -465,18 +465,18 @@ def _load_uploaded_documents(
             }
         )
 
-    if docs:
-        return docs
-
-    # Fallback: when metadata index has no rows for the default tenant,
-    # expose already-indexed vectorstore documents as read-only list items.
+    # Merge with vectorstore-indexed documents so pre-loaded seed docs
+    # remain visible even after a user uploads new files.
     default_tenant_id = (
         settings.default_tenant_id
         if settings and settings.default_tenant_id
         else "public"
     )
     if tenant_id == default_tenant_id:
-        return _load_indexed_documents_fallback(limit=200)
+        uploaded_names = {d["name"].lower() for d in docs}
+        for indexed_doc in _load_indexed_documents_fallback(limit=200):
+            if indexed_doc["name"].lower() not in uploaded_names:
+                docs.append(indexed_doc)
 
     return docs
 
@@ -955,11 +955,65 @@ async def upload_document(
                 detail="Document upload failed: metadata persistence error",
             ) from exc
 
+        # Auto-vectorize: extract → chunk → embed → store in pgvector
+        vectorized = False
+        try:
+            from backend.services.document_processing.document_extractor import (
+                DocumentExtractor,
+            )
+            from backend.services.core.chunker import chunk_text
+            from backend.services.core.embedder import embed_texts
+            from backend.services.core.vectorstore import VectorStore
+
+            extractor = DocumentExtractor(use_ocr=True)
+            doc_content = extractor.extract(file_path)
+            text = doc_content.text
+            if text and len(text.strip()) > 10:
+                chunks = chunk_text(
+                    text,
+                    chunk_size=settings.chunk_size,
+                    chunk_overlap=settings.chunk_overlap,
+                )
+                chunk_contents = [c["content"] for c in chunks]
+                if chunk_contents:
+                    embeddings = embed_texts(chunk_contents)
+                    vs = VectorStore()
+                    doc_id = vs.store_document_with_chunks(
+                        filename=safe_name,
+                        filepath=file_path,
+                        chunks=chunk_contents,
+                        embeddings=embeddings,
+                        size_bytes=len(content),
+                    )
+                    payload["doc_id"] = doc_id
+                    payload["chunk_count"] = len(chunk_contents)
+                    payload["message"] = (
+                        f"Document uploaded and vectorized ({len(chunk_contents)} chunks)."
+                    )
+                    vectorized = True
+                    logger.info(
+                        "Document vectorized: %s → %d chunks (doc_id=%s)",
+                        safe_name,
+                        len(chunk_contents),
+                        doc_id,
+                    )
+        except Exception as vec_exc:
+            logger.warning(
+                "Auto-vectorization failed for %s (upload still succeeded): %s",
+                safe_name,
+                vec_exc,
+            )
+            payload["vectorization_error"] = str(vec_exc)
+
         log_audit(
             action="document.upload",
             tenant=tenant,
             status="success",
-            detail={"filename": safe_name, "size": len(content)},
+            detail={
+                "filename": safe_name,
+                "size": len(content),
+                "vectorized": vectorized,
+            },
         )
         _run_documents_cleanup_if_due()
         return payload

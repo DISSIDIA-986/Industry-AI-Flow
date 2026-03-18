@@ -184,54 +184,107 @@ async def delete_document(
     soft_delete: bool = True,
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """
-    EN
+    """Delete a document — cleans up uploaded_documents_index, vector data, and disk file."""
+    import re
+    from pathlib import Path
 
-    Args:
-        doc_id: ENID
-        reason: EN
-        soft_delete: EN
-
-    Returns:
-        EN
-    """
     try:
         if not settings.enable_document_deletion:
             raise HTTPException(status_code=403, detail="Document deletion is disabled")
 
-        doc_manager = get_document_manager()
-        success = doc_manager.delete_document(
-            doc_id=doc_id, reason=reason, soft_delete=soft_delete
-        )
+        deleted_sources: list[str] = []
+        tenant_id = tenant.tenant_id
+        conn = VectorStore().get_connection()
+        cur = conn.cursor()
 
-        if success:
-            delete_type = "soft deleted" if soft_delete else "permanently deleted"
-            logger.info(f"Document {doc_id} {delete_type} successfully")
-            _log_document_event(
-                action="document.delete",
-                tenant=tenant,
-                status="success",
-                detail={"doc_id": doc_id, "soft_delete": soft_delete},
+        try:
+            # 1. Clean uploaded_documents_index
+            file_path_to_remove: str | None = None
+            cur.execute(
+                "SELECT file_path, original_filename FROM uploaded_documents_index "
+                "WHERE id = %s AND tenant_id = %s",
+                (doc_id, tenant_id),
             )
-            return {
-                "success": True,
-                "message": f"Document {delete_type} successfully",
-                "doc_id": doc_id,
-                "delete_type": delete_type,
-            }
-        else:
-            logger.warning(f"Failed to delete document {doc_id}")
+            upload_row = cur.fetchone()
+            if upload_row:
+                file_path_to_remove = upload_row[0]
+                cur.execute(
+                    "DELETE FROM uploaded_documents_index WHERE id = %s AND tenant_id = %s",
+                    (doc_id, tenant_id),
+                )
+                deleted_sources.append("uploaded_index")
+
+            # 2. Try direct match in documents table (UUID-based doc_id)
+            cur.execute("SELECT id, filepath FROM documents WHERE id = %s", (doc_id,))
+            doc_row = cur.fetchone()
+            if doc_row:
+                if not file_path_to_remove:
+                    file_path_to_remove = doc_row[1]
+                cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (doc_id,))
+                cur.execute("DELETE FROM documents WHERE id = %s", (doc_id,))
+                deleted_sources.append("vector_index")
+
+            # 3. For uploaded_index IDs (doc-xxx), find vector data by matching filename
+            if "vector_index" not in deleted_sources and file_path_to_remove:
+                fname = Path(file_path_to_remove).name
+                clean_name = re.sub(r"_[a-f0-9]{12}(\.\w+)$", r"\1", fname)
+                cur.execute("SELECT id FROM documents WHERE filename = %s", (clean_name,))
+                vec_row = cur.fetchone()
+                if vec_row:
+                    vec_doc_id = vec_row[0]
+                    cur.execute("DELETE FROM document_chunks WHERE doc_id = %s", (vec_doc_id,))
+                    cur.execute("DELETE FROM documents WHERE id = %s", (vec_doc_id,))
+                    deleted_sources.append("vector_index")
+
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
+
+        # 4. Remove file from disk
+        if file_path_to_remove:
+            try:
+                fp = Path(file_path_to_remove)
+                if fp.exists():
+                    os.unlink(fp)
+                    deleted_sources.append("disk")
+            except Exception as exc:
+                logger.warning("Failed to remove file %s: %s", file_path_to_remove, exc)
+
+        if not deleted_sources:
+            # Fall back to DocumentManager for legacy documents
+            doc_manager = get_document_manager()
+            success = doc_manager.delete_document(
+                doc_id=doc_id, reason=reason, soft_delete=soft_delete
+            )
+            if success:
+                deleted_sources.append("vector_index")
+
+        if not deleted_sources:
             _log_document_event(
                 action="document.delete",
                 tenant=tenant,
                 status="error",
-                detail={"doc_id": doc_id, "reason": "delete_failed"},
+                detail={"doc_id": doc_id, "reason": "not_found"},
             )
-            return {
-                "success": False,
-                "message": "Failed to delete document",
-                "doc_id": doc_id,
-            }
+            return {"success": False, "message": "Document not found", "doc_id": doc_id}
+
+        logger.info("Document %s deleted from: %s", doc_id, deleted_sources)
+        _log_document_event(
+            action="document.delete",
+            tenant=tenant,
+            status="success",
+            detail={"doc_id": doc_id, "deleted_from": deleted_sources},
+        )
+        return {
+            "success": True,
+            "message": f"Document deleted from: {', '.join(deleted_sources)}",
+            "doc_id": doc_id,
+            "deleted_from": deleted_sources,
+        }
 
     except HTTPException:
         _log_document_event(
