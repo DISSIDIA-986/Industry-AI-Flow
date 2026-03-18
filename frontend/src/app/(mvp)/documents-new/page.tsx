@@ -322,7 +322,7 @@ export default function DocumentsPage() {
                 <div className="space-y-4">
                   <FileUpload
                     onFilesSelected={handleFileSelect}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.jpg,.jpeg,.png"
                     maxSize={50 * 1024 * 1024} // 50MB
                     multiple
                   />

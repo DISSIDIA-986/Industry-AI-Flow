@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Document {
   id: string
@@ -11,44 +11,43 @@ interface Document {
   status: 'processed' | 'processing' | 'error'
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${bytes} B`
+}
+
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: '1',
-      name: 'Construction Cost Estimating Guide.pdf',
-      type: 'PDF',
-      size: '2.4 MB',
-      uploadedAt: new Date('2026-02-13'),
-      status: 'processed'
-    },
-    {
-      id: '2',
-      name: 'Project Risk Assessment Report.docx',
-      type: 'Word',
-      size: '1.8 MB',
-      uploadedAt: new Date('2026-02-12'),
-      status: 'processed'
-    },
-    {
-      id: '3',
-      name: 'construction schedule.xlsx',
-      type: 'Excel',
-      size: '3.2 MB',
-      uploadedAt: new Date('2026-02-11'),
-      status: 'processed'
-    },
-    {
-      id: '4',
-      name: 'Material cost data.csv',
-      type: 'CSV',
-      size: '850 KB',
-      uploadedAt: new Date('2026-02-10'),
-      status: 'processing'
-    }
-  ])
-  
+  const [documents, setDocuments] = useState<Document[]>([])
   const [uploading, setUploading] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const { documentApi } = await import('@/lib/api-client')
+      const docs = await documentApi.getDocuments()
+      const mapped: Document[] = docs.map((doc: Record<string, unknown>) => ({
+        id: String(doc.file_id || doc.id || ''),
+        name: String(doc.filename || doc.name || ''),
+        type: String(doc.filename || doc.name || '').split('.').pop()?.toUpperCase() || 'FILE',
+        size: typeof doc.size_bytes === 'number'
+          ? formatFileSize(doc.size_bytes as number)
+          : String(doc.size || doc.size_bytes || '0 B'),
+        uploadedAt: new Date(String(doc.created_at || doc.uploadedAt || new Date())),
+        status: 'processed' as const,
+      }))
+      setDocuments(mapped)
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -59,45 +58,19 @@ export default function DocumentsPage() {
     if (selectedFiles.length === 0) return
 
     setUploading(true)
-    
+
     try {
-      // useAPIClient upload documents
       const { documentApi } = await import('@/lib/api-client')
-      const response = await documentApi.uploadDocuments(selectedFiles)
-      
-      // Add new document to list
-      const newDocuments: Document[] = response.documents.map((doc: {
-        id: string
-        name: string
-        type: string
-        size: string
-        uploadedAt: string
-        status: Document['status']
-      }) => ({
-        id: doc.id,
-        name: doc.name,
-        type: doc.type,
-        size: doc.size,
-        uploadedAt: new Date(doc.uploadedAt),
-        status: doc.status
-      }))
-      
-      setDocuments(prev => [...newDocuments, ...prev])
+      await documentApi.uploadDocuments(selectedFiles)
       setSelectedFiles([])
-      
+
       // Clear file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement
       if (fileInput) fileInput.value = ''
-      
-      // Simulate document processing status updates
-      setTimeout(() => {
-        setDocuments(prev => prev.map(doc => 
-          newDocuments.some(newDoc => newDoc.id === doc.id) 
-            ? { ...doc, status: 'processed' as const }
-            : doc
-        ))
-      }, 3000)
-      
+
+      // Refetch the full document list from backend
+      await fetchDocuments()
+
     } catch (error) {
       console.error('Upload error:', error)
       alert('File upload failed, please try again')
@@ -106,9 +79,15 @@ export default function DocumentsPage() {
     }
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this document?')) {
-      setDocuments(prev => prev.filter(doc => doc.id !== id))
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return
+    try {
+      const { documentApi } = await import('@/lib/api-client')
+      await documentApi.deleteDocument(id)
+      await fetchDocuments()
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete document')
     }
   }
 
@@ -139,7 +118,7 @@ export default function DocumentsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
         <p className="text-gray-600 mt-2">
-          Upload and manage your project documents. Supports PDF, Word, Excel, and CSV formats.
+          Upload and manage your project documents. Supports PDF, Word, Excel, CSV, TXT, and Markdown formats.
         </p>
       </div>
 
@@ -148,7 +127,7 @@ export default function DocumentsPage() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="font-medium text-gray-900 mb-4">Upload documents</h3>
-            
+
             <div className="space-y-4">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
                 <input
@@ -157,7 +136,7 @@ export default function DocumentsPage() {
                   multiple
                   onChange={handleFileSelect}
                   className="hidden"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
@@ -169,7 +148,7 @@ export default function DocumentsPage() {
                     Click to select file or drag and drop here
                   </div>
                   <div className="text-sm text-gray-500 mt-2">
-                    support PDF, Word, Excel, CSV, TXT
+                    support PDF, Word, Excel, CSV, TXT, Markdown
                   </div>
                 </label>
               </div>
@@ -221,7 +200,7 @@ export default function DocumentsPage() {
               <div className="flex justify-between items-center">
                 <h3 className="font-medium text-gray-900">Document list</h3>
                 <div className="text-sm text-gray-500">
-                  common {documents.length} documents
+                  {loading ? 'Loading...' : `${documents.length} documents`}
                 </div>
               </div>
             </div>
@@ -301,7 +280,7 @@ export default function DocumentsPage() {
               </table>
             </div>
 
-            {documents.length === 0 && (
+            {!loading && documents.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-gray-400 mb-2">No document yet</div>
                 <div className="text-sm text-gray-500">
@@ -328,7 +307,7 @@ export default function DocumentsPage() {
               <div className="text-2xl font-bold text-blue-600">
                 {documents.reduce((total, doc) => {
                   const size = parseFloat(doc.size)
-                  return total + size
+                  return total + (isNaN(size) ? 0 : size)
                 }, 0).toFixed(1)} MB
               </div>
             </div>
