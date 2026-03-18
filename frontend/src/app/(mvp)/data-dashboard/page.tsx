@@ -1,35 +1,80 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { 
-  LineChartComponent, BarChartComponent, PieChartComponent, 
-  AreaChartComponent, RadarChartComponent,
+import { useState, useEffect, useCallback } from 'react'
+import {
+  BarChartComponent, PieChartComponent,
   MetricCard, DataTable
 } from '@/components/charts'
-import { dataApi } from '@/lib/data-generator'
+
+interface LlmProviderUsage {
+  provider: string
+  model: string
+  request_count: number
+  total_tokens: number
+  total_cost_usd: number
+}
 
 export default function DataDashboardPage() {
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<any>(null)
-  const [timeRange, setTimeRange] = useState('monthly')
+  const [docStats, setDocStats] = useState<Record<string, unknown>>({})
+  const [llmSummary, setLlmSummary] = useState<LlmProviderUsage[]>([])
+  const [llmTotals, setLlmTotals] = useState({ requests: 0, tokens: 0, cost: 0 })
+  const [costModelStats, setCostModelStats] = useState<Record<string, unknown>>({})
+  const [documents, setDocuments] = useState<Array<Record<string, unknown>>>([])
 
-  useEffect(() => {
-    loadData()
-  }, [timeRange])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const allData = await dataApi.getAllData()
-      setData(allData)
+      const { dashboardApi, documentApi } = await import('@/lib/api-client')
+
+      const results = await Promise.allSettled([
+        dashboardApi.getDocumentStats(),
+        dashboardApi.getLlmUsage(30),
+        dashboardApi.getCostEstimationHealth(),
+        documentApi.getDocuments(),
+      ])
+
+      // Document stats
+      if (results[0].status === 'fulfilled') {
+        setDocStats(results[0].value as Record<string, unknown>)
+      }
+
+      // LLM usage
+      if (results[1].status === 'fulfilled') {
+        const usage = results[1].value as Record<string, unknown>
+        const summary = (Array.isArray(usage.summary) ? usage.summary : []) as LlmProviderUsage[]
+        setLlmSummary(summary)
+        const totals = (usage.totals || {}) as Record<string, number>
+        setLlmTotals({
+          requests: totals.request_count || 0,
+          tokens: totals.total_tokens || 0,
+          cost: totals.total_cost_usd || 0,
+        })
+      }
+
+      // Cost model health
+      if (results[2].status === 'fulfilled') {
+        const health = results[2].value as Record<string, unknown>
+        const model = (health.model || {}) as Record<string, unknown>
+        setCostModelStats(model)
+      }
+
+      // Document list
+      if (results[3].status === 'fulfilled') {
+        setDocuments(results[3].value as Array<Record<string, unknown>>)
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  if (loading || !data) {
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
@@ -47,182 +92,184 @@ export default function DataDashboardPage() {
     )
   }
 
+  // Derive chart data from real backend data
+  const docTypeDistribution = deriveDocTypeDistribution(documents)
+  const llmProviderDistribution = llmSummary.map((s) => ({
+    name: `${s.provider}/${s.model}`,
+    value: s.request_count,
+  }))
+  const llmCostDistribution = llmSummary
+    .filter((s) => s.total_cost_usd > 0)
+    .map((s) => ({
+      name: `${s.provider}/${s.model}`,
+      value: Number(s.total_cost_usd.toFixed(4)),
+    }))
+
+  // Cost model metrics
+  const modelMetrics = (costModelStats.metrics || {}) as Record<string, unknown>
+  const crossVal = (modelMetrics.cross_validation || {}) as Record<string, unknown>
+  const actualCost = (crossVal.actual_cost || {}) as Record<string, number>
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Title and time filter */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Data Analysis Dashboard</h1>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setTimeRange('daily')}
-              className={`px-4 py-2 rounded-lg ${timeRange === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-            >
-              Daily
-            </button>
-            <button
-              onClick={() => setTimeRange('weekly')}
-              className={`px-4 py-2 rounded-lg ${timeRange === 'weekly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-            >
-              Weekly
-            </button>
-            <button
-              onClick={() => setTimeRange('monthly')}
-              className={`px-4 py-2 rounded-lg ${timeRange === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-            >
-              Monthly
-            </button>
-          </div>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Refresh
+          </button>
         </div>
 
-        {/* KPI indicator card */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Total Projects"
-            value={data.kpiMetrics.totalProjects}
-            change="+12%"
+            title="Documents"
+            value={Number(docStats.total_documents || documents.length || 0)}
+            change={`${Number(docStats.total_chunks || 0).toLocaleString()} chunks`}
           />
           <MetricCard
-            title="Active projects"
-            value={data.kpiMetrics.activeProjects}
-            change="+5%"
+            title="LLM Requests"
+            value={llmTotals.requests}
+            change="Last 30 days"
           />
           <MetricCard
-            title="Budget Utilization"
-            value={`${data.kpiMetrics.budgetUtilization}%`}
-            change="+3.2%"
+            title="Total Tokens"
+            value={llmTotals.tokens.toLocaleString()}
+            change="Last 30 days"
           />
           <MetricCard
-            title="Risk Score"
-            value={`${data.kpiMetrics.riskScore}/100`}
-            change="-8%"
+            title="API Cost"
+            value={`$${llmTotals.cost.toFixed(2)}`}
+            change="Cloud LLM spend"
           />
         </div>
 
-        {/* First row chart */}
+        {/* Charts row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Cost trend chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Trend Analysis</h2>
-            <LineChartComponent
-              data={data.timeSeries}
-              title="Monthly Cost Changes"
-              height={300}
-            />
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Document Type Distribution</h2>
+            {docTypeDistribution.length > 0 ? (
+              <PieChartComponent
+                data={docTypeDistribution}
+                title="By file type"
+                height={300}
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                No documents indexed
+              </div>
+            )}
           </div>
 
-          {/* Project type distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Project type distribution</h2>
-            <PieChartComponent
-              data={data.category}
-              title="Proportion of project types"
-              height={300}
-            />
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">LLM Usage by Provider</h2>
+            {llmProviderDistribution.length > 0 ? (
+              <BarChartComponent
+                data={llmProviderDistribution}
+                title="Requests per provider/model"
+                height={300}
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                No LLM usage data
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Second row of charts */}
+        {/* Charts row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Cost composition analysis */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Breakdown Analysis</h2>
-            <BarChartComponent
-              data={data.costDistribution}
-              title="Cost Breakdown by Category"
-              height={300}
-            />
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">LLM Cost Breakdown</h2>
+            {llmCostDistribution.length > 0 ? (
+              <BarChartComponent
+                data={llmCostDistribution}
+                title="Cost (USD) per provider"
+                height={300}
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                No cost data (local LLM is free)
+              </div>
+            )}
           </div>
 
-          {/* Risk Assessment Radar Chart */}
+          {/* Cost Estimation Model Stats */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Risk Assessment</h2>
-            <RadarChartComponent
-              data={data.riskData}
-              title="Risk Dimension Assessment"
-              height={300}
-            />
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Estimation Model</h2>
+            {costModelStats.loaded ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500">Training Rows</div>
+                    <div className="text-lg font-bold">{Number(costModelStats.training_rows || 0).toLocaleString()}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500">R² Score</div>
+                    <div className="text-lg font-bold">{(actualCost.r2 ?? 0).toFixed(3)}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500">MAPE</div>
+                    <div className="text-lg font-bold">{((actualCost.mape ?? 0) * 100).toFixed(1)}%</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500">Ridge Alpha</div>
+                    <div className="text-lg font-bold">{String(costModelStats.ridge_alpha ?? 'N/A')}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                  Cross-validated on {String(crossVal.folds ?? 0)} folds
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                Cost model not loaded
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Real-time monitoring */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Real-Time System Monitoring</h2>
-            <div className="text-sm text-gray-500">Last 24 Hours</div>
-          </div>
-          <AreaChartComponent
-            data={data.realTimeData}
-            title="System activity trends"
-            height={250}
-          />
-        </div>
-
-        {/* Project data form */}
+        {/* Document table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Project Progress Details</h2>
-            <button
-              onClick={loadData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              Refresh data
-            </button>
-          </div>
-          <DataTable
-            data={data.projectProgress}
-            columns={[
-              { key: 'name', label: 'Project Name' },
-              { key: 'progress', label: 'Progress', format: (value) => `${value}%` },
-              { key: 'budget', label: 'Budget', format: (value) => `$${value.toLocaleString()}` },
-              { key: 'spent', label: 'Spent', format: (value) => `$${value.toLocaleString()}` },
-              { key: 'timeline', label: 'Timeline', format: (value) => `${value} months` }
-            ]}
-          />
-        </div>
-
-        {/* Cost estimate comparison */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Cost Estimation Method Comparison</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {data.costComparison.map((item: any, index: number) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${item.estimate.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${item.actual.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.variance >= 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                        {item.variance >= 0 ? '+' : ''}{item.variance}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {Math.round(100 - Math.abs(item.variance))}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 text-sm text-gray-500">
-            * AI Prediction methods show the highest accuracy in cost estimation
-          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Document Index</h2>
+          {documents.length > 0 ? (
+            <DataTable
+              data={documents.map((d) => ({
+                name: String(d.name || d.filename || ''),
+                type: String(d.type || ''),
+                size: typeof d.size === 'number'
+                  ? `${(d.size / 1024 / 1024).toFixed(2)} MB`
+                  : String(d.size || ''),
+                status: String(d.status || 'unknown'),
+                source: String(d.source || ''),
+              }))}
+              columns={[
+                { key: 'name', label: 'Filename' },
+                { key: 'type', label: 'Type' },
+                { key: 'size', label: 'Size' },
+                { key: 'status', label: 'Status' },
+                { key: 'source', label: 'Source' },
+              ]}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-400">No documents found</div>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+function deriveDocTypeDistribution(docs: Array<Record<string, unknown>>): Array<{ name: string; value: number }> {
+  const counts: Record<string, number> = {}
+  for (const doc of docs) {
+    const ext = String(doc.type || 'UNKNOWN').toUpperCase()
+    counts[ext] = (counts[ext] || 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
 }
