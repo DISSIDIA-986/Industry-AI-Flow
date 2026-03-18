@@ -105,6 +105,10 @@ make test-release-gate              # Full pre-release validation (11 gates)
 make test-demo-smoke-gate           # CI-friendly smoke (no Postgres/Ollama needed)
 make test-demo-smoke-live-gate      # Full integration smoke (needs Postgres/Ollama)
 
+# Data Analysis E2E (5 public datasets, needs Docker or E2B + cloud LLM)
+python scripts/testing/run_data_analysis_dataset_e2e.py   # API-level, 11 prompts
+python scripts/testing/run_data_analysis_browser_e2e.py   # Browser (agent-browser), 5 cases
+
 # Code quality
 make format                         # black + isort
 make lint                           # flake8 + mypy (strict mode)
