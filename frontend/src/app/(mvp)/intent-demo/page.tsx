@@ -109,7 +109,12 @@ export default function IntentDemoPage() {
         ...prev.slice(0, 9),
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Classification failed");
+      const msg = err instanceof Error ? err.message : "Classification failed";
+      if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort")) {
+        setError("Classification timed out. The cloud LLM may be slow — please try again.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsClassifying(false);
     }
@@ -162,6 +167,15 @@ export default function IntentDemoPage() {
                 {isClassifying ? "..." : "Go"}
               </button>
             </div>
+            {isClassifying && (
+              <div className="mt-2 flex items-center space-x-2 text-xs text-blue-600">
+                <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span>Classifying via cloud LLM... this may take up to 60 seconds.</span>
+              </div>
+            )}
             {error && (
               <div className="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
             )}

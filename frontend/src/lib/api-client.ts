@@ -869,7 +869,7 @@ export const intentApi = {
       method: 'POST',
       config,
       body: request,
-      timeoutMs: 30_000,
+      timeoutMs: 90_000,
     })
   },
 
