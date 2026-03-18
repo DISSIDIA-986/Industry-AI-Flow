@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useAppConfig } from "@/components/app-config-context";
+import CollapsibleCode from "@/components/CollapsibleCode";
 import {
   generateVisualization,
   runDataAnalysis,
@@ -55,7 +56,7 @@ function basename(rawPath: string): string {
 export default function DataAnalysisPage() {
   const { config } = useAppConfig();
   const [file, setFile] = useState<File | null>(null);
-  const [uploadedPath, setUploadedPath] = useState("");
+  const [uploadedPath, setUploadedPath] = useState("test_resources/datasets/e2e_public/tips.csv");
   const [analysisType, setAnalysisType] = useState("eda");
   const [chartType, setChartType] = useState("line");
   const [instruction, setInstruction] = useState(
@@ -217,24 +218,46 @@ export default function DataAnalysisPage() {
 
         {error ? <p className="error-text">{error}</p> : null}
 
-        <div className="result-grid">
-          <div>
-            <p className="result-label">Analysis Result</p>
-            {analysisSummary.length ? (
-              <div className="kv-grid">
-                {analysisSummary.map(([key, value]) => (
-                  <div key={key} className="kv-item">
-                    <span>{key}</span>
-                    <strong>{String(value)}</strong>
-                  </div>
-                ))}
+        {(result || viz) && (
+          <div className="result-stack">
+            {/* Status banner */}
+            {result && (
+              <div
+                className={`status-banner ${
+                  result.status === "error" || result.error ? "error" : "success"
+                }`}
+              >
+                {result.status === "error" || result.error ? "Error" : "Analysis Complete"}
+                {typeof result.analysis_type === "string" && ` — ${result.analysis_type}`}
+                {typeof result.code_gen_mode === "string" && ` (${result.code_gen_mode})`}
               </div>
-            ) : null}
-            <pre>{result ? JSON.stringify(result, null, 2) : "No analysis result yet"}</pre>
-          </div>
-          <div>
-            <p className="result-label">Visualization Result</p>
-            {visualizationAsset ? (
+            )}
+
+            {/* Answer / summary text */}
+            {typeof result?.answer === "string" && result.answer && (
+              <div className="artifact-card">
+                <p className="result-label">Summary</p>
+                <p style={{ marginTop: "0.35rem" }}>{result.answer as string}</p>
+              </div>
+            )}
+
+            {/* Key metrics */}
+            {analysisSummary.length > 0 && (
+              <div>
+                <p className="result-label">Key Metrics</p>
+                <div className="kv-grid">
+                  {analysisSummary.map(([key, value]) => (
+                    <div key={key} className="kv-item">
+                      <span>{key}</span>
+                      <strong>{String(value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Visualization image */}
+            {visualizationAsset && (
               <div className="artifact-card">
                 <p className="muted-text">Artifact: {visualizationAsset.filename}</p>
                 {visualizationAsset.isImage ? (
@@ -255,10 +278,45 @@ export default function DataAnalysisPage() {
                   </a>
                 )}
               </div>
-            ) : null}
-            <pre>{viz ? JSON.stringify(viz, null, 2) : "No visualization result yet"}</pre>
+            )}
+
+            {/* Generated code (collapsed) */}
+            {typeof result?.generated_code === "string" && result.generated_code && (
+              <CollapsibleCode
+                title="Generated Code"
+                code={result.generated_code as string}
+                language="python"
+              />
+            )}
+
+            {/* Analysis output (collapsed) */}
+            {typeof result?.output === "string" && result.output && (
+              <CollapsibleCode
+                title="Analysis Output"
+                code={result.output as string}
+                language="json"
+              />
+            )}
+
+            {/* Full analysis response (collapsed) */}
+            {result && (
+              <CollapsibleCode
+                title="Full Response (JSON)"
+                code={JSON.stringify(result, null, 2)}
+                language="json"
+              />
+            )}
+
+            {/* Full visualization response (collapsed) */}
+            {viz && (
+              <CollapsibleCode
+                title="Visualization Response (JSON)"
+                code={JSON.stringify(viz, null, 2)}
+                language="json"
+              />
+            )}
           </div>
-        </div>
+        )}
       </article>
     </section>
   );

@@ -649,6 +649,77 @@ td {
   text-decoration: underline;
 }
 
+/* Collapsible code sections (Data Analysis page) */
+.collapsible-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.collapsible-section summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.collapsible-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-section summary::before {
+  content: "▸";
+  font-size: 0.75rem;
+  transition: transform 180ms ease;
+}
+
+.collapsible-section[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.collapsible-section summary:hover {
+  background: var(--bg-accent);
+}
+
+.code-scroll {
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.status-banner.success {
+  background: #def7e9;
+  color: var(--ok);
+}
+
+.status-banner.error {
+  background: #f8ddd9;
+  color: var(--warn);
+}
+
+.result-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
 @media (max-width: 760px) {
   .form-grid.two-col,
   .result-grid,
