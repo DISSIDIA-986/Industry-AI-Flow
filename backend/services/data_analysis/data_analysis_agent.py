@@ -42,7 +42,7 @@ class DataAnalysisAgent:
         else:
             try:
                 self.llm_client = LLMClientFactory.create_client(
-                    backend=settings.resolved_local_backend
+                    backend=settings.resolved_cloud_provider
                 )
             except Exception as exc:
                 logger.warning(
@@ -319,7 +319,7 @@ class DataAnalysisAgent:
             logger.error(f"LLM code generation failed: {e}")
 
         # Cloud LLM dual fallback: try alternate cloud providers before template.
-        for fallback_backend in ("zhipu", "gemini"):
+        for fallback_backend in ("zhipu", "groq"):
             if (
                 self.llm_client is not None
                 and getattr(self.llm_client, "backend", None) == fallback_backend

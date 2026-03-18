@@ -32,8 +32,13 @@ class CostTracker:
         "llama_cpp": {"*": (0.0, 0.0)},
         "ollama": {"*": (0.0, 0.0)},
         "zhipu": {
+            "glm-4.7": (2.0, 8.0),
             "glm-4-plus": (2.0, 8.0),
             "*": (2.0, 8.0),
+        },
+        "groq": {
+            "llama-3.3-70b-versatile": (0.0, 0.0),  # Free tier
+            "*": (0.0, 0.0),
         },
     }
 

@@ -57,7 +57,15 @@ class Settings(BaseSettings):
     zhipu_base_url: str = os.getenv(
         "ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/anthropic"
     )
-    zhipu_model: str = os.getenv("ZHIPU_MODEL", "glm-4-plus")
+    zhipu_model: str = os.getenv("ZHIPU_MODEL", "glm-4.7")
+
+    # Groq cloud LLM (OpenAI-compatible)
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+    groq_base_url: str = os.getenv(
+        "GROQ_BASE_URL", "https://api.groq.com/openai"
+    )
+    groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
     api_timeout_ms: int = int(os.getenv("API_TIMEOUT_MS", "60000"))
 
     # LLM提供商选择（保持兼容）
@@ -164,7 +172,7 @@ class Settings(BaseSettings):
     )  # Whether to enable Docker sandbox
     code_execution_provider: str = os.getenv(
         "CODE_EXECUTION_PROVIDER", "docker"
-    )  # docker | auto | ppio
+    )  # docker | auto | ppio | e2b
     enable_ppio_code_execution: bool = (
         os.getenv("ENABLE_PPIO_CODE_EXECUTION", "false").lower() == "true"
     )
@@ -177,6 +185,15 @@ class Settings(BaseSettings):
     ppio_failure_threshold: int = int(os.getenv("PPIO_FAILURE_THRESHOLD", "3"))
     ppio_cooldown_seconds: int = int(os.getenv("PPIO_COOLDOWN_SECONDS", "30"))
     ppio_verify_tls: bool = os.getenv("PPIO_VERIFY_TLS", "true").lower() == "true"
+
+    # E2B cloud sandbox (e2b.dev)
+    enable_e2b_code_execution: bool = (
+        os.getenv("ENABLE_E2B_CODE_EXECUTION", "false").lower() == "true"
+    )
+    e2b_api_key: str = os.getenv("E2B_API_KEY", "")
+    e2b_timeout_seconds: int = int(os.getenv("E2B_TIMEOUT_SECONDS", "60"))
+    e2b_failure_threshold: int = int(os.getenv("E2B_FAILURE_THRESHOLD", "3"))
+    e2b_cooldown_seconds: int = int(os.getenv("E2B_COOLDOWN_SECONDS", "30"))
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
     )  # Docker image name
@@ -225,8 +242,7 @@ class Settings(BaseSettings):
         os.getenv("PROMPT_EXPERIMENTS_ENABLED", "false").lower() == "true"
     )
 
-    # API & Security
-    require_api_key: bool = os.getenv("REQUIRE_API_KEY", "true").lower() == "true"
+    # API & Security (require_api_key defined above with default=false)
     api_keys_raw: str = os.getenv("API_KEYS", "")
     api_key_header: str = os.getenv("API_KEY_HEADER", "X-API-Key")
     tenant_header: str = os.getenv("TENANT_HEADER", "X-Tenant-ID")
@@ -445,7 +461,7 @@ class Settings(BaseSettings):
         )
         for candidate in candidates:
             value = self._normalize_token(candidate)
-            if value in {"zhipu"}:
+            if value in {"zhipu", "groq"}:
                 return value
         return "zhipu"
 

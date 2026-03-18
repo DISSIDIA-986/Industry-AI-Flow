@@ -550,6 +550,50 @@ class DispatchService:
                 detail_extra={"error": error_message},
             )
 
+            # Cloud fallback chain: try secondary cloud provider before giving up.
+            secondary_providers = {"zhipu": "groq", "groq": "zhipu"}
+            secondary = secondary_providers.get(provider)
+            if secondary:
+                try:
+                    fallback_client = LLMClientFactory.create_client(
+                        backend=secondary
+                    )
+                    fallback_model = self._resolve_model_name(
+                        fallback_client, secondary
+                    )
+                    fallback_text = fallback_client.generate(
+                        redaction.text,
+                        temperature=req.temperature,
+                        max_tokens=req.max_tokens,
+                        top_p=req.top_p,
+                    )
+                    latency_ms = int((time.time() - started) * 1000)
+                    logger.info(
+                        "Cloud fallback to %s succeeded", secondary
+                    )
+                    record_llm_request(
+                        provider=secondary,
+                        route_mode=route_mode,
+                        status="success",
+                        latency_seconds=max(0.0, (time.time() - started)),
+                    )
+                    return DispatchResponse(
+                        success=True,
+                        text=fallback_text,
+                        provider=secondary,
+                        model=fallback_model,
+                        route_mode=route_mode,  # type: ignore[arg-type]
+                        trace_id=req.trace_id,
+                        latency_ms=latency_ms,
+                        confidence=self._estimate_confidence(fallback_text),
+                    )
+                except Exception as fallback_exc:
+                    logger.warning(
+                        "Cloud fallback %s also failed: %s",
+                        secondary,
+                        fallback_exc,
+                    )
+
             if route_mode == "hybrid_auto" and settings.fallback_on_error:
                 record_llm_fallback(reason="cloud_error")
                 if fallback_from_local is not None:
