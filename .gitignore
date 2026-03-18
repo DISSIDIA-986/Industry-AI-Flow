@@ -232,3 +232,13 @@ test_resources/documents/**/*.7z
 models/**/.cache/
 # Allow Claude agent skills documentation
 !claude/*.md
+
+# Claude Code local agent skills (project-specific tooling)
+.agents/
+
+# Backup CSV files
+docs/testing/*_backup*.csv
+docs/testing/*_old_backup*.csv
+
+# Binary presentation files (share via cloud storage)
+docs/presentation/*.pptx
