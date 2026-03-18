@@ -111,6 +111,28 @@ class E2BExecutionProvider:
             error_msg = None
             output_files: Dict[str, bytes] = {}
 
+            # Download generated files (charts, visualizations) from sandbox
+            _VIZ_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf"}
+            try:
+                for search_dir in ["/workspace"]:
+                    try:
+                        entries = sbx.files.list(search_dir)
+                    except Exception:
+                        continue
+                    for entry in entries:
+                        if not hasattr(entry, "name"):
+                            continue
+                        suffix = "." + entry.name.rsplit(".", 1)[-1].lower() if "." in entry.name else ""
+                        if suffix in _VIZ_EXTENSIONS:
+                            try:
+                                content = sbx.files.read(f"{search_dir}/{entry.name}", format="bytes")
+                                if content:
+                                    output_files[entry.name] = content
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
             if execution.error:
                 error_obj = execution.error
                 # ExecutionError has name, value, traceback attributes
