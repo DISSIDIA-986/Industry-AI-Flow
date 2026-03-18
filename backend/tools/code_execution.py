@@ -105,7 +105,7 @@ def code_execution_tool(
             "visualizations": [],
         }
 
-    # 一律先做静态安全校验，防止 manager 路径绕过校验。
+    # Always run static safety validation first, preventing bypass via manager path.
     validation = validate_code(code, strict_mode=True)
     if not validation.is_valid:
         return _validation_failure_payload(

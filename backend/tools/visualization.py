@@ -176,9 +176,11 @@ Hard requirements:
    CHART_INFO_JSON=<json>
    where <json> is json.dumps(chart_info, ensure_ascii=False)
 8. Do NOT use locals(), globals(), eval(), exec(), __import__(), open(), subprocess, os.system.
-9. Never raise exceptions when columns are missing; auto-fallback to available columns or frequency counts so one chart is still produced.
-10. Ensure chart_info values are JSON-serializable Python types.
-11. Return Python code only, no markdown fences or explanations.
+9. Do NOT use df.apply(), df.agg(), df.map(), df.transform(), df.pipe(), df.query(), df.eval() — these are blocked by the code validator. Use direct pandas operations instead (e.g., df.groupby(col)[y].mean(), df[col].value_counts(), df.pivot_table()).
+10. Never raise exceptions when columns are missing; auto-fallback to available columns or frequency counts so one chart is still produced.
+11. Ensure chart_info values are JSON-serializable Python types.
+12. Return Python code only, no markdown fences or explanations.
+13. All output text must be in English only. Do not use Chinese or any non-ASCII text in print statements or comments.
 """
 
     try:
@@ -295,7 +297,7 @@ def visualization_tool(
         dataset_metadata=dataset_metadata,
     )
 
-    # 使用代码执行工具运行可视化
+    # Run visualization via code execution tool
     from backend.tools.code_execution import code_execution_tool
 
     try:
@@ -454,7 +456,7 @@ def advanced_visualization_tool(
         data_file, viz_type, columns, group_column, title, save_format
     )
 
-    # 使用代码执行工具运行可视化
+    # Run visualization via code execution tool
     from backend.tools.code_execution import code_execution_tool
 
     try:
@@ -592,7 +594,7 @@ def _generate_visualization_code(
 ) -> str:
     """Generate visualization code"""
 
-    # 确定文件读取方式
+    # Determine file read method
     container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
         read_code = f"df = pd.read_csv('{container_data_file}')"
@@ -601,7 +603,7 @@ def _generate_visualization_code(
     else:
         read_code = f"# Please read data file manually: {container_data_file}"
 
-    # 选择可视化库
+    # Select visualization library
     if interactive:
         viz_lib = "plotly.express as px"
         save_method = "fig.write_html"
@@ -622,14 +624,14 @@ if not {interactive}:
     plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
 
-# 读取数据
+# Read data
 {read_code}
 
 print("=== Data Info ===")
 print(f"Data Shape: {{df.shape}}")
-print(f"列名: {{list(df.columns)}}")
+print(f"Columns: {{list(df.columns)}}")
 
-# 自动检测列（如果未指定）
+# Auto-detect columns if not specified
 numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
 """
 
@@ -670,9 +672,9 @@ else:
     else:
         base_code += f"chart_title = '{title}'\n"
 
-    # 根据图表类型生成代码
+    # Generate chart code by type
     if interactive:
-        # Plotly 交互式图表
+        # Plotly interactive charts
         if chart_type == "line":
             base_code += """
 fig = px.line(df, x=x_col, y=y_col, color=color_col, title=chart_title)
@@ -702,11 +704,11 @@ fig = px.pie(df, names=x_col, values=y_col, title=chart_title)
 fig.update_layout(title_font_size=16, showlegend=True)
 output_file = '/workspace/{chart_type}_chart.html'
 fig.write_html(output_file)
-print(f"交互式图表已保存: {{output_file}}")
+print(f"Interactive chart saved: {{output_file}}")
 """
 
     else:
-        # Matplotlib/Seaborn 静态图表
+        # Matplotlib/Seaborn static charts
         if chart_type == "line":
             base_code += """
 plt.figure(figsize=(12, 6))
@@ -727,7 +729,7 @@ plt.grid(True, alpha=0.3)
             base_code += """
 plt.figure(figsize=(12, 6))
 if color_col and df[color_col].nunique() <= 10:
-    # 分组柱状图
+    # Grouped bar chart
     pivot_data = df.pivot_table(values=y_col, index=x_col, columns=color_col, aggfunc='mean')
     pivot_data.plot(kind='bar', figsize=(12, 6))
 else:
@@ -770,7 +772,7 @@ elif color_col and df[color_col].nunique() <= 5:
 else:
     plt.hist(df[x_col], bins=30, alpha=0.7)
 plt.xlabel(x_col)
-plt.ylabel('频次')
+plt.ylabel('Frequency')
 plt.title(chart_title)
 plt.grid(True, alpha=0.3)
 """
@@ -788,7 +790,7 @@ plt.xticks(rotation=45)
 
         elif chart_type == "heatmap":
             base_code += """
-# 热力图需要数值数据
+# Heatmap requires numeric data
 numeric_df = df.select_dtypes(include=[np.number])
 plt.figure(figsize=(12, 8))
 correlation_matrix = numeric_df.corr()
@@ -826,12 +828,12 @@ plt.tight_layout()
 output_file = '/workspace/{chart_type}_chart.{save_format}'
 plt.savefig(output_file, dpi=300, bbox_inches='tight')
 plt.close()
-print(f"图表已保存: {{output_file}}")
+print(f"Chart saved: {{output_file}}")
 """
 
-    # 添加图表信息输出
+    # Add chart info output
     base_code += f"""
-# 输出图表信息
+# Output chart info
 chart_info = {{
     'chart_type': '{chart_type}',
     'x_column': x_col,
@@ -843,7 +845,7 @@ chart_info = {{
     'interactive': {repr(interactive)}
 }}
 
-print("\\n=== 图表信息 ===")
+print("\\n=== Chart Info ===")
 for key, value in chart_info.items():
     print(f"{{key}}: {{value}}")
 print("CHART_INFO_JSON=" + json.dumps(chart_info, ensure_ascii=False))
@@ -862,7 +864,7 @@ def _generate_advanced_viz_code(
 ) -> str:
     """Generate advanced visualization code"""
 
-    # 确定文件读取方式
+    # Determine file read method
     container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
         read_code = f"df = pd.read_csv('{container_data_file}')"
@@ -1073,7 +1075,7 @@ def _generate_dashboard_code(
 ) -> str:
     """Generate dashboard code"""
 
-    # 确定文件读取方式
+    # Determine file read method
     container_data_file = _resolve_container_data_path(data_file)
     if data_file.endswith(".csv"):
         read_code = f"df = pd.read_csv('{container_data_file}')"
