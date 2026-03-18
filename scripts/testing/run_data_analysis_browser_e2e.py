@@ -3,8 +3,8 @@
 Data Analysis Browser E2E Test (agent-browser)
 
 End-to-end browser automation test for the Dynamic Data Analysis pipeline:
-  Upload public dataset → Run Analysis (cloud LLM code gen + Docker sandbox) →
-  Generate Visualization → Validate results + capture screenshots.
+  Upload public dataset → Enable "Include Visualization" toggle →
+  Run Analysis (cloud LLM code gen + Docker sandbox + viz) → Validate results + capture screenshots.
 
 Uses agent-browser CLI to drive the /data-analysis frontend page.
 
@@ -46,7 +46,7 @@ LOGIN_EMAIL_SELECTOR = 'input[type="email"]'
 LOGIN_PASSWORD_SELECTOR = 'input[type="password"]'
 LOGIN_BUTTON_SELECTOR = 'button:has-text("Log in")'
 RUN_ANALYSIS_BUTTON_SELECTOR = 'button:has-text("2) Run Analysis")'
-GENERATE_VIZ_BUTTON_SELECTOR = 'button:has-text("3) Generate Visualization")'
+INCLUDE_VIZ_CHECKBOX_SELECTOR = 'input[type="checkbox"]'
 UPLOAD_BUTTON_SELECTOR = 'button:has-text("1) Upload Data")'
 PROCESSING_BUTTON_SELECTOR = 'button:has-text("Processing...")'
 ERROR_SELECTOR = "p.error-text"
@@ -286,7 +286,7 @@ def _snapshot_refs() -> dict[str, str]:
         "analysis_type": r'^\-\s+combobox\s+"Analysis Type"\s+\[ref=([^\]]+)\]',
         "chart_type": r'^\-\s+combobox\s+"Chart Type"\s+\[ref=([^\]]+)\]',
         "run_analysis": r'^\-\s+button\s+"2\)\s*Run Analysis"\s+\[ref=([^\]]+)\]',
-        "generate_viz": r'^\-\s+button\s+"3\)\s*Generate Visualization"\s+\[ref=([^\]]+)\]',
+        "include_viz": r'^\-\s+checkbox\s+"Include Visualization"\s+\[ref=([^\]]+)\]',
     }
     for line in (out or "").splitlines():
         for key, pattern in patterns.items():
@@ -578,7 +578,12 @@ def _run_case(
             result["error"] = f"set_form_failed: {set_out}"
             return result
 
-        # Click Run Analysis
+        # Check "Include Visualization" toggle before running analysis
+        viz_toggle = refs.get("include_viz") or INCLUDE_VIZ_CHECKBOX_SELECTOR
+        _run_agent_browser(["click", viz_toggle], timeout=15)
+        _run_agent_browser(["wait", "500"], timeout=10)
+
+        # Click Run Analysis (now includes visualization)
         run_target = refs.get("run_analysis") or RUN_ANALYSIS_BUTTON_SELECTOR
         ok, out = _run_agent_browser(["click", run_target], timeout=25)
         if not ok:
@@ -588,7 +593,7 @@ def _run_case(
             result["error"] = f"click_analysis_failed: {out}"
             return result
 
-        # Wait for analysis
+        # Wait for combined analysis + visualization
         done_ok, done_state = _wait_for_complete(max_wait=180)
         analysis_payload = _read_result_payload()
         analysis_summary = _build_analysis_summary(analysis_payload)
@@ -624,17 +629,7 @@ def _run_case(
             )
             result["has_answer"] = bool(rj.get("answer"))
 
-        # Click Generate Visualization
-        viz_target = refs.get("generate_viz") or GENERATE_VIZ_BUTTON_SELECTOR
-        ok, out = _run_agent_browser(["click", viz_target], timeout=25)
-        if not ok:
-            if attempt < 3:
-                _run_agent_browser(["wait", "1000"], timeout=10)
-                continue
-            break
-
-        # Wait for viz
-        vdone_ok, vdone_state = _wait_for_complete(max_wait=180)
+        # Extract visualization from combined response
         viz_payload = _read_viz_payload()
         viz_summary = _build_viz_summary(viz_payload)
         result["viz_summary"] = viz_summary
@@ -649,7 +644,7 @@ def _run_case(
             result["viz_file_path"] = viz_file
             result["viz_success"] = vrj.get("success")
 
-        if vdone_ok and isinstance(vrj, dict) and vrj.get("success") is not False:
+        if done_ok and isinstance(rj, dict) and rj.get("success") is not False:
             result["success"] = True
             break
 

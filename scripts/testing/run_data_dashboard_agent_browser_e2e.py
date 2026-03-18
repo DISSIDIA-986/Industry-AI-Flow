@@ -24,7 +24,7 @@ LOGIN_EMAIL_SELECTOR = 'input[type="email"]'
 LOGIN_PASSWORD_SELECTOR = 'input[type="password"]'
 LOGIN_BUTTON_SELECTOR = 'button:has-text("Log in")'
 RUN_ANALYSIS_BUTTON_SELECTOR = 'button:has-text("2) Run Analysis")'
-GENERATE_VIZ_BUTTON_SELECTOR = 'button:has-text("3) Generate Visualization")'
+INCLUDE_VIZ_CHECKBOX_SELECTOR = 'input[type="checkbox"]'
 UPLOAD_BUTTON_SELECTOR = 'button:has-text("1) Upload Data")'
 PROCESSING_BUTTON_SELECTOR = 'button:has-text("Processing...")'
 ERROR_SELECTOR = "p.error-text"
@@ -154,7 +154,7 @@ def _snapshot_refs() -> dict[str, str]:
         "analysis_type": r'^\-\s+combobox\s+"Analysis Type"\s+\[ref=([^\]]+)\]',
         "chart_type": r'^\-\s+combobox\s+"Chart Type"\s+\[ref=([^\]]+)\]',
         "run_analysis": r'^\-\s+button\s+"2\)\s*Run Analysis"\s+\[ref=([^\]]+)\]',
-        "generate_viz": r'^\-\s+button\s+"3\)\s*Generate Visualization"\s+\[ref=([^\]]+)\]',
+        "include_viz": r'^\-\s+checkbox\s+"Include Visualization"\s+\[ref=([^\]]+)\]',
     }
     lines = (out or "").splitlines()
     for line in lines:
@@ -697,6 +697,11 @@ def _run_case(
                 "screenshot_path": "",
             }
 
+        # Check "Include Visualization" toggle before running analysis
+        viz_toggle = refs.get("include_viz") or INCLUDE_VIZ_CHECKBOX_SELECTOR
+        _run_agent_browser(["click", viz_toggle], timeout=15)
+        _run_agent_browser(["wait", "500"], timeout=10)
+
         run_analysis_target = refs.get("run_analysis") or RUN_ANALYSIS_BUTTON_SELECTOR
         analysis_click_ok, analysis_click_out = _run_agent_browser(
             ["click", run_analysis_target],
@@ -756,18 +761,7 @@ def _run_case(
                 continue
             break
 
-        generate_viz_target = refs.get("generate_viz") or GENERATE_VIZ_BUTTON_SELECTOR
-        viz_click_ok, viz_click_out = _run_agent_browser(
-            ["click", generate_viz_target],
-            timeout=25,
-        )
-        if not viz_click_ok:
-            if attempt < 3:
-                _run_agent_browser(["wait", "1000"], timeout=10)
-                continue
-            break
-
-        viz_done_ok, viz_done_state = _wait_for_analysis_complete(max_wait_seconds=180)
+        # Visualization is now included in combined response
         viz_payload = _read_viz_payload()
         viz_answer = _build_viz_summary(viz_payload)
 

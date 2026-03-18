@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { useAppConfig } from "@/components/app-config-context";
 import CollapsibleCode from "@/components/CollapsibleCode";
 import {
-  generateVisualization,
   runDataAnalysis,
   uploadDataFile,
 } from "@/lib/api-client";
@@ -62,6 +61,7 @@ export default function DataAnalysisPage() {
   const [instruction, setInstruction] = useState(
     "Run a concise analysis and summarize key findings."
   );
+  const [includeViz, setIncludeViz] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [viz, setViz] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,30 +126,25 @@ export default function DataAnalysisPage() {
         data_file: uploadedPath,
         analysis_type: analysisType,
         instruction,
+        generate_visualization: includeViz,
+        chart_type: includeViz ? chartType : undefined,
       });
-      setResult(payload);
-    } catch (err) {
-      setError(normalizeError(err));
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function handleGenerateViz() {
-    if (!uploadedPath) {
-      setError("Upload data file first.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await generateVisualization(config, {
-        data_file: uploadedPath,
-        chart_type: chartType,
-        instruction,
-      });
-      setViz(payload);
+      // Extract embedded visualization if present
+      if (
+        payload.visualization &&
+        typeof payload.visualization === "object" &&
+        !Array.isArray(payload.visualization)
+      ) {
+        setViz(payload.visualization as Record<string, unknown>);
+        const { visualization: _v, ...analysisOnly } = payload;
+        setResult(analysisOnly);
+      } else {
+        setResult(payload);
+        if (!includeViz) {
+          setViz(null);
+        }
+      }
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -162,7 +157,7 @@ export default function DataAnalysisPage() {
       <article className="hero-card">
         <p className="eyebrow">L5 Analysis Layer</p>
         <h2>Dynamic data analysis and chart generation</h2>
-        <p>Upload a file, run an analysis pass, then generate a chart artifact.</p>
+        <p>Upload a file and run analysis. Toggle &quot;Include Visualization&quot; to generate a chart alongside.</p>
       </article>
 
       <article className="panel-card">
@@ -187,15 +182,21 @@ export default function DataAnalysisPage() {
               <option value="regression">regression</option>
             </select>
           </label>
-          <label className="field-group">
-            Chart Type
-            <select value={chartType} onChange={(event) => setChartType(event.target.value)}>
-              <option value="line">line</option>
-              <option value="bar">bar</option>
-              <option value="scatter">scatter</option>
-              <option value="histogram">histogram</option>
-            </select>
-          </label>
+          {includeViz && (
+            <label className="field-group">
+              Chart Type
+              <select value={chartType} onChange={(event) => setChartType(event.target.value)}>
+                <option value="line">line</option>
+                <option value="bar">bar</option>
+                <option value="scatter">scatter</option>
+                <option value="histogram">histogram</option>
+                <option value="box">box</option>
+                <option value="heatmap">heatmap</option>
+                <option value="violin">violin</option>
+                <option value="pie">pie</option>
+              </select>
+            </label>
+          )}
           <label className="field-group">
             Analysis Instruction
             <input
@@ -211,11 +212,16 @@ export default function DataAnalysisPage() {
             {loading ? "Processing..." : "1) Upload Data"}
           </button>
           <button className="secondary-button" type="button" onClick={handleRunAnalysis}>
-            2) Run Analysis
+            {loading ? "Processing..." : "2) Run Analysis"}
           </button>
-          <button className="secondary-button" type="button" onClick={handleGenerateViz}>
-            3) Generate Visualization
-          </button>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
+            <input
+              type="checkbox"
+              checked={includeViz}
+              onChange={(event) => setIncludeViz(event.target.checked)}
+            />
+            Include Visualization
+          </label>
         </div>
 
         {error ? <p className="error-text">{error}</p> : null}
