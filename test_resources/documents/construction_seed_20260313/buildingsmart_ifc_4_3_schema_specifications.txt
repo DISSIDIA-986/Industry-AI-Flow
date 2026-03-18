@@ -1,0 +1,531 @@
+IFC Schema Specifications - buildingSMART Technical 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+ 
+		 
+			 
+ 
+ 
+ Skip o conten 
+	 
+	 
+		 
+			 
+				 
+					 
+						 
+					 
+				 
+				 
+					 
+						 
+							 
+								 Menu 
+							 
+							 
+								 Home 
+ Standards 
+ 
+	 Data standards 
+	 
+		 Industry Foundation Classes (IFC) 
+		 
+			 IFC Specifications database 
+		 
+ 
+		 Use-case Model View Definitions (MVD) 
+		 
+			 MVD database 
+		 
+ 
+	 
+ 
+	 Workflow standards 
+	 
+		 Information Delivery Specification (IDS) 🡕 
+		 BIM Collaboration Forma (BCF) 🡕 
+		 Information Delivery Manual (IDM) 
+		 
+			 IDM database 
+		 
+ 
+	 
+ 
+	 openBIM API standards 
+	 
+		 Foundation API (common) 🡕 
+		 Documents API 🡕 
+		 BCF API 🡕 
+		 bSDD API 🡕 
+	 
+ 
+ 
+ 
+ Services 
+ 
+	 Technical Services 
+	 
+		 buildingSMART Data Dictionary (bSDD) 🡕 
+		 Validation Service 🡕 
+		 Use Case Managemen Tool (UCM) 🡕 
+	 
+ 
+	 Developmen &#038; Conformance 
+	 
+		 IFC Release eams 
+		 General Assembly of Implementers 🡕 
+		 Dispute mediation service 
+		 IFC Translations Framework 🡕 
+		 IFC Software Certification 🡕 
+		 
+			 IFC Software Certification ledger 
+		 
+ 
+	 
+ 
+ 
+ 
+ Resources 
+ 
+	 Technical Roadmap 🡕 
+	 buildingSMART Standards database 🡕 
+	 Software Implementation overview 
+	 IFC Implementation Guidance 
+	 GitHub page 🡕 
+	 Sample files 🡕 
+ 
+ 
+ 							 
+						 
+					 
+				 
+			 
+		 
+	 
+ 
+ 
+	 
+		 
+			 
+				 
+					 
+						 
+											 
+				 
+				 
+					 
+						 
+							 
+								 Menu 
+							 
+							 
+								 Home 
+ Standards 
+ 
+	 Data standards 
+	 
+		 Industry Foundation Classes (IFC) 
+		 
+			 IFC Specifications database 
+		 
+ 
+		 Use-case Model View Definitions (MVD) 
+		 
+			 MVD database 
+		 
+ 
+	 
+ 
+	 Workflow standards 
+	 
+		 Information Delivery Specification (IDS) 🡕 
+		 BIM Collaboration Forma (BCF) 🡕 
+		 Information Delivery Manual (IDM) 
+		 
+			 IDM database 
+		 
+ 
+	 
+ 
+	 openBIM API standards 
+	 
+		 Foundation API (common) 🡕 
+		 Documents API 🡕 
+		 BCF API 🡕 
+		 bSDD API 🡕 
+	 
+ 
+ 
+ 
+ Services 
+ 
+	 Technical Services 
+	 
+		 buildingSMART Data Dictionary (bSDD) 🡕 
+		 Validation Service 🡕 
+		 Use Case Managemen Tool (UCM) 🡕 
+	 
+ 
+	 Developmen &#038; Conformance 
+	 
+		 IFC Release eams 
+		 General Assembly of Implementers 🡕 
+		 Dispute mediation service 
+		 IFC Translations Framework 🡕 
+		 IFC Software Certification 🡕 
+		 
+			 IFC Software Certification ledger 
+		 
+ 
+	 
+ 
+ 
+ 
+ Resources 
+ 
+	 Technical Roadmap 🡕 
+	 buildingSMART Standards database 🡕 
+	 Software Implementation overview 
+	 IFC Implementation Guidance 
+	 GitHub page 🡕 
+	 Sample files 🡕 
+ 
+ 
+ 
+	 
+	 
+		 
+	 
+ 
+							 
+						 
+					 
+				 
+			 
+		 
+	 
+ 
+	 
+
+		
+ 
+	 
+		 
+			 
+
+			 
+		 
+	 
+								 
+		
+ 
+			 
+	 
+	 
+		 
+	 IFC Specifications Database 
+ Official releases of he IFC specification are listed here, as well as heir components including HTML, EXPRESS, XSD/XML, and OWL documentation and formats.
+
+
+ Release Notes and Errata  for all versions can be found here .
+
+
+ IFC is licensed under he Creative Commons A ribution-NoDerivatives 4.0 International License. To view a copy of his license, visi h p://creativecommons.org/licenses/by-nd/4.0/ 
+
+
+ 
+ 
+ 
+ 
+	 Version Name (HTML Documentation) ISO publication Published 
+(yyyy-mm) Curren Status Full package EXPRESS XSD pSe XSD OWL HTML RDF TTL 
+ 
+ 
+ 
+ 
+	 5.0 dev IFC 5 dev 
+ 
+ Nex generation IFC. Refactoring of he IFC 4.x content. 
+ 
+Currently under development. GitHub n.a. n.a. 
+ 
+ 
+	 4.4 - dev IFC 4.4.x dev 
+ Potential extension of 4.3. Adding additional functionality. 
+ 
+Currently in planning phase. 
+ 
+ 
+	 4.3.2.0 IFC 4.3 ADD2 
+ 
+ ISO 16739-1:2024 2024-04 Official ZIP EXP XSD 
+ ZIP ifcOWL 
+ 
+ 
+	 4.2.0.0 IFC 4.2 - 2019-04 Withdrawn ZIP EXP IFC4x2.xsd - 
+ 
+ 
+	 4.1.0.0 IFC 4.1 - 2018-06 Withdrawn ZIP EXP IFC4x1.xsd - 
+ 
+ 
+	 4.0.2.1 IFC 4 ADD2 TC1 ISO 16739-1:2018 2017-10 Official ZIP EXP IFC4.xsd - ifcOWL RDF TTL 
+ 
+ 
+	 4.0.2.0 IFC 4 ADD2 - 2016-07 Retired ZIP EXP IFC4_ADD2.xsd - 
+ 
+ 
+	 4.0.1.0 IFC 4 ADD1 - 2015-06 Retired ZIP EXP IFC4_ADD1.xsd - 
+ 
+ 
+	 4.0.0.0 IFC 4 ISO 16739:2013 2013-02 Retired ZIP EXP ifcXML4.xsd PSD_IFC4.xsd ifcOWL RDF TTL 
+ 
+ 
+	 2.3.0.1 IFC 2x3 TC1 ISO/PAS 16739:2005 2007-07 Official ZIP EXP IFC2X3.xsd PSD_R2x3.xsl ifcOWL RDF TTL 
+ 
+ 
+	 2.3.0.0 IFC 2x3 - 2005-12 Retired ZIP EXP - - ifcOWL RDF TTL 
+ 
+ 
+	 2.2.1.0 IFC 2x2 ADD1 - 2004-07 Retired ZIP EXP - - - - - 
+ 
+ 
+	 2.2.0.0 IFC 2x2 - 2003-05 Retired ZIP EXP - - - - - 
+ 
+ 
+	 2.1.1.0 IFC 2x ADD1 - 2001-10 Retired ZIP EXP - - - - - 
+ 
+ 
+	 2.1.0.0 IFC 2x - 2000-10 Retired ZIP EXP - - - - - 
+ 
+ 
+	 2.0.0.0 IFC 2.0 - 1999-10 Retired - - - - - - - 
+ 
+ 
+ 
+ 
+
+
+ The able IFC Release Database was las modified a 2025-12-08 14:46:13 by Evandro Alfieri.
+
+
+ Version Notation 
+ IFC versions are identified using he notation " Major.Minor.Addendum.Corrigendum ".
+
+
+ Major versions consis of scope expansions or deletions and may have changes ha break compatibility.
+
+
+ Minor versions consis of feature extensions, where compatibility is guaranteed for he "core" schema, bu no for other definitions.
+
+
+ Addendums consis of improvements o existing features, where he schema may change bu upward compatibility is guaranteed.
+
+
+ Corrigendums consis of improvements o documentation, where he schema does no change hough deprecation is possible.
+
+
+ 
+
+
+ 
+	 
+ 
+ 
+ 
+	 
+		 
+	 
+ 
+ 	 
+	
+ 
+
+ 
+		 
+	 
+ 
+
+
+	 
+		 
+		 
+	 
+		 
+			 ©2026 buildingSMART International, Ltd., All Rights Reserved | Privacy and Cookie Statemen 			 	 
+	 Facebook 
+					 
+					 
+					 Linkedin 
+					 
+					 
+					 Youtube 
+					 
+					 
+					 Github 
+					 
+					 
+					 Email 
+					 
+					 
+					 X-twi er 
+					 
+					 
+					 
+ 		 
+	 
+ 
+	 
+		 
+ 
+ Scroll To Top
