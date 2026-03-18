@@ -31,9 +31,9 @@ export default function DocumentsPage() {
         id: String(doc.file_id || doc.id || ''),
         name: String(doc.filename || doc.name || ''),
         type: String(doc.filename || doc.name || '').split('.').pop()?.toUpperCase() || 'FILE',
-        size: typeof doc.size_bytes === 'number'
-          ? formatFileSize(doc.size_bytes as number)
-          : String(doc.size || doc.size_bytes || '0 B'),
+        size: typeof doc.size === 'number'
+          ? formatFileSize(doc.size as number)
+          : String(doc.size || '0 B'),
         uploadedAt: new Date(String(doc.created_at || doc.uploadedAt || new Date())),
         status: 'processed' as const,
       }))
@@ -306,8 +306,11 @@ export default function DocumentsPage() {
               <div className="text-sm text-gray-500 mb-1">total size</div>
               <div className="text-2xl font-bold text-blue-600">
                 {documents.reduce((total, doc) => {
-                  const size = parseFloat(doc.size)
-                  return total + (isNaN(size) ? 0 : size)
+                  const num = parseFloat(doc.size)
+                  if (isNaN(num)) return total
+                  if (doc.size.includes('KB')) return total + num / 1024
+                  if (doc.size.includes('B') && !doc.size.includes('MB')) return total + num / (1024 * 1024)
+                  return total + num
                 }, 0).toFixed(1)} MB
               </div>
             </div>

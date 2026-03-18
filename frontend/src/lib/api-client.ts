@@ -784,7 +784,7 @@ export const dashboardApi = {
   },
 
   async getWorkflowStats(): Promise<Record<string, unknown>> {
-    return requestBackend<Record<string, unknown>>('/api/v1/stats/workflow', {
+    return requestBackend<Record<string, unknown>>('/api/intent/stats/workflow', {
       method: 'GET',
     })
   },
