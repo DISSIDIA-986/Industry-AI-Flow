@@ -8,7 +8,7 @@ interface Document {
   type: string
   size: string
   uploadedAt: Date
-  status: 'processed' | 'processing' | 'error'
+  status: 'processed' | 'processing' | 'error' | 'missing'
 }
 
 function formatFileSize(bytes: number): string {
@@ -34,8 +34,8 @@ export default function DocumentsPage() {
         size: typeof doc.size === 'number'
           ? formatFileSize(doc.size as number)
           : String(doc.size || '0 B'),
-        uploadedAt: new Date(String(doc.created_at || doc.uploadedAt || new Date())),
-        status: 'processed' as const,
+        uploadedAt: new Date(String(doc.uploaded_at || doc.created_at || doc.uploadedAt || new Date())),
+        status: (doc.status === 'missing' ? 'missing' : doc.status === 'processing' ? 'processing' : doc.status === 'error' ? 'error' : 'processed') as Document['status'],
       }))
       setDocuments(mapped)
     } catch (error) {
@@ -100,6 +100,7 @@ export default function DocumentsPage() {
       case 'processed': return 'bg-green-100 text-green-800'
       case 'processing': return 'bg-blue-100 text-blue-800'
       case 'error': return 'bg-red-100 text-red-800'
+      case 'missing': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -109,6 +110,7 @@ export default function DocumentsPage() {
       case 'processed': return 'Processed'
       case 'processing': return 'Processing'
       case 'error': return 'Processing failed'
+      case 'missing': return 'Missing'
       default: return 'unknown status'
     }
   }

@@ -56,7 +56,7 @@ function basename(rawPath: string): string {
 export default function DataAnalysisPage() {
   const { config } = useAppConfig();
   const [file, setFile] = useState<File | null>(null);
-  const [uploadedPath, setUploadedPath] = useState("test_resources/datasets/e2e_public/tips.csv");
+  const [uploadedPath, setUploadedPath] = useState("tips.csv");
   const [analysisType, setAnalysisType] = useState("eda");
   const [chartType, setChartType] = useState("line");
   const [instruction, setInstruction] = useState(
@@ -72,7 +72,9 @@ export default function DataAnalysisPage() {
       return [];
     }
     return Object.entries(result)
-      .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+      .filter((entry): entry is [string, string | number | boolean] =>
+        ["string", "number", "boolean"].includes(typeof entry[1])
+      )
       .slice(0, 6);
   }, [result]);
 
@@ -281,22 +283,16 @@ export default function DataAnalysisPage() {
             )}
 
             {/* Generated code (collapsed) */}
-            {typeof result?.generated_code === "string" && result.generated_code && (
-              <CollapsibleCode
-                title="Generated Code"
-                code={result.generated_code as string}
-                language="python"
-              />
-            )}
+            {(() => {
+              const code = String(result?.generated_code ?? result?.generated_code_preview ?? "");
+              return code ? <CollapsibleCode title="Generated Code" code={code} language="python" /> : null;
+            })()}
 
             {/* Analysis output (collapsed) */}
-            {typeof result?.output === "string" && result.output && (
-              <CollapsibleCode
-                title="Analysis Output"
-                code={result.output as string}
-                language="json"
-              />
-            )}
+            {(() => {
+              const output = String(result?.output ?? result?.raw_output ?? "");
+              return output ? <CollapsibleCode title="Analysis Output" code={output} language="text" /> : null;
+            })()}
 
             {/* Full analysis response (collapsed) */}
             {result && (
