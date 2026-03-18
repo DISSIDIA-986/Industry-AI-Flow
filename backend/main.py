@@ -703,6 +703,8 @@ class DataAnalysisRequest(BaseModel):
     target_column: Optional[str] = None
     columns: Optional[List[str]] = None
     instruction: Optional[str] = Field(default=None, max_length=2048)
+    generate_visualization: bool = False
+    chart_type: str = Field(default="line", max_length=64)
 
     @field_validator("data_file", mode="before")
     @classmethod
@@ -1320,6 +1322,24 @@ async def analyze_data(
             }
         )
         is_success = not isinstance(result, dict) or bool(result.get("success", True))
+
+        # Optionally generate visualization alongside analysis
+        viz_result = None
+        if request.generate_visualization and is_success:
+            try:
+                from backend.tools.visualization import visualization_tool
+
+                viz_result = visualization_tool.invoke(
+                    {
+                        "data_file": resolved_data_file,
+                        "chart_type": request.chart_type,
+                        "instruction": request.instruction,
+                    }
+                )
+            except Exception as viz_err:
+                logger.warning("Visualization generation failed: %s", viz_err)
+                viz_result = {"error": str(viz_err)}
+
         log_audit(
             action="data.analyze",
             tenant=tenant,
@@ -1328,9 +1348,14 @@ async def analyze_data(
                 "data_file": resolved_data_file,
                 "analysis_type": request.analysis_type,
                 "success": is_success,
+                "generate_visualization": request.generate_visualization,
                 "error": result.get("error") if isinstance(result, dict) else None,
             },
         )
+
+        if viz_result is not None and isinstance(result, dict):
+            result["visualization"] = viz_result
+
         return result
     except HTTPException as exc:
         log_audit(
