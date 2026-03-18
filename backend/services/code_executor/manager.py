@@ -16,7 +16,16 @@ from backend.services.code_executor.providers.base import (
 @dataclass
 class CodeExecutionManager:
     docker_provider: ExecutionProvider
-    ppio_provider: Optional[ExecutionProvider] = None
+    ppio_provider: Optional[ExecutionProvider] = None  # Legacy name kept for compat
+    cloud_provider: Optional[ExecutionProvider] = None
+
+    def __post_init__(self):
+        # Unify: cloud_provider is the canonical cloud slot.
+        # Accept ppio_provider as alias for backward compatibility.
+        if self.cloud_provider is None and self.ppio_provider is not None:
+            self.cloud_provider = self.ppio_provider
+        if self.ppio_provider is None and self.cloud_provider is not None:
+            self.ppio_provider = self.cloud_provider
 
     async def execute(
         self,
@@ -27,34 +36,36 @@ class CodeExecutionManager:
     ) -> ExecutionResult:
         requested_mode = (mode or "docker").strip().lower()
 
-        if requested_mode == "ppio":
-            if self.ppio_provider is None:
-                return ExecutionResult(success=False, error="PPIO provider unavailable")
-            ppio_health = await self._provider_health(self.ppio_provider)
-            if ppio_health is not None and not ppio_health.get("healthy", False):
+        if requested_mode in {"ppio", "e2b"}:
+            if self.cloud_provider is None:
+                return ExecutionResult(
+                    success=False, error=f"{requested_mode} provider unavailable"
+                )
+            cloud_health = await self._provider_health(self.cloud_provider)
+            if cloud_health is not None and not cloud_health.get("healthy", False):
                 return ExecutionResult(
                     success=False,
-                    error=f"PPIO provider unhealthy: {ppio_health.get('status', 'unknown')}",
+                    error=f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}",
                 )
-            return await self.ppio_provider.execute(code, files, timeout_s)
+            return await self.cloud_provider.execute(code, files, timeout_s)
 
-        if requested_mode == "auto" and self.ppio_provider is not None:
+        if requested_mode == "auto" and self.cloud_provider is not None:
             docker_result = await self.docker_provider.execute(code, files, timeout_s)
             if docker_result.success:
                 return docker_result
-            ppio_health = await self._provider_health(self.ppio_provider)
-            if ppio_health is not None and not ppio_health.get("healthy", False):
+            cloud_health = await self._provider_health(self.cloud_provider)
+            if cloud_health is not None and not cloud_health.get("healthy", False):
                 combined_error = (
                     f"docker_error={docker_result.error or docker_result.stderr}; "
-                    f"ppio_unhealthy={ppio_health.get('status', 'unknown')}"
+                    f"cloud_unhealthy={cloud_health.get('status', 'unknown')}"
                 )
                 return ExecutionResult(success=False, error=combined_error)
-            ppio_result = await self.ppio_provider.execute(code, files, timeout_s)
-            if ppio_result.success:
-                return ppio_result
+            cloud_result = await self.cloud_provider.execute(code, files, timeout_s)
+            if cloud_result.success:
+                return cloud_result
             combined_error = (
                 f"docker_error={docker_result.error or docker_result.stderr}; "
-                f"ppio_error={ppio_result.error or ppio_result.stderr}"
+                f"cloud_error={cloud_result.error or cloud_result.stderr}"
             )
             return ExecutionResult(success=False, error=combined_error)
 
@@ -69,16 +80,16 @@ class CodeExecutionManager:
     ) -> dict:
         requested_mode = (mode or "docker").strip().lower()
 
-        if requested_mode == "ppio":
-            if self.ppio_provider is None:
-                return self._error_result("PPIO provider unavailable")
-            ppio_health = self._provider_health_sync(self.ppio_provider)
-            if ppio_health is not None and not ppio_health.get("healthy", False):
+        if requested_mode in {"ppio", "e2b"}:
+            if self.cloud_provider is None:
+                return self._error_result(f"{requested_mode} provider unavailable")
+            cloud_health = self._provider_health_sync(self.cloud_provider)
+            if cloud_health is not None and not cloud_health.get("healthy", False):
                 return self._error_result(
-                    f"PPIO provider unhealthy: {ppio_health.get('status', 'unknown')}"
+                    f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}"
                 )
             return self._execute_provider_sync(
-                self.ppio_provider, code, data_files, timeout
+                self.cloud_provider, code, data_files, timeout
             )
 
         if requested_mode == "auto":
@@ -87,25 +98,25 @@ class CodeExecutionManager:
             )
             if docker_result.get("success"):
                 return docker_result
-            if self.ppio_provider is None:
+            if self.cloud_provider is None:
                 return docker_result
-            ppio_health = self._provider_health_sync(self.ppio_provider)
-            if ppio_health is not None and not ppio_health.get("healthy", False):
+            cloud_health = self._provider_health_sync(self.cloud_provider)
+            if cloud_health is not None and not cloud_health.get("healthy", False):
                 docker_error = docker_result.get("error") or docker_result.get("stderr")
                 return self._error_result(
                     f"docker_error={docker_error}; "
-                    f"ppio_unhealthy={ppio_health.get('status', 'unknown')}",
+                    f"cloud_unhealthy={cloud_health.get('status', 'unknown')}",
                     docker_result,
                 )
-            ppio_result = self._execute_provider_sync(
-                self.ppio_provider, code, data_files, timeout
+            cloud_result = self._execute_provider_sync(
+                self.cloud_provider, code, data_files, timeout
             )
-            if ppio_result.get("success"):
-                return ppio_result
+            if cloud_result.get("success"):
+                return cloud_result
             docker_error = docker_result.get("error") or docker_result.get("stderr")
-            ppio_error = ppio_result.get("error") or ppio_result.get("stderr")
+            cloud_error = cloud_result.get("error") or cloud_result.get("stderr")
             return self._error_result(
-                f"docker_error={docker_error}; ppio_error={ppio_error}",
+                f"docker_error={docker_error}; cloud_error={cloud_error}",
                 docker_result,
             )
 
@@ -175,23 +186,23 @@ class CodeExecutionManager:
             "healthy": True,
             "status": "unknown",
         }
-        ppio_health = None
-        if self.ppio_provider is not None:
-            ppio_health = self._provider_health_sync(self.ppio_provider) or {
-                "provider": "ppio",
+        cloud_health = None
+        if self.cloud_provider is not None:
+            cloud_health = self._provider_health_sync(self.cloud_provider) or {
+                "provider": "cloud",
                 "healthy": True,
                 "status": "unknown",
             }
 
-        if requested_mode == "ppio":
-            selected_provider = "ppio"
-            selected_healthy = bool(ppio_health and ppio_health.get("healthy", False))
+        if requested_mode in {"ppio", "e2b"}:
+            selected_provider = requested_mode
+            selected_healthy = bool(cloud_health and cloud_health.get("healthy", False))
         elif requested_mode == "auto":
             if docker_health.get("healthy", False):
                 selected_provider = "docker"
                 selected_healthy = True
-            elif ppio_health is not None and ppio_health.get("healthy", False):
-                selected_provider = "ppio"
+            elif cloud_health is not None and cloud_health.get("healthy", False):
+                selected_provider = "cloud"
                 selected_healthy = True
             else:
                 selected_provider = "docker"
@@ -206,7 +217,7 @@ class CodeExecutionManager:
             "selected_provider": selected_provider,
             "providers": {
                 "docker": docker_health,
-                "ppio": ppio_health,
+                "cloud": cloud_health,
             },
         }
 

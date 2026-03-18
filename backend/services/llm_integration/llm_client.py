@@ -38,7 +38,7 @@ class LLMClientFactory:
     @staticmethod
     def _normalize_backend(backend: Optional[str]) -> str:
         value = (backend or "").strip().lower()
-        if value in {"llama_cpp", "ollama", "zhipu"}:
+        if value in {"llama_cpp", "ollama", "zhipu", "groq"}:
             return value
         # Fallback: unrecognized backend value, use resolved local backend
         local_backend = getattr(settings, "resolved_local_backend", "llama_cpp")
@@ -77,6 +77,11 @@ class LLMClientFactory:
 
                 logger.info("Using Zhipu cloud backend")
                 return ZhipuClient()
+            elif backend == "groq":
+                from .groq_client import GroqClient
+
+                logger.info("Using Groq cloud backend")
+                return GroqClient()
             else:
                 raise ValueError(f"Unsupported LLM backend: {backend}")
 
@@ -89,8 +94,8 @@ class LLMClientFactory:
                 from .ollama_client import OllamaClient
 
                 return OllamaClient()
-            if backend == "zhipu":
-                raise RuntimeError("Zhipu client requires the requests library")
+            if backend in {"zhipu", "groq"}:
+                raise RuntimeError(f"{backend} client requires the requests library")
             else:
                 raise RuntimeError(f"Failed to create LLM client: {e}")
 

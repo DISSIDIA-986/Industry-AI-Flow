@@ -9,6 +9,7 @@ from backend.services.code_executor.manager import CodeExecutionManager
 from backend.services.code_executor.providers.docker_provider import (
     DockerExecutionProvider,
 )
+from backend.services.code_executor.providers.e2b_provider import E2BExecutionProvider
 from backend.services.code_executor.providers.ppio_provider import PPIOExecutionProvider
 from backend.services.code_executor.validator import (
     CodeValidator,
@@ -112,19 +113,35 @@ def get_code_execution_manager() -> Optional[CodeExecutionManager]:
             verify_tls=settings.ppio_verify_tls,
         )
 
-    if docker_provider is None and not ppio_enabled:
+    e2b_enabled = settings.enable_e2b_code_execution or provider == "e2b"
+    e2b_provider = None
+    if e2b_enabled:
+        e2b_provider = E2BExecutionProvider(
+            enabled=e2b_enabled,
+            api_key=settings.e2b_api_key or None,
+            timeout_seconds=settings.e2b_timeout_seconds,
+            failure_threshold=settings.e2b_failure_threshold,
+            cooldown_seconds=settings.e2b_cooldown_seconds,
+        )
+
+    # Determine the cloud provider to use (prefer E2B over PPIO if both enabled)
+    active_cloud_provider = e2b_provider or ppio_provider
+    cloud_enabled = e2b_enabled or ppio_enabled
+
+    if docker_provider is None and not cloud_enabled:
         return None
 
-    if docker_provider is None and ppio_enabled:
+    if docker_provider is None and cloud_enabled:
+        # No Docker — cloud provider serves as both primary and cloud slot.
         _execution_manager = CodeExecutionManager(
-            docker_provider=ppio_provider,
-            ppio_provider=ppio_provider,
+            docker_provider=active_cloud_provider,
+            cloud_provider=active_cloud_provider,
         )
         return _execution_manager
 
     _execution_manager = CodeExecutionManager(
         docker_provider=docker_provider,
-        ppio_provider=ppio_provider if ppio_enabled else None,
+        cloud_provider=active_cloud_provider if cloud_enabled else None,
     )
     return _execution_manager
 
