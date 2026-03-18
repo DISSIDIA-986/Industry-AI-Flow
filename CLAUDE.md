@@ -33,9 +33,10 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Multi-tenant isolation** (X-Tenant-ID): future-proofing for enterprise deployment, NOT a demo requirement
 - **Prompt A/B testing**: versioned prompt management with performance scoring
 
-### Demo Hardware (Confirmed)
+### Demo Hardware & Deployment (Confirmed)
 - **Mac Studio (M1 Max, 32GB RAM)** — sole demo machine
-- Stable internet at venue (cloud APIs accessible)
+- **Public URL**: `https://iai.dissidia.me/` via Cloudflare Tunnel → `localhost:3123` (Next.js frontend)
+- Stable internet at venue (cloud APIs + Cloudflare Tunnel accessible)
 - Docker installed and required (`CODE_EXECUTION_PROVIDER=docker`)
 - Single-operator demo (evaluators watch, don't interact directly)
 
@@ -222,7 +223,7 @@ PostgreSQL 14+ with pgvector extension. Schema managed via `backend/init_databas
 
 Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[...path]/route.ts`. Run with `make frontend-dev`.
 
-**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, Data Dashboard, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`).
+**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, Data Dashboard, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
 
 **Data Analysis page** (`/data-analysis`): Results displayed in stacked `.result-stack` layout with `CollapsibleCode` component (`<details>/<summary>` + `react-syntax-highlighter` Prism). Generated Python code and JSON responses are collapsible with syntax highlighting and max-height scroll. E2E selectors in `run_data_analysis_browser_e2e.py` query `.result-stack details` by summary text.
 
