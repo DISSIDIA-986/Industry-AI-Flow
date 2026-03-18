@@ -84,7 +84,16 @@ capabilities:
       - "safety"
       - "osha"
       - "construction"
-    patterns: []
+      - "cite"
+      - "citation"
+      - "passages"
+      - "relevant"
+      - "key requirements"
+      - "building code"
+      - "national building code"
+    patterns:
+      - "\\.(pdf|txt|docx?)\\b"
+      - "(summarize|explain|describe|cite).{0,40}(document|pdf|regulation|code|standard|requirements)"
     example_queries:
       - "What are the fall protection requirements under OSHA 1926?"
       - "Summarize the key requirements in the National Building Code of Canada."
@@ -97,8 +106,8 @@ capabilities:
         - txt
         - docx
     fallback_ids: []
-    priority: 0
-    confidence: 0.85
+    priority: 5
+    confidence: 0.88
 
   - id: data_analysis
     name: Data Analysis

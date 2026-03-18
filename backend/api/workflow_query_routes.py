@@ -93,11 +93,20 @@ async def _initialize_workflow_service() -> WorkflowRunner:
     except Exception as exc:
         logger.warning("Workflow runner without prompt manager: %s", exc)
 
-    llm_client = get_llm_client()
+    # Use cloud LLM for intent classification (more accurate than local 4B model)
+    from backend.services.llm_integration.llm_client import LLMClientFactory
+
+    try:
+        intent_llm_client = LLMClientFactory.create_client("zhipu")
+        logger.info("Intent classification using Zhipu cloud LLM")
+    except Exception as exc:
+        logger.warning("Zhipu unavailable for intent, falling back to local: %s", exc)
+        intent_llm_client = get_llm_client()
+
     context_manager = ContextManager(storage_backend="memory")
     intent_classifier = IntentClassifier(
         prompt_manager=prompt_manager,
-        llm_client=llm_client,
+        llm_client=intent_llm_client,
     )
     routing_engine = RoutingDecisionEngine()
     return IntentClassificationWorkflow(

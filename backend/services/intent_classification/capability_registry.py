@@ -82,24 +82,52 @@ class CapabilityRegistry:
         """Classify query using keyword/pattern heuristics.
 
         Returns (intent_id, confidence, reasoning).
-        Capabilities are checked in priority order (highest first).
+        Uses a scoring approach: all capabilities are scored, best match wins.
+        Word-boundary matching prevents false positives like "code" in "building_code".
         """
         text = (query or "").strip().lower()
         if not text:
             return "knowledge_retrieval", 0.51, "Empty query, defaulting to knowledge retrieval"
 
-        for cap in self.list_all():
-            # Check regex patterns first
-            patterns = self._compiled_patterns.get(cap.id, [])
-            if patterns and any(p.search(text) for p in patterns):
-                return cap.id, cap.confidence, f"Query matches {cap.name} pattern"
+        best_id = ""
+        best_score = 0.0
+        best_conf = 0.51
+        best_reason = "No keywords matched, defaulting to knowledge retrieval"
 
-            # Check keywords
-            if cap.keywords and any(kw in text for kw in cap.keywords):
-                return cap.id, cap.confidence, f"Query contains {cap.name} keywords"
+        for cap in self.list_all():
+            score = 0.0
+            matched: list[str] = []
+
+            # Check regex patterns (high weight)
+            patterns = self._compiled_patterns.get(cap.id, [])
+            for p in patterns:
+                if p.search(text):
+                    score += 15.0
+                    matched.append(f"pattern:{p.pattern}")
+
+            # Check keywords with word-boundary matching
+            if cap.keywords:
+                for kw in cap.keywords:
+                    # Use word boundaries to prevent substring false positives
+                    if re.search(r"(?<![a-z])" + re.escape(kw) + r"(?![a-z])", text):
+                        weight = 2.0 if " " in kw else 1.0  # multi-word = stronger
+                        score += weight
+                        matched.append(kw)
+
+            # Apply priority as a tiebreaker (small bonus)
+            score += cap.priority * 0.01
+
+            if score > best_score:
+                best_score = score
+                best_id = cap.id
+                best_conf = cap.confidence
+                best_reason = f"Query matches {cap.name} [{', '.join(matched[:3])}]"
+
+        if best_id:
+            return best_id, best_conf, best_reason
 
         # Default fallback
-        return "knowledge_retrieval", 0.51, "No keywords matched, defaulting to knowledge retrieval"
+        return "knowledge_retrieval", 0.51, best_reason
 
     # ── For routing engine ────────────────────────────────────────
 

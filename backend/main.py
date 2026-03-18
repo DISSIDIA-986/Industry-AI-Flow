@@ -594,6 +594,14 @@ async def lifespan(_: FastAPI):
         logger.info("Database initialized successfully")
     except Exception as e:  # pragma: no cover - defensive startup guard
         logger.error(f"Failed to initialize database: {e}")
+
+    try:
+        from backend.api.intent_classification_routes import initialize_intent_routes
+
+        await initialize_intent_routes()
+    except Exception as e:
+        logger.error(f"Failed to initialize intent workflow: {e}")
+
     yield
 
 

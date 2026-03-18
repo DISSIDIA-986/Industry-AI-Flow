@@ -122,14 +122,19 @@ async def initialize_intent_workflow():
         from backend.services.llm_integration.llm_client import get_llm_client
 
         pool = await get_database_pool()
-        llm_client = get_llm_client()
+        from backend.services.llm_integration.llm_client import LLMClientFactory
+
+        try:
+            intent_llm_client = LLMClientFactory.create_client("zhipu")
+        except Exception:
+            intent_llm_client = get_llm_client()
 
         # EN
         prompt_manager = PromptManager(pool)
         context_manager = ContextManager(storage_backend="memory")
         intent_classifier = IntentClassifier(
             prompt_manager=prompt_manager,
-            llm_client=llm_client,
+            llm_client=intent_llm_client,
         )
         routing_engine = RoutingDecisionEngine()
 
