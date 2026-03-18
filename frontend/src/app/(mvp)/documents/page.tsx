@@ -211,22 +211,22 @@ export default function DocumentsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       file name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       size
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Upload time
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       state
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       operate
                     </th>
                   </tr>
@@ -234,33 +234,33 @@ export default function DocumentsPage() {
                 <tbody className="divide-y divide-gray-200">
                   {documents.map((document) => (
                     <tr key={document.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center mr-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded items-center justify-center mr-3 hidden sm:flex">
                             <span className="text-blue-600 font-medium text-sm">
                               {document.type.charAt(0)}
                             </span>
                           </div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900">
                             {document.name}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4 text-xs sm:text-sm text-gray-500">
                         {document.type}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4 text-xs sm:text-sm text-gray-500">
                         {document.size}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4 text-xs sm:text-sm text-gray-500">
                         {document.uploadedAt.toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(document.status)}`}>
                           {getStatusText(document.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium">
+                      <td className="px-3 py-2 sm:px-6 sm:py-4 text-sm font-medium">
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handlePreview(document)}

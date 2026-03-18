@@ -581,7 +581,7 @@ export default function WorkflowChatPage() {
           {/* Quick Tips */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <h3 className="font-medium text-gray-900 mb-3">Quick Tips</h3>
-            <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-48 md:max-h-96 overflow-y-auto space-y-2 pr-1">
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={`qt-${index}-${prompt.slice(0, 20)}`}

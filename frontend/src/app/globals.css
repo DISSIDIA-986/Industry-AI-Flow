@@ -365,7 +365,7 @@ a {
   margin-top: 0.75rem;
   display: grid;
   gap: 0.7rem;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .result-label {
@@ -380,7 +380,7 @@ a {
   margin-bottom: 0.55rem;
   display: grid;
   gap: 0.45rem;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .kv-item {
@@ -720,7 +720,7 @@ td {
   margin-top: 0.75rem;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .form-grid.two-col,
   .result-grid,
   .floor-grid {
@@ -733,5 +733,19 @@ td {
 
   .shell-main-simple {
     padding: 0.85rem;
+  }
+
+  pre,
+  .code-scroll {
+    font-size: 0.72rem;
+  }
+
+  .collapsible-section summary {
+    font-size: 0.76rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .kv-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 }

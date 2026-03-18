@@ -130,11 +130,11 @@ export default function OverviewDashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Welcome banner */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 mb-8 text-white">
-          <h1 className="text-3xl font-bold mb-2">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-4 md:p-8 mb-6 md:mb-8 text-white">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">
             Welcome back, {user?.name || 'User'}!
           </h1>
           <p className="text-blue-100">
