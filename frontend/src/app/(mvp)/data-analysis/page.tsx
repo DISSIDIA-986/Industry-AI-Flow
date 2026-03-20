@@ -67,15 +67,15 @@ export default function DataAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const METRICS_WHITELIST = ["success", "analysis_type", "code_gen_mode", "execution_time"];
+
   const analysisSummary = useMemo(() => {
     if (!result) {
       return [];
     }
-    return Object.entries(result)
-      .filter((entry): entry is [string, string | number | boolean] =>
-        ["string", "number", "boolean"].includes(typeof entry[1])
-      )
-      .slice(0, 6);
+    return METRICS_WHITELIST
+      .filter((key) => key in result && result[key] !== undefined && result[key] !== null)
+      .map((key) => [key, result[key]] as [string, string | number | boolean]);
   }, [result]);
 
   const visualizationAsset = useMemo(() => {
@@ -166,13 +166,9 @@ export default function DataAnalysisPage() {
         </header>
 
         <div className="form-grid two-col">
-          <label className="field-group">
+          <label className="field-group" style={{ gridColumn: "1 / -1" }}>
             Upload File
             <input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-          </label>
-          <label className="field-group">
-            Uploaded Path
-            <input value={uploadedPath} onChange={(event) => setUploadedPath(event.target.value)} />
           </label>
           <label className="field-group">
             Analysis Type
@@ -257,7 +253,24 @@ export default function DataAnalysisPage() {
                   {analysisSummary.map(([key, value]) => (
                     <div key={key} className="kv-item">
                       <span>{key}</span>
-                      <strong>{String(value)}</strong>
+                      <strong>
+                        {key === "success" ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <span
+                              style={{
+                                width: "8px",
+                                height: "8px",
+                                borderRadius: "50%",
+                                background: value === true || value === "true" ? "#22c55e" : "#ef4444",
+                                flexShrink: 0,
+                              }}
+                            />
+                            {value === true || value === "true" ? "Yes" : "No"}
+                          </span>
+                        ) : (
+                          String(value)
+                        )}
+                      </strong>
                     </div>
                   ))}
                 </div>
