@@ -1,4 +1,4 @@
-"""可视化工具 - 自动化图表生成和可视化功能"""
+"""Visualization tool - Automated chart generation and visualization"""
 
 import json
 import logging
@@ -224,44 +224,44 @@ def visualization_tool(
     interactive: Annotated[bool, "Whether to generate interactive charts"] = False,
 ) -> Dict[str, Any]:
     """
-    可视化工具 - 自动化生成各类数据可视化图表
+    Visualization tool - Automated generation of various data visualization charts
 
-    这个工具提供全面的数据可视化功能，支持：
-    1. 基础图表：折线图、柱状图、散点图、直方图
+    This tool provides comprehensive data visualization capabilities:
+    1. Basic charts: line chart, bar chart, scatter plot, histogram
     2. Statistical charts: box plots, violin plots, heatmaps
-    3. 分布图表：饼图、环形图、雷达图
-    4. 高级可视化：3D图表、地理图表、网络图
-    5. 交互式图表：基于 Plotly 的动态可视化
+    3. Distribution charts: pie chart, donut chart, radar chart
+    4. Advanced visualization: 3D charts, geographic charts, network graphs
+    5. Interactive charts: Plotly-based dynamic visualization
 
-    支持的图表类型：
-    - 'line': 折线图
-    - 'bar': 柱状图
-    - 'scatter': 散点图
-    - 'histogram': 直方图
-    - 'heatmap': 热力图
-    - 'box': Box Plot
-    - 'violin': 小提琴图
-    - 'pie': 饼图
+    Supported chart types:
+    - 'line': Line chart
+    - 'bar': Bar chart
+    - 'scatter': Scatter plot
+    - 'histogram': Histogram
+    - 'heatmap': Heatmap
+    - 'box': Box plot
+    - 'violin': Violin plot
+    - 'pie': Pie chart
 
     Args:
         data_file: Data file path
-        chart_type: 图表类型
+        chart_type: Chart type
         x_column: X-axis column name
         y_column: Y-axis column name
         color_column: Color grouping column name
         title: Chart title
-        save_format: 保存格式
+        save_format: Save format
         interactive: Whether to generate interactive charts
 
     Returns:
-        可视化结果字典，包含：
-        - success: 是否成功
-        - chart_type: 生成的图表类型
-        - chart_info: 图表信息
-        - file_path: 图表文件路径
-        - chart_data: 图表数据摘要
-        - insights: 图表洞察
-        - error: 错误信息（如果失败）
+        Visualization result dictionary containing:
+        - success: Whether successful
+        - chart_type: Generated chart type
+        - chart_info: Chart information
+        - file_path: Chart file path
+        - chart_data: Chart data summary
+        - insights: Chart insights
+        - error: Error message (if failed)
 
     Example:
         >>> result = visualization_tool.invoke({
@@ -271,11 +271,11 @@ def visualization_tool(
         ...     "y_column": "income",
         ...     "color_column": "gender"
         ... })
-        >>> print(f"图表生成成功: {result['success']}")
-        >>> print(f"图表路径: {result['file_path']}")
+        >>> print(f"Chart generated successfully: {result['success']}")
+        >>> print(f"Chart path: {result['file_path']}")
     """
 
-    # 先尝试由 LLM 动态生成代码，失败时回退模板。
+    # Try LLM dynamic code generation first; fall back to template on failure.
     dataset_metadata = extract_dataset_metadata(data_file)
     metadata_report = build_metadata_audit_report(dataset_metadata)
     llm_input_policy = {
@@ -338,7 +338,7 @@ def visualization_tool(
                     )
 
         if result["success"]:
-            # 解析可视化结果
+            # Parse visualization results
             viz_result = _parse_visualization_output(result["stdout"])
             persisted_visualizations = _persist_visualization_artifacts(
                 result.get("output_files", {})
@@ -414,33 +414,33 @@ def advanced_visualization_tool(
     save_format: Annotated[str, "Save format: 'png', 'jpg', 'svg', 'html'"] = "png",
 ) -> Dict[str, Any]:
     """
-    高级可视化工具 - 生成复杂的数据可视化图表
+    Advanced visualization tool - Generate complex data visualization charts
 
-    这个工具提供高级的数据可视化功能：
-    1. 3D可视化：3D散点图、3D曲面图
-    2. 多维可视化：平行坐标图、安德鲁斯曲线
-    3. 层次可视化：树状图、旭日图
-    4. 特殊图表：雷达图、词云图、网络图
-    5. 统计图表：Q-Q图、概率密度图
+    This tool provides advanced data visualization capabilities:
+    1. 3D visualization: 3D scatter plot, 3D surface plot
+    2. Multi-dimensional visualization: Parallel coordinates, Andrews curves
+    3. Hierarchical visualization: Treemap, Sunburst chart
+    4. Special charts: Radar chart, word cloud, network graph
+    5. Statistical charts: Q-Q plot, probability density plot
 
-    支持的高级可视化类型：
-    - '3d_scatter': 3D散点图
-    - 'parallel_coordinates': 平行坐标图
-    - 'andrews_curves': 安德鲁斯曲线
-    - 'radar': 雷达图
-    - 'treemap': 树状图
-    - 'sunburst': 旭日图
+    Supported advanced visualization types:
+    - '3d_scatter': 3D scatter plot
+    - 'parallel_coordinates': Parallel coordinates
+    - 'andrews_curves': Andrews curves
+    - 'radar': Radar chart
+    - 'treemap': Treemap
+    - 'sunburst': Sunburst chart
 
     Args:
         data_file: Data file path
-        viz_type: 高级可视化类型
+        viz_type: Advanced visualization type
         columns: List of column names to use
         group_column: Group column name
         title: Chart title
-        save_format: 保存格式
+        save_format: Save format
 
     Returns:
-        高级可视化结果字典
+        Advanced visualization result dictionary
 
     Example:
         >>> result = advanced_visualization_tool.invoke({
@@ -465,7 +465,7 @@ def advanced_visualization_tool(
         )
 
         if result["success"]:
-            # 解析可视化结果
+            # Parse visualization results
             viz_result = _parse_visualization_output(result["stdout"])
             viz_result.update(
                 {
@@ -506,29 +506,29 @@ def dashboard_generation_tool(
     output_format: Annotated[str, "Output format: 'html', 'pdf'"] = "html",
 ) -> Dict[str, Any]:
     """
-    仪表板生成工具 - 自动化生成数据仪表板
+    Dashboard generation tool - Automated data dashboard generation
 
-    这个工具提供完整的仪表板生成功能：
-    1. EDA仪表板：探索性数据分析仪表板
-    2. ML监控仪表板：机器学习模型监控
-    3. 业务KPI仪表板：关键业务指标展示
-    4. 时间序列仪表板：时序数据分析
+    This tool provides complete dashboard generation capabilities:
+    1. EDA Dashboard: Exploratory Data Analysis Dashboard
+    2. ML Monitoring Dashboard: Machine learning model monitoring
+    3. Business KPI Dashboard: Key business metrics display
+    4. Time Series Dashboard: Time series data analysis
 
-    支持的仪表板类型：
-    - 'eda': 探索性数据分析仪表板
-    - 'ml_monitoring': 机器学习监控仪表板
-    - 'business_kpi': 业务KPI仪表板
-    - 'time_series': 时间序列仪表板
+    Supported dashboard types:
+    - 'eda': Exploratory Data Analysis Dashboard
+    - 'ml_monitoring': ML Monitoring Dashboard
+    - 'business_kpi': Business KPI Dashboard
+    - 'time_series': Time Series Dashboard
 
     Args:
         data_file: Data file path
-        dashboard_type: 仪表板类型
+        dashboard_type: Dashboard type
         key_metrics: List of key metric column names
         time_column: Time column name
-        output_format: 输出格式
+        output_format: Output format
 
     Returns:
-        仪表板生成结果字典
+        Dashboard generation result dictionary
 
     Example:
         >>> result = dashboard_generation_tool.invoke({
@@ -543,7 +543,7 @@ def dashboard_generation_tool(
         data_file, dashboard_type, key_metrics, time_column, output_format
     )
 
-    # 使用代码执行工具运行仪表板生成
+    # Run dashboard generation via code execution tool
     from backend.tools.code_execution import code_execution_tool
 
     try:
@@ -552,7 +552,7 @@ def dashboard_generation_tool(
         )
 
         if result["success"]:
-            # 解析仪表板结果
+            # Parse dashboard results
             dashboard_result = _parse_dashboard_output(result["stdout"])
             dashboard_result.update(
                 {
@@ -621,7 +621,7 @@ warnings.filterwarnings('ignore')
 
 # Set up fonts if available
 if not {interactive}:
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
     plt.rcParams['axes.unicode_minus'] = False
 
 # Read data
@@ -883,18 +883,18 @@ from pandas.plotting import parallel_coordinates, andrews_curves, radviz
 import warnings
 warnings.filterwarnings('ignore')
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+# Set up font rendering
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-# 读取数据
+# Read data
 {read_code}
 
 print("=== Data Info ===")
 print(f"Data Shape: {{df.shape}}")
-print(f"列名: {{list(df.columns)}}")
+print(f"Columns: {{list(df.columns)}}")
 
-# 选择列
+# Select columns
 """
 
     if columns:
@@ -910,7 +910,7 @@ print(f"列名: {{list(df.columns)}}")
     else:
         base_code += f"chart_title = '{title}'\n"
 
-    # 根据高级可视化类型生成代码
+    # Generate code by advanced visualization type
     if viz_type == "3d_scatter":
         base_code += """
 fig = plt.figure(figsize=(12, 8))
@@ -931,7 +931,7 @@ if len(selected_columns) >= 3:
     ax.set_ylabel(y)
     ax.set_zlabel(z)
 else:
-    print("需要至少3个数值列来生成3D散点图")
+    print("Need at least 3 numeric columns for 3D scatter plot")
 
 ax.set_title(chart_title)
 """
@@ -944,7 +944,7 @@ if len(selected_columns) >= 2 and group_column and group_column in df.columns:
     plt.title(chart_title)
     plt.xticks(rotation=45)
 else:
-    print("平行坐标图需要分组列和至少2个数值列")
+    print("Parallel coordinates requires a group column and at least 2 numeric columns")
 """
 
     elif viz_type == "andrews_curves":
@@ -954,32 +954,32 @@ if len(selected_columns) >= 2 and group_column and group_column in df.columns:
     andrews_curves(df[selected_columns + [group_column]], group_column)
     plt.title(chart_title)
 else:
-    print("安德鲁斯曲线需要分组列和至少2个数值列")
+    print("Andrews curves requires a group column and at least 2 numeric columns")
 """
 
     elif viz_type == "radar":
         base_code += f"""
 if len(selected_columns) >= 3 and group_column and group_column in df.columns:
-    # 雷达图需要标准化数据
+    # Radar chart requires normalized data
     from sklearn.preprocessing import MinMaxScaler
 
     numeric_data = df[selected_columns].copy()
     scaler = MinMaxScaler()
     numeric_data_scaled = scaler.fit_transform(numeric_data)
 
-    # 计算每个组的平均值
+    # Calculate group means
     if group_column in df.columns:
         grouped_data = df.groupby(group_column)[selected_columns].mean()
 
-        # 创建雷达图
+        # Create radar chart
         angles = np.linspace(0, 2*np.pi, len(selected_columns), endpoint=False).tolist()
-        angles += angles[:1]  # 闭合图形
+        angles += angles[:1]  # Close the shape
 
         fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(projection='polar'))
 
         for i, (group_name, group_data) in enumerate(grouped_data.iterrows()):
             values = group_data.values.tolist()
-            values += values[:1]  # 闭合图形
+            values += values[:1]  # Close the shape
             ax.plot(angles, values, 'o-', linewidth=2, label=str(group_name))
             ax.fill(angles, values, alpha=0.25)
 
@@ -988,67 +988,67 @@ if len(selected_columns) >= 3 and group_column and group_column in df.columns:
         ax.set_title(chart_title)
         ax.legend()
 else:
-    print("雷达图需要分组列和至少3个数值列")
+    print("Radar chart requires a group column and at least 3 numeric columns")
 """
 
     elif viz_type == "treemap":
         base_code += """
-# 树状图需要 plotly
+# Treemap requires plotly
 try:
     import plotly.express as px
 
     if len(selected_columns) >= 2:
-        # 使用前两列作为父级和子级
+        # Use first two columns as parent and child
         parent_col = selected_columns[0]
         child_col = selected_columns[1]
 
-        # 计算每个子级的值
+        # Calculate child values
         treemap_data = df.groupby([parent_col, child_col]).size().reset_index(name='count')
 
         fig = px.treemap(treemap_data, path=[parent_col, child_col], values='count', title=chart_title)
         output_file = f'/workspace/treemap.html'
         fig.write_html(output_file)
-        print(f"树状图已保存: {output_file}")
+        print(f"Treemap saved: {output_file}")
     else:
-        print("树状图需要至少2个列")
+        print("Treemap requires at least 2 columns")
 except ImportError:
-    print("树状图需要安装 plotly: pip install plotly")
+    print("Treemap requires plotly: pip install plotly")
 """
 
     elif viz_type == "sunburst":
         base_code += """
-# 旭日图需要 plotly
+# Sunburst requires plotly
 try:
     import plotly.express as px
 
     if len(selected_columns) >= 2:
-        # 使用前两列作为层级
+        # Use first two columns as hierarchy levels
         level1_col = selected_columns[0]
         level2_col = selected_columns[1]
 
-        # 计算每个层级的值
+        # Calculate level values
         sunburst_data = df.groupby([level1_col, level2_col]).size().reset_index(name='count')
 
         fig = px.sunburst(sunburst_data, path=[level1_col, level2_col], values='count', title=chart_title)
         output_file = f'/workspace/sunburst.html'
         fig.write_html(output_file)
-        print(f"旭日图已保存: {output_file}")
+        print(f"Sunburst chart saved: {output_file}")
     else:
-        print("旭日图需要至少2个列")
+        print("Sunburst chart requires at least 2 columns")
 except ImportError:
-    print("旭日图需要安装 plotly: pip install plotly")
+    print("Sunburst requires plotly: pip install plotly")
 """
 
     base_code += f"""
-# 保存图表
-if not '{viz_type}' in ['treemap', 'sunburst']:  # 这些已经保存为HTML
+# Save chart
+if not '{viz_type}' in ['treemap', 'sunburst']:  # These are already saved as HTML
     plt.tight_layout()
     output_file = f'/workspace/{viz_type}_visualization.{save_format}'
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"高级可视化已保存: {{output_file}}")
+    print(f"Advanced visualization saved: {{output_file}}")
 
-# 输出图表信息
+# Output chart info
 viz_info = {{
     'viz_type': '{viz_type}',
     'columns_used': selected_columns,
@@ -1058,7 +1058,7 @@ viz_info = {{
     'data_points': len(df)
 }}
 
-print("\\n=== 高级可视化信息 ===")
+print("\\n=== Advanced Visualization Info ===")
 for key, value in viz_info.items():
     print(f"{{key}}: {{value}}")
 """
@@ -1093,18 +1093,18 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+# Set up font rendering
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-# 读取数据
+# Read data
 {read_code}
 
 print("=== Data Info ===")
 print(f"Data Shape: {{df.shape}}")
-print(f"列名: {{list(df.columns)}}")
+print(f"Columns: {{list(df.columns)}}")
 
-# 选择关键指标
+# Select key metrics
 """
 
     if key_metrics:
@@ -1119,52 +1119,52 @@ print(f"列名: {{list(df.columns)}}")
     else:
         base_code += "time_col = None\n"
 
-    # 根据仪表板类型生成代码
+    # Generate code by dashboard type
     if dashboard_type == "eda":
         base_code += """
-# EDA 仪表板
+# EDA Dashboard
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-fig.suptitle('探索性数据分析仪表板', fontsize=16)
+fig.suptitle('Exploratory Data Analysis Dashboard', fontsize=16)
 
 # 1. Data Overview
-axes[0, 0].text(0.1, 0.5, f'数据集形状: {df.shape}\\n数值列: {len(df.select_dtypes(include=[np.number]).columns)}\\n分类列: {len(df.select_dtypes(include=[object]).columns)}',
+axes[0, 0].text(0.1, 0.5, f'Dataset shape: {df.shape}\\nNumeric columns: {len(df.select_dtypes(include=[np.number]).columns)}\\nCategorical columns: {len(df.select_dtypes(include=[object]).columns)}',
                 transform=axes[0, 0].transAxes, fontsize=12, verticalalignment='center')
 axes[0, 0].set_title('Data Overview')
 axes[0, 0].axis('off')
 
-# 2. Missing Values分析
+# 2. Missing Values Analysis
 missing_data = df.isnull().sum()
 missing_data = missing_data[missing_data > 0].sort_values(ascending=False)
 if len(missing_data) > 0:
     axes[0, 1].bar(range(len(missing_data)), missing_data.values)
     axes[0, 1].set_xticks(range(len(missing_data)))
     axes[0, 1].set_xticklabels(missing_data.index, rotation=45)
-    axes[0, 1].set_title('Missing Values分析')
+    axes[0, 1].set_title('Missing Values Analysis')
 else:
-    axes[0, 1].text(0.5, 0.5, '无Missing Values', transform=axes[0, 1].transAxes,
+    axes[0, 1].text(0.5, 0.5, 'No missing values', transform=axes[0, 1].transAxes,
                     ha='center', va='center')
-    axes[0, 1].set_title('Missing Values分析')
+    axes[0, 1].set_title('Missing Values Analysis')
 
-# 3. 数值Variable分布
+# 3. Numeric Variable Distribution
 if len(metrics) > 0:
     df[metrics[0]].hist(bins=30, ax=axes[0, 2])
-    axes[0, 2].set_title(f'{metrics[0]} 分布')
+    axes[0, 2].set_title(f'{metrics[0]} Distribution')
 else:
-    axes[0, 2].text(0.5, 0.5, '无数值列', transform=axes[0, 2].transAxes,
+    axes[0, 2].text(0.5, 0.5, 'No numeric columns', transform=axes[0, 2].transAxes,
                     ha='center', va='center')
-    axes[0, 2].set_title('数值Variable分布')
+    axes[0, 2].set_title('Numeric Variable Distribution')
 
-# 4. 相关性热力图
+# 4. Correlation Heatmap
 numeric_df = df.select_dtypes(include=[np.number])
 if len(numeric_df.columns) > 1:
     correlation_matrix = numeric_df.corr()
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
                 ax=axes[1, 0], square=True)
-    axes[1, 0].set_title('相关性热力图')
+    axes[1, 0].set_title('Correlation Heatmap')
 else:
-    axes[1, 0].text(0.5, 0.5, '数值列不足', transform=axes[1, 0].transAxes,
+    axes[1, 0].text(0.5, 0.5, 'Not enough numeric columns', transform=axes[1, 0].transAxes,
                     ha='center', va='center')
-    axes[1, 0].set_title('相关性热力图')
+    axes[1, 0].set_title('Correlation Heatmap')
 
 # 5. Box Plot
 if len(metrics) >= 2:
@@ -1172,30 +1172,30 @@ if len(metrics) >= 2:
     axes[1, 1].set_title('Box Plot')
     axes[1, 1].tick_params(axis='x', rotation=45)
 else:
-    axes[1, 1].text(0.5, 0.5, '数值列不足', transform=axes[1, 1].transAxes,
+    axes[1, 1].text(0.5, 0.5, 'Not enough numeric columns', transform=axes[1, 1].transAxes,
                     ha='center', va='center')
     axes[1, 1].set_title('Box Plot')
 
-# 6. 数据质量评分
+# 6. Data Quality Score
 quality_score = 100
 quality_score -= (df.isnull().sum().sum() / (df.shape[0] * df.shape[1])) * 50
 quality_score -= (df.duplicated().sum() / df.shape[0]) * 30
 
-axes[1, 2].bar(['数据质量'], [quality_score])
+axes[1, 2].bar(['Data Quality'], [quality_score])
 axes[1, 2].set_ylim(0, 100)
-axes[1, 2].set_title(f'数据质量评分: {quality_score:.1f}')
-axes[1, 2].set_ylabel('分数')
+axes[1, 2].set_title(f'Data Quality Score: {quality_score:.1f}')
+axes[1, 2].set_ylabel('Score')
 
 plt.tight_layout()
 """
 
     elif dashboard_type == "business_kpi":
         base_code += """
-# 业务KPI仪表板
+# Business KPI Dashboard
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-fig.suptitle('业务KPI仪表板', fontsize=16)
+fig.suptitle('Business KPI Dashboard', fontsize=16)
 
-# 1. KPI概览
+# 1. KPI Overview
 if len(metrics) > 0:
     for i, metric in enumerate(metrics[:3]):
         if i < 3:
@@ -1206,32 +1206,32 @@ if len(metrics) > 0:
             axes[0, i].set_title(metric)
             axes[0, i].axis('off')
 
-# 4. 趋势图
+# 4. Trend chart
 if len(metrics) >= 2 and time_col and time_col in df.columns:
     df_sorted = df.sort_values(time_col)
     axes[1, 0].plot(df_sorted[time_col], df_sorted[metrics[0]])
-    axes[1, 0].set_title(f'{metrics[0]} 趋势')
+    axes[1, 0].set_title(f'{metrics[0]} Trend')
     axes[1, 0].tick_params(axis='x', rotation=45)
 
-# 5. 对比图
+# 5. Comparison chart
 if len(metrics) >= 2:
     axes[1, 1].bar(metrics[:2], [df[metric].sum() for metric in metrics[:2]])
-    axes[1, 1].set_title('指标对比')
+    axes[1, 1].set_title('Metric Comparison')
     axes[1, 1].tick_params(axis='x', rotation=45)
 
-# 6. 分布图
+# 6. Distribution chart
 if len(metrics) > 0:
     df[metrics[0]].hist(bins=30, ax=axes[1, 2])
-    axes[1, 2].set_title(f'{metrics[0]} 分布')
+    axes[1, 2].set_title(f'{metrics[0]} Distribution')
 
 plt.tight_layout()
 """
 
     base_code += f"""
-# 保存仪表板
+# Save dashboard
 output_file = f'/workspace/{dashboard_type}_dashboard.{output_format}'
 if output_format == 'html':
-    # 保存为HTML需要特殊处理
+    # Saving as HTML requires special handling
     import io
     import base64
 
@@ -1266,9 +1266,9 @@ else:
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close()
 
-print(f"仪表板已保存: {{output_file}}")
+print(f"Dashboard saved: {{output_file}}")
 
-# 输出仪表板信息
+# Output dashboard info
 dashboard_info = {{
     'dashboard_type': '{dashboard_type}',
     'metrics': metrics,
@@ -1277,7 +1277,7 @@ dashboard_info = {{
     'data_points': len(df)
 }}
 
-print("\\n=== 仪表板信息 ===")
+print("\\n=== Dashboard Info ===")
 for key, value in dashboard_info.items():
     print(f"{{key}}: {{value}}")
 """
@@ -1338,7 +1338,7 @@ def _parse_visualization_output(stdout: str) -> Dict[str, Any]:
 def _parse_dashboard_output(stdout: str) -> Dict[str, Any]:
     """Parse dashboard output"""
     try:
-        # 尝试从输出中提取仪表板信息
+        # Try to extract dashboard info from output
         lines = stdout.split("\n")
         dashboard_info = {}
 
