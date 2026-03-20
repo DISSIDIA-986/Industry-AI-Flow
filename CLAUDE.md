@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## gstack
+
+Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
+Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review,
+/design-consultation, /review, /ship, /browse, /qa, /qa-only, /design-review,
+/setup-browser-cookies, /retro, /debug, /document-release.
+
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -225,7 +233,7 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 
 **Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, Data Dashboard, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
 
-**Data Analysis page** (`/data-analysis`): "Include Visualization" toggle replaces old "3) Generate Visualization" button — one click runs analysis + optional visualization. 8 chart types (line, bar, scatter, histogram, box, heatmap, violin, pie). Chart Type dropdown only visible when toggle is ON. Backend `/api/v1/data/analyze` accepts `generate_visualization` and `chart_type` params. Results use `CollapsibleCode` for Generated Code (`generated_code_preview` fallback), Analysis Output (`raw_output` fallback), and Full Response JSON. Pre-filled path: `tips.csv` (not full path — sanitizer rejects `/`). E2E selectors in `run_data_analysis_browser_e2e.py` use checkbox selector for viz toggle.
+**Data Analysis page** (`/data-analysis`): "Include Visualization" toggle replaces old "3) Generate Visualization" button — one click runs analysis + optional visualization. 8 chart types (line, bar, scatter, histogram, box, heatmap, violin, pie). Chart Type dropdown only visible when toggle is ON. Backend `/api/v1/data/analyze` accepts `generate_visualization` and `chart_type` params. Key Metrics grid uses a whitelist (`success`, `analysis_type`, `code_gen_mode`, `execution_time`) — hidden when no fields present. Success field shows colored dot (green/red). Uploaded Path field removed from UI (backend auto-handles paths; state kept internally for API calls, pre-filled with `tips.csv`). Results use `CollapsibleCode` for Generated Code (`generated_code_preview` fallback), Analysis Output (`raw_output` fallback), and Full Response JSON. E2E selectors in `run_data_analysis_browser_e2e.py` use checkbox selector for viz toggle.
 
 ## Configuration
 
