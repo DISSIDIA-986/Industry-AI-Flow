@@ -226,7 +226,7 @@ a {
 }
 
 .hero-card {
-  background: linear-gradient(120deg, #eff6ff 0%, #f9fafb 58%, #f0fdf4 100%);
+  background: linear-gradient(120deg, #eff6ff 0%, #f9fafb 58%, #eff6ff 100%);
 }
 
 .hero-card h2 {
