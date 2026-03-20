@@ -2,19 +2,19 @@
 @import "../styles/components.css";
 
 :root {
-  --bg: #f3efe6;
-  --bg-accent: #d7e3de;
-  --surface: #fffdf8;
-  --surface-2: #f7f4ec;
-  --text: #1f2a30;
-  --muted: #5f6f73;
-  --line: #d8d2c8;
-  --steel: #0d7288;
-  --steel-soft: #b7e2ea;
-  --copper: #b85622;
-  --ok: #1f8f55;
-  --warn: #9b3d2c;
-  --shadow: 0 16px 40px rgba(22, 38, 44, 0.1);
+  --bg: #f9fafb;
+  --bg-accent: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --text: #111827;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --steel: #2563eb;
+  --steel-soft: #dbeafe;
+  --copper: #dc2626;
+  --ok: #16a34a;
+  --warn: #dc2626;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -25,7 +25,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: radial-gradient(circle at 10% 10%, var(--bg-accent) 0%, var(--bg) 45%);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -71,7 +71,7 @@ a {
 
 .shell-sidebar {
   border-right: 1px solid var(--line);
-  background: linear-gradient(180deg, #f7f2e7 0%, #efe8db 100%);
+  background: var(--surface);
   padding: 1rem;
   position: sticky;
   top: 0;
@@ -110,7 +110,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0.62rem 0.7rem;
-  background: #f8f4eb;
+  background: var(--surface);
   transition: transform 180ms ease, border-color 180ms ease;
 }
 
@@ -141,7 +141,7 @@ a {
 }
 
 .shell-main-simple {
-  padding: 1rem 1.2rem 1rem;
+  padding: 1.5rem;
   width: min(1280px, 100%);
   margin: 0 auto;
   display: flex;
@@ -151,12 +151,12 @@ a {
 .shell-header {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: flex-start;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 0.9rem;
+  padding: 1.5rem;
   box-shadow: var(--shadow);
 }
 
@@ -192,8 +192,9 @@ a {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
-  padding: 0.56rem 0.6rem;
+  padding: 0.56rem 0.75rem;
   font: inherit;
+  font-size: 1rem;
   color: var(--text);
 }
 
@@ -212,20 +213,20 @@ a {
 .page-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 1.5rem;
 }
 
 .hero-card,
 .panel-card {
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 1rem;
+  padding: 1.5rem;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
 .hero-card {
-  background: linear-gradient(120deg, #ecf7fa 0%, #fff8ef 58%, #edf4ef 100%);
+  background: linear-gradient(120deg, #eff6ff 0%, #f9fafb 58%, #f0fdf4 100%);
 }
 
 .hero-card h2 {
@@ -248,7 +249,7 @@ a {
 
 .floor-grid {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.5rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
@@ -319,7 +320,7 @@ a {
 }
 
 .action-button {
-  background: linear-gradient(130deg, var(--steel) 0%, #0f8fa0 100%);
+  background: var(--steel);
   color: #fff;
 }
 
@@ -354,7 +355,7 @@ a {
 
 .form-grid {
   display: grid;
-  gap: 0.6rem;
+  gap: 1rem;
 }
 
 .form-grid.two-col {
@@ -728,24 +729,33 @@ td {
   }
 
   .shell-main {
-    padding: 0.85rem;
+    padding: 1rem;
   }
 
   .shell-main-simple {
-    padding: 0.85rem;
+    padding: 1rem;
+  }
+
+  .hero-card,
+  .panel-card {
+    padding: 1rem;
   }
 
   pre,
   .code-scroll {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
   }
 
   .collapsible-section summary {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     padding: 0.5rem 0.6rem;
   }
 
   .kv-grid {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+
+  .page-stack {
+    gap: 1rem;
   }
 }

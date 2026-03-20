@@ -20,7 +20,7 @@ export function LineChartComponent({ data, width = '100%', height = 300, title }
       {title && <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>}
       <ResponsiveContainer width={width} height={height}>
         <RechartsLineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
@@ -42,12 +42,12 @@ export function BarChartComponent({ data, width = '100%', height = 300, title }:
       {title && <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>}
       <ResponsiveContainer width={width} height={height}>
         <RechartsBarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>
@@ -59,7 +59,7 @@ export const BarChart = BarChartComponent
 
 // Pie chart component
 export function PieChartComponent({ data, width = '100%', height = 300, title }: ChartProps) {
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+  const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']
   
   return (
     <div className="w-full">
@@ -98,12 +98,12 @@ export function AreaChartComponent({ data, width = '100%', height = 300, title }
       {title && <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>}
       <ResponsiveContainer width={width} height={height}>
         <AreaChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
+          <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

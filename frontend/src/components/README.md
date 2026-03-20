@@ -11,7 +11,7 @@ src/components/
 ├── index.ts              # Unified export of components
 ├── Navbar.tsx           # Navigation bar component
 ├── ProtectedRoute.tsx   # protected routing component
-├── dashboard-shell.tsx  # Instrument panel housing components
+├── dashboard-shell-simple.tsx  # Dashboard shell wrapper
 ├── app-config-context.tsx # Application configuration context
 ├── forms/              # form component
 │   └── index.tsx
