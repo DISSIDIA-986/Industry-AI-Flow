@@ -86,13 +86,16 @@ test.describe('Authenticated core journeys', () => {
     await expect(page.getByText('No document found')).toBeVisible();
   });
 
-  test('data dashboard renders and supports time range switch', async ({ page }) => {
+  test('system overview renders four module health cards', async ({ page }) => {
     await page.goto('/data-dashboard');
-    await expect(page.getByRole('heading', { name: 'Data analysis dashboard' })).toBeVisible();
-    await expect(page.getByText('Real-time system monitoring')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'System Overview' })).toBeVisible();
+    await expect(page.getByText('Real-time health and performance across all AI modules')).toBeVisible();
 
-    await clickByJs(page.getByRole('button', { name: 'Weekly' }));
-    await expect(page.getByRole('button', { name: 'Weekly' })).toHaveClass(/bg-blue-600/);
+    // Verify all 4 module cards are present
+    await expect(page.getByRole('article', { name: 'Intent Classifier Status' })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'RAG Knowledge Base Status' })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Cost Estimation Status' })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Dynamic Data Analysis Status' })).toBeVisible();
   });
 
   test('cost estimation runs single and batch prediction', async ({ page }) => {

@@ -89,7 +89,7 @@ test.describe('Layout width and navbar persistence regressions', () => {
     const navFlow = [
       { label: 'APItest', url: /\/api-integration-test$/ },
       { label: 'Document management', url: /\/documents-integrated$/ },
-      { label: 'Data dashboard', url: /\/data-dashboard$/ },
+      { label: 'System Overview', url: /\/data-dashboard$/ },
       { label: 'cost estimate', url: /\/cost-estimation$/ },
       { label: 'Workflow chat', url: /\/workflow-chat$/ },
     ] as const;
