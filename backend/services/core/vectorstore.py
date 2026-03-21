@@ -87,15 +87,23 @@ class VectorStore:
                 (doc_id, filename, filepath, len(chunks), size_bytes),
             )
 
-            # 2. Insert chunk records with embeddings
-            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                cur.execute(
-                    """
-                    INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (doc_id, i, chunk, embedding),
-                )
+            # 2. Batch insert chunk records with embeddings
+            insert_sql = """
+                INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
+                VALUES (%s, %s, %s, %s)
+            """
+            chunk_values = [
+                (doc_id, i, chunk, embedding)
+                for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+            ]
+            if chunk_values:
+                try:
+                    from psycopg2.extras import execute_batch
+
+                    execute_batch(cur, insert_sql, chunk_values, page_size=50)
+                except ImportError:
+                    # psycopg v3 — use executemany (batch by default)
+                    cur.executemany(insert_sql, chunk_values)
 
             conn.commit()
             try:

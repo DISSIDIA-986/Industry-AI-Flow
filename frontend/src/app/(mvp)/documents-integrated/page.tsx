@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { realApiService } from '@/lib/real-api-client'
 import type { RealDocumentListResponse } from '@/lib/real-api-client'
@@ -21,6 +21,22 @@ interface Document {
   source: 'uploaded' | 'knowledge_base'
   chunkCount?: number
 }
+
+interface PipelineStage {
+  name: string
+  label: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+  detail: string
+  elapsed_ms: number
+}
+
+const PIPELINE_STAGES: { name: string; label: string }[] = [
+  { name: 'extract', label: 'Extract text' },
+  { name: 'ocr', label: 'OCR scanned pages' },
+  { name: 'chunk', label: 'Chunk text' },
+  { name: 'embed', label: 'Vectorize' },
+  { name: 'store', label: 'Store in database' },
+]
 
 const ALLOW_DOCUMENTS_MOCK_FALLBACK =
   process.env.NEXT_PUBLIC_ALLOW_DOCUMENTS_MOCK_FALLBACK === 'true'
@@ -53,8 +69,13 @@ export default function DocumentsIntegratedPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([])
+  const [pipelineComplete, setPipelineComplete] = useState(false)
+  const [pipelineError, setPipelineError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const eventSourceRef = useRef<EventSource | null>(null)
   const { user } = useAuth()
 
   // Load document list
@@ -180,58 +201,144 @@ export default function DocumentsIntegratedPage() {
     setSelectedFiles(files)
   }
 
+  // Connect to SSE progress stream for a document
+  const connectProgressSSE = useCallback((docId: string) => {
+    // Close any existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+    }
+
+    // Initialize pipeline stages
+    setPipelineStages(
+      PIPELINE_STAGES.map(s => ({
+        ...s,
+        status: 'pending' as const,
+        detail: '',
+        elapsed_ms: 0,
+      }))
+    )
+    setPipelineComplete(false)
+    setPipelineError(null)
+
+    const es = new EventSource(`/api/backend/api/v1/documents/${docId}/progress`)
+    eventSourceRef.current = es
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        const { stage, status, progress, detail, elapsed_ms } = data
+
+        setPipelineStages(prev =>
+          prev.map(s =>
+            s.name === stage
+              ? { ...s, status, detail, elapsed_ms }
+              : s
+          )
+        )
+
+        // Calculate overall progress
+        const stageWeights: Record<string, number> = {
+          extract: 0.3, ocr: 0.1, chunk: 0.1, embed: 0.3, store: 0.2,
+        }
+        setPipelineStages(prev => {
+          const totalProgress = prev.reduce((sum, s) => {
+            const w = stageWeights[s.name] || 0.2
+            if (s.status === 'completed' || s.status === 'skipped') return sum + w
+            if (s.status === 'running') return sum + w * progress
+            return sum
+          }, 0)
+          setUploadProgress(Math.round(totalProgress * 100))
+          return prev
+        })
+
+        if (status === 'failed') {
+          setPipelineError(detail || 'Processing failed')
+        }
+
+        if (status === 'completed' && stage === 'store') {
+          setPipelineComplete(true)
+          setUploadProgress(100)
+          es.close()
+          // Auto-refresh document list after completion
+          setTimeout(() => {
+            loadDocuments()
+            // Reset after showing success for 3 seconds
+            setTimeout(() => {
+              setUploading(false)
+              setUploadProgress(0)
+              setPipelineStages([])
+              setPipelineComplete(false)
+              setSelectedFiles([])
+            }, 3000)
+          }, 500)
+        }
+      } catch {
+        // Ignore parse errors (e.g., keepalive comments)
+      }
+    }
+
+    es.onerror = () => {
+      es.close()
+      // Fallback: poll document list
+      const pollInterval = setInterval(async () => {
+        try {
+          await loadDocuments()
+          clearInterval(pollInterval)
+          setUploading(false)
+          setUploadProgress(0)
+          setPipelineStages([])
+          setSelectedFiles([])
+        } catch {
+          // Keep polling
+        }
+      }, 2000)
+      // Stop polling after 60 seconds
+      setTimeout(() => clearInterval(pollInterval), 60000)
+    }
+  }, [])
+
+  // Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+      }
+    }
+  }, [])
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return
 
     setUploading(true)
     setUploadProgress(0)
+    setUploadError(null)
+    setPipelineError(null)
 
-    try {
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return prev
+    // Upload files sequentially, show progress for each
+    for (const file of selectedFiles) {
+      try {
+        if (apiStatus === 'connected') {
+          const result = await realApiService.uploadDocument(file, {
+            title: file.name,
+            description: `Uploaded by ${user?.name || 'user'}`,
+            tags: ['uploaded', getFileType(file.name).toLowerCase()]
+          })
+          // Connect SSE for progress tracking using returned doc_id
+          if (result?.doc_id) {
+            connectProgressSSE(result.doc_id)
           }
-          return prev + 10
-        })
-      }, 200)
-
-      // Upload each file
-      for (const file of selectedFiles) {
-        try {
-          if (apiStatus === 'connected') {
-            // use realAPIupload
-            await realApiService.uploadDocument(file, {
-              title: file.name,
-              description: `Uploaded by ${user?.name || 'user'}`,
-              tags: ['uploaded', getFileType(file.name).toLowerCase()]
-            })
-          } else {
-            // Simulate upload
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-        } catch (error) {
-          console.error(`Upload files ${file.name} fail:`, error)
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          setUploading(false)
+          setSelectedFiles([])
         }
-      }
-
-      clearInterval(progressInterval)
-      setUploadProgress(100)
-
-      // Upload completed, reload the document list
-      setTimeout(() => {
+      } catch (error) {
+        console.error(`Upload failed for ${file.name}:`, error)
+        setUploadError(`Upload failed: ${file.name}`)
         setUploading(false)
         setUploadProgress(0)
-        setSelectedFiles([])
-        loadDocuments()
-      }, 500)
-
-    } catch (error) {
-      console.error('Upload failed:', error)
-      setUploading(false)
-      setUploadProgress(0)
+        setPipelineStages([])
+      }
     }
   }
 
@@ -332,17 +439,82 @@ export default function DocumentsIntegratedPage() {
                   )}
 
                   {uploading && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Upload progress</span>
-                        <span>{uploadProgress}%</span>
+                    <div className="space-y-3">
+                      {/* Overall progress bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>{pipelineComplete ? 'Complete!' : pipelineError ? 'Failed' : 'Processing...'}</span>
+                          <span>{uploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              pipelineError ? 'bg-red-600' : pipelineComplete ? 'bg-green-600' : 'bg-blue-600'
+                            }`}
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
-                      </div>
+
+                      {/* Stage list */}
+                      {pipelineStages.length > 0 && (
+                        <div className="space-y-1">
+                          {pipelineStages.map(stage => (
+                            <div
+                              key={stage.name}
+                              className={`flex items-center justify-between text-xs px-2 py-1 rounded ${
+                                stage.status === 'running' ? 'bg-blue-50' :
+                                stage.status === 'failed' ? 'bg-red-50' : ''
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={
+                                  stage.status === 'completed' ? 'text-green-600' :
+                                  stage.status === 'running' ? 'text-blue-600 animate-pulse' :
+                                  stage.status === 'failed' ? 'text-red-600' :
+                                  stage.status === 'skipped' ? 'text-gray-300' :
+                                  'text-gray-400'
+                                }>
+                                  {stage.status === 'completed' ? '✓' :
+                                   stage.status === 'running' ? '●' :
+                                   stage.status === 'failed' ? '✗' :
+                                   stage.status === 'skipped' ? '~' : '○'}
+                                </span>
+                                <span className={stage.status === 'skipped' ? 'text-gray-300 italic' : ''}>
+                                  {stage.label}
+                                </span>
+                              </div>
+                              <div className="text-gray-500 text-right">
+                                {stage.detail && <span>{stage.detail}</span>}
+                                {stage.status === 'completed' && stage.elapsed_ms > 0 && (
+                                  <span className="ml-2">{(stage.elapsed_ms / 1000).toFixed(1)}s</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Completion banner */}
+                      {pipelineComplete && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                          ✓ Document ready — try searching its content!
+                        </div>
+                      )}
+
+                      {/* Error display with retry hint */}
+                      {pipelineError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                          ✗ {pipelineError}. File is saved — try uploading again.
+                        </div>
+                      )}
+
+                      {/* Upload error toast */}
+                      {uploadError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                          {uploadError}
+                        </div>
+                      )}
                     </div>
                   )}
 
