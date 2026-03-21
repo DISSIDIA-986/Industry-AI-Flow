@@ -10,6 +10,12 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Design System
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
+
 ## Project Overview
 
 Industry AI Flow is a **SAIT Capstone project** (Integrated AI program) — a concept prototype demonstrating how AI can empower the construction industry. **2-person team**: one with software development background, one with construction industry background. Showcase is approximately late March / early April 2026, presenting to teachers and evaluators (no real client).
