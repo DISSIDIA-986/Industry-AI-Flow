@@ -17,6 +17,13 @@ from backend.services.core.vectorstore import VectorStore
 from backend.services.document_manager import DocumentManager, DocumentOperation
 from backend.services.security import persist_temp_file, validate_and_buffer_upload
 
+import json
+import asyncio
+from fastapi.responses import StreamingResponse
+from backend.services.document_processing.progress_tracker import (
+    PipelineProgressTracker,
+)
+
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(secure_endpoint)])
 
@@ -524,3 +531,46 @@ async def restore_document_version(
     except Exception as e:
         logger.error(f"Error restoring document version: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/documents/{doc_id}/progress")
+async def document_progress_stream(doc_id: str):
+    """Stream pipeline progress events via SSE (no auth required for demo)."""
+    tracker = PipelineProgressTracker.get(doc_id)
+
+    async def event_generator():
+        if tracker is None or tracker.async_queue is None:
+            # No active pipeline for this doc — send a done event
+            yield f"data: {json.dumps({'stage': 'unknown', 'status': 'completed', 'progress': 1.0, 'detail': 'Already processed', 'elapsed_ms': 0})}\n\n"
+            return
+
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(
+                        tracker.async_queue.get(), timeout=30.0
+                    )
+                except asyncio.TimeoutError:
+                    # Send keepalive
+                    yield ": keepalive\n\n"
+                    continue
+
+                if event is None:
+                    # Sentinel — pipeline complete or failed
+                    return
+
+                yield f"data: {json.dumps(event.to_dict())}\n\n"
+        except asyncio.CancelledError:
+            return
+        finally:
+            tracker.close()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

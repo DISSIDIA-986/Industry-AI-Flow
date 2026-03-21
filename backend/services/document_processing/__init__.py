@@ -18,21 +18,25 @@ from backend.services.document_processing.ocr_processor import (
 )
 
 # Global OCR processor singleton (lazy initialization)
+import threading
+
 _global_ocr_processor = None
+_ocr_lock = threading.Lock()
 
 
 def get_ocr_processor() -> OCRProcessor:
-    """Get or create the global OCR processor singleton."""
+    """Get or create the global OCR processor singleton (thread-safe)."""
     global _global_ocr_processor
     if _global_ocr_processor is None:
-        try:
-            _global_ocr_processor = OCRProcessor()
-        except Exception as e:
-            import logging
+        with _ocr_lock:
+            if _global_ocr_processor is None:
+                try:
+                    _global_ocr_processor = OCRProcessor()
+                except Exception as e:
+                    import logging
 
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to initialize OCR processor: {e}")
-            _global_ocr_processor = None
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to initialize OCR processor: {e}")
     return _global_ocr_processor
 
 
