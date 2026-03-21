@@ -245,3 +245,4 @@ docs/presentation/*.pptx
 
 # Frontend node modules
 frontend/nextjs/node_modules/
+.gstack/
