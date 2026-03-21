@@ -165,12 +165,65 @@ export default function PipelineFlowDashboard() {
       const result = await workflowApi.sendQuery({ query }, config)
 
       const metadata = result.metadata || {}
-      const completedNodes = (metadata.completed_nodes as string[]) || []
-      const latencyMs = (metadata.node_latency_ms as Record<string, number>) || {}
+      let completedNodes = (metadata.completed_nodes as string[]) || []
+      let latencyMs = (metadata.node_latency_ms as Record<string, number>) || {}
       const pipelineIntent = (metadata.intent as string) || result.intent?.type || 'unknown'
       const pipelineConfidence = (metadata.intent_confidence as number) || result.confidence || 0
       const pipelineStatus = (metadata.pipeline_status as string) || 'unknown'
       const failedNode = metadata.failed_node as string | undefined
+
+      // If intent_workflow (no pipeline nodes), infer node states from metadata timestamps
+      if (completedNodes.length === 0 && metadata.workflow_runner === 'intent_workflow') {
+        const agentType = metadata.agent_type as string || metadata.selected_agent as string || ''
+        const agentStatus = metadata.agent_execution_status as string || ''
+        const inferred: string[] = ['intent_node', 'safety_node']
+        const inferredLatency: Record<string, number> = {}
+
+        // Calculate timing from timestamps
+        const start = metadata.start_timestamp as string
+        const classTs = metadata.classification_timestamp as string
+        const routeTs = metadata.routing_timestamp as string
+        const completeTs = metadata.completion_timestamp as string
+        if (start && classTs) {
+          inferredLatency.intent_node = Math.max(1, Math.round(
+            (new Date(classTs).getTime() - new Date(start).getTime())
+          ))
+        }
+        inferredLatency.safety_node = 5 // implicit, near-instant
+
+        // Route node
+        if (routeTs && classTs) {
+          inferred.push('route_node')
+          inferredLatency.route_node = Math.max(1, Math.round(
+            (new Date(routeTs).getTime() - new Date(classTs).getTime())
+          ))
+        }
+
+        // Agent-specific nodes based on which agent ran
+        if (agentStatus === 'ok') {
+          if (agentType === 'rag_agent' || pipelineIntent === 'knowledge_retrieval') {
+            inferred.push('retrieval_node', 'rerank_node', 'prompt_node', 'response_node', 'groundedness_node')
+          } else if (agentType === 'cost_estimation_agent' || pipelineIntent === 'cost_estimation') {
+            inferred.push('cost_estimation_node', 'response_node')
+          } else if (agentType === 'data_analysis_agent' || pipelineIntent === 'data_analysis') {
+            inferred.push('code_exec_node', 'response_node')
+          } else {
+            inferred.push('response_node')
+          }
+          // Distribute remaining time across agent nodes
+          if (routeTs && completeTs) {
+            const agentMs = Math.max(1, Math.round(
+              (new Date(completeTs).getTime() - new Date(routeTs).getTime())
+            ))
+            const agentNodes = inferred.filter(n => !['intent_node', 'safety_node', 'route_node'].includes(n))
+            const perNode = Math.round(agentMs / Math.max(1, agentNodes.length))
+            agentNodes.forEach(n => { inferredLatency[n] = perNode })
+          }
+        }
+
+        completedNodes = inferred
+        latencyMs = inferredLatency
+      }
 
       // Check for pipeline-level failure
       if (pipelineStatus === 'error' && completedNodes.length === 0) {
