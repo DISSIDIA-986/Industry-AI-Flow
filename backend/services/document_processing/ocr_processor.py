@@ -46,7 +46,7 @@ class OCRProcessor:
         self,
         use_local: bool = True,
         use_api_fallback: bool = True,
-        lang: str = "ch",
+        lang: str = "en",
         use_gpu: bool = True,
         ocr_version: str = "PP-OCRv5",
     ):
