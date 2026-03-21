@@ -4,8 +4,10 @@ Intent Classification Workflow
 """
 
 import asyncio
+import functools
 import json
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -57,6 +59,54 @@ class WorkflowState(TypedDict):
     system_prompt: Optional[str]  # Prompt manager system prompt
     prompt_meta: Optional[Dict[str, Any]]  # Prompt metadata
     metadata: Dict[str, Any]  # Workflow execution metadata
+    node_trace: List[Dict[str, Any]]  # Per-node execution trace for debugger
+
+
+def _trace_node(node_name: str):
+    """Decorator that records per-node timing and decision in node_trace."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(self, state: WorkflowState) -> WorkflowState:
+            start = time.perf_counter()
+            trace_entry: Dict[str, Any] = {
+                "node_name": node_name,
+                "start_ms": 0.0,
+                "end_ms": 0.0,
+                "duration_ms": 0.0,
+                "decision": "completed",
+                "metadata": {},
+            }
+            try:
+                result = await fn(self, state)
+                elapsed = time.perf_counter() - start
+                trace_entry["end_ms"] = elapsed * 1000
+                trace_entry["duration_ms"] = round(elapsed * 1000, 1)
+                # Node functions can set _trace_decision / _trace_meta on state
+                if isinstance(result, dict):
+                    trace_entry["decision"] = result.get(
+                        "_trace_decision", "completed"
+                    )
+                    trace_entry["metadata"] = result.get("_trace_meta", {})
+                    result.pop("_trace_decision", None)
+                    result.pop("_trace_meta", None)
+                return result
+            except Exception as exc:
+                elapsed = time.perf_counter() - start
+                trace_entry["end_ms"] = elapsed * 1000
+                trace_entry["duration_ms"] = round(elapsed * 1000, 1)
+                trace_entry["decision"] = "error"
+                trace_entry["metadata"] = {"error": str(exc)[:200]}
+                raise
+            finally:
+                traces = state.get("node_trace", [])
+                traces.append(trace_entry)
+                # Update state in-place (LangGraph passes mutable dicts)
+                state["node_trace"] = traces
+
+        return wrapper
+
+    return decorator
 
 
 class IntentClassificationWorkflow:
@@ -171,6 +221,7 @@ class IntentClassificationWorkflow:
 
         return workflow
 
+    @_trace_node("input_preprocessing")
     async def _input_preprocessing_node(self, state: WorkflowState) -> WorkflowState:
         """Preprocess user input: clean and normalize the query."""
         try:
@@ -200,6 +251,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("context_enrichment")
     async def _context_enrichment_node(self, state: WorkflowState) -> WorkflowState:
         """Enrich the query with session context and interaction history."""
         try:
@@ -266,6 +318,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("intent_classification")
     async def _intent_classification_node(self, state: WorkflowState) -> WorkflowState:
         """Classify user intent using the intent classifier."""
         try:
@@ -301,6 +354,19 @@ class IntentClassificationWorkflow:
             )
             state["metadata"]["confidence"] = intent_result.confidence
 
+            # Store capability_scores in metadata for the API response
+            # (extracted from the heuristic's llm_response JSON)
+            if intent_result.llm_response:
+                try:
+                    import json as _json
+                    parsed = _json.loads(intent_result.llm_response) if isinstance(intent_result.llm_response, str) else {}
+                    if "capability_scores" in parsed:
+                        state["metadata"]["capability_scores"] = parsed["capability_scores"]
+                    if "matched_keywords_detail" in parsed:
+                        state["metadata"]["matched_keywords"] = parsed["matched_keywords_detail"]
+                except (ValueError, TypeError):
+                    pass
+
             logger.info(
                 f"Intent classified: {intent_result.intent} (confidence: {intent_result.confidence:.2f})"
             )
@@ -311,6 +377,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("confidence_evaluation")
     async def _confidence_evaluation_node(self, state: WorkflowState) -> WorkflowState:
         """P0: Evaluate intent confidence and track clarification rounds."""
         try:
@@ -388,6 +455,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("routing_decision")
     async def _routing_decision_node(self, state: WorkflowState) -> WorkflowState:
         """Make agent routing decision based on classified intent."""
         try:
@@ -425,6 +493,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("prompt_preparation")
     async def _prompt_preparation_node(self, state: WorkflowState) -> WorkflowState:
         """Prepare system prompt via prompt manager (runs before agent dispatch)."""
         if not self.prompt_manager:
@@ -474,6 +543,7 @@ class IntentClassificationWorkflow:
             state["metadata"]["prompt_error"] = str(e)
             return state
 
+    @_trace_node("clarification_step")
     async def _clarification_needed_node(self, state: WorkflowState) -> WorkflowState:
         """Generate a clarification request when intent confidence is low."""
         try:
@@ -556,6 +626,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("clarification_processing")
     async def _clarification_processing_node(
         self, state: WorkflowState
     ) -> WorkflowState:
@@ -648,6 +719,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("agent_dispatch")
     async def _agent_dispatch_node(self, state: WorkflowState) -> WorkflowState:
         """Dispatch the query to the selected agent for execution."""
         try:
@@ -702,6 +774,7 @@ class IntentClassificationWorkflow:
             state["metadata"]["agent_execution_error"] = str(e)
             return state
 
+    @_trace_node("response_processing")
     async def _response_processing_node(self, state: WorkflowState) -> WorkflowState:
         """Process and finalize the agent response."""
         try:
@@ -740,6 +813,7 @@ class IntentClassificationWorkflow:
             state["error"] = f"Intent processing error: {str(e)}"
             return state
 
+    @_trace_node("error_handling")
     async def _error_handling_node(self, state: WorkflowState) -> WorkflowState:
         """Handle workflow errors and generate error response."""
         logger.error(f"Workflow error: {state.get('error', 'Unknown error')}")
@@ -1890,6 +1964,7 @@ class IntentClassificationWorkflow:
                     ),
                     "requested_route_mode": route_mode,
                 },
+                node_trace=[],
             )
 
             # Compile the workflow with memory checkpointer
@@ -1928,6 +2003,7 @@ class IntentClassificationWorkflow:
                     for msg in result.get("messages", [])
                 ],
                 "metadata": metadata,
+                "node_trace": result.get("node_trace", []),
                 "error": result.get("error"),
             }
 

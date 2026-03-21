@@ -1,65 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { intentApi, type IntentClassifyResponse, type CapabilityCatalog } from "@/lib/api-client";
-
-// ── Intent display config ──────────────────────────────────────
-
-const INTENT_STYLE: Record<string, { label: string; dot: string; bg: string; text: string }> = {
-  knowledge_retrieval: { label: "Knowledge Retrieval", dot: "bg-blue-500", bg: "bg-blue-50 border-blue-200", text: "text-blue-700" },
-  cost_estimation:     { label: "Cost Estimation",     dot: "bg-green-500", bg: "bg-green-50 border-green-200", text: "text-green-700" },
-  data_analysis:       { label: "Data Analysis",       dot: "bg-purple-500", bg: "bg-purple-50 border-purple-200", text: "text-purple-700" },
-  document_processing: { label: "Document Processing", dot: "bg-orange-500", bg: "bg-orange-50 border-orange-200", text: "text-orange-700" },
-  code_execution:      { label: "Code Execution",      dot: "bg-red-500", bg: "bg-red-50 border-red-200", text: "text-red-700" },
-  unclear_intent:      { label: "Unclear",             dot: "bg-gray-400", bg: "bg-gray-50 border-gray-200", text: "text-gray-600" },
-};
-
-const EXAMPLE_QUERIES: Record<string, { label: string; queries: string[] }> = {
-  knowledge_retrieval: {
-    label: "RAG Knowledge",
-    queries: [
-      "What are the fall protection requirements under Ontario Regulation 213/91?",
-      "What safety equipment must workers wear according to OSHA 29 CFR 1926?",
-      "How does the National Building Code of Canada define fire compartment?",
-    ],
-  },
-  cost_estimation: {
-    label: "Cost Estimation",
-    queries: [
-      "How much does a 10-story commercial office building cost in Toronto?",
-      "Estimate the construction cost for a residential project with 5 floors and 20,000 sqft.",
-      "What is the typical budget overrun percentage for healthcare projects?",
-    ],
-  },
-  data_analysis: {
-    label: "Data Analysis",
-    queries: [
-      "Analyze the trend of construction costs over the past 5 years.",
-      "Create a visualization comparing project budgets by location.",
-      "Show me statistics on cost overruns for different project types.",
-    ],
-  },
-  document_processing: {
-    label: "Document Processing",
-    queries: [
-      "Upload and scan this PDF document for text extraction using OCR.",
-      "Process the uploaded image and extract text from the building permit.",
-    ],
-  },
-  code_execution: {
-    label: "Code Execution",
-    queries: [
-      "Run a Python script to calculate the structural load capacity.",
-      "Execute a computation to determine material requirements for a 50m bridge span.",
-    ],
-  },
-};
-
-const PIPELINE_NODES = [
-  "Input Preprocessing", "Context Enrichment", "Intent Classification",
-  "Confidence Evaluation", "Routing Decision", "Prompt Preparation",
-  "Agent Dispatch", "Response Processing",
-];
+import { useState, useEffect, useRef } from "react";
+import {
+  intentApi,
+  type IntentClassifyResponse,
+  type CapabilityCatalog,
+} from "@/lib/api-client";
+import { INTENT_STYLE } from "@/lib/intent-constants";
+import IntentFlowViz, { useIntentAnimation } from "@/components/IntentFlowViz";
+import IntentResultCard from "@/components/IntentResultCard";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -71,98 +20,189 @@ interface HistoryEntry {
   timestamp: Date;
 }
 
-// ── Component ──────────────────────────────────────────────────
+// ── Page Component ─────────────────────────────────────────────
 
-export default function IntentDemoPage() {
+export default function IntentDebuggerPage() {
+  // Query state
   const [query, setQuery] = useState("");
+  const [queryB, setQueryB] = useState("");
   const [isClassifying, setIsClassifying] = useState(false);
+  const [isClassifyingB, setIsClassifyingB] = useState(false);
   const [result, setResult] = useState<IntentClassifyResponse | null>(null);
+  const [resultB, setResultB] = useState<IntentClassifyResponse | null>(null);
+  const [lastQuery, setLastQuery] = useState("");
+  const [lastQueryB, setLastQueryB] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorB, setErrorB] = useState<string | null>(null);
+
+  // UI state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<CapabilityCatalog | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
 
+  // Stable session ID per page mount (for conversation replay)
+  const sessionIdRef = useRef(`intent-debug-${Date.now()}`);
+
+  // Animation hook
+  const { nodeStates, triggerAnimation } = useIntentAnimation();
+
+  // Load capabilities from API (DRY — no hardcoded example queries)
   useEffect(() => {
     intentApi.getCapabilities().then(setCapabilities).catch(() => {});
   }, []);
 
-  const handleClassify = async (queryText: string) => {
-    if (!queryText.trim() || isClassifying) return;
-    setIsClassifying(true);
-    setError(null);
-    setQuery(queryText);
+  // ── Classify handler ──────────────────────────────────────────
+
+  const handleClassify = async (queryText: string, isQueryB = false) => {
+    if (!queryText.trim()) return;
+    if (isQueryB ? isClassifyingB : isClassifying) return;
+
+    const setLoading = isQueryB ? setIsClassifyingB : setIsClassifying;
+    const setRes = isQueryB ? setResultB : setResult;
+    const setErr = isQueryB ? setErrorB : setError;
+    const setLastQ = isQueryB ? setLastQueryB : setLastQuery;
+
+    setLoading(true);
+    setErr(null);
+    setLastQ(queryText);
+    if (!isQueryB) setQuery(queryText);
 
     try {
+      const sessionId = isQueryB
+        ? `intent-debug-b-${Date.now()}`
+        : sessionIdRef.current;
+
       const res = await intentApi.classify({
         query: queryText.trim(),
-        session_id: `intent-demo-${Date.now()}`,
+        session_id: sessionId,
       });
-      setResult(res);
-      setHistory((prev) => [
-        {
-          query: queryText.trim(),
-          intent: res.intent || "unknown",
-          confidence: res.confidence || 0,
-          timeMs: res.processing_time_ms || 0,
-          timestamp: new Date(),
-        },
-        ...prev.slice(0, 9),
-      ]);
+      setRes(res);
+
+      // Trigger animation for the most recent query
+      if (res.node_trace && res.node_trace.length > 0) {
+        triggerAnimation(res.node_trace);
+      }
+
+      // Add to history (only for primary query)
+      if (!isQueryB) {
+        setHistory((prev) => [
+          {
+            query: queryText.trim(),
+            intent: res.intent || "unknown",
+            confidence: res.confidence || 0,
+            timeMs: res.processing_time_ms || 0,
+            timestamp: new Date(),
+          },
+          ...prev.slice(0, 9),
+        ]);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Classification failed";
       if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort")) {
-        setError("Classification timed out. The cloud LLM may be slow — please try again.");
+        setErr("Classification timed out. The cloud LLM may be slow — please try again.");
       } else {
-        setError(msg);
+        setErr(msg);
       }
     } finally {
-      setIsClassifying(false);
+      setLoading(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent, isB = false) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleClassify(query);
+      handleClassify(isB ? queryB : query, isB);
     }
   };
 
-  const intentStyle = INTENT_STYLE[(result?.intent as string) || ""] || INTENT_STYLE.unclear_intent;
-  const confidencePct = Math.round((result?.confidence || 0) * 100);
+  // ── Comparison presets ────────────────────────────────────────
+
+  const comparisonPairs = [
+    {
+      a: "Analyze construction cost trends by region",
+      b: "How much does a 10-story building cost in Toronto?",
+    },
+    {
+      a: "Run a Python script to calculate structural load capacity",
+      b: "What is the structural load capacity requirement under OSHA?",
+    },
+  ];
+
+  // ── Build example queries from API capabilities ───────────────
+
+  const exampleGroups: Record<string, { label: string; queries: string[] }> = {};
+  if (capabilities) {
+    for (const cap of capabilities.capabilities) {
+      if (cap.example_queries.length > 0) {
+        const style = INTENT_STYLE[cap.id];
+        exampleGroups[cap.id] = {
+          label: style?.label || cap.name,
+          queries: cap.example_queries,
+        };
+      }
+    }
+  }
+
+  // ── Derive node latencies from trace ──────────────────────────
+
+  const activeResult = result; // hero shows primary query
+  const nodeLatencies: Record<string, number> = {};
+  let skippedReason = "";
+  if (activeResult?.node_trace) {
+    for (const t of activeResult.node_trace) {
+      nodeLatencies[t.node_name] = t.duration_ms;
+    }
+    const completedNodes = activeResult.node_trace.map((t) => t.node_name);
+    const skipped = ["clarification_step", "clarification_processing", "error_handling"].filter(
+      (n) => !completedNodes.includes(n)
+    );
+    if (skipped.length > 0) {
+      const confPct = Math.round((activeResult.confidence || 0) * 100);
+      if (confPct >= 80) {
+        skippedReason = `Clarification skipped (confidence ${confPct}% ≥ 80%)`;
+      }
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-        <div className="text-xs font-medium uppercase tracking-wider opacity-80 mb-1">
-          11-Node LangGraph StateGraph
-        </div>
-        <h1 className="text-2xl font-bold mb-2">AI Intent Classification Engine</h1>
-        <p className="text-blue-100 text-sm">
-          See how the system understands and routes your queries to the right capability.
-        </p>
-      </div>
+      {/* Hero — IntentFlowViz */}
+      <IntentFlowViz
+        nodeStates={nodeStates}
+        nodeLatencies={nodeLatencies}
+        totalTime={activeResult?.processing_time_ms || undefined}
+        intentLabel={
+          activeResult?.intent
+            ? INTENT_STYLE[activeResult.intent]?.label || activeResult.intent
+            : undefined
+        }
+        confidence={activeResult?.confidence || undefined}
+        skippedReason={skippedReason}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left Panel — Input & Examples */}
+        {/* ── Left Panel ──────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Custom query input */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          {/* Query Input */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4" data-testid="query-input-panel">
             <h3 className="font-medium text-gray-900 mb-3">Test a Query</h3>
             <div className="flex space-x-2">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onKeyDown={(e) => handleKeyDown(e)}
                 placeholder="Type any query to classify..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={isClassifying}
+                data-testid="query-input"
               />
               <button
                 onClick={() => handleClassify(query)}
                 disabled={isClassifying || !query.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                data-testid="query-submit"
               >
                 {isClassifying ? "..." : "Go"}
               </button>
@@ -170,8 +210,8 @@ export default function IntentDemoPage() {
             {isClassifying && (
               <div className="mt-2 flex items-center space-x-2 text-xs text-blue-600">
                 <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
                 <span>Classifying via cloud LLM... this may take up to 60 seconds.</span>
               </div>
@@ -179,70 +219,123 @@ export default function IntentDemoPage() {
             {error && (
               <div className="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
             )}
+
+            {/* Comparison mode input B */}
+            {isComparing && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-500 mb-2">
+                  Query B
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={queryB}
+                    onChange={(e) => setQueryB(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, true)}
+                    placeholder="Second query to compare..."
+                    className="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    disabled={isClassifyingB}
+                    data-testid="query-input-b"
+                  />
+                  <button
+                    onClick={() => handleClassify(queryB, true)}
+                    disabled={isClassifyingB || !queryB.trim()}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                    data-testid="query-submit-b"
+                  >
+                    {isClassifyingB ? "..." : "Go"}
+                  </button>
+                </div>
+                {isClassifyingB && (
+                  <div className="mt-2 flex items-center space-x-2 text-xs text-amber-600">
+                    <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Classifying Query B...</span>
+                  </div>
+                )}
+                {errorB && (
+                  <div className="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{errorB}</div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Example queries by category */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          {/* Example Queries (from API) */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4" data-testid="example-queries-panel">
             <h3 className="font-medium text-gray-900 mb-3">Example Queries</h3>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {Object.entries(EXAMPLE_QUERIES).map(([key, val]) => {
-                const style = INTENT_STYLE[key];
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setActiveCategory(activeCategory === key ? null : key)}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition ${
-                      activeCategory === key
-                        ? `${style.bg} ${style.text} font-medium`
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {val.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="space-y-1.5 max-h-80 overflow-y-auto">
-              {Object.entries(EXAMPLE_QUERIES)
-                .filter(([key]) => !activeCategory || key === activeCategory)
-                .flatMap(([, val]) => val.queries)
-                .map((q, i) => (
+            {Object.keys(exampleGroups).length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {Object.entries(exampleGroups).map(([key, val]) => {
+                    const style = INTENT_STYLE[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setActiveCategory(activeCategory === key ? null : key)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                          activeCategory === key
+                            ? `${style?.bg} ${style?.text} font-medium`
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                        data-testid={`category-pill-${key}`}
+                      >
+                        {val.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                  {Object.entries(exampleGroups)
+                    .filter(([key]) => !activeCategory || key === activeCategory)
+                    .flatMap(([, val]) => val.queries)
+                    .map((q, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleClassify(q)}
+                        disabled={isClassifying}
+                        className="w-full text-left p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs text-gray-700 transition disabled:opacity-50"
+                        data-testid="example-query"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-gray-400">Loading capabilities...</div>
+            )}
+          </div>
+
+          {/* Comparison Presets */}
+          {isComparing && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4" data-testid="comparison-presets">
+              <h3 className="font-medium text-gray-900 mb-3">Comparison Pairs</h3>
+              <div className="space-y-2">
+                {comparisonPairs.map((pair, i) => (
                   <button
                     key={i}
-                    onClick={() => handleClassify(q)}
-                    disabled={isClassifying}
-                    className="w-full text-left p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs text-gray-700 transition disabled:opacity-50"
+                    onClick={() => {
+                      setQuery(pair.a);
+                      setQueryB(pair.b);
+                      handleClassify(pair.a, false);
+                      handleClassify(pair.b, true);
+                    }}
+                    disabled={isClassifying || isClassifyingB}
+                    className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs text-gray-700 transition disabled:opacity-50 space-y-1"
                   >
-                    {q}
+                    <div><span className="text-blue-600 font-medium">A:</span> {pair.a}</div>
+                    <div><span className="text-amber-600 font-medium">B:</span> {pair.b}</div>
                   </button>
                 ))}
+              </div>
             </div>
-          </div>
-
-          {/* Pipeline flow */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">Intent Workflow Pipeline</h3>
-            <div className="flex flex-wrap gap-1">
-              {PIPELINE_NODES.map((node, i) => (
-                <div key={node} className="flex items-center">
-                  <span className={`text-[10px] px-2 py-1 rounded ${
-                    result && i <= 4
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}>
-                    {node}
-                  </span>
-                  {i < PIPELINE_NODES.length - 1 && (
-                    <span className="text-gray-300 mx-0.5 text-xs">&rarr;</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* History */}
           {history.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4" data-testid="history-panel">
               <h3 className="font-medium text-gray-900 mb-3">
                 Classification History ({history.length})
               </h3>
@@ -254,10 +347,11 @@ export default function IntentDemoPage() {
                       key={i}
                       onClick={() => handleClassify(entry.query)}
                       className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                      data-testid="history-entry"
                     >
                       <span className="truncate flex-1 mr-2 text-gray-700">{entry.query}</span>
                       <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className={`${s.dot} w-1.5 h-1.5 rounded-full`}></span>
+                        <span className={`${s.dot} w-1.5 h-1.5 rounded-full`} />
                         <span className="text-gray-500 tabular-nums">{Math.round(entry.confidence * 100)}%</span>
                         <span className="text-gray-400 tabular-nums">{entry.timeMs}ms</span>
                       </div>
@@ -269,87 +363,76 @@ export default function IntentDemoPage() {
           )}
         </div>
 
-        {/* Right Panel — Results & Capabilities */}
+        {/* ── Right Panel ─────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-4">
-          {/* Classification Result */}
-          {result ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="font-medium text-gray-900 mb-4">Classification Result</h3>
+          {/* Comparison toggle */}
+          <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3" data-testid="comparison-toggle">
+            <label className="text-sm font-medium text-gray-700">Comparison Mode</label>
+            <button
+              onClick={() => setIsComparing(!isComparing)}
+              className={`relative w-10 h-[22px] rounded-full transition-colors ${
+                isComparing ? "bg-blue-600" : "bg-gray-300"
+              }`}
+              role="switch"
+              aria-checked={isComparing}
+              data-testid="comparison-switch"
+            >
+              <span
+                className={`absolute top-[2px] w-[18px] h-[18px] bg-white rounded-full transition-transform ${
+                  isComparing ? "translate-x-[20px]" : "translate-x-[2px]"
+                }`}
+              />
+            </button>
+            <span className="text-xs text-gray-500">Compare two queries side-by-side</span>
+          </div>
 
-              {/* Intent badge */}
-              <div className={`rounded-lg p-4 border ${intentStyle.bg} mb-4`}>
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className={`w-4 h-4 rounded-full ${intentStyle.dot}`}></div>
-                  <span className={`text-lg font-semibold ${intentStyle.text}`}>
-                    {intentStyle.label}
-                  </span>
+          {/* Results */}
+          {isComparing ? (
+            // Comparison mode: side-by-side
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {result ? (
+                <IntentResultCard
+                  result={result}
+                  query={lastQuery}
+                  borderColor="border-t-blue-600"
+                  label="Query A"
+                />
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-t-[3px] border-t-blue-600 p-5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-2">Query A</div>
+                  <p className="text-sm text-gray-500">Submit Query A to see results.</p>
                 </div>
-                {/* Confidence bar */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Confidence</span>
-                    <span className={`font-semibold ${intentStyle.text}`}>{confidencePct}%</span>
-                  </div>
-                  <div className="w-full bg-white bg-opacity-60 rounded-full h-2.5">
-                    <div
-                      className={`h-2.5 rounded-full transition-all duration-700 ${
-                        confidencePct >= 80 ? "bg-green-500" :
-                        confidencePct >= 60 ? "bg-blue-500" :
-                        confidencePct >= 40 ? "bg-yellow-500" : "bg-red-500"
-                      }`}
-                      style={{ width: `${confidencePct}%` }}
-                    ></div>
-                  </div>
+              )}
+              {resultB ? (
+                <IntentResultCard
+                  result={resultB}
+                  query={lastQueryB}
+                  borderColor="border-t-amber-500"
+                  label="Query B"
+                />
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-t-[3px] border-t-amber-500 p-5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-500 mb-2">Query B</div>
+                  <p className="text-sm text-gray-500">Submit Query B to compare.</p>
                 </div>
-              </div>
-
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {result.reasoning && (
-                  <div className="col-span-2">
-                    <div className="text-gray-500 text-xs mb-0.5">Reasoning</div>
-                    <div className="text-gray-800">{result.reasoning}</div>
-                  </div>
-                )}
-                {result.routing_decision && (
-                  <>
-                    <div>
-                      <div className="text-gray-500 text-xs mb-0.5">Agent</div>
-                      <div className="text-gray-800 font-medium">
-                        {(result.routing_decision as Record<string, unknown>).selected_agent as string || "N/A"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs mb-0.5">Routing Path</div>
-                      <div className="text-gray-800">
-                        {(result.routing_decision as Record<string, unknown>).routing_path as string || "N/A"}
-                      </div>
-                    </div>
-                  </>
-                )}
-                <div>
-                  <div className="text-gray-500 text-xs mb-0.5">Processing Time</div>
-                  <div className="text-gray-800 font-medium tabular-nums">{result.processing_time_ms || 0}ms</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs mb-0.5">Clarification Needed</div>
-                  <div className={result.clarification_needed ? "text-yellow-600 font-medium" : "text-green-600"}>
-                    {result.clarification_needed ? "Yes" : "No"}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="font-medium text-gray-900 mb-3">Classification Result</h3>
-              <p className="text-sm text-gray-500">
-                Click an example query or type your own to see how the system classifies it.
-              </p>
-            </div>
+            // Single mode
+            result ? (
+              <IntentResultCard result={result} query={lastQuery} />
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 className="font-medium text-gray-900 mb-3">Classification Result</h3>
+                <p className="text-sm text-gray-500">
+                  Submit a query to watch the AI think — the pipeline above will animate with real timing data.
+                </p>
+              </div>
+            )
           )}
 
           {/* System Capabilities */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5" data-testid="capabilities-panel">
             <h3 className="font-medium text-gray-900 mb-3">
               System Capabilities
               {capabilities && (
@@ -364,7 +447,7 @@ export default function IntentDemoPage() {
                 return (
                   <div key={cap.id} className={`rounded-lg p-3 border ${style.bg}`}>
                     <div className="flex items-center space-x-2 mb-1.5">
-                      <div className={`w-2 h-2 rounded-full ${style.dot}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${style.dot}`} />
                       <span className={`text-sm font-medium ${style.text}`}>{cap.name}</span>
                     </div>
                     <p className="text-xs text-gray-600 mb-2 line-clamp-2">{cap.description}</p>
