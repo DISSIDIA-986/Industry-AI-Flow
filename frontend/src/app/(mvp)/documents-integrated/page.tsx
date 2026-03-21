@@ -421,7 +421,7 @@ export default function DocumentsIntegratedPage() {
                   <FileUpload
                     onFilesSelected={handleFileSelect}
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.jpg,.jpeg,.png"
-                    maxSize={50 * 1024 * 1024} // 50MB
+                    maxSize={50} // 50MB (FileUpload expects MB, not bytes)
                     multiple
                   />
                   
