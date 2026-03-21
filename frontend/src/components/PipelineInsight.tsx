@@ -27,7 +27,7 @@ const NODE_LABELS: Record<string, string> = {
   groundedness_node: "Groundedness Check",
 };
 
-const ALL_NODES = [
+export const ALL_NODES = [
   "intent_node", "safety_node", "cost_estimation_node", "retrieval_node",
   "rerank_node", "prompt_node", "route_node", "code_exec_node",
   "response_node", "groundedness_node",
