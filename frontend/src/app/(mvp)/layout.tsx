@@ -1,5 +1,4 @@
 import { AppConfigProvider } from "@/components/app-config-context";
-import DashboardShell from "@/components/dashboard-shell-simple";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 
@@ -7,9 +6,11 @@ export default function MvpLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
       <AppConfigProvider>
-        <div className="h-screen flex flex-col bg-gray-50">
+        <div className="min-h-screen bg-gray-50">
           <Navbar />
-          <DashboardShell>{children}</DashboardShell>
+          <main className="pt-6">
+            {children}
+          </main>
         </div>
       </AppConfigProvider>
     </ProtectedRoute>
