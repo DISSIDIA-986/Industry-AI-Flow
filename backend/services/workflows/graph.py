@@ -114,6 +114,8 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
             ] = "An error occurred while processing your request. Please try again."
         metadata = state.setdefault("metadata", {})
         metadata["pipeline_status"] = "error" if state.get("error") else "completed"
+        metrics = state.get("metrics", {})
+        metadata["node_latency_ms"] = metrics.get("node_latency_ms", {})
         return state
 
     try:
