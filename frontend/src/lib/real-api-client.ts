@@ -324,7 +324,7 @@ export const realApiService = {
       return await realApi.get<RealDocumentListResponse[]>('/documents')
     } catch (error) {
       if (shouldFallbackToSyntheticData()) {
-        console.warn('Failed to get the list of documents, returning an empty list (explicitly enabledfallback）:', error)
+        console.warn('Failed to get the list of documents, returning an empty list (explicitly enabled fallback):', error)
         return []
       }
       if (isTransientDocumentListError(error)) {
@@ -336,6 +336,13 @@ export const realApiService = {
         ? error
         : new RealApiError(503, 'Failed to get document list')
     }
+  },
+
+  // Delete document
+  async deleteDocument(id: string): Promise<{ success: boolean; message?: string }> {
+    return await realApi.delete<{ success: boolean; message?: string }>(
+      `/documents/${encodeURIComponent(id)}`
+    )
   },
   
   // cost estimate
