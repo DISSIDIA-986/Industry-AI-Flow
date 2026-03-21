@@ -3,9 +3,9 @@
 ## Deferred Tasks
 
 ### Migrate E2E selectors from Tailwind classes to data-testid
-**Priority:** Medium
+**Priority:** Medium — **PARTIAL (Intent Demo page done, 4 other pages remain)**
 **Added:** 2026-03-19 (eng review of UI design system unification)
-**Blocked by:** Nothing — can be done anytime after demo
+**Blocked by:** Nothing — Intent Demo page has data-testid attributes as of Intent Debugger PR
 
 **What:** All 4 browser E2E test scripts (`run_rag_agent_browser_e2e.py`, `run_data_analysis_browser_e2e.py`, `run_cost_estimation_agent_browser_e2e.py`, `run_data_dashboard_agent_browser_e2e.py`) use hardcoded Tailwind CSS class names as selectors (e.g., `bg-blue-600`, `space-y-6`, `overflow-y-auto`). Any CSS styling change can break these tests.
 
@@ -51,3 +51,21 @@
 4. Frontend polling fallback reads stage from API response instead of getting no progress
 
 **Effort:** human: ~4 hours / CC: ~10 min
+
+### Intent Debugger — Conversation Replay (stretch goal)
+**Priority:** Medium
+**Added:** 2026-03-21 (eng review of Intent Debugger design)
+**Blocked by:** Intent Debugger Phases 1-3 must be completed first
+
+**What:** Multi-turn conversation replay component + backend session trace storage. Shows how intent evolves across clarification rounds (e.g., unclear_intent → cost_estimation after user clarifies). Timeline UI with step-forward/back playback controls, color-coded by intent at each turn.
+
+**Why:** Demonstrates the core architectural innovation of the 11-node StateGraph — specifically the clarification loop (MAX_CLARIFICATION_ROUNDS=2) that distinguishes this system from a simple keyword matcher. Evaluators can see the system "learn" what the user wants across multiple turns.
+
+**How to implement:**
+1. Add in-memory `workflow_traces: dict[str, list]` to intent workflow (keyed by session_id)
+2. Each classification appends full `node_trace` + result to the session's trace list
+3. New endpoint: `GET /api/intent/session/{session_id}/trace` → returns ordered list
+4. New frontend component: `IntentConversationReplay` — vertical timeline with connected dots
+5. Playback controls: step forward/back through turns, show intent evolution
+
+**Effort:** human: ~2 days / CC: ~20 min

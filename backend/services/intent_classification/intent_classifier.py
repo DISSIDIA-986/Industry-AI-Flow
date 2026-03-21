@@ -189,13 +189,20 @@ class IntentClassifier:
 
         logger.info("Intent classifier initialized")
 
-    async def classify_intent(self, query: str, context: QueryContext) -> IntentResult:
+    async def classify_intent(
+        self,
+        query: str,
+        context: QueryContext,
+        *,
+        bypass_cache: bool = False,
+    ) -> IntentResult:
         """
         Classify the intent of a user query.
 
         Args:
             query: The user's input query string.
             context: Query context including session and file information.
+            bypass_cache: If True, skip cache lookup (used by Intent Debugger).
 
         Returns:
             IntentResult: The classification result with intent, confidence, and metadata.
@@ -208,7 +215,7 @@ class IntentClassifier:
 
             # 2. Check the cache for a previous classification
             cache_key = self._generate_cache_key(processed_query, context)
-            if self.enable_cache:
+            if self.enable_cache and not bypass_cache:
                 cached_result = self._get_from_cache(cache_key)
                 if cached_result:
                     self.stats["cache_hits"] += 1
@@ -518,19 +525,14 @@ class IntentClassifier:
                 query_text = query_text[:end_idx]
 
         registry = get_capability_registry()
-        intent, confidence, reasoning = registry.classify_heuristic(query_text)
+        detailed = registry.classify_heuristic_detailed(query_text)
 
-        # Extract detected keywords
-        query_lower = query_text.lower()
-        keywords = []
-        if "cost" in query_lower:
-            keywords.append("cost")
-        if "data" in query_lower:
-            keywords.append("data")
-        if "pdf" in query_lower:
-            keywords.append("PDF")
-        if "code" in query_lower:
-            keywords.append("code")
+        intent = detailed["intent_id"]
+        confidence = detailed["confidence"]
+        reasoning = detailed["reasoning"]
+
+        # Extract matched keywords from detailed result
+        keywords = [kw for kw, _cap_id in detailed["matched_keywords"]]
 
         return json.dumps(
             {
@@ -543,6 +545,8 @@ class IntentClassifier:
                 "uncertainty_factors": []
                 if confidence > 0.7
                 else ["Low confidence classification"],
+                "capability_scores": detailed["capability_scores"],
+                "matched_keywords_detail": detailed["matched_keywords"],
             },
             ensure_ascii=False,
         )
