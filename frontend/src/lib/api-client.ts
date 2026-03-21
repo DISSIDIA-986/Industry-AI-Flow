@@ -336,9 +336,16 @@ export interface CostPrediction {
   predicted_actual_cost_cad: number
   predicted_cost_overrun_pct: number
   prediction_interval_cad: {
+    confidence_quantile: number
     lower: number
     upper: number
   }
+  estimated_cost_cad: number
+  uncertainty: { ape_quantile: number }
+  reasonableness: { within_training_range: boolean; flags: string[] }
+  unknown_categories: Record<string, string>
+  confidence_degraded: boolean
+  warning: string | null
 }
 
 export interface CostPredictionResponse {

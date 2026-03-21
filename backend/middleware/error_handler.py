@@ -6,6 +6,7 @@ import logging
 from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend.security.memory_guard import MemoryGuardExceeded
@@ -25,7 +26,31 @@ FRIENDLY_MESSAGES = {
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    """Attach middleware for consistent error responses."""
+    """Attach middleware and exception handlers for consistent error responses."""
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        # Preserve full location path so batch errors keep row index
+        # e.g. ("body", "projects", 0, "floors") → "projects.0.floors"
+        field_errors: dict[str, str] = {}
+        for err in exc.errors():
+            loc = err.get("loc", ())
+            # Skip "body" prefix for cleaner keys
+            parts = [str(p) for p in loc if p != "body"]
+            field_name = ".".join(parts) if parts else "unknown"
+            field_errors[field_name] = err.get("msg", "Invalid value")
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error_code": "VALIDATION_ERROR",
+                "message": "Request validation failed. Please review the submitted fields.",
+                "detail": exc.errors(),
+                "field_errors": field_errors,
+            },
+        )
 
     @app.middleware("http")
     async def _error_middleware(request: Request, call_next: Callable):
