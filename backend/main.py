@@ -439,6 +439,7 @@ def _load_uploaded_documents(
         suffix = Path(sanitized_name).suffix.lstrip(".").upper() or "FILE"
         created_at = row.get("created_at")
         status = str(row.get("status") or "processed")
+        size_bytes = int(row.get("size_bytes") or 0)
         if file_path and status != "deleted":
             try:
                 if not _normalize_file_path(file_path).exists():
@@ -446,12 +447,16 @@ def _load_uploaded_documents(
             except Exception:
                 status = "missing"
 
+        # Filter out unhealthy documents (missing, deleted, or zero-size)
+        if status not in ("processed", "processing") or size_bytes <= 0:
+            continue
+
         docs.append(
             {
                 "id": row.get("id"),
                 "name": sanitized_name,
                 "type": suffix,
-                "size": row.get("size_bytes"),
+                "size": size_bytes,
                 "uploaded_at": (
                     created_at.isoformat()
                     if hasattr(created_at, "isoformat")
@@ -523,6 +528,10 @@ def _load_indexed_documents_fallback(*, limit: int = 200) -> List[Dict[str, Any]
                     status = "missing"
             except Exception:
                 status = "missing"
+
+        # Filter out unhealthy documents (missing or zero-size)
+        if status != "processed" or size_bytes <= 0:
+            continue
 
         docs.append(
             {
