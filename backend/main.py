@@ -360,10 +360,13 @@ def _record_uploaded_document(
     file_path: str,
     size_bytes: int,
     mime_type: Optional[str] = None,
-) -> None:
+    status: str = "processing",
+) -> str:
+    """Record uploaded document metadata. Returns the generated doc_id."""
     _ensure_uploaded_documents_index_table()
 
     tenant_id = _resolve_tenant_id(tenant)
+    doc_id = f"doc-{uuid4().hex[:16]}"
     conn = connect_db(settings.database_url)
     cur = conn.cursor()
     try:
@@ -378,22 +381,41 @@ def _record_uploaded_document(
                 size_bytes,
                 mime_type,
                 status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'processed')
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
-                f"doc-{uuid4().hex[:16]}",
+                doc_id,
                 tenant_id,
                 original_filename,
                 sanitized_filename,
                 file_path,
                 size_bytes,
                 mime_type,
+                status,
             ),
+        )
+        conn.commit()
+        return doc_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def _update_document_status(doc_id: str, status: str) -> None:
+    """Update the status of an uploaded document."""
+    conn = connect_db(settings.database_url)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE uploaded_documents_index SET status = %s, updated_at = NOW() WHERE id = %s",
+            (status, doc_id),
         )
         conn.commit()
     except Exception:
         conn.rollback()
-        raise
     finally:
         cur.close()
         conn.close()
@@ -610,6 +632,16 @@ async def lifespan(_: FastAPI):
         await initialize_intent_routes()
     except Exception as e:
         logger.error(f"Failed to initialize intent workflow: {e}")
+
+    # Pre-warm OCR model to eliminate cold start on first upload
+    try:
+        from backend.services.document_processing import get_ocr_processor
+
+        ocr = get_ocr_processor()
+        if ocr is not None:
+            logger.info("OCR model pre-warmed (lang=%s)", ocr.lang)
+    except Exception as e:
+        logger.warning("OCR pre-warming failed (non-critical): %s", e)
 
     yield
 
@@ -938,22 +970,16 @@ async def upload_document(
             tenant=tenant,
         )
 
-        payload = {
-            "status": "success",
-            "filename": file.filename,
-            "sanitized_filename": safe_name,
-            "file_id": safe_name,
-            "size": len(content),
-            "message": "Document uploaded successfully.",
-        }
+        # Record metadata with status='processing', get doc_id immediately
         try:
-            _record_uploaded_document(
+            doc_id = _record_uploaded_document(
                 tenant=tenant,
                 original_filename=file.filename or safe_name,
                 sanitized_filename=safe_name,
                 file_path=file_path,
                 size_bytes=len(content),
                 mime_type=file.content_type,
+                status="processing",
             )
         except Exception as exc:
             try:
@@ -966,98 +992,153 @@ async def upload_document(
                 detail="Document upload failed: metadata persistence error",
             ) from exc
 
-        # Auto-vectorize: extract → chunk → embed → store in pgvector
-        # Runs in a thread pool to avoid blocking the async event loop.
-        vectorized = False
+        # Create progress tracker for SSE streaming
+        from backend.services.document_processing.progress_tracker import (
+            PipelineProgressTracker,
+        )
 
+        tracker = PipelineProgressTracker(doc_id)
+
+        # Auto-vectorize in background: extract → chunk → embed → store
         def _vectorize_sync(
-            _file_path: str, _safe_name: str, _content_len: int
-        ) -> dict:
-            """Synchronous vectorization — runs in ThreadPoolExecutor."""
+            _file_path: str,
+            _safe_name: str,
+            _content_len: int,
+            _doc_id: str,
+            _tracker: PipelineProgressTracker,
+        ) -> None:
+            """Synchronous vectorization with progress tracking."""
             import time as _time
 
-            from backend.services.document_processing.document_extractor import (
-                DocumentExtractor,
-            )
             from backend.services.core.chunker import chunk_text
             from backend.services.core.embedder import embed_texts
             from backend.services.core.vectorstore import VectorStore
-
-            t_total = _time.time()
-
-            t0 = _time.time()
-            extractor = DocumentExtractor(use_ocr=True)
-            doc_content = extractor.extract(_file_path)
-            t_extract = _time.time() - t0
-
-            text = doc_content.text
-            if not text or len(text.strip()) <= 10:
-                return {"vectorized": False, "reason": "insufficient_text"}
-
-            t0 = _time.time()
-            chunks = chunk_text(
-                text,
-                chunk_size=settings.chunk_size,
-                chunk_overlap=settings.chunk_overlap,
-            )
-            chunk_contents = [c["content"] for c in chunks]
-            t_chunk = _time.time() - t0
-
-            if not chunk_contents:
-                return {"vectorized": False, "reason": "no_chunks"}
-
-            t0 = _time.time()
-            embeddings = embed_texts(chunk_contents)
-            t_embed = _time.time() - t0
-
-            vs = VectorStore()
-            doc_id = vs.store_document_with_chunks(
-                filename=_safe_name,
-                filepath=_file_path,
-                chunks=chunk_contents,
-                embeddings=embeddings,
-                size_bytes=_content_len,
+            from backend.services.document_processing.document_extractor import (
+                DocumentExtractor,
             )
 
-            t_total_dur = _time.time() - t_total
-            logger.info(
-                "Vectorization complete for %s: extract=%.1fs, chunk=%.1fs, "
-                "embed=%.1fs, total=%.1fs (%d chunks, doc_id=%s)",
-                _safe_name,
-                t_extract,
-                t_chunk,
-                t_embed,
-                t_total_dur,
-                len(chunk_contents),
-                doc_id,
-            )
-            return {
-                "vectorized": True,
-                "doc_id": doc_id,
-                "chunk_count": len(chunk_contents),
-            }
+            try:
+                t_total = _time.time()
 
-        try:
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-            vec_result = await loop.run_in_executor(
-                None, _vectorize_sync, file_path, safe_name, len(content)
-            )
-            if vec_result.get("vectorized"):
-                payload["doc_id"] = vec_result["doc_id"]
-                payload["chunk_count"] = vec_result["chunk_count"]
-                payload["message"] = (
-                    f"Document uploaded and vectorized ({vec_result['chunk_count']} chunks)."
+                # Stage 1: Extract
+                _tracker.update("extract", "running", 0.0, "Starting text extraction...")
+                t0 = _time.time()
+                extractor = DocumentExtractor(use_ocr=True)
+                doc_content = extractor.extract(
+                    _file_path, progress_callback=_tracker.update
                 )
-                vectorized = True
-        except Exception as vec_exc:
-            logger.warning(
-                "Auto-vectorization failed for %s (upload still succeeded): %s",
-                safe_name,
-                vec_exc,
-            )
-            payload["vectorization_error"] = str(vec_exc)
+                _tracker.update(
+                    "extract", "completed", 1.0,
+                    f"Extracted text ({len(doc_content.text)} chars)",
+                )
+
+                text = doc_content.text
+                if not text or len(text.strip()) <= 10:
+                    _tracker.update("chunk", "skipped", 0.0, "Insufficient text")
+                    _tracker.update("embed", "skipped", 0.0, "Insufficient text")
+                    _tracker.update("store", "skipped", 0.0, "Insufficient text")
+                    _update_document_status(_doc_id, "processed")
+                    _tracker.complete()
+                    return
+
+                # Stage 2: OCR (handled inside extract, report skipped if no OCR)
+                ocr_pages = doc_content.metadata.get("ocr_pages")
+                if not ocr_pages:
+                    _tracker.update("ocr", "skipped", 0.0, "Text PDF — no OCR needed")
+
+                # Stage 3: Chunk
+                _tracker.update("chunk", "running", 0.0, "Chunking text...")
+                t0 = _time.time()
+                chunks = chunk_text(
+                    text,
+                    chunk_size=settings.chunk_size,
+                    chunk_overlap=settings.chunk_overlap,
+                )
+                chunk_contents = [c["content"] for c in chunks]
+                t_chunk = _time.time() - t0
+
+                if not chunk_contents:
+                    _tracker.update("chunk", "completed", 1.0, "No chunks generated")
+                    _tracker.update("embed", "skipped", 0.0, "No chunks to embed")
+                    _tracker.update("store", "skipped", 0.0, "Nothing to store")
+                    _update_document_status(_doc_id, "processed")
+                    _tracker.complete()
+                    return
+
+                _tracker.update(
+                    "chunk", "completed", 1.0,
+                    f"Created {len(chunk_contents)} chunks ({t_chunk:.1f}s)",
+                )
+
+                # Stage 4: Embed
+                _tracker.update(
+                    "embed", "running", 0.0,
+                    f"Embedding {len(chunk_contents)} chunks...",
+                )
+                t0 = _time.time()
+                embeddings = embed_texts(chunk_contents)
+                t_embed = _time.time() - t0
+                _tracker.update(
+                    "embed", "completed", 1.0,
+                    f"Embedded {len(chunk_contents)} chunks ({t_embed:.1f}s)",
+                )
+
+                # Stage 5: Store
+                _tracker.update(
+                    "store", "running", 0.0,
+                    f"Storing {len(chunk_contents)} chunks in database...",
+                )
+                vs = VectorStore()
+                vector_doc_id = vs.store_document_with_chunks(
+                    filename=_safe_name,
+                    filepath=_file_path,
+                    chunks=chunk_contents,
+                    embeddings=embeddings,
+                    size_bytes=_content_len,
+                )
+                _tracker.update(
+                    "store", "completed", 1.0,
+                    f"Stored {len(chunk_contents)} chunks",
+                )
+
+                # Update document status to processed
+                _update_document_status(_doc_id, "processed")
+
+                t_total_dur = _time.time() - t_total
+                logger.info(
+                    "Vectorization complete for %s: total=%.1fs (%d chunks, doc_id=%s)",
+                    _safe_name,
+                    t_total_dur,
+                    len(chunk_contents),
+                    vector_doc_id,
+                )
+                _tracker.complete()
+
+            except Exception as exc:
+                logger.warning(
+                    "Auto-vectorization failed for %s: %s", _safe_name, exc
+                )
+                _update_document_status(_doc_id, "failed")
+                _tracker.fail("unknown", str(exc))
+
+        # Kick off async vectorization — don't await
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(
+            None, _vectorize_sync, file_path, safe_name, len(content), doc_id, tracker
+        )
+
+        # Return immediately with doc_id (status=processing)
+        payload = {
+            "status": "success",
+            "filename": file.filename,
+            "sanitized_filename": safe_name,
+            "file_id": safe_name,
+            "doc_id": doc_id,
+            "size": len(content),
+            "message": "Document uploaded. Processing started.",
+        }
 
         log_audit(
             action="document.upload",
@@ -1066,7 +1147,7 @@ async def upload_document(
             detail={
                 "filename": safe_name,
                 "size": len(content),
-                "vectorized": vectorized,
+                "doc_id": doc_id,
             },
         )
         _run_documents_cleanup_if_due()

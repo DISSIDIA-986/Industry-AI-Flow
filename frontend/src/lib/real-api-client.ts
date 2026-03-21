@@ -169,6 +169,7 @@ export interface RealDocumentUploadRequest {
 // Document upload response
 export interface RealDocumentUploadResponse {
   id: string
+  doc_id?: string
   filename: string
   title: string
   size: number
