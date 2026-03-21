@@ -51,11 +51,12 @@ function normalizeDocumentSource(
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([])
-  const [realDocuments, setRealDocuments] = useState<RealDocumentListResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -73,15 +74,12 @@ export default function DocumentsPage() {
       const connected = health.status === 'ok'
       setApiStatus(connected ? 'connected' : 'disconnected')
       if (!connected) {
-        setRealDocuments([])
         setDocuments(ALLOW_DOCUMENTS_MOCK_FALLBACK ? getMockDocuments() : [])
         return
       }
 
-      // try from realityAPILoad document
       const realDocs = await realApiService.getDocuments()
-      setRealDocuments(realDocs)
-      
+
       // Convert to front-end format
       const formattedDocs: Document[] = realDocs.map(doc => ({
         id: doc.id,
@@ -93,22 +91,21 @@ export default function DocumentsPage() {
         source: normalizeDocumentSource(doc.source),
         chunkCount: Number(doc.chunk_count || 0) || undefined,
       }))
-      
+
       setDocuments(formattedDocs)
-      
+
       // Optional local fallback for visual demos only.
       if (formattedDocs.length === 0 && ALLOW_DOCUMENTS_MOCK_FALLBACK) {
         setDocuments(getMockDocuments())
       }
     } catch (error) {
-      console.error('Failed to load document:', error)
+      console.error('Failed to load documents:', error)
       setApiStatus('disconnected')
       if (ALLOW_DOCUMENTS_MOCK_FALLBACK) {
         setDocuments(getMockDocuments())
       } else {
         setDocuments([])
       }
-      setRealDocuments([])
     } finally {
       setLoading(false)
     }
@@ -135,22 +132,13 @@ export default function DocumentsPage() {
     },
     {
       id: '3',
-      name: 'Construction safety regulations.pdf',
+      name: 'Construction Safety Regulations.pdf',
       type: 'PDF',
       size: '3.2 MB',
       uploadedAt: new Date('2026-02-11'),
-      status: 'processing',
+      status: 'processed',
       source: 'uploaded',
     },
-    {
-      id: '4',
-      name: 'Material cost data.xlsx',
-      type: 'Excel',
-      size: '4.1 MB',
-      uploadedAt: new Date('2026-02-10'),
-      status: 'error',
-      source: 'uploaded',
-    }
   ]
 
   const getFileType = (filename: string): string => {
@@ -189,6 +177,7 @@ export default function DocumentsPage() {
 
     setUploading(true)
     setUploadProgress(0)
+    setUploadError(null)
 
     try {
       // Simulate upload progress
@@ -202,27 +191,32 @@ export default function DocumentsPage() {
         })
       }, 200)
 
+      const failedFiles: string[] = []
+
       // Upload each file
       for (const file of selectedFiles) {
         try {
           if (apiStatus === 'connected') {
-            // use realAPIupload
             await realApiService.uploadDocument(file, {
               title: file.name,
               description: `Uploaded by ${user?.name || 'user'}`,
               tags: ['uploaded', getFileType(file.name).toLowerCase()]
             })
           } else {
-            // Simulate upload
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
         } catch (error) {
-          console.error(`Upload files ${file.name} fail:`, error)
+          console.error(`Failed to upload ${file.name}:`, error)
+          failedFiles.push(file.name)
         }
       }
 
       clearInterval(progressInterval)
       setUploadProgress(100)
+
+      if (failedFiles.length > 0) {
+        setUploadError(`Failed to upload: ${failedFiles.join(', ')}. Please try again.`)
+      }
 
       // Upload completed, reload the document list
       setTimeout(() => {
@@ -230,7 +224,7 @@ export default function DocumentsPage() {
         setUploadProgress(0)
         setSelectedFiles([])
         loadDocuments()
-        
+
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
@@ -239,6 +233,7 @@ export default function DocumentsPage() {
 
     } catch (error) {
       console.error('Upload failed:', error)
+      setUploadError('Upload failed. Please check your connection and try again.')
       setUploading(false)
       setUploadProgress(0)
     }
@@ -247,22 +242,17 @@ export default function DocumentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return
 
+    setDeleteError(null)
     try {
-      // Delete should be called hereAPI
-      // await realApiService.deleteDocument(id)
-      
-      // Temporarily removed from frontend status
-      setDocuments(prev => prev.filter(doc => doc.id !== id))
-      setRealDocuments(prev => prev.filter(doc => doc.id !== id))
+      if (apiStatus === 'connected') {
+        await realApiService.deleteDocument(id)
+      }
+      // Refresh from backend to ensure consistency
+      await loadDocuments()
     } catch (error) {
       console.error('Failed to delete document:', error)
+      setDeleteError('Failed to delete document. Please try again.')
     }
-  }
-
-  const handleDownload = (id: string, filename: string) => {
-    // Download should be called hereAPI
-    // Temporarily use simulated downloads
-    alert(`Start downloading: ${filename}`)
   }
 
   const filteredDocuments = documents.filter(doc =>
@@ -279,7 +269,7 @@ export default function DocumentsPage() {
       case 'error':
         return <Badge variant="destructive">Error</Badge>
       default:
-        return <Badge variant="secondary">unknown</Badge>
+        return <Badge variant="secondary">Unknown</Badge>
     }
   }
 
@@ -290,9 +280,9 @@ export default function DocumentsPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
               <p className="text-gray-600 mt-2">
-                Upload, manage and process construction project documents
+                Upload, manage, and process construction project documents
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -302,7 +292,7 @@ export default function DocumentsPage() {
               }`}></div>
               <span className="text-sm text-gray-600">
                 {apiStatus === 'connected' ? 'API Connected' :
-                 apiStatus === 'disconnected' ? 'API Disconnected' : 'Checking API status...'}
+                 apiStatus === 'disconnected' ? 'API Disconnected' : 'Checking API...'}
               </span>
             </div>
           </div>
@@ -313,9 +303,9 @@ export default function DocumentsPage() {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Upload documents</CardTitle>
+                <CardTitle>Upload Documents</CardTitle>
                 <CardDescription>
-                  Supports PDF, Word, Excel, Image, and other formats.
+                  Supports PDF, Word, Excel, Image, and other formats
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -326,10 +316,10 @@ export default function DocumentsPage() {
                     maxSize={50 * 1024 * 1024} // 50MB
                     multiple
                   />
-                  
+
                   {selectedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-sm font-medium">Selected {selectedFiles.length} files:</div>
+                      <div className="text-sm font-medium">{selectedFiles.length} file(s) selected:</div>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {selectedFiles.map((file, index) => (
                           <div key={index} className="text-xs text-gray-600 truncate">
@@ -343,10 +333,16 @@ export default function DocumentsPage() {
                   {uploading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Upload progress</span>
+                        <span>Upload Progress</span>
                         <span>{uploadProgress}%</span>
                       </div>
                       <Progress value={uploadProgress} />
+                    </div>
+                  )}
+
+                  {uploadError && (
+                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      {uploadError}
                     </div>
                   )}
 
@@ -355,40 +351,13 @@ export default function DocumentsPage() {
                     disabled={selectedFiles.length === 0 || uploading}
                     className="w-full"
                   >
-                    {uploading ? 'Uploading...' : 'Start uploading'}
+                    {uploading ? 'Uploading...' : 'Upload'}
                   </Button>
 
                   <div className="text-xs text-gray-500">
-                    <p>• Maximum file size: 50MB</p>
-                    <p>• Supported formats: PDF, Word, Excel, Text, Images</p>
-                    <p>• Documents will be automatically processed and analyzed after uploading</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* APIstatus card */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>API Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">backend connection</span>
-                    <Badge variant={apiStatus === 'connected' ? 'success' : 'destructive'}>
-                      {apiStatus === 'connected' ? 'normal' : 'disconnect'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total number of documents</span>
-                    <span className="font-medium">{realDocuments.length} indivual</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Processed</span>
-                    <span className="font-medium">
-                      {realDocuments.filter(d => d.status === 'completed' || d.status === 'processed').length} indivual
-                    </span>
+                    <p>• Maximum file size: 50 MB</p>
+                    <p>• Supported: PDF, Word, Excel, Text, Markdown, Images</p>
+                    <p>• Documents are automatically processed after upload</p>
                   </div>
                 </div>
               </CardContent>
@@ -401,14 +370,14 @@ export default function DocumentsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Document list</CardTitle>
+                    <CardTitle>Document List</CardTitle>
                     <CardDescription>
-                      All uploaded documents support search and filtering
+                      All documents in the knowledge base
                     </CardDescription>
                   </div>
                   <div className="w-64">
                     <Input
-                      placeholder="Search document name or type..."
+                      placeholder="Search by name or type..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -416,15 +385,20 @@ export default function DocumentsPage() {
                 </div>
               </CardHeader>
               <CardContent>
+                {deleteError && (
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded mb-4">
+                    {deleteError}
+                  </div>
+                )}
                 {loading ? (
                   <div className="py-12">
-                    <Loading message="Loading document..." />
+                    <Loading message="Loading documents..." />
                   </div>
                 ) : filteredDocuments.length === 0 ? (
                   <EmptyState
-                    title="No document found"
-                    description={searchQuery ? 'Try other search terms' : 'Upload your first document to get started'}
-                    actionLabel="Upload documents"
+                    title="No Documents Found"
+                    description={searchQuery ? 'Try a different search term' : 'Upload your first document to get started'}
+                    actionLabel="Upload Document"
                     onAction={() => fileInputRef.current?.click()}
                   />
                 ) : (
@@ -432,13 +406,13 @@ export default function DocumentsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>file name</TableHead>
-                          <TableHead>type</TableHead>
-                          <TableHead>size</TableHead>
-                          <TableHead>Upload time</TableHead>
-                          <TableHead>source</TableHead>
-                          <TableHead>state</TableHead>
-                          <TableHead className="text-right">operate</TableHead>
+                          <TableHead>File Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead>Upload Time</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -481,23 +455,14 @@ export default function DocumentsPage() {
                               {getStatusBadge(document.status)}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDownload(document.id, document.name)}
-                                >
-                                  download
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDelete(document.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  delete
-                                </Button>
-                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(document.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -516,7 +481,7 @@ export default function DocumentsPage() {
                     <div className="text-2xl font-bold text-gray-900">
                       {documents.length}
                     </div>
-                    <div className="text-sm text-gray-600">Total number of documents</div>
+                    <div className="text-sm text-gray-600">Total Documents</div>
                   </div>
                 </CardContent>
               </Card>
@@ -546,7 +511,7 @@ export default function DocumentsPage() {
                         }, 0)
                       )}
                     </div>
-                    <div className="text-sm text-gray-600">total storage space</div>
+                    <div className="text-sm text-gray-600">Total Storage</div>
                   </div>
                 </CardContent>
               </Card>
