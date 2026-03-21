@@ -242,3 +242,6 @@ docs/testing/*_old_backup*.csv
 
 # Binary presentation files (share via cloud storage)
 docs/presentation/*.pptx
+
+# Frontend node modules
+frontend/nextjs/node_modules/

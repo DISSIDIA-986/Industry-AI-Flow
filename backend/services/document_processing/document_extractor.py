@@ -69,12 +69,16 @@ class DocumentExtractor:
             except Exception as e:
                 logger.warning(f"OCR processor initialization failed: {e}")
 
-    def extract(self, file_path: Union[str, Path]) -> DocumentContent:
+    def extract(
+        self, file_path: Union[str, Path], progress_callback=None
+    ) -> DocumentContent:
         """
         Extract text content from a document file.
 
         Args:
             file_path: Path to the document file
+            progress_callback: Optional callback(stage, status, progress, detail)
+                for reporting extraction progress to SSE clients.
 
         Returns:
             DocumentContent with extracted text and metadata
@@ -96,7 +100,7 @@ class DocumentExtractor:
 
         # Route to the appropriate extraction method
         if file_type == "pdf":
-            return self._extract_pdf(file_path)
+            return self._extract_pdf(file_path, progress_callback=progress_callback)
         elif file_type == "word":
             return self._extract_word(file_path)
         elif file_type == "excel":
@@ -108,16 +112,17 @@ class DocumentExtractor:
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
-    def _extract_pdf(self, file_path: Path) -> DocumentContent:
+    def _extract_pdf(self, file_path: Path, progress_callback=None) -> DocumentContent:
         """Extract text from a PDF file, with OCR fallback for scanned pages."""
         try:
             import fitz  # PyMuPDF
 
             doc = fitz.open(file_path)
+            total_pages = len(doc)
             text_parts = []
             ocr_pages = []
 
-            for page_num in range(len(doc)):
+            for page_num in range(total_pages):
                 page = doc[page_num]
                 page_text = page.get_text().strip()
 
@@ -129,6 +134,12 @@ class DocumentExtractor:
                         f"PDF page {page_num + 1} has no extractable text, "
                         "falling back to OCR"
                     )
+                    if progress_callback:
+                        progress_callback(
+                            "ocr", "running",
+                            (page_num + 1) / total_pages,
+                            f"OCR: page {page_num + 1}/{total_pages}",
+                        )
                     try:
                         pix = page.get_pixmap(dpi=200)
                         import tempfile
@@ -147,16 +158,29 @@ class DocumentExtractor:
                             f"OCR fallback failed for page {page_num + 1}: {ocr_err}"
                         )
 
+                # Report extraction progress
+                if progress_callback:
+                    progress_callback(
+                        "extract", "running",
+                        (page_num + 1) / total_pages,
+                        f"Extracting text: {page_num + 1}/{total_pages} pages",
+                    )
+
             full_text = "\n\n".join(text_parts)
 
             pdf_metadata = doc.metadata or {}
             metadata = {
-                "num_pages": len(doc),
+                "num_pages": total_pages,
                 "author": pdf_metadata.get("author", "Unknown"),
                 "title": pdf_metadata.get("title", "Unknown"),
             }
             if ocr_pages:
                 metadata["ocr_pages"] = ocr_pages
+                if progress_callback:
+                    progress_callback(
+                        "ocr", "completed", 1.0,
+                        f"OCR completed ({len(ocr_pages)} pages)",
+                    )
 
             method = "pymupdf+ocr" if ocr_pages else "pymupdf"
 
