@@ -61,6 +61,15 @@ class ClassifyResponse(BaseModel):
         None, description="Processing time in milliseconds"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Description")
+    node_trace: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Per-node execution trace"
+    )
+    capability_scores: Optional[Dict[str, Any]] = Field(
+        None, description="Score breakdown per capability"
+    )
+    matched_keywords: Optional[List] = Field(
+        None, description="Keywords that matched during classification"
+    )
     error: Optional[str] = Field(None, description="Description")
 
 
@@ -194,18 +203,27 @@ async def classify_intent(
         # EN
         processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
+        # Extract capability_scores and matched_keywords from workflow metadata
+        metadata = result.get("metadata", {})
+        intent_result_data = result.get("intent_result") or {}
+        cap_scores = metadata.get("capability_scores")
+        matched_kw = metadata.get("matched_keywords")
+
         # EN
         response = ClassifyResponse(
             success=result["success"],
-            intent=result.get("intent_result", {}).get("intent"),
-            confidence=result.get("intent_result", {}).get("confidence"),
-            reasoning=result.get("intent_result", {}).get("reasoning"),
+            intent=intent_result_data.get("intent"),
+            confidence=intent_result_data.get("confidence"),
+            reasoning=intent_result_data.get("reasoning"),
             routing_decision=result.get("routing_decision"),
             agent_response=result.get("agent_response"),
             clarification_needed=result.get("clarification_needed", False),
             clarification_message=result.get("clarification_response"),
             processing_time_ms=processing_time,
-            metadata=result.get("metadata", {}),
+            metadata=metadata,
+            node_trace=result.get("node_trace", []),
+            capability_scores=cap_scores,
+            matched_keywords=matched_kw,
             error=result.get("error"),
         )
 

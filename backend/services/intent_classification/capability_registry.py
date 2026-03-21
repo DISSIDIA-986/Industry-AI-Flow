@@ -30,6 +30,7 @@ class Capability:
     description: str  # Rich description for LLM prompt context
     agent_type: str  # e.g. "rag_agent" — matches AgentType value
     keywords: tuple[str, ...] = ()  # Heuristic matching keywords
+    exclusive_keywords: tuple[str, ...] = ()  # Must match ≥1 to avoid penalty
     patterns: tuple[str, ...] = ()  # Regex patterns for heuristic
     example_queries: tuple[str, ...] = ()  # For API catalog + frontend
     parameters: dict[str, Any] = field(default_factory=dict)
@@ -85,9 +86,29 @@ class CapabilityRegistry:
         Uses a scoring approach: all capabilities are scored, best match wins.
         Word-boundary matching prevents false positives like "code" in "building_code".
         """
+        result = self.classify_heuristic_detailed(query)
+        return result["intent_id"], result["confidence"], result["reasoning"]
+
+    def classify_heuristic_detailed(self, query: str) -> dict[str, Any]:
+        """Classify query with full score breakdown for all capabilities.
+
+        Returns dict with:
+            intent_id, confidence, reasoning,
+            capability_scores: {cap_id: {score, confidence, matched_keywords, penalized}},
+            matched_keywords: [(keyword, capability_id), ...]
+        """
         text = (query or "").strip().lower()
         if not text:
-            return "knowledge_retrieval", 0.51, "Empty query, defaulting to knowledge retrieval"
+            return {
+                "intent_id": "knowledge_retrieval",
+                "confidence": 0.51,
+                "reasoning": "Empty query, defaulting to knowledge retrieval",
+                "capability_scores": {},
+                "matched_keywords": [],
+            }
+
+        all_scores: dict[str, dict[str, Any]] = {}
+        all_matched_keywords: list[tuple[str, str]] = []
 
         best_id = ""
         best_score = 0.0
@@ -108,26 +129,57 @@ class CapabilityRegistry:
             # Check keywords with word-boundary matching
             if cap.keywords:
                 for kw in cap.keywords:
-                    # Use word boundaries to prevent substring false positives
                     if re.search(r"(?<![a-z])" + re.escape(kw) + r"(?![a-z])", text):
-                        weight = 2.0 if " " in kw else 1.0  # multi-word = stronger
+                        weight = 2.0 if " " in kw else 1.0
                         score += weight
                         matched.append(kw)
+                        all_matched_keywords.append((kw, cap.id))
 
             # Apply priority as a tiebreaker (small bonus)
             score += cap.priority * 0.01
 
+            # Apply exclusive_keywords penalty: if capability defines exclusive_keywords
+            # but query matches none of them, halve the score and reduce confidence.
+            penalized = False
+            conf = cap.confidence
+            if cap.exclusive_keywords and matched:
+                has_exclusive = any(
+                    re.search(r"(?<![a-z])" + re.escape(ek) + r"(?![a-z])", text)
+                    for ek in cap.exclusive_keywords
+                )
+                if not has_exclusive:
+                    score *= 0.5
+                    conf = max(0.3, conf - 0.3)
+                    penalized = True
+
+            all_scores[cap.id] = {
+                "score": round(score, 2),
+                "confidence": round(conf, 2),
+                "matched_keywords": matched,
+                "penalized": penalized,
+            }
+
             if score > best_score:
                 best_score = score
                 best_id = cap.id
-                best_conf = cap.confidence
-                best_reason = f"Query matches {cap.name} [{', '.join(matched[:3])}]"
+                # Only use capability's confidence if actual keywords/patterns matched
+                best_conf = conf if matched else 0.51
+                best_reason = (
+                    f"Query matches {cap.name} [{', '.join(matched[:3])}]"
+                    if matched
+                    else best_reason
+                )
 
-        if best_id:
-            return best_id, best_conf, best_reason
+        if not best_id:
+            best_id = "knowledge_retrieval"
 
-        # Default fallback
-        return "knowledge_retrieval", 0.51, best_reason
+        return {
+            "intent_id": best_id,
+            "confidence": best_conf,
+            "reasoning": best_reason,
+            "capability_scores": all_scores,
+            "matched_keywords": all_matched_keywords,
+        }
 
     # ── For routing engine ────────────────────────────────────────
 
@@ -173,6 +225,7 @@ def _load_from_yaml(registry: CapabilityRegistry, path: Path) -> None:
             description=item.get("description", ""),
             agent_type=item.get("agent_type", "general_agent"),
             keywords=tuple(item.get("keywords", [])),
+            exclusive_keywords=tuple(item.get("exclusive_keywords", [])),
             patterns=tuple(item.get("patterns", [])),
             example_queries=tuple(item.get("example_queries", [])),
             parameters=dict(item.get("parameters", {})),
