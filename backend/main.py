@@ -967,8 +967,15 @@ async def upload_document(
             ) from exc
 
         # Auto-vectorize: extract → chunk → embed → store in pgvector
+        # Runs in a thread pool to avoid blocking the async event loop.
         vectorized = False
-        try:
+
+        def _vectorize_sync(
+            _file_path: str, _safe_name: str, _content_len: int
+        ) -> dict:
+            """Synchronous vectorization — runs in ThreadPoolExecutor."""
+            import time as _time
+
             from backend.services.document_processing.document_extractor import (
                 DocumentExtractor,
             )
@@ -976,38 +983,74 @@ async def upload_document(
             from backend.services.core.embedder import embed_texts
             from backend.services.core.vectorstore import VectorStore
 
+            t_total = _time.time()
+
+            t0 = _time.time()
             extractor = DocumentExtractor(use_ocr=True)
-            doc_content = extractor.extract(file_path)
+            doc_content = extractor.extract(_file_path)
+            t_extract = _time.time() - t0
+
             text = doc_content.text
-            if text and len(text.strip()) > 10:
-                chunks = chunk_text(
-                    text,
-                    chunk_size=settings.chunk_size,
-                    chunk_overlap=settings.chunk_overlap,
+            if not text or len(text.strip()) <= 10:
+                return {"vectorized": False, "reason": "insufficient_text"}
+
+            t0 = _time.time()
+            chunks = chunk_text(
+                text,
+                chunk_size=settings.chunk_size,
+                chunk_overlap=settings.chunk_overlap,
+            )
+            chunk_contents = [c["content"] for c in chunks]
+            t_chunk = _time.time() - t0
+
+            if not chunk_contents:
+                return {"vectorized": False, "reason": "no_chunks"}
+
+            t0 = _time.time()
+            embeddings = embed_texts(chunk_contents)
+            t_embed = _time.time() - t0
+
+            vs = VectorStore()
+            doc_id = vs.store_document_with_chunks(
+                filename=_safe_name,
+                filepath=_file_path,
+                chunks=chunk_contents,
+                embeddings=embeddings,
+                size_bytes=_content_len,
+            )
+
+            t_total_dur = _time.time() - t_total
+            logger.info(
+                "Vectorization complete for %s: extract=%.1fs, chunk=%.1fs, "
+                "embed=%.1fs, total=%.1fs (%d chunks, doc_id=%s)",
+                _safe_name,
+                t_extract,
+                t_chunk,
+                t_embed,
+                t_total_dur,
+                len(chunk_contents),
+                doc_id,
+            )
+            return {
+                "vectorized": True,
+                "doc_id": doc_id,
+                "chunk_count": len(chunk_contents),
+            }
+
+        try:
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            vec_result = await loop.run_in_executor(
+                None, _vectorize_sync, file_path, safe_name, len(content)
+            )
+            if vec_result.get("vectorized"):
+                payload["doc_id"] = vec_result["doc_id"]
+                payload["chunk_count"] = vec_result["chunk_count"]
+                payload["message"] = (
+                    f"Document uploaded and vectorized ({vec_result['chunk_count']} chunks)."
                 )
-                chunk_contents = [c["content"] for c in chunks]
-                if chunk_contents:
-                    embeddings = embed_texts(chunk_contents)
-                    vs = VectorStore()
-                    doc_id = vs.store_document_with_chunks(
-                        filename=safe_name,
-                        filepath=file_path,
-                        chunks=chunk_contents,
-                        embeddings=embeddings,
-                        size_bytes=len(content),
-                    )
-                    payload["doc_id"] = doc_id
-                    payload["chunk_count"] = len(chunk_contents)
-                    payload["message"] = (
-                        f"Document uploaded and vectorized ({len(chunk_contents)} chunks)."
-                    )
-                    vectorized = True
-                    logger.info(
-                        "Document vectorized: %s → %d chunks (doc_id=%s)",
-                        safe_name,
-                        len(chunk_contents),
-                        doc_id,
-                    )
+                vectorized = True
         except Exception as vec_exc:
             logger.warning(
                 "Auto-vectorization failed for %s (upload still succeeded): %s",
