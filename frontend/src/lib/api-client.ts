@@ -840,6 +840,22 @@ export interface IntentClassifyRequest {
   context?: Record<string, unknown>
 }
 
+export interface NodeTraceEntry {
+  node_name: string
+  start_ms: number
+  end_ms: number
+  duration_ms: number
+  decision: string
+  metadata: Record<string, unknown>
+}
+
+export interface CapabilityScore {
+  score: number
+  confidence: number
+  matched_keywords: string[]
+  penalized: boolean
+}
+
 export interface IntentClassifyResponse {
   success: boolean
   intent: string | null
@@ -851,6 +867,9 @@ export interface IntentClassifyResponse {
   clarification_message: string | null
   processing_time_ms: number | null
   metadata: Record<string, unknown>
+  node_trace: NodeTraceEntry[]
+  capability_scores: Record<string, CapabilityScore> | null
+  matched_keywords: Array<[string, string]> | null
   error: string | null
 }
 
