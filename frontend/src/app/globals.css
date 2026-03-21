@@ -721,6 +721,85 @@ td {
   margin-top: 0.75rem;
 }
 
+/* Cost Estimation: spinner, skeleton, field errors, interaction states */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.skeleton-block {
+  height: 3.5rem;
+  border-radius: 8px;
+  background: var(--bg-accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.field-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--warn);
+  margin-top: 2px;
+}
+
+/* Interaction: focus rings, hover transitions */
+.field-group input:focus,
+.field-group select:focus {
+  border-color: var(--steel);
+  box-shadow: 0 0 0 3px var(--steel-soft);
+  outline: none;
+}
+
+.action-button {
+  transition: background 200ms ease;
+}
+
+.action-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.action-button:disabled {
+  background: var(--bg-accent);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.secondary-button {
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.secondary-button:hover {
+  background: var(--bg-accent);
+  border-color: var(--muted);
+}
+
+.collapsible-section summary:focus-visible {
+  border-color: var(--steel);
+  box-shadow: 0 0 0 3px var(--steel-soft);
+  outline: none;
+  border-radius: 12px;
+}
+
+.collapsible-section summary {
+  min-height: 44px;
+}
+
 @media (max-width: 640px) {
   .form-grid.two-col,
   .result-grid,

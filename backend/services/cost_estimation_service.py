@@ -711,7 +711,10 @@ class CostEstimationService:
         warning = None
         if unknown_categories:
             cats = ", ".join(f"{k}={v}" for k, v in unknown_categories.items())
-            warning = f"Unknown categories detected ({cats}). Prediction confidence is degraded."
+            warning = (
+                f"Prediction reliability reduced. "
+                f"Categories not in training data: {cats}."
+            )
 
         # Reasonableness validation against training data range.
         reasonableness = {"within_training_range": True, "flags": []}
@@ -793,6 +796,11 @@ class CostEstimationService:
         if not numeric_quantiles:
             return 0.90, 0.10
 
-        # Select the closest available quantile.
-        selected = min(numeric_quantiles, key=lambda item: abs(item[0] - requested))
+        # Select the smallest quantile >= requested.
+        candidates = [(q, ape) for q, ape in numeric_quantiles if q >= requested]
+        if candidates:
+            selected = min(candidates, key=lambda item: item[0])
+        else:
+            # No quantile >= requested; use the maximum available.
+            selected = max(numeric_quantiles, key=lambda item: item[0])
         return selected
