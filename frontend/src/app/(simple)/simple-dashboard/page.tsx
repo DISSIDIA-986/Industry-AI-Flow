@@ -86,7 +86,10 @@ export default function PipelineFlowDashboard() {
     if (docResult.status === 'fulfilled') {
       const stats = docResult.value
       const total = Number(stats.total_documents ?? stats.total ?? 0)
-      const processed = Number(stats.processed_documents ?? stats.processed ?? 0)
+      const active = Number(stats.active_documents ?? stats.processed_documents ?? stats.processed ?? 0)
+      const totalChunks = Number(stats.total_chunks ?? 0)
+      // If active_documents is 0 but we have chunks, documents are processed but not "active" in the DB sense
+      const processed = active > 0 ? active : (totalChunks > 0 ? total : 0)
       const pending = total - processed
       setKnowledgeBase({
         loading: false, error: null,
