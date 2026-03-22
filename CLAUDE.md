@@ -1,12 +1,5 @@
 # CLAUDE.md
 
-## gstack
-
-Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
-Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review,
-/design-consultation, /review, /ship, /browse, /qa, /qa-only, /design-review,
-/setup-browser-cookies, /retro, /debug, /document-release.
-
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -259,6 +252,8 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 
 **Workflow Chat page** (`/workflow-chat`): Primary demo interaction surface — dark hero header (#1a1a2e) matching Dashboard and Intent Debugger, with API status indicator. Sidebar uses `lg:grid-cols-4` layout (3/4 chat, 1/4 sidebar). **Golden Questions** accordion in sidebar: 6 document categories (NBC 2020, Ontario Reg 213/91, Canada OHS, BC Building Code 2024, Quebec Safety Code, Canada Labour Code Part II) with 16 curated questions and 18 static follow-up chains for primary questions. Data in `frontend/src/lib/golden-questions.ts`, UI component `GoldenQuestions.tsx` with `data-testid` attributes. **CompactPipelineViz** sticky at sidebar bottom: dark vertical pipeline with sequential node animation during query, `response_node` holds active with elapsed timer until API responds, then snaps to real `completed_nodes` data. Handles `intent_workflow` metadata without `completed_nodes` via inference (same pattern as Dashboard). **Hybrid follow-up**: ref-based (`lastClickedGQRef`) Golden Question tracking — first GQ response gets static follow-ups, subsequent rounds use backend `suggested_questions`. Source citations always visible (compact single-line format, per CLAUDE.md demo requirement). Follow-up pills use blue-600 outline style. Mobile: Golden Questions collapse to toggle button, Pipeline hidden. Legacy `workflow-quick-tips.ts` removed (replaced by Golden Questions).
 
+**Document Preview page** (`/documents/[id]`): AI-enhanced document detail page with hybrid format rendering. Dark hero header with breadcrumb navigation (`Documents > filename`), status/type/size/chunks/upload-date metadata. Two-column layout: left panel (65%) shows format-specific preview (PDF via react-pdf with text layer, images via `<img>`, text/CSV/JSON via formatted view, Word/PPT via extracted text). Right panel (35%) stacks AI Intelligence cards: Document Summary (from `document_profiles` table, auto-generated badge), Document Details (metadata grid with JetBrains Mono for numbers), Vectorized Chunks (search with keyword highlighting, blue-600 left border), "Ask AI About This Document" amber button (navigates to `/workflow-chat` with prefilled query), Download button. Backend: 4 GET endpoints in `document_management_routes.py` — `/detail` (metadata + AI summary), `/content` (raw file via FileResponse, path traversal prevention), `/summary` (from document_profiles), `/chunks` (paginated). Content endpoint is public (for `<img>`/react-pdf access). Batch summary script: `scripts/generate_document_summaries.py` (LLM generates JSON summary → stored in document_profiles). Mobile: single column, AI summary on top, preview collapses to button. All elements have `data-testid` attributes.
+
 ## Configuration
 
 Key environment variables (in `.env`):
@@ -293,3 +288,39 @@ ALLOW_REGISTRATION=false            # Disable /register endpoint
 - **Frontend**: Next.js + TypeScript
 - **Formatting**: black (88 chars) + isort (black profile)
 - **Type checking**: mypy (strict)
+
+## gstack (Browser & Workflow Skills)
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+### Available Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/office-hours` | Brainstorm ideas, design thinking |
+| `/plan-ceo-review` | CEO/founder strategy review |
+| `/plan-eng-review` | Engineering architecture review |
+| `/plan-design-review` | Designer's eye plan review |
+| `/design-consultation` | Create design system / DESIGN.md |
+| `/autoplan` | Auto-run all plan reviews sequentially |
+| `/review` | Pre-landing PR code review |
+| `/ship` | Ship workflow: test, review, PR |
+| `/land-and-deploy` | Merge PR + deploy + verify |
+| `/canary` | Post-deploy canary monitoring |
+| `/benchmark` | Performance regression detection |
+| `/browse` | Headless browser for QA/dogfooding |
+| `/qa` | Systematic QA testing + fix bugs |
+| `/qa-only` | QA report only (no fixes) |
+| `/design-review` | Visual design audit + fixes |
+| `/setup-browser-cookies` | Import browser cookies for auth |
+| `/setup-deploy` | Configure deployment settings |
+| `/retro` | Weekly engineering retrospective |
+| `/investigate` | Systematic debugging (root cause) |
+| `/document-release` | Post-ship documentation update |
+| `/codex` | Codex second opinion / adversarial review |
+| `/cso` | Security audit (OWASP, STRIDE) |
+| `/careful` | Safety guardrails for destructive commands |
+| `/freeze` | Restrict edits to one directory |
+| `/guard` | Full safety mode (careful + freeze) |
+| `/unfreeze` | Remove edit restrictions |
+| `/gstack-upgrade` | Upgrade gstack to latest |

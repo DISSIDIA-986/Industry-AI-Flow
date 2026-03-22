@@ -116,6 +116,53 @@ All design tokens are defined as CSS custom properties on `:root` for consistenc
 - **Chips/Badges:** Pill shape (rounded-full), mono font, 1px border
 - **Collapsible sections:** Gray-100 bg, rounded-lg, triangle marker, hover highlight
 
+## Page-Specific: Document Detail (`/documents/[id]`)
+
+### Layout
+- **Two-column grid:** `grid-template-columns: 1fr 380px` at ≥768px, single column below
+- **Preview panel** (left, ~65%): white surface, gray-200 border, rounded-xl. Toolbar at top with gray-50 bg.
+- **AI Intelligence panel** (right, ~35%): stacked cards with 16px gap
+
+### Hero Header
+- Same DarkHeroWrapper as all demo pages
+- **Breadcrumb:** `Documents > [filename]` — muted gray-500 link + gray-200 current
+- **Title:** 24px Inter 700, hero-text color (#e5e7eb)
+- **Meta row:** Status badge (green pill), Type badge (blue outline pill), Size, Chunks (mono), Upload date
+
+### Document Preview
+- **Toolbar:** gray-50 bg, gray-200 bottom border. Prev/Next buttons + page counter (mono) left, Zoom +/− and Download right
+- **PDF rendering area:** gray-100 bg padding, white PDF page with shadow
+- **PDF text layer:** enabled for text selection (renderTextLayer={true})
+- **Image preview:** centered with `object-fit: contain`, max-height 600px
+- **Text/code preview:** 14px JetBrains Mono, gray-50 bg with 24px padding
+- **Fallback (missing file):** gray-100 bg, centered message "Original file unavailable — AI summary and chunks are still accessible" in gray-500
+
+### AI Intelligence Panel Cards
+- **Document Summary:** AI icon (20px blue-600 square, white "AI" text) + "Auto-generated" badge (gray-100 bg, gray-500 text). Summary text 14px Inter, bullet points with 6px blue-600 dots. Bold labels + normal detail text.
+- **Document Details:** key-value rows with gray-200 bottom border. Labels in gray-500, values in gray-900. Numeric values in JetBrains Mono.
+- **Vectorized Chunks:** Search input (gray-200 border, blue focus ring). Chunk cards with blue-600 3px left border on gray-50 bg. Text 12px, match highlights in amber-soft bg (#fef3c7). Chunk metadata in JetBrains Mono 11px gray-500.
+
+### Action Buttons
+- **"Ask AI About This Document":** amber-500 bg, white text, full width, rounded-lg. Navigates to `/workflow-chat` with document name prefilled.
+- **"Download Original File":** white bg, gray-200 border, gray-700 text, full width
+
+### Interaction States
+| Feature | Loading | Empty | Error | Success |
+|---------|---------|-------|-------|---------|
+| Document Preview | Gray skeleton with page outline | "Empty document" + download link | "Unable to render — download instead" | Rendered content |
+| AI Summary | 3 skeleton lines with pulse animation | "AI is reading this document..." (auto-retry 10s) | "Summary generation failed. Retry?" | Full summary with bullets |
+| Document Details | Shimmer cards | N/A (always has basic metadata) | N/A | Metadata grid |
+| Chunk Preview | 3 skeleton blocks | "No chunks — this document hasn't been vectorized" | "Unable to load chunks" | Chunk cards |
+| Chunk Search | N/A (instant) | "No matches for '[query]'" with clear button | N/A | Highlighted matching chunks |
+
+### Responsive
+- **Mobile (<768px):** Single column. AI summary card on top (most important first). Document preview collapses to "View Document" button → fullscreen overlay. All touch targets 44px minimum.
+- **Tablet (768-1024px):** Two columns at 55/45 ratio. AI panel slightly narrower.
+- **Desktop (≥1024px):** Two columns at 1fr/380px.
+
+### Preview Page Reference
+Preview HTML at `/tmp/design-consultation-preview-doc-detail.html` — open in browser to see the full rendered design.
+
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
@@ -124,3 +171,4 @@ All design tokens are defined as CSS custom properties on `:root` for consistenc
 | 2026-03-21 | Add amber-500 as accent color | Construction industry warmth. Differentiates from blue-only competitors. Used for warnings and highlight CTAs. |
 | 2026-03-21 | Dark Pipeline hero (#1a1a2e) | Deliberate departure from industry-standard white backgrounds. Creates visual hierarchy and communicates technical depth. |
 | 2026-03-21 | Industrial/Utilitarian aesthetic | Matches construction industry "serious work" ethos. Function over decoration. |
+| 2026-03-22 | Document Detail page design specs | Two-column layout (preview + AI panel), reuses DarkHeroWrapper, all tokens from existing system. No new colors, fonts, or patterns. Consistency with Dashboard/Cost Estimation prioritized. |
