@@ -92,6 +92,7 @@ export default function DataAnalysisPage() {
   const [stages, setStages] = useState<Record<string, StageEvent>>({});
   const [streaming, setStreaming] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const gotResultRef = useRef(false);
 
   const METRICS_WHITELIST = ["success", "analysis_type", "execution_time"];
 
@@ -158,6 +159,7 @@ export default function DataAnalysisPage() {
     setResult(null);
     setViz(null);
     setStages({});
+    gotResultRef.current = false;
     eventSourceRef.current?.close();
 
     try {
@@ -198,6 +200,7 @@ export default function DataAnalysisPage() {
             if (!includeViz) setViz(null);
           }
         } catch { /* ignore */ }
+        gotResultRef.current = true;
         es.close();
         setLoading(false);
         setStreaming(false);
@@ -222,8 +225,7 @@ export default function DataAnalysisPage() {
       es.onerror = () => {
         // EventSource built-in error (connection lost)
         if (es.readyState === EventSource.CLOSED) {
-          if (!result) {
-            // Only show error if we didn't get a result
+          if (!gotResultRef.current) {
             setError("Connection to analysis pipeline lost. Results may still be processing.");
           }
           setLoading(false);
@@ -235,7 +237,7 @@ export default function DataAnalysisPage() {
       setLoading(false);
       setStreaming(false);
     }
-  }, [config, uploadedPath, analysisType, instruction, includeViz, chartType, result]);
+  }, [config, uploadedPath, analysisType, instruction, includeViz, chartType]);
 
   // Fallback: non-streaming analysis (in case SSE fails)
   async function handleRunAnalysisBatch() {
