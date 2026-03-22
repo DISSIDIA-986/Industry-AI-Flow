@@ -238,7 +238,7 @@ PostgreSQL 14+ with pgvector extension. Schema managed via `backend/init_databas
 
 Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[...path]/route.ts`. Run with `make frontend-dev`.
 
-**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, System Overview). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
+**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, System Overview). Login page is a clean form (no auto-fill, no credential hints) — use 1Password or browser auto-fill for demo credentials. Registration page removed; Register link removed from navbar.
 
 **Dashboard** (`/simple-dashboard`): Pipeline Flow visualization — 10-node dark hero section with per-node SVG icons, sequential animation using real `node_latency_ms` data from workflow metadata. "Live Demo" button (amber accent) auto-runs on page load, sends real RAG query, replays pipeline execution. 3 status cards (Knowledge Base doc count, LLM Engine model, System Health) from real health endpoints. Recent Pipeline Executions table. `PipelineFlowViz.tsx` component + `usePipelineAnimation()` hook. When queries go through `intent_workflow` (not the 10-node pipeline), node states are inferred from metadata timestamps and agent type.
 
@@ -268,6 +268,10 @@ OCR_LANG=en                         # en | ch | en+ch
 REQUIRE_API_KEY=false
 ENABLE_PROMETHEUS_METRICS=true
 CODE_EXECUTION_PROVIDER=docker      # docker | auto | ppio
+DEMO_USER_PASSWORD=<strong>         # Required — no fallback, crash if missing
+AUTH_JWT_SECRET=<strong>             # Required when REQUIRE_USER_AUTH=true
+REQUIRE_USER_AUTH=true              # Enforce JWT auth on all non-public endpoints
+ALLOW_REGISTRATION=false            # Disable /register endpoint
 ```
 
 ## Tech Stack

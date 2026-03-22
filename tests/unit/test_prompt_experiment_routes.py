@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from backend.api.prompt_routes import get_prompt_manager, router
+from backend.security.dependencies import secure_endpoint
 
 
 class _FakeManager:
@@ -76,6 +77,7 @@ async def test_prompt_experiment_routes_contract():
         return manager
 
     app.dependency_overrides[get_prompt_manager] = _override_manager
+    app.dependency_overrides[secure_endpoint] = lambda: None
 
     create_payload = {
         "name": "rag_grounded_qa_exp_v2",

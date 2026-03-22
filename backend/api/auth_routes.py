@@ -38,12 +38,20 @@ def _verify_password(password: str, stored: str) -> bool:
 
 
 _users_lock = Lock()
+
+_demo_password = settings.demo_user_password
+if not _demo_password:
+    raise RuntimeError(
+        "DEMO_USER_PASSWORD environment variable is required but not set. "
+        "Add it to your .env file."
+    )
+
 _users: Dict[str, Dict[str, str | List[str]]] = {
     "demo@example.com": {
         "id": "user-demo",
         "name": "Demo User",
         "email": "demo@example.com",
-        "password": _hash_password("demo123"),
+        "password": _hash_password(_demo_password),
         "roles": ["user"],
     }
 }
@@ -145,6 +153,11 @@ async def login(payload: LoginRequest) -> AuthResponse:
 
 @router.post("/register", response_model=AuthResponse)
 async def register(payload: RegisterRequest) -> AuthResponse:
+    if not settings.allow_registration:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled",
+        )
     key = payload.email.lower()
     with _users_lock:
         if len(_users) >= 1000:
