@@ -481,7 +481,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run RAG browser E2E from CSV questions."
     )
-    parser.add_argument("--frontend-url", default="http://localhost:3000")
+    parser.add_argument("--frontend-url", default="http://localhost:3123")
     parser.add_argument("--csv", default=str(DEFAULT_CSV))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--max-questions", type=int, default=560)

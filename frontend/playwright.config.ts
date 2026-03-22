@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const isCI = !!process.env.CI;
 const runCrossBrowser = process.env.PW_CROSS_BROWSER === '1';
 const frontendHost = process.env.PW_FRONTEND_HOST || '127.0.0.1';
-const frontendPort = process.env.PW_FRONTEND_PORT || '3000';
+const frontendPort = process.env.PW_FRONTEND_PORT || '3123';
 const frontendBaseUrl = `http://${frontendHost}:${frontendPort}`;
 
 export default defineConfig({

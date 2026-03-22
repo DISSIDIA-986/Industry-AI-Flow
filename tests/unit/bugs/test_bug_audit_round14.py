@@ -357,7 +357,7 @@ class TestR14_HDR01_NoSecurityHeaders:
 class TestR14_HDR02_NoCORSConfiguration:
     """P0: No CORSMiddleware is configured. The FastAPI app has no CORS
     policy, which means:
-    - In development: frontend on localhost:3000 cannot call API on :8000
+    - In development: frontend on localhost:3123 cannot call API on :8000
     - In production: either CORS fails or a proxy bypasses it entirely
     - No explicit allow_origins means implicit browser-default (same-origin)
 
@@ -368,7 +368,7 @@ class TestR14_HDR02_NoCORSConfiguration:
         source = _read(_MAIN_PATH)
         has_cors = "CORSMiddleware" in source or "cors" in source.lower()
         assert has_cors, (
-            "No CORSMiddleware configured. Frontend at localhost:3000 cannot "
+            "No CORSMiddleware configured. Frontend at localhost:3123 cannot "
             "call the API at localhost:8000. Must add CORSMiddleware with "
             "explicit allow_origins for demo and production."
         )

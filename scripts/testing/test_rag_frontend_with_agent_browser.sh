@@ -2,13 +2,13 @@
 # 使用 agent-browser 测试 RAG 前端页面功能
 #
 # 前置条件:
-# 1. 启动前端服务: cd frontend && npm run dev (端口 3000)
+# 1. 启动前端服务: cd frontend && npm run dev (端口 3123)
 # 2. 启动后端服务: make run (端口 8000)
 # 3. 确保 Ollama 运行: ollama serve
 
 set -e
 
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:3123}"
 BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
 
 echo "=================================="

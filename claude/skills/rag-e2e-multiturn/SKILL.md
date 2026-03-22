@@ -21,7 +21,7 @@ Use this skill when you need repeatable quality validation for the Industry-AI-F
   - `max_questions=<N>`
   - `parallel=<N>`
   - `nothink=on|off`
-  - `frontend_url=<URL>` (default `http://localhost:3000`)
+  - `frontend_url=<URL>` (default `http://localhost:3123`)
   - `RAG_E2E_LOGIN_EMAIL` / `RAG_E2E_LOGIN_PASSWORD` (override demo login)
 
 ## Core Workflow
@@ -52,7 +52,7 @@ Use this skill when you need repeatable quality validation for the Industry-AI-F
 
 ```bash
 .venv/bin/python scripts/testing/run_rag_agent_browser_e2e.py \
-  --frontend-url http://localhost:3000 \
+  --frontend-url http://localhost:3123 \
   --csv docs/testing/rag_question_bank_180.csv \
   --max-questions 180 \
   --login-email ${RAG_E2E_LOGIN_EMAIL:-demo@example.com} \

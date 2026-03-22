@@ -19,7 +19,7 @@ lrwxr-xr-x@ 1 openclaw staff 31 Mar 2 19:16 agent-browser -> ../.agents/skills/a
 您可以直接在对话中让我使用 agent-browser 技能来测试页面：
 
 ```
-请使用 agent-browser 打开 http://localhost:3000 并测试 RAG 查询功能
+请使用 agent-browser 打开 http://localhost:3123 并测试 RAG 查询功能
 ```
 
 我会自动：
@@ -33,7 +33,7 @@ lrwxr-xr-x@ 1 openclaw staff 31 Mar 2 19:16 agent-browser -> ../.agents/skills/a
 
 ```bash
 # 打开页面
-agent-browser open http://localhost:3000
+agent-browser open http://localhost:3123
 
 # 等待页面加载完成
 agent-browser wait --load networkidle
@@ -79,7 +79,7 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 # 启动前端服务
 cd frontend
 npm run dev
-# 前端默认运行在 http://localhost:3000
+# 前端默认运行在 http://localhost:3123
 ```
 
 ### 2. 确认服务状态
@@ -91,7 +91,7 @@ curl http://localhost:8000/health
 curl http://localhost:8000/docs
 
 # 检查前端
-curl http://localhost:3000
+curl http://localhost:3123
 ```
 
 ## 🎯 典型测试场景
@@ -104,7 +104,7 @@ curl http://localhost:3000
 ```
 
 **我会自动执行：**
-1. 打开前端页面 (http://localhost:3000)
+1. 打开前端页面 (http://localhost:3123)
 2. 获取页面快照，找到输入框和按钮
 3. 输入测试查询
 4. 点击提交按钮
@@ -141,7 +141,7 @@ curl http://localhost:3000
 
 | 命令 | 功能 | 示例 |
 |------|------|------|
-| `open <url>` | 打开网页 | `agent-browser open http://localhost:3000` |
+| `open <url>` | 打开网页 | `agent-browser open http://localhost:3123` |
 | `snapshot -i` | 获取页面快照（交互式） | `agent-browser snapshot -i` |
 | `fill <ref> <text>` | 填写输入框 | `agent-browser fill @QueryInput "test query"` |
 | `click <ref>` | 点击元素 | `agent-browser click @SubmitButton` |
@@ -211,7 +211,7 @@ cat snapshot.json | jq '.data.refs'
 
 **现在就可以测试！**
 
-1. 确保前端服务运行在 http://localhost:3000
+1. 确保前端服务运行在 http://localhost:3123
 2. 对我说：**"使用 agent-browser 测试 RAG 页面功能"**
 3. 我会自动完成测试并生成报告
 

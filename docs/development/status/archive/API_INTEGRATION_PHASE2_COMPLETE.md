@@ -44,7 +44,7 @@
 ## 🚀 系统当前状态
 
 ### 前端服务 ✅ **正常运行**
-- **地址**: http://localhost:3000
+- **地址**: http://localhost:3123
 - **API客户端**: ✅ 完整实现
 - **模拟API**: ✅ 自动切换
 - **错误处理**: ✅ 统一管理
@@ -56,7 +56,7 @@
 - **待实现**: 具体认证和查询端点
 
 ### API集成状态 ✅ **可测试**
-- **测试页面**: http://localhost:3000/api-test
+- **测试页面**: http://localhost:3123/api-test
 - **功能测试**: 所有API端点可测试
 - **模拟模式**: 当真实API不可用时自动切换
 
@@ -83,27 +83,27 @@
 ## 🔗 可访问页面和功能
 
 ### 核心功能页面
-1. **登录页面**: http://localhost:3000/login
+1. **登录页面**: http://localhost:3123/login
    - ✅ API集成完成
    - ✅ 演示账户: demo@example.com / demo123
    - ✅ 错误处理完整
 
-2. **注册页面**: http://localhost:3000/register
+2. **注册页面**: http://localhost:3123/register
    - ✅ API集成完成
    - ✅ 表单验证完整
    - ✅ 密码确认验证
 
-3. **工作流聊天**: http://localhost:3000/workflow-chat
+3. **工作流聊天**: http://localhost:3123/workflow-chat
    - ✅ API集成完成
    - ✅ 实时聊天功能
    - ✅ 模拟AI响应
 
-4. **文档管理**: http://localhost:3000/documents
+4. **文档管理**: http://localhost:3123/documents
    - ✅ API集成完成
    - ✅ 文件上传功能
    - ✅ 文档状态管理
 
-5. **API测试页面**: http://localhost:3000/api-test
+5. **API测试页面**: http://localhost:3123/api-test
    - ✅ 完整API测试套件
    - ✅ 实时状态监控
    - ✅ 错误诊断

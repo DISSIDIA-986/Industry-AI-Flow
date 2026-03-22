@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_FRONTEND_URL = "http://127.0.0.1:3001"
+DEFAULT_FRONTEND_URL = "http://127.0.0.1:3123"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "temp"
 
 
