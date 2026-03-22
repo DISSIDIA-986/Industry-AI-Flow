@@ -15,6 +15,54 @@ import pytest
 os.environ.setdefault("REQUIRE_API_KEY", "false")
 
 
+def get_demo_auth_headers() -> dict[str, str]:
+    """Get auth headers using the demo user credentials.
+
+    Returns a dict with Authorization header suitable for passing to httpx.
+    Caches the token for the test session to avoid repeated login calls.
+    """
+    if not hasattr(get_demo_auth_headers, "_cached_token"):
+        from backend.config import settings
+
+        password = settings.demo_user_password
+        if not password:
+            return {}
+
+        import asyncio
+
+        from httpx import ASGITransport, AsyncClient
+
+        from backend.main import app
+
+        async def _login():
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://testserver"
+            ) as client:
+                resp = await client.post(
+                    "/api/v1/auth/login",
+                    json={"email": "demo@example.com", "password": password},
+                )
+                if resp.status_code == 200:
+                    return resp.json()["token"]
+                return None
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Can't nest event loops; return empty for now
+                return {}
+            token = loop.run_until_complete(_login())
+        except RuntimeError:
+            token = asyncio.run(_login())
+
+        get_demo_auth_headers._cached_token = token
+
+    token = get_demo_auth_headers._cached_token
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
 @pytest.fixture(scope="session")
 def test_data_dir():
     """Fixture providing path to test data directory."""

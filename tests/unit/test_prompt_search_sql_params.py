@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from backend.api.prompt_routes import get_prompt_manager, router
+from backend.security.dependencies import secure_endpoint
 
 
 class _Acquire:
@@ -52,6 +53,7 @@ async def test_search_prompt_sql_params_without_category_single_fetch():
         return manager
 
     app.dependency_overrides[get_prompt_manager] = _override_manager
+    app.dependency_overrides[secure_endpoint] = lambda: None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
@@ -76,6 +78,7 @@ async def test_search_prompt_sql_params_with_category_binding_order():
         return manager
 
     app.dependency_overrides[get_prompt_manager] = _override_manager
+    app.dependency_overrides[secure_endpoint] = lambda: None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"

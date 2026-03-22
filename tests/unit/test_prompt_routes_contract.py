@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from backend.api.prompt_routes import get_prompt_manager, router
+from backend.security.dependencies import secure_endpoint
 
 
 class _Acquire:
@@ -76,6 +77,7 @@ async def test_list_prompts_contract_returns_page_payload():
         return _FakeManager()
 
     app.dependency_overrides[get_prompt_manager] = _override_manager
+    app.dependency_overrides[secure_endpoint] = lambda: None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
