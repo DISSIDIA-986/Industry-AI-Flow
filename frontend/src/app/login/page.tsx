@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage() {
@@ -12,11 +11,6 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const { login, error: authError } = useAuth()
-
-  useEffect(() => {
-    setEmail('demo@example.com')
-    setPassword('demo123')
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,22 +84,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Don’t have an account yet?{' '}
-            <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium">
-              Register now
-            </Link>
-          </p>
-        </div>
-
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              Demo account: demo@example.com / demo123
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )
