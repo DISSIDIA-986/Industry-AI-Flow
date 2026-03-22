@@ -1,12 +1,5 @@
 # CLAUDE.md
 
-## gstack
-
-Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
-Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review,
-/design-consultation, /review, /ship, /browse, /qa, /qa-only, /design-review,
-/setup-browser-cookies, /retro, /debug, /document-release.
-
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -293,3 +286,39 @@ ALLOW_REGISTRATION=false            # Disable /register endpoint
 - **Frontend**: Next.js + TypeScript
 - **Formatting**: black (88 chars) + isort (black profile)
 - **Type checking**: mypy (strict)
+
+## gstack (Browser & Workflow Skills)
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+### Available Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/office-hours` | Brainstorm ideas, design thinking |
+| `/plan-ceo-review` | CEO/founder strategy review |
+| `/plan-eng-review` | Engineering architecture review |
+| `/plan-design-review` | Designer's eye plan review |
+| `/design-consultation` | Create design system / DESIGN.md |
+| `/autoplan` | Auto-run all plan reviews sequentially |
+| `/review` | Pre-landing PR code review |
+| `/ship` | Ship workflow: test, review, PR |
+| `/land-and-deploy` | Merge PR + deploy + verify |
+| `/canary` | Post-deploy canary monitoring |
+| `/benchmark` | Performance regression detection |
+| `/browse` | Headless browser for QA/dogfooding |
+| `/qa` | Systematic QA testing + fix bugs |
+| `/qa-only` | QA report only (no fixes) |
+| `/design-review` | Visual design audit + fixes |
+| `/setup-browser-cookies` | Import browser cookies for auth |
+| `/setup-deploy` | Configure deployment settings |
+| `/retro` | Weekly engineering retrospective |
+| `/investigate` | Systematic debugging (root cause) |
+| `/document-release` | Post-ship documentation update |
+| `/codex` | Codex second opinion / adversarial review |
+| `/cso` | Security audit (OWASP, STRIDE) |
+| `/careful` | Safety guardrails for destructive commands |
+| `/freeze` | Restrict edits to one directory |
+| `/guard` | Full safety mode (careful + freeze) |
+| `/unfreeze` | Remove edit restrictions |
+| `/gstack-upgrade` | Upgrade gstack to latest |

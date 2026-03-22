@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { realApiService } from '@/lib/real-api-client'
 import type { RealDocumentListResponse } from '@/lib/real-api-client'
@@ -615,14 +616,18 @@ export default function DocumentsIntegratedPage() {
                         {filteredDocuments.map((document) => (
                           <TableRow key={document.id}>
                             <TableCell className="font-medium">
-                              <div className="flex items-center space-x-2">
+                              <Link
+                                href={`/documents/${encodeURIComponent(document.id)}`}
+                                className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
+                                data-testid={`doc-link-${document.id}`}
+                              >
                                 <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded">
                                   <span className="text-blue-600 font-bold">
                                     {document.type.charAt(0)}
                                   </span>
                                 </div>
-                                <span>{document.name}</span>
-                              </div>
+                                <span className="underline-offset-2 hover:underline">{document.name}</span>
+                              </Link>
                             </TableCell>
                             <TableCell>{document.type}</TableCell>
                             <TableCell>{document.size}</TableCell>
