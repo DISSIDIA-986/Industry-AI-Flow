@@ -163,8 +163,6 @@ make test             # 运行所有测试
 make test-unit        # 只运行单元测试
 make test-phase1-gate # 运行一期纠偏方案门禁（dispatch/privacy/cost/API兼容）
 make test-comprehensive # 运行综合测试套件
-make test-ocr         # 运行OCR集成测试
-make test-rag         # 运行RAG系统测试
 
 # 实用工具
 make utilities        # 查看可用工具脚本
@@ -439,16 +437,9 @@ Industry-AI-Flow/
 │   │   ├── install_pgvector_pg14.sh   # 🐘 pgvector安装
 │   │   └── install_python313_paddleocr.sh # 🧩 Python3.13安装
 │   ├── testing/                       # 🧪 测试脚本
-│   │   ├── quick_test.sh              # ⚡ 快速测试
-│   │   ├── test_ocr.py                # 📷 OCR测试
-│   │   ├── test_rag.py                # 🔍 RAG测试
 │   │   ├── comprehensive_system_test.py # 🧪 综合系统测试
-│   │   ├── test_realistic_rag.py      # 🔍 现实RAG测试
-│   │   ├── test_improved_system.py    # 💫 改进系统测试
-│   │   ├── test_document_loader_ocr.py # 📄 文档加载OCR测试
-│   │   ├── test_paddleocr_integration.py # 🏓 PaddleOCR集成测试
-│   │   ├── test_llama_cpp_integration.py # 🦙 llama.cpp集成测试
-│   │   ├── test_llama_cpp_simple.py   # 🦙 简单llama.cpp测试
+│   │   ├── run_*_browser_e2e.py       # 🌐 Browser E2E runners
+│   │   ├── run_*_gate.py              # 🛡️ Gate validation scripts
 │   │   └── create_test_image.py       # 🖼️ 创建测试图像
 │   ├── utilities/                     # 🛠️ 实用工具脚本
 │   │   ├── README.md                  # 📖 实用工具说明

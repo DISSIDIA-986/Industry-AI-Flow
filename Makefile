@@ -480,6 +480,5 @@ quick-start: ## Quick start for development
 quick-test: ## Quick test to verify setup
 	@echo "⚡ Quick testing setup..."
 	$(MAKE) test-unit
-	$(MAKE) test-rag
 	$(MAKE) format-check
 	@echo "✅ Setup verification complete!"
