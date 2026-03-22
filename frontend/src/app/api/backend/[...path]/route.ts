@@ -54,6 +54,17 @@ async function proxyRequest(
       responseHeaders.set("content-type", contentType);
     }
 
+    // Stream SSE responses instead of buffering
+    if (contentType?.includes("text/event-stream") && upstream.body) {
+      responseHeaders.set("Cache-Control", "no-cache");
+      responseHeaders.set("Connection", "keep-alive");
+      responseHeaders.set("X-Accel-Buffering", "no");
+      return new NextResponse(upstream.body, {
+        status: upstream.status,
+        headers: responseHeaders,
+      });
+    }
+
     return new NextResponse(await upstream.arrayBuffer(), {
       status: upstream.status,
       headers: responseHeaders,
