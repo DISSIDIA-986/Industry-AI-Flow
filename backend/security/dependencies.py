@@ -28,6 +28,8 @@ _PUBLIC_PATH_PREFIXES = (
     "/api/v1/auth/",
     "/api/v1/data/analyze/stream/",  # SSE — EventSource can't send headers; UUID4 job_id is auth
     "/api/v1/files/visualizations/",  # <img> tags can't send Authorization headers
+    # Note: /api/v1/documents/{id}/content needs public access for <img>/<embed> tags.
+    # But prefix matching is too broad here. Handled via path check in _is_public_path().
 )
 
 
@@ -35,7 +37,13 @@ def _is_public_path(path: str) -> bool:
     """Endpoints that are intentionally reachable without API key."""
     if path in {"/api/v1/auth", "/api/v1/auth/"}:
         return True
-    return path.startswith(_PUBLIC_PATH_PREFIXES)
+    if path.startswith(_PUBLIC_PATH_PREFIXES):
+        return True
+    # Document content endpoint: <img>/<embed>/react-pdf can't send Auth headers.
+    # Path traversal prevention is enforced in the endpoint itself.
+    if "/documents/" in path and path.endswith("/content"):
+        return True
+    return False
 
 
 def _normalize_forwarded_ip(value: str) -> Optional[str]:

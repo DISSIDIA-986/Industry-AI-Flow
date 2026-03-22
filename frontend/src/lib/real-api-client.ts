@@ -198,6 +198,43 @@ export interface RealDocumentListResponse {
   [key: string]: unknown
 }
 
+// Document detail (preview feature)
+export interface DocumentDetailResponse {
+  id: string
+  filename: string
+  sanitized_filename: string
+  size: number
+  mime_type: string | null
+  status: string
+  uploaded_at: string
+  file_exists: boolean
+  chunk_count: number
+  vector_doc_id: string | null
+  ai_summary: string | null
+  ai_outline: unknown[] | null
+  ai_keywords: unknown[] | null
+}
+
+export interface DocumentSummaryResponse {
+  status: 'ready' | 'pending'
+  summary?: string
+  outline?: unknown[]
+  keywords?: unknown[]
+  chunk_count?: number
+  message?: string
+}
+
+export interface DocumentChunksResponse {
+  chunks: Array<{
+    chunk_id: number
+    content: string
+    char_count: number
+  }>
+  total: number
+  offset: number
+  limit: number
+}
+
 // Cost estimate request
 export interface RealCostEstimationRequest {
   project_type: string
@@ -345,7 +382,34 @@ export const realApiService = {
       `/documents/${encodeURIComponent(id)}`
     )
   },
-  
+
+  // Document detail (preview feature)
+  async getDocumentDetail(id: string): Promise<DocumentDetailResponse> {
+    return await realApi.get<DocumentDetailResponse>(
+      `/documents/${encodeURIComponent(id)}/detail`
+    )
+  },
+
+  getDocumentContentUrl(id: string): string {
+    return `${REAL_API_BASE_URL}/documents/${encodeURIComponent(id)}/content`
+  },
+
+  async getDocumentSummary(id: string): Promise<DocumentSummaryResponse> {
+    return await realApi.get<DocumentSummaryResponse>(
+      `/documents/${encodeURIComponent(id)}/summary`
+    )
+  },
+
+  async getDocumentChunks(
+    id: string,
+    offset: number = 0,
+    limit: number = 20
+  ): Promise<DocumentChunksResponse> {
+    return await realApi.get<DocumentChunksResponse>(
+      `/documents/${encodeURIComponent(id)}/chunks?offset=${offset}&limit=${limit}`
+    )
+  },
+
   // cost estimate
   async estimateCost(request: RealCostEstimationRequest): Promise<RealCostEstimationResponse> {
     try {
