@@ -602,6 +602,32 @@ def _resolve_tenant_id(tenant: Optional[TenantContext]) -> str:
     return settings.default_tenant_id or "public"
 
 
+def _resolve_vector_doc_id(cur, doc_id: str, tenant_id: str) -> Optional[str]:
+    """Resolve a doc_id to the vector documents table ID.
+
+    Handles both uploaded_documents_index IDs (doc-xxx) and
+    documents table IDs (UUID) used by knowledge_base entries.
+    """
+    # Try uploaded_documents_index first
+    cur.execute(
+        "SELECT sanitized_filename FROM uploaded_documents_index "
+        "WHERE id = %s AND tenant_id = %s",
+        (doc_id, tenant_id),
+    )
+    doc_rows = fetchall_dicts(cur)
+    if doc_rows:
+        sanitized = str(doc_rows[0].get("sanitized_filename") or "")
+        clean_name = _clean_filename(sanitized)
+        cur.execute("SELECT id FROM documents WHERE filename = %s", (clean_name,))
+        vec_rows = fetchall_dicts(cur)
+        return str(vec_rows[0].get("id") or "") if vec_rows else None
+
+    # Fallback: try documents table directly (UUID-based knowledge_base docs)
+    cur.execute("SELECT id FROM documents WHERE id = %s", (doc_id,))
+    vec_rows = fetchall_dicts(cur)
+    return str(vec_rows[0].get("id") or "") if vec_rows else None
+
+
 @router.get("/documents/{doc_id}/detail")
 def get_document_detail(
     doc_id: str,
@@ -612,7 +638,7 @@ def get_document_detail(
     conn = connect_db(settings.database_url)
     cur = conn.cursor()
     try:
-        # Get document metadata from uploaded_documents_index
+        # Try uploaded_documents_index first (user-uploaded docs with doc-xxx IDs)
         cur.execute(
             """
             SELECT id, original_filename, sanitized_filename, file_path,
@@ -623,24 +649,50 @@ def get_document_detail(
             (doc_id, tenant_id),
         )
         rows = fetchall_dicts(cur)
-        if not rows:
-            raise HTTPException(status_code=404, detail="Document not found")
-        doc = rows[0]
 
-        # Get chunk count from document_chunks (match by filename)
-        sanitized = str(doc.get("sanitized_filename") or "")
-        chunk_count = 0
         vector_doc_id = None
-        if sanitized:
-            clean_name = _clean_filename(sanitized)
+        chunk_count = 0
+        file_path_str = ""
+
+        if rows:
+            # Found in uploaded_documents_index
+            doc = rows[0]
+            sanitized = str(doc.get("sanitized_filename") or "")
+            file_path_str = str(doc.get("file_path") or "")
+            if sanitized:
+                clean_name = _clean_filename(sanitized)
+                cur.execute(
+                    "SELECT id, chunk_count FROM documents WHERE filename = %s",
+                    (clean_name,),
+                )
+                vec_rows = fetchall_dicts(cur)
+                if vec_rows:
+                    vector_doc_id = str(vec_rows[0].get("id") or "")
+                    chunk_count = int(vec_rows[0].get("chunk_count") or 0)
+        else:
+            # Fallback: try documents table directly (knowledge_base docs with UUID IDs)
             cur.execute(
-                "SELECT id, chunk_count FROM documents WHERE filename = %s",
-                (clean_name,),
+                "SELECT id, filename, filepath, chunk_count, size_bytes, created_at FROM documents WHERE id = %s",
+                (doc_id,),
             )
             vec_rows = fetchall_dicts(cur)
-            if vec_rows:
-                vector_doc_id = str(vec_rows[0].get("id") or "")
-                chunk_count = int(vec_rows[0].get("chunk_count") or 0)
+            if not vec_rows:
+                raise HTTPException(status_code=404, detail="Document not found")
+            vec_doc = vec_rows[0]
+            vector_doc_id = str(vec_doc.get("id") or "")
+            chunk_count = int(vec_doc.get("chunk_count") or 0)
+            file_path_str = str(vec_doc.get("filepath") or "")
+            # Build a compatible doc dict
+            doc = {
+                "id": vector_doc_id,
+                "original_filename": vec_doc.get("filename"),
+                "sanitized_filename": vec_doc.get("filename"),
+                "file_path": file_path_str,
+                "size_bytes": vec_doc.get("size_bytes") or 0,
+                "mime_type": None,
+                "status": "processed",
+                "created_at": vec_doc.get("created_at"),
+            }
 
         # Get AI summary from document_profiles
         ai_summary = None
@@ -660,11 +712,12 @@ def get_document_detail(
         created_at = doc.get("created_at")
         file_path = str(doc.get("file_path") or "")
         file_exists = Path(file_path).exists() if file_path else False
+        sanitized_name = str(doc.get("sanitized_filename") or doc.get("original_filename") or "")
 
         return {
             "id": doc.get("id"),
             "filename": doc.get("original_filename"),
-            "sanitized_filename": sanitized,
+            "sanitized_filename": sanitized_name,
             "size": int(doc.get("size_bytes") or 0),
             "mime_type": doc.get("mime_type"),
             "status": doc.get("status"),
@@ -753,28 +806,9 @@ def get_document_summary(
     conn = connect_db(settings.database_url)
     cur = conn.cursor()
     try:
-        # Verify document belongs to tenant
-        cur.execute(
-            "SELECT sanitized_filename FROM uploaded_documents_index "
-            "WHERE id = %s AND tenant_id = %s",
-            (doc_id, tenant_id),
-        )
-        doc_rows = fetchall_dicts(cur)
-        if not doc_rows:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        # Find vector doc_id by filename
-        sanitized = str(doc_rows[0].get("sanitized_filename") or "")
-        clean_name = _clean_filename(sanitized)
-        cur.execute(
-            "SELECT id FROM documents WHERE filename = %s",
-            (clean_name,),
-        )
-        vec_rows = fetchall_dicts(cur)
-        if not vec_rows:
+        vector_doc_id = _resolve_vector_doc_id(cur, doc_id, tenant_id)
+        if not vector_doc_id:
             return {"status": "pending", "message": "Document not yet vectorized"}
-
-        vector_doc_id = str(vec_rows[0].get("id") or "")
 
         # Get profile
         cur.execute(
@@ -823,28 +857,9 @@ def get_document_chunks(
     conn = connect_db(settings.database_url)
     cur = conn.cursor()
     try:
-        # Verify document belongs to tenant
-        cur.execute(
-            "SELECT sanitized_filename FROM uploaded_documents_index "
-            "WHERE id = %s AND tenant_id = %s",
-            (doc_id, tenant_id),
-        )
-        doc_rows = fetchall_dicts(cur)
-        if not doc_rows:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        # Find vector doc_id by filename
-        sanitized = str(doc_rows[0].get("sanitized_filename") or "")
-        clean_name = _clean_filename(sanitized)
-        cur.execute(
-            "SELECT id FROM documents WHERE filename = %s",
-            (clean_name,),
-        )
-        vec_rows = fetchall_dicts(cur)
-        if not vec_rows:
+        vector_doc_id = _resolve_vector_doc_id(cur, doc_id, tenant_id)
+        if not vector_doc_id:
             return {"chunks": [], "total": 0}
-
-        vector_doc_id = str(vec_rows[0].get("id") or "")
 
         # Get total count
         cur.execute(
