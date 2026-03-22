@@ -8,8 +8,14 @@ import {
   getCostHealth,
   predictCost,
   predictCostBatch,
+  predictWhatIf,
+  findSimilarProjects,
+  getCostTransparency,
   type CostPrediction,
   type CostProjectFeatures,
+  type DataTransparencyResponse,
+  type SimilarProject,
+  type WhatIfOverride,
 } from "@/lib/api-client";
 import { formatCurrency, formatNumber, normalizeError } from "@/lib/formatters";
 
@@ -72,7 +78,6 @@ const GROUP_3_FIELDS = [
   "material_volatility",
   "budget_pressure",
   "risk_score",
-  "risk_score_original",
 ] as const;
 
 const FIELD_LABELS: Record<string, string> = {
@@ -90,7 +95,6 @@ const FIELD_LABELS: Record<string, string> = {
   num_subcontractors: "Number of Subcontractors",
   budget_pressure: "Budget Pressure",
   risk_score: "Risk Score",
-  risk_score_original: "Original Risk Score",
 };
 
 const CONFIDENCE_PRESETS = [
@@ -117,7 +121,6 @@ const DEFAULT_STRINGS: Record<string, string> = {
   num_subcontractors: "16",
   budget_pressure: "0.58",
   risk_score: "24.2",
-  risk_score_original: "34.3",
 };
 
 interface ModelHealth {
@@ -184,7 +187,6 @@ function parseFields(
     num_subcontractors: num("num_subcontractors", { ge: 0 }),
     budget_pressure: num("budget_pressure", { ge: 0 }),
     risk_score: num("risk_score", { ge: 0 }),
-    risk_score_original: num("risk_score_original", { ge: 0 }),
   };
 
   return { project, errors };
@@ -195,9 +197,13 @@ function exportCsv(entries: BatchEntry[], results: CostPrediction[]) {
     "project_type", "location", ...GROUP_1_FIELDS, ...GROUP_2_FIELDS, ...GROUP_3_FIELDS,
     "predicted_actual_cost_cad", "predicted_cost_overrun_pct",
     "interval_lower", "interval_upper",
+    "model_type", "shap_top1_feature", "shap_top1_pct", "shap_top2_feature", "shap_top2_pct", "shap_top3_feature", "shap_top3_pct",
   ];
   const rows = results.map((r, i) => {
     const p = entries[i]?.project;
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const shap = (r as any).shap_contributions as Array<{ feature: string; contribution_pct: number }> | undefined;
+    const modelType = (r as any).model_info?.type ?? "";
     return [
       p?.project_type ?? "", p?.location ?? "",
       ...GROUP_1_FIELDS.map((f) => String(p?.[f] ?? "")),
@@ -207,6 +213,10 @@ function exportCsv(entries: BatchEntry[], results: CostPrediction[]) {
       String(r.predicted_cost_overrun_pct),
       String(r.prediction_interval_cad.lower),
       String(r.prediction_interval_cad.upper),
+      modelType,
+      shap?.[0]?.feature ?? "", shap?.[0]?.contribution_pct ?? "",
+      shap?.[1]?.feature ?? "", shap?.[1]?.contribution_pct ?? "",
+      shap?.[2]?.feature ?? "", shap?.[2]?.contribution_pct ?? "",
     ].join(",");
   });
   const csv = [headers.join(","), ...rows].join("\n");
@@ -244,6 +254,20 @@ export default function CostEstimationPage() {
   /* Model health */
   const [modelHealth, setModelHealth] = useState<ModelHealth | null>(null);
 
+  /* Similar projects */
+  const [similarProjects, setSimilarProjects] = useState<SimilarProject[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+
+  /* What-if */
+  const [whatIfOverrides, setWhatIfOverrides] = useState<Record<string, number>>({});
+  const [whatIfResult, setWhatIfResult] = useState<CostPrediction | null>(null);
+  const [loadingWhatIf, setLoadingWhatIf] = useState(false);
+  const whatIfTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastParsedProject = useRef<CostProjectFeatures | null>(null);
+
+  /* Data transparency */
+  const [transparency, setTransparency] = useState<DataTransparencyResponse | null>(null);
+
   const isDefaultData = useMemo(
     () => Object.entries(DEFAULT_STRINGS).every(([k, v]) => fields[k] === v),
     [fields],
@@ -263,6 +287,10 @@ export default function CostEstimationPage() {
         });
       })
       .catch(() => { /* hide badge silently */ });
+
+    getCostTransparency(config)
+      .then(setTransparency)
+      .catch(() => { /* silent */ });
   }, [config]);
 
   function updateField(key: string, value: string) {
@@ -293,6 +321,16 @@ export default function CostEstimationPage() {
     try {
       const response = await predictCost(config, project, confidence);
       setSingleResult(response.prediction);
+      lastParsedProject.current = project;
+      setWhatIfOverrides({});
+      setWhatIfResult(null);
+
+      // Load similar projects in background
+      setLoadingSimilar(true);
+      findSimilarProjects(config, project, 5)
+        .then((res) => setSimilarProjects(res.projects || []))
+        .catch(() => setSimilarProjects([]))
+        .finally(() => setLoadingSimilar(false));
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -301,6 +339,39 @@ export default function CostEstimationPage() {
       setShowSkeleton(false);
     }
   }, [config, fields, confidence]);
+
+  const handleWhatIfChange = useCallback((feature: string, value: number) => {
+    setWhatIfOverrides((prev) => {
+      const next = { ...prev, [feature]: value };
+
+      // Debounced API call — build overrides from the fresh `next` state
+      if (whatIfTimer.current) clearTimeout(whatIfTimer.current);
+      whatIfTimer.current = setTimeout(async () => {
+        if (!lastParsedProject.current) return;
+        const overrides: WhatIfOverride[] = Object.entries(next)
+          .filter(([, v]) => v !== undefined)
+          .map(([f, v]) => ({ feature: f, value: v }));
+        if (overrides.length === 0) return;
+
+        setLoadingWhatIf(true);
+        try {
+          const res = await predictWhatIf(config, lastParsedProject.current, overrides, confidence);
+          setWhatIfResult(res.modified_prediction);
+        } catch {
+          // Silent fail — what-if is non-critical
+        } finally {
+          setLoadingWhatIf(false);
+        }
+      }, 300);
+
+      return next;
+    });
+  }, [config, confidence]);
+
+  const resetWhatIf = useCallback(() => {
+    setWhatIfOverrides({});
+    setWhatIfResult(null);
+  }, []);
 
   const addToBatch = useCallback(() => {
     const { project, errors } = parseFields(fields);
@@ -371,13 +442,13 @@ export default function CostEstimationPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-              Cost Prediction
+              Construction Cost Intelligence
             </p>
             <h1 className="text-xl font-bold text-gray-200 mt-1">
-              Construction cost overrun prediction
+              Predict and explain cost overruns
             </h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              Ridge regression ML model trained on 10,000+ historical projects with confidence intervals
+              CatBoost ML · SHAP Explainability · 10,000 Projects
             </p>
             {isDefaultData && (
               <span className="inline-block mt-1.5 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-400">
@@ -551,18 +622,247 @@ export default function CostEstimationPage() {
               </div>
             )}
 
-            {/* Model metrics badge */}
-            {modelHealth && modelHealth.mape !== null && (
-              <p style={{ marginTop: "0.6rem", fontSize: "0.78rem", color: "var(--muted)" }}>
-                <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "var(--ok)", marginRight: 5, verticalAlign: "middle" }} />
-                MAPE {(modelHealth.mape * 100).toFixed(1)}% · R² {modelHealth.r2?.toFixed(3)} · Trained on {modelHealth.training_rows?.toLocaleString()} projects
+            {/* Model metrics badge moved to below SHAP waterfall for honest dual display */}
+          </div>
+        )}
+
+        {/* SHAP Waterfall — "Why This Overrun?" */}
+        {singleResult && (singleResult as any).shap_contributions && (
+          <div data-testid="shap-waterfall" style={{ marginTop: "1.25rem", padding: "1rem", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+            <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+              Why This Overrun?
+            </h4>
+            {(singleResult as any).shap_base_rate_pct !== undefined && (
+              <p style={{ fontSize: "0.78rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+                Base rate: {((singleResult as any).shap_base_rate_pct as number).toFixed(1)}% →
+                {" "}Predicted: {singleResult.predicted_cost_overrun_pct.toFixed(1)}%
               </p>
             )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {((singleResult as any).shap_contributions as Array<{feature: string; label: string; value: any; contribution_pct: number; direction: string}>).map((c) => {
+                const maxBar = Math.max(...((singleResult as any).shap_contributions as Array<{contribution_pct: number}>).map((x) => Math.abs(x.contribution_pct)));
+                const barWidth = maxBar > 0 ? (Math.abs(c.contribution_pct) / maxBar) * 100 : 0;
+                const isIncrease = c.direction === "increase";
+                return (
+                  <div key={c.feature} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}>
+                    <span style={{ width: "130px", textAlign: "right", color: "#374151", flexShrink: 0 }}>{c.label}</span>
+                    <div style={{ flex: 1, position: "relative", height: "20px", background: "#f3f4f6", borderRadius: "4px", overflow: "hidden" }}>
+                      <div
+                        aria-label={`${c.label}: ${isIncrease ? "increases" : "decreases"} overrun by ${Math.abs(c.contribution_pct).toFixed(1)}%`}
+                        style={{
+                          width: `${Math.min(barWidth, 100)}%`,
+                          height: "100%",
+                          background: isIncrease ? "#dc2626" : "#16a34a",
+                          borderRadius: "4px",
+                          transition: "width 0.3s ease",
+                        }}
+                      />
+                    </div>
+                    <span style={{ width: "65px", fontFamily: "var(--font-mono, monospace)", color: isIncrease ? "#dc2626" : "#16a34a", fontWeight: 600, flexShrink: 0 }}>
+                      {c.contribution_pct > 0 ? "+" : ""}{c.contribution_pct.toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* SHAP empty state — before first prediction */}
+        {!singleResult && !loadingSingle && (
+          <div data-testid="shap-empty" style={{ marginTop: "1rem", padding: "1rem", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb", textAlign: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", opacity: 0.4, marginBottom: "0.5rem" }}>
+              {[80, 60, 45, 30, 50].map((w, i) => (
+                <div key={i} style={{ height: "12px", width: `${w}%`, background: "#d1d5db", borderRadius: "4px", marginLeft: "auto", marginRight: "auto" }} />
+              ))}
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>Click <strong>Predict Cost</strong> to see cost drivers</p>
+          </div>
+        )}
+
+        {/* Model metrics — honest dual display */}
+        {singleResult && (singleResult as any).model_info && (
+          <div data-testid="model-info" style={{ marginTop: "0.6rem", fontSize: "0.78rem", color: "#6b7280" }}>
+            <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#16a34a", marginRight: 5, verticalAlign: "middle" }} />
+            {(singleResult as any).model_info.type === "catboost" ? "CatBoost" : "Ridge"} ·{" "}
+            Overrun R² {((singleResult as any).model_info.metrics?.overrun_pct?.r2 ?? 0).toFixed(3)} ·{" "}
+            Cost R² {((singleResult as any).model_info.metrics?.actual_cost?.r2 ?? 0).toFixed(3)} ·{" "}
+            {((singleResult as any).model_info.training_rows ?? 0).toLocaleString()} projects ·{" "}
+            <span style={{ fontStyle: "italic" }}>{(singleResult as any).model_info.data_source}</span>
           </div>
         )}
 
         {error && <p className="error-text" style={{ marginTop: "0.5rem" }}>{error}</p>}
       </article>
+
+      {/* What-If Scenario Analysis */}
+      {singleResult && (singleResult as any).shap_contributions && (
+        <article className="panel-card" data-testid="what-if-section">
+          <details open>
+            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "1.05rem" }}>
+              What-If Scenario Analysis
+              {loadingWhatIf && <span className="spinner" style={{ marginLeft: "0.5rem", width: 14, height: 14 }} />}
+            </summary>
+            <p style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "0.3rem", marginBottom: "0.75rem" }}>
+              Adjust parameters to see how changes affect the predicted overrun.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {[
+                { key: "contractor_rating", label: "Contractor Rating", min: 2, max: 5, step: 0.1, decimals: 1 },
+                { key: "num_change_orders", label: "Change Orders", min: 0, max: 30, step: 1, decimals: 0 },
+                { key: "weather_risk_factor", label: "Weather Risk", min: 0, max: 1, step: 0.05, decimals: 2 },
+                { key: "material_volatility", label: "Material Volatility", min: 0, max: 1, step: 0.05, decimals: 2 },
+                { key: "budget_pressure", label: "Budget Pressure", min: 0, max: 1, step: 0.05, decimals: 2 },
+              ].map((s) => {
+                const originalVal = Number(fields[s.key] || 0);
+                const currentVal = whatIfOverrides[s.key] ?? originalVal;
+                const changed = whatIfOverrides[s.key] !== undefined && whatIfOverrides[s.key] !== originalVal;
+                return (
+                  <div key={s.key} style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.85rem" }}>
+                    <span style={{ width: "140px", textAlign: "right", color: "#374151", flexShrink: 0 }}>{s.label}</span>
+                    <span style={{ width: "50px", fontFamily: "var(--font-mono, monospace)", color: changed ? "#2563eb" : "#6b7280", textAlign: "right", flexShrink: 0, fontWeight: changed ? 600 : 400 }}>
+                      {currentVal.toFixed(s.decimals)}
+                    </span>
+                    <input
+                      type="range"
+                      min={s.min}
+                      max={s.max}
+                      step={s.step}
+                      value={currentVal}
+                      onChange={(e) => handleWhatIfChange(s.key, Number(e.target.value))}
+                      style={{ flex: 1, accentColor: "#2563eb", height: "6px" }}
+                      aria-label={s.label}
+                      aria-valuetext={`${currentVal.toFixed(s.decimals)}`}
+                      data-testid={`whatif-slider-${s.key}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* What-if delta display */}
+            {whatIfResult && singleResult && (
+              <div data-testid="whatif-delta" style={{ marginTop: "0.75rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb", display: "flex", gap: "1.5rem", flexWrap: "wrap", fontSize: "0.9rem" }}>
+                <div>
+                  <span style={{ color: "#6b7280" }}>Original: </span>
+                  <span style={{ fontWeight: 600, color: overrunColor(singleResult.predicted_cost_overrun_pct) }}>
+                    {singleResult.predicted_cost_overrun_pct.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: "#6b7280" }}>Scenario: </span>
+                  <span style={{ fontWeight: 600, color: overrunColor(whatIfResult.predicted_cost_overrun_pct) }}>
+                    {whatIfResult.predicted_cost_overrun_pct.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  {(() => {
+                    const delta = whatIfResult.predicted_cost_overrun_pct - singleResult.predicted_cost_overrun_pct;
+                    return (
+                      <>
+                        <span style={{ color: "#6b7280" }}>Delta: </span>
+                        <span style={{ fontWeight: 700, color: delta < 0 ? "#16a34a" : delta > 0 ? "#dc2626" : "#6b7280" }}>
+                          {delta > 0 ? "+" : ""}{delta.toFixed(1)}%
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <button
+                  type="button"
+                  onClick={resetWhatIf}
+                  style={{ marginLeft: "auto", fontSize: "0.78rem", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+          </details>
+        </article>
+      )}
+
+      {/* Similar Projects */}
+      {singleResult && (
+        <article className="panel-card" data-testid="similar-projects">
+          <h3 style={{ fontWeight: 600, fontSize: "1.05rem", marginBottom: "0.75rem" }}>
+            Similar Projects in Dataset
+            {loadingSimilar && <span className="spinner" style={{ marginLeft: "0.5rem", width: 14, height: 14 }} />}
+          </h3>
+          <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+            Comparable projects from the training dataset — not validated against real outcomes.
+          </p>
+          <div style={{ display: "flex", gap: "0.75rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
+            {similarProjects.length > 0 ? similarProjects.map((sp, i) => (
+              <div key={i} style={{ minWidth: "200px", maxWidth: "240px", padding: "0.75rem", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "0.85rem", flexShrink: 0 }}>
+                <p style={{ fontWeight: 600, color: "#111827", marginBottom: "0.25rem" }}>
+                  {sp.project_type.replace(/_/g, " ")}
+                </p>
+                <p style={{ color: "#6b7280", fontSize: "0.78rem" }}>
+                  {sp.location} · {sp.sqft.toLocaleString()} sqft
+                </p>
+                <p style={{ marginTop: "0.4rem", fontWeight: 700, fontSize: "1rem", color: overrunColor(sp.actual_overrun_pct) }}>
+                  {sp.actual_overrun_pct > 0 ? "+" : ""}{sp.actual_overrun_pct.toFixed(1)}% overrun
+                </p>
+                {sp.key_diff && (
+                  <p style={{ marginTop: "0.25rem", fontSize: "0.75rem", color: "#9ca3af", fontStyle: "italic" }}>
+                    {sp.key_diff}
+                  </p>
+                )}
+              </div>
+            )) : !loadingSimilar && (
+              <div style={{ minWidth: "200px", padding: "0.75rem", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "0.85rem" }}>
+                <p style={{ color: "#6b7280" }}>No similar projects found for this project type</p>
+              </div>
+            )}
+          </div>
+        </article>
+      )}
+
+      {/* Data Transparency */}
+      {singleResult && (
+        <article className="panel-card" data-testid="data-transparency">
+          <details>
+            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "1.05rem" }}>
+              Data Transparency
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", color: "#6b7280", marginLeft: "0.5rem" }}>
+                {transparency?.dataset
+                  ? `${transparency.dataset.rows.toLocaleString()} ${transparency.dataset.source.replace(/_/g, " ")} projects`
+                  : "10,000 Synthetic Projects · Remediated · BCPI-Adjusted"}
+              </span>
+            </summary>
+            <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#374151" }}>
+              {/* Model performance comparison */}
+              {transparency?.model_performance && (
+                <div style={{ marginBottom: "0.75rem", padding: "0.6rem", background: "#f3f4f6", borderRadius: "8px" }}>
+                  <h4 style={{ fontWeight: 600, marginBottom: "0.4rem", fontSize: "0.85rem" }}>Model Performance</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem" }}>
+                    <div>Overrun R²: <strong>{transparency.model_performance.overrun_r2?.toFixed(3) ?? "—"}</strong></div>
+                    <div>Cost R²: <strong>{transparency.model_performance.actual_cost_r2?.toFixed(3) ?? "—"}</strong></div>
+                    <div>Overrun MAPE: <strong>{transparency.model_performance.overrun_mape ? `${(transparency.model_performance.overrun_mape * 100).toFixed(1)}%` : "—"}</strong></div>
+                    <div>Cost MAPE: <strong>{transparency.model_performance.actual_cost_mape ? `${(transparency.model_performance.actual_cost_mape * 100).toFixed(1)}%` : "—"}</strong></div>
+                  </div>
+                  <p style={{ fontSize: "0.72rem", color: "#9ca3af", marginTop: "0.3rem", fontStyle: "italic" }}>
+                    Not directly comparable to published results on real datasets (e.g., RSMeans R²=0.883)
+                  </p>
+                </div>
+              )}
+
+              <h4 style={{ fontWeight: 600, marginBottom: "0.4rem" }}>Known Limitations</h4>
+              <ul style={{ paddingLeft: "1.25rem", lineHeight: 1.7, color: "#6b7280" }}>
+                {(transparency?.limitations ?? [
+                  "Training data is synthetic (generated, not collected from real projects)",
+                  "Location cost adjustments based on Statistics Canada BCPI estimates",
+                  "Duration values were capped at 520 weeks during data remediation",
+                  "Model has not been validated against real construction project outcomes",
+                  "Not directly comparable to published results on real datasets (e.g., RSMeans)",
+                ]).map((lim, i) => (
+                  <li key={i}>{lim}</li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        </article>
+      )}
 
       {/* Batch Prediction */}
       <article className="panel-card">
