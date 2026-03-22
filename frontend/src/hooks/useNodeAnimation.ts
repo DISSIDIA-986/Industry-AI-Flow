@@ -44,20 +44,8 @@ export function useNodeAnimation(config: AnimationConfig) {
     async (params: TriggerParams) => {
       const { completedNodes, latencyMs, failedNode } = params;
 
-      // Fast-complete if already animating
-      if (animatingRef.current) {
-        const final: Record<string, NodeState> = {};
-        nodeIds.forEach((id) => {
-          final[id] =
-            id === failedNode
-              ? "error"
-              : completedNodes.includes(id)
-                ? "completed"
-                : "skipped";
-        });
-        setNodeStates(final);
-        await sleep(100);
-      }
+      // Reject concurrent animations (prevent race condition)
+      if (animatingRef.current) return;
 
       animatingRef.current = true;
       setIsAnimating(true);

@@ -1530,6 +1530,8 @@ from backend.services.document_processing.progress_tracker import (
 )
 
 _analysis_job_results: Dict[str, Any] = {}
+_analysis_job_timestamps: Dict[str, float] = {}  # job_id → time.monotonic()
+_ANALYSIS_JOB_TTL = 300  # 5 minutes — matches PipelineProgressTracker TTL
 
 
 def _run_analysis_with_progress(
@@ -1547,11 +1549,13 @@ def _run_analysis_with_progress(
     if tracker is None:
         return
 
+    current_stage = "file_resolution"
     try:
         tracker.update("file_resolution", "running", 0.1, "Resolving data file...")
         resolved = _resolve_data_file_for_analysis(data_file)
         tracker.update("file_resolution", "completed", 0.15, f"File: {resolved}")
 
+        current_stage = "code_generation"
         tracker.update("code_generation", "running", 0.2, "AI generating analysis code...")
         from backend.tools.data_analysis import data_analysis_tool
 
@@ -1564,7 +1568,7 @@ def _run_analysis_with_progress(
                 "instruction": instruction,
             }
         )
-        is_success = not isinstance(result, dict) or bool(result.get("success", True))
+        is_success = isinstance(result, dict) and bool(result.get("success", True))
         code_gen_mode = "unknown"
         if isinstance(result, dict):
             cg = result.get("code_generation")
@@ -1606,7 +1610,7 @@ def _run_analysis_with_progress(
         logger.exception("Streaming analysis job %s failed: %s", job_id, exc)
         _analysis_job_results[job_id] = {"error": str(exc), "success": False}
         if tracker:
-            tracker.fail("code_generation", str(exc))
+            tracker.fail(current_stage, str(exc))
 
 
 @app.post("/api/v1/data/analyze/start")
@@ -1616,8 +1620,17 @@ async def start_analysis_job(
 ):
     """Initiate a data analysis job — returns job_id for SSE streaming."""
     import asyncio as _aio
+    import time as _time
+
+    # TTL cleanup: remove stale job results older than 5 minutes
+    now = _time.monotonic()
+    stale = [k for k, ts in _analysis_job_timestamps.items() if now - ts > _ANALYSIS_JOB_TTL]
+    for k in stale:
+        _analysis_job_results.pop(k, None)
+        _analysis_job_timestamps.pop(k, None)
 
     job_id = str(uuid4())
+    _analysis_job_timestamps[job_id] = now
     PipelineProgressTracker(job_id)
     _aio.get_running_loop().run_in_executor(
         None,

@@ -10,7 +10,7 @@
  * └──────┘  └──────┘  └──────┘  ◇──────◇  └──────┘  └──────┘  ◇──────◇  └──────┘  └──────┘
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { useNodeAnimation, type NodeState } from '@/hooks/useNodeAnimation'
 import type { NodeTraceEntry } from '@/lib/api-client'
@@ -194,7 +194,7 @@ export default function IntentFlowViz({
 
 /** Hook: animate intent workflow nodes sequentially using real trace data. */
 export function useIntentAnimation() {
-  const nodeIds = INTENT_WORKFLOW_NODES.map((n) => n.id)
+  const nodeIds = useMemo(() => INTENT_WORKFLOW_NODES.map((n) => n.id), [])
   const { nodeStates, triggerAnimation: rawTrigger, isAnimating, reset } =
     useNodeAnimation({ nodeIds })
 

@@ -148,7 +148,8 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
                 node_name=node_name, handler=handler, state=state, services=services
             )
 
-        if state.get("error") or not state.get("response"):
+        failed = (state.get("metadata") or {}).get("failed_node")
+        if (state.get("error") or not state.get("response")) and failed != "response_node":
             state = await _run_node("response_node", response_node, state, services)
         if state.get("error") and not state.get("response"):
             state[
