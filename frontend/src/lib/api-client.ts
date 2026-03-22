@@ -621,6 +621,17 @@ export async function getCostHealth(config: RuntimeAppConfig): Promise<HealthRes
   return getBackendHealth('/api/v1/cost-estimation/health', config)
 }
 
+export async function previewDataFile(
+  config: RuntimeAppConfig,
+  dataFile: string,
+): Promise<Record<string, unknown>> {
+  return requestBackend<Record<string, unknown>>('/api/v1/data/preview', {
+    method: 'POST',
+    config,
+    body: { data_file: dataFile },
+  })
+}
+
 export async function uploadDataFile(
   config: RuntimeAppConfig,
   file: File,
