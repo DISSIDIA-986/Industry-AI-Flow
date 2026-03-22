@@ -125,15 +125,9 @@ export default function Navbar() {
               <div className="flex items-center space-x-3">
                 <Link
                   href="/login"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-1.5 text-sm font-medium transition"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition"
                 >
-                  Register
+                  Log in
                 </Link>
               </div>
             )}
