@@ -329,7 +329,7 @@ export interface CostProjectFeatures {
   num_subcontractors: number
   budget_pressure: number
   risk_score: number
-  risk_score_original: number
+  risk_score_original?: number
 }
 
 export interface CostPrediction {
@@ -405,6 +405,89 @@ export function predictCostBatch(
   confidenceQuantile = 0.9,
 ): Promise<CostBatchPredictionResponse> {
   return costEstimationApi.predictCostBatch(config, projects, confidenceQuantile)
+}
+
+/* What-if scenario analysis */
+export interface WhatIfOverride {
+  feature: string
+  value: number
+}
+
+export interface WhatIfResponse {
+  success: boolean
+  modified_prediction: CostPrediction & {
+    shap_contributions?: Array<{
+      feature: string
+      label: string
+      value: number | string
+      contribution_pct: number
+      direction: string
+    }>
+    shap_base_rate_pct?: number
+    model_info?: Record<string, unknown>
+  }
+  overrides_applied: WhatIfOverride[]
+  warnings: string[]
+}
+
+export async function predictWhatIf(
+  config: RuntimeAppConfig,
+  project: CostProjectFeatures,
+  overrides: WhatIfOverride[],
+  confidenceQuantile = 0.9,
+): Promise<WhatIfResponse> {
+  return requestBackend<WhatIfResponse>('/api/v1/cost-estimation/what-if', {
+    method: 'POST',
+    config,
+    body: { project, overrides, confidence_quantile: confidenceQuantile },
+  })
+}
+
+/* Similar projects lookup */
+export interface SimilarProject {
+  project_type: string
+  location: string
+  sqft: number
+  estimated_cost_cad: number
+  actual_overrun_pct: number
+  key_diff: string
+  similarity_score: number
+}
+
+export interface SimilarProjectsResponse {
+  success: boolean
+  count: number
+  projects: SimilarProject[]
+}
+
+export async function findSimilarProjects(
+  config: RuntimeAppConfig,
+  project: CostProjectFeatures,
+  topK = 5,
+): Promise<SimilarProjectsResponse> {
+  return requestBackend<SimilarProjectsResponse>('/api/v1/cost-estimation/similar', {
+    method: 'POST',
+    config,
+    body: { project, top_k: topK },
+  })
+}
+
+/* Data transparency */
+export interface DataTransparencyResponse {
+  available: boolean
+  dataset?: { rows: number; source: string; features_numeric: number; features_categorical: number }
+  stats?: Record<string, number>
+  model_performance?: { overrun_r2: number | null; overrun_mape: number | null; actual_cost_r2: number | null; actual_cost_mape: number | null }
+  limitations?: string[]
+}
+
+export async function getCostTransparency(
+  config: RuntimeAppConfig,
+): Promise<DataTransparencyResponse> {
+  return requestBackend<DataTransparencyResponse>('/api/v1/cost-estimation/data-transparency', {
+    method: 'GET',
+    config,
+  })
 }
 
 export interface WorkflowQueryRequest {
