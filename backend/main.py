@@ -618,6 +618,13 @@ def get_code_executor():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Security: fail fast if auth is required but JWT secret is missing
+    if settings.require_user_auth and not settings.auth_jwt_secret:
+        raise RuntimeError(
+            "REQUIRE_USER_AUTH is enabled but AUTH_JWT_SECRET is not configured. "
+            "Set AUTH_JWT_SECRET in your .env file."
+        )
+
     try:
         from backend.init_database import init_database
 
