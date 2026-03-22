@@ -7,12 +7,10 @@ import {
   websocketService,
   type QueryResponseData,
 } from "@/lib/websocket-service";
-import {
-  buildQuickTipsFromDocuments,
-  parsePinnedQuickTips,
-} from "@/lib/workflow-quick-tips";
+import { getStaticFollowUps } from "@/lib/golden-questions";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import PipelineInsight from "@/components/PipelineInsight";
+import GoldenQuestions from "@/components/GoldenQuestions";
+import CompactPipelineViz from "@/components/CompactPipelineViz";
 
 interface Message {
   id: string;
@@ -43,26 +41,6 @@ function createWorkflowSessionId(): string {
   }
   return `wf-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
-
-const defaultQuickPrompts = [
-  // Ontario Reg. 213/91 (text, reliable single-doc retrieval)
-  "What is the ranked hierarchy of fall protection methods required under Ontario Regulation 213/91?",
-  "When is a guardrail system required on a construction project under Ontario Regulation 213/91?",
-  "What training requirements does Ontario Regulation 213/91 mandate for workers using fall protection systems?",
-  "What personal protective equipment must a worker wear on an Ontario construction project under Regulation 213/91?",
-  "What notification must a constructor file before beginning a construction project under Ontario Regulation 213/91?",
-  // NBC 2020 (OCR'd PDF, impressive scale)
-  'How does the National Building Code of Canada define "fire compartment" and what fire-resistance rating is required?',
-  "Under the National Building Code of Canada, when can separate portions of a building be treated as separate buildings?",
-  "How does the National Building Code of Canada classify buildings by major occupancy groups?",
-  'What does the National Building Code of Canada define as "means of egress" and what are its components?',
-  "What are the five stated objectives of the National Building Code of Canada?",
-];
-
-const pinnedQuickPrompts = parsePinnedQuickTips(
-  process.env.NEXT_PUBLIC_DEMO_PINNED_QUICK_TIPS,
-  defaultQuickPrompts.length,
-);
 
 function extractSuggestedQuestions(metadata: unknown): string[] | undefined {
   if (!metadata || typeof metadata !== "object") {
@@ -110,7 +88,7 @@ export default function WorkflowChatPage() {
     {
       id: "1",
       content:
-        "Hello! I am the Industry AI Flow assistant. I can help you with construction cost estimates, risk analysis and data queries. How can I help you?",
+        "Hello! I am the Industry AI Flow assistant. I can help you with construction regulations, cost estimates, risk analysis and data queries. Click a Golden Question to get started, or type your own.",
       sender: "ai",
       timestamp: new Date(),
     },
@@ -124,10 +102,8 @@ export default function WorkflowChatPage() {
     "disconnected" | "connecting" | "connected"
   >("disconnected");
   const [useWebSocket, _setUseWebSocket] = useState(false);
-  const [quickPrompts, setQuickPrompts] = useState<string[]>(
-    pinnedQuickPrompts ?? defaultQuickPrompts,
-  );
   const [sessionId] = useState<string>(createWorkflowSessionId);
+  const [mobileGQOpen, setMobileGQOpen] = useState(false);
   const pendingQueryRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -142,65 +118,26 @@ export default function WorkflowChatPage() {
         setApiStatus("disconnected");
       }
     };
-
     checkApiHealth();
-    // Check API status every 30 seconds
     const interval = setInterval(checkApiHealth, 30000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (pinnedQuickPrompts && pinnedQuickPrompts.length > 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadDocumentAwareQuickTips = async () => {
-      try {
-        const docs = await realApiService.getDocuments();
-        if (cancelled) {
-          return;
-        }
-
-        const generated = buildQuickTipsFromDocuments(
-          docs,
-          defaultQuickPrompts,
-        );
-        setQuickPrompts((prev) =>
-          prev === defaultQuickPrompts ? generated : prev,
-        );
-      } catch (error) {
-        console.warn("Failed to build document-aware quick tips:", error);
-      }
-    };
-
-    loadDocumentAwareQuickTips();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   // WebSocket connection management
   useEffect(() => {
     if (!useWebSocket) return;
-
     setWsStatus("connecting");
 
     const connectWebSocket = async () => {
       const connected = await websocketService.connect();
       setWsStatus(connected ? "connected" : "disconnected");
     };
-
     connectWebSocket();
 
-    // Monitor connection status changes
     const unsubscribe = websocketService.onConnectionChange((connected) => {
       setWsStatus(connected ? "connected" : "disconnected");
     });
 
-    // Listen for query responses
     const unsubscribeResponse = websocketService.onMessage(
       "query_response",
       (data: QueryResponseData) => {
@@ -215,20 +152,14 @@ export default function WorkflowChatPage() {
           suggestedQuestions,
           metadata: data.metadata,
         };
-
         setMessages((prev) => [...prev, aiMessage]);
-        setQuickPrompts(suggestedQuestions);
         setLoading(false);
       },
     );
 
-    // Listen for notifications
     const unsubscribeNotification = websocketService.onMessage(
       "notification",
-      (data: unknown) => {
-        console.log("Notification received:", data);
-        // Here you can add notification display logic
-      },
+      () => {},
     );
 
     return () => {
@@ -247,9 +178,13 @@ export default function WorkflowChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-    const queryText = input.trim();
+  // Use a ref to avoid React state-ordering bug: setLastClickedGQ + handleSend
+  // in the same event would read stale state. Ref is synchronously updated.
+  const lastClickedGQRef = useRef<string | null>(null);
+
+  const handleSend = async (overrideText?: string) => {
+    const queryText = (overrideText ?? input).trim();
+    if (!queryText || loading) return;
     pendingQueryRef.current = queryText;
 
     const userMessage: Message = {
@@ -265,35 +200,38 @@ export default function WorkflowChatPage() {
 
     try {
       if (useWebSocket && wsStatus === "connected") {
-        // Send query via WebSocket
         const sent = websocketService.sendChatMessage(queryText);
-        if (!sent) {
-          throw new Error("WebSocket send failed");
-        }
-        // Responses will be handled via WebSocket event listeners
+        if (!sent) throw new Error("WebSocket send failed");
       } else {
-        // Send query via HTTP API
         const response = await workflowApi.sendQuery(
-          {
-            query: queryText,
-            session_id: sessionId,
-            thread_id: sessionId,
-          },
-          {
-            userId: user?.id,
-          },
+          { query: queryText, session_id: sessionId, thread_id: sessionId },
+          { userId: user?.id },
         );
 
-        const suggestedQuestions =
+        // Hybrid follow-up: static for first GQ response, backend for rest
+        let suggestedQuestions: string[];
+        const currentGQ = lastClickedGQRef.current;
+        const staticFollowUps = currentGQ
+          ? getStaticFollowUps(currentGQ)
+          : undefined;
+
+        if (staticFollowUps && staticFollowUps.length > 0) {
+          // First response to a Golden Question — use static follow-ups
+          suggestedQuestions = staticFollowUps;
+          lastClickedGQRef.current = null; // Clear so subsequent rounds use backend
+        } else if (
           response.suggested_questions &&
           response.suggested_questions.length > 0
-            ? response.suggested_questions
-            : buildFallbackSuggestedQuestions(
-                queryText,
-                response.sources && response.sources.length > 0
-                  ? response.sources[0].document_name
-                  : undefined,
-              );
+        ) {
+          suggestedQuestions = response.suggested_questions;
+        } else {
+          suggestedQuestions = buildFallbackSuggestedQuestions(
+            queryText,
+            response.sources && response.sources.length > 0
+              ? response.sources[0].document_name
+              : undefined,
+          );
+        }
 
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -307,12 +245,10 @@ export default function WorkflowChatPage() {
         };
 
         setMessages((prev) => [...prev, aiMessage]);
-        setQuickPrompts(suggestedQuestions);
         setLoading(false);
       }
     } catch (error) {
       console.error("Query error:", error);
-
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         content:
@@ -320,122 +256,137 @@ export default function WorkflowChatPage() {
         sender: "ai",
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, errorMessage]);
       setLoading(false);
     }
   };
 
-  const handleQuickPrompt = (prompt: string) => {
-    setInput(prompt);
+  const handleGoldenQuestionSelect = (questionText: string) => {
+    lastClickedGQRef.current = questionText;
+    setMobileGQOpen(false);
+    handleSend(questionText);
+  };
+
+  const handleFollowUpClick = (question: string) => {
+    lastClickedGQRef.current = null; // Follow-up clicks are not GQ first-round
+    handleSend(question);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      lastClickedGQRef.current = null; // Manual typing clears GQ tracking
       handleSend();
     }
   };
 
-  const wsStatusDotClass =
-    wsStatus === "connected"
+  // Get latest AI message metadata for pipeline
+  const latestMetadata =
+    [...messages].reverse().find((m) => m.sender === "ai" && m.metadata)
+      ?.metadata ?? null;
+
+  const apiStatusDot =
+    apiStatus === "connected"
       ? "bg-green-500"
-      : wsStatus === "connecting"
-        ? "bg-yellow-500"
-        : "bg-gray-400";
+      : apiStatus === "disconnected"
+        ? "bg-red-500"
+        : "bg-yellow-500";
 
-  const wsStatusLabel =
-    wsStatus === "connected"
+  const apiStatusText =
+    apiStatus === "connected"
       ? "Connected"
-      : wsStatus === "connecting"
-        ? "Connecting..."
-        : "Disconnected (HTTP fallback active)";
-
-  const wsBannerClass =
-    wsStatus === "connected"
-      ? "bg-green-50 text-green-800 border border-green-200"
-      : wsStatus === "connecting"
-        ? "bg-yellow-50 text-yellow-800 border border-yellow-200"
-        : "bg-blue-50 text-blue-800 border border-blue-200";
-
-  const wsBannerText =
-    wsStatus === "connected"
-      ? "WebSocket real-time channel is active."
-      : wsStatus === "connecting"
-        ? "Connecting to WebSocket service..."
-        : "WebSocket service is unavailable. Switched to HTTP API automatically; queries continue to work.";
+      : apiStatus === "disconnected"
+        ? "Disconnected"
+        : "Checking...";
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 h-full flex flex-col">
-      <div className="mb-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 h-full flex flex-col">
+      {/* Dark Hero Header */}
+      <div
+        className="bg-[#1a1a2e] rounded-2xl px-6 py-4 mb-4 flex-shrink-0 relative overflow-hidden"
+        data-testid="workflow-chat-hero"
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/5 to-transparent pointer-events-none" />
+        <div className="relative flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Workflow Chat</h1>
-            <p className="text-gray-600 mt-2">
-              Chat with the AI assistant for cost estimation, risk analysis and
-              data queries
+            <h1 className="text-xl font-bold text-gray-200">Workflow Chat</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              AI-powered construction knowledge assistant
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            {/* WebSocket status — only visible when WebSocket is actively connected or connecting */}
-            {useWebSocket && wsStatus !== "disconnected" && (
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${wsStatusDotClass}`}
-                ></div>
-                <span className="text-xs text-gray-600">
-                  WebSocket {wsStatusLabel}
-                </span>
-              </div>
-            )}
-
-            {/* API status */}
-            <div className="flex items-center space-x-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  apiStatus === "connected"
-                    ? "bg-green-500"
-                    : apiStatus === "disconnected"
-                      ? "bg-red-500"
-                      : "bg-yellow-500"
-                }`}
-              ></div>
-              <span className="text-sm text-gray-600">
-                {apiStatus === "connected"
-                  ? "API Connected"
-                  : apiStatus === "disconnected"
-                    ? "API Disconnected (please check backend)"
-                    : "Checking API status..."}
-              </span>
-            </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${apiStatusDot}`} />
+            <span className="text-xs text-gray-400">{apiStatusText}</span>
           </div>
         </div>
+      </div>
 
-        {/* WebSocket status banner */}
-        {useWebSocket && (
-          <div className={`mt-3 p-3 rounded-lg text-sm ${wsBannerClass}`}>
-            {wsBannerText}
+      {/* WebSocket banner (rarely shown) */}
+      {useWebSocket && wsStatus !== "disconnected" && (
+        <div
+          className={`mb-4 p-2 rounded-lg text-xs ${
+            wsStatus === "connected"
+              ? "bg-green-50 text-green-800"
+              : "bg-yellow-50 text-yellow-800"
+          }`}
+        >
+          WebSocket{" "}
+          {wsStatus === "connected"
+            ? "connected"
+            : "connecting..."}
+        </div>
+      )}
+
+      {/* Mobile Golden Questions toggle */}
+      <div className="lg:hidden mb-3 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileGQOpen(!mobileGQOpen)}
+          className="w-full flex items-center justify-between px-4 py-2 bg-white rounded-lg border border-gray-200 text-sm text-gray-700"
+          data-testid="mobile-gq-toggle"
+        >
+          <span>Golden Questions</span>
+          <svg
+            className={`w-4 h-4 transition-transform ${mobileGQOpen ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {mobileGQOpen && (
+          <div className="mt-2 bg-white rounded-lg border border-gray-200 p-3 max-h-64 overflow-y-auto">
+            <GoldenQuestions
+              onSelect={handleGoldenQuestionSelect}
+              disabled={loading}
+            />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-        {/* Main chat area */}
-        <div className="lg:col-span-2 flex flex-col min-h-0">
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
+        {/* Chat area — 3/4 width */}
+        <div className="lg:col-span-3 flex flex-col min-h-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-1 min-h-0">
-            {/* Chat message area */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`mb-6 ${message.sender === "user" ? "text-right" : "text-left"}`}
+                  className={`mb-5 ${message.sender === "user" ? "text-right" : "text-left"}`}
                 >
                   <div
-                    className={`inline-block max-w-[80%] rounded-2xl px-4 py-4 ${
+                    className={`inline-block max-w-[85%] rounded-2xl px-4 py-3 ${
                       message.sender === "user"
                         ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-800"
+                        : "bg-gray-50 text-gray-800 border-l-2 border-blue-200"
                     }`}
+                    data-testid={
+                      message.sender === "user" ? "user-bubble" : "ai-bubble"
+                    }
                   >
                     {message.sender === "ai" ? (
                       <MarkdownRenderer content={message.content} />
@@ -445,69 +396,55 @@ export default function WorkflowChatPage() {
                       </div>
                     )}
 
-                    {/* Intent info (AI messages only) */}
-                    {message.sender === "ai" && message.intent && (
-                      <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">
-                            Intent recognition:
-                          </span>
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                            {message.intent.description}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-600">
-                          Confidence:{" "}
-                          {(message.intent.confidence * 100).toFixed(1)}%
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Source citations (AI messages only) */}
+                    {/* Compact source citations — always visible */}
                     {message.sender === "ai" &&
                       message.sources &&
                       message.sources.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                          <div className="text-sm font-medium mb-2">
-                            Reference sources:
+                        <div
+                          className="mt-2 pt-2 border-t border-gray-200"
+                          data-testid="source-citations"
+                        >
+                          <div className="text-xs font-medium text-gray-500 mb-1">
+                            Sources
                           </div>
-                          <div className="space-y-2">
-                            {message.sources.map((source, index) => (
-                              <div
-                                key={index}
-                                className="text-xs bg-white bg-opacity-50 p-2 rounded"
-                              >
-                                <div className="font-medium">
-                                  {source.document_name}
-                                </div>
-                                <div className="text-gray-600 truncate">
-                                  {source.content}
-                                </div>
-                                <div className="text-gray-500 mt-1">
-                                  Relevance:{" "}
-                                  {(source.relevance * 100).toFixed(0)}%
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          {message.sources.map((source, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 text-[11px] py-0.5"
+                            >
+                              <span className="text-gray-700 font-medium truncate flex-1">
+                                {source.document_name}
+                              </span>
+                              <span className="text-gray-400 flex-shrink-0">
+                                {(source.relevance * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
+                    {/* Follow-up question pills */}
                     {message.sender === "ai" &&
                       message.suggestedQuestions &&
                       message.suggestedQuestions.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-300 border-opacity-30">
-                          <div className="text-sm font-medium mb-2">
-                            Suggested follow-up questions:
+                        <div
+                          className="mt-2 pt-2 border-t border-gray-200"
+                          data-testid="follow-up-pills"
+                        >
+                          <div className="text-xs font-medium text-gray-500 mb-1.5">
+                            Follow-up
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {message.suggestedQuestions.map(
                               (question, index) => (
                                 <button
                                   key={`${message.id}-suggestion-${index}`}
                                   type="button"
-                                  onClick={() => handleQuickPrompt(question)}
-                                  className="text-xs px-3 py-1.5 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 border border-gray-300 text-gray-700 transition"
+                                  onClick={() =>
+                                    handleFollowUpClick(question)
+                                  }
+                                  className="text-[11px] px-2.5 py-1 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 transition leading-tight"
+                                  data-testid={`follow-up-${index}`}
                                 >
                                   {question}
                                 </button>
@@ -518,10 +455,10 @@ export default function WorkflowChatPage() {
                       )}
 
                     <div
-                      className={`text-xs mt-3 ${
+                      className={`text-[10px] mt-2 ${
                         message.sender === "user"
                           ? "text-blue-200"
-                          : "text-gray-500"
+                          : "text-gray-400"
                       }`}
                     >
                       {message.timestamp.toLocaleTimeString([], {
@@ -535,11 +472,11 @@ export default function WorkflowChatPage() {
 
               {loading && (
                 <div className="text-left mb-4">
-                  <div className="inline-block max-w-[80%] rounded-2xl px-4 py-3 bg-gray-100">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
+                  <div className="inline-block max-w-[80%] rounded-2xl px-4 py-3 bg-gray-50 border-l-2 border-blue-200">
+                    <div className="flex items-center space-x-1.5">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse [animation-delay:150ms]" />
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse [animation-delay:300ms]" />
                     </div>
                   </div>
                 </div>
@@ -549,86 +486,49 @@ export default function WorkflowChatPage() {
             </div>
 
             {/* Input area */}
-            <div className="border-t border-gray-200 p-4">
-              <div className="flex space-x-2">
+            <div className="border-t border-gray-200 p-3">
+              <div className="flex gap-2">
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder="Enter your question or query..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm"
                   rows={2}
                   disabled={loading}
+                  data-testid="chat-input"
                 />
                 <button
-                  onClick={handleSend}
+                  onClick={() => {
+                    lastClickedGQRef.current = null;
+                    handleSend();
+                  }}
                   disabled={loading || !input.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
+                  data-testid="send-button"
                 >
-                  {loading ? "Sending..." : "Send"}
+                  {loading ? "..." : "Send"}
                 </button>
               </div>
-
-              <div className="mt-3 text-sm text-gray-500">
-                Press Enter to send, Shift + Enter for new line
+              <div className="mt-1.5 text-[11px] text-gray-400">
+                Enter to send · Shift+Enter for new line
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6 overflow-y-auto min-h-0">
-          {/* Quick Tips */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">Quick Tips</h3>
-            <div className="max-h-48 md:max-h-96 overflow-y-auto space-y-2 pr-1">
-              {quickPrompts.map((prompt, index) => (
-                <button
-                  key={`qt-${index}-${prompt.slice(0, 20)}`}
-                  onClick={() => handleQuickPrompt(prompt)}
-                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+        {/* Sidebar — 1/4 width, desktop only */}
+        <div className="hidden lg:flex flex-col min-h-0 gap-3">
+          {/* Golden Questions — scrollable top section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex-1 overflow-y-auto min-h-0">
+            <GoldenQuestions
+              onSelect={handleGoldenQuestionSelect}
+              disabled={loading}
+            />
           </div>
 
-          {/* User information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-3">User information</h3>
-            {user ? (
-              <div className="space-y-2">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </div>
-                </div>
-                <div className="pt-3 border-t border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    Sent {messages.filter((m) => m.sender === "user").length}{" "}
-                    messages
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-500 text-sm">Not logged in</div>
-            )}
-          </div>
-
-          {/* Pipeline Insight — replaces static Function description */}
-          <PipelineInsight
-            metadata={
-              [...messages].reverse().find((m) => m.sender === "ai" && m.metadata)?.metadata ?? null
-            }
-            loading={loading}
-          />
+          {/* Compact Pipeline — sticky bottom */}
+          <CompactPipelineViz metadata={latestMetadata} loading={loading} />
         </div>
       </div>
     </div>
