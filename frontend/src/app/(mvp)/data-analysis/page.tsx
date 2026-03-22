@@ -93,7 +93,7 @@ export default function DataAnalysisPage() {
   const [streaming, setStreaming] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const METRICS_WHITELIST = ["success", "analysis_type", "code_gen_mode", "execution_time"];
+  const METRICS_WHITELIST = ["success", "analysis_type", "execution_time"];
 
   const analysisSummary = useMemo(() => {
     if (!result) {
@@ -435,7 +435,11 @@ export default function DataAnalysisPage() {
               >
                 {result.status === "error" || result.error ? "Error" : "Analysis Complete"}
                 {typeof result.analysis_type === "string" && ` — ${result.analysis_type}`}
-                {typeof result.code_gen_mode === "string" && ` (${result.code_gen_mode})`}
+                {(() => {
+                  const cg = result.code_generation;
+                  const mode = typeof cg === "object" && cg !== null ? (cg as Record<string, unknown>).mode : null;
+                  return typeof mode === "string" ? ` (${mode})` : null;
+                })()}
               </div>
             )}
 
@@ -446,6 +450,32 @@ export default function DataAnalysisPage() {
                 <p style={{ marginTop: "0.35rem" }}>{result.answer as string}</p>
               </div>
             )}
+
+            {/* Code generation mode badge */}
+            {(() => {
+              const cg = result?.code_generation;
+              const mode = typeof cg === "object" && cg !== null ? (cg as Record<string, unknown>).mode : null;
+              if (typeof mode !== "string") return null;
+              const isLLM = mode === "llm" || mode === "llm_generated";
+              const fallbackReason = typeof cg === "object" && cg !== null ? (cg as Record<string, unknown>).fallback_reason : null;
+              return (
+                <div className="flex items-center gap-2 text-sm" data-testid="code-gen-mode-badge">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      isLLM
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-amber-50 text-amber-700 border border-amber-200"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isLLM ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    {isLLM ? "LLM Generated" : "Template Fallback"}
+                  </span>
+                  {typeof fallbackReason === "string" && fallbackReason && (
+                    <span className="text-xs text-gray-500">{fallbackReason}</span>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Key metrics */}
             {analysisSummary.length > 0 && (
