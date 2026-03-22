@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -27,8 +28,47 @@ NUMERIC_FEATURES: List[str] = [
     "num_subcontractors",
     "budget_pressure",
     "risk_score",
-    "risk_score_original",
 ]
+
+# Legacy feature kept for backward compatibility with v1.0 artifacts
+_LEGACY_NUMERIC_FEATURES = NUMERIC_FEATURES + ["risk_score_original"]
+
+# Features used for similar project distance calculation
+SIMILAR_DISTANCE_FEATURES: List[str] = [
+    "sqft",
+    "floors",
+    "estimated_cost_cad",
+    "planned_duration_weeks",
+    "contractor_rating",
+    "complexity_score",
+]
+
+# What-if adjustable features with their valid ranges
+WHATIF_FEATURES: Dict[str, Tuple[float, float]] = {
+    "contractor_rating": (2.0, 5.0),
+    "num_change_orders": (0, 30),
+    "weather_risk_factor": (0.0, 1.0),
+    "material_volatility": (0.0, 1.0),
+    "budget_pressure": (0.0, 1.0),
+}
+
+# Human-readable feature labels for SHAP display
+FEATURE_LABELS: Dict[str, str] = {
+    "sqft": "Square Footage",
+    "floors": "Number of Floors",
+    "num_units": "Number of Units",
+    "planned_duration_weeks": "Planned Duration",
+    "estimated_cost_cad": "Estimated Cost",
+    "contractor_rating": "Contractor Rating",
+    "complexity_score": "Complexity Score",
+    "team_experience_years": "Team Experience",
+    "num_change_orders": "Change Orders",
+    "weather_risk_factor": "Weather Risk",
+    "material_volatility": "Material Volatility",
+    "num_subcontractors": "Subcontractors",
+    "budget_pressure": "Budget Pressure",
+    "risk_score": "Risk Score",
+}
 
 CATEGORICAL_FEATURES: List[str] = [
     "project_type",
@@ -41,6 +81,10 @@ ESTIMATED_COST = "estimated_cost_cad"
 
 REQUIRED_TRAINING_COLUMNS: List[str] = (
     NUMERIC_FEATURES + CATEGORICAL_FEATURES + [TARGET_OVERRUN, TARGET_ACTUAL_COST]
+)
+# Legacy datasets may still have risk_score_original; training accepts both
+_LEGACY_REQUIRED_COLUMNS: List[str] = (
+    _LEGACY_NUMERIC_FEATURES + CATEGORICAL_FEATURES + [TARGET_OVERRUN, TARGET_ACTUAL_COST]
 )
 
 _PROJECT_TYPE_KEYWORDS: Dict[str, List[str]] = {
@@ -329,8 +373,11 @@ def _ensure_columns(df: pd.DataFrame, required_columns: List[str]) -> None:
 
 def _clean_training_rows(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
-    for col in NUMERIC_FEATURES + [TARGET_OVERRUN, TARGET_ACTUAL_COST]:
-        cleaned[col] = pd.to_numeric(cleaned[col], errors="coerce")
+    # Use whichever numeric features are present in the dataset
+    numeric_cols = [c for c in NUMERIC_FEATURES + ["risk_score_original"] if c in cleaned.columns]
+    for col in numeric_cols + [TARGET_OVERRUN, TARGET_ACTUAL_COST]:
+        if col in cleaned.columns:
+            cleaned[col] = pd.to_numeric(cleaned[col], errors="coerce")
     cleaned = cleaned.dropna(
         subset=[TARGET_OVERRUN, TARGET_ACTUAL_COST, ESTIMATED_COST]
     )
@@ -604,8 +651,246 @@ def train_cost_estimation_model(
     }
 
 
+def _load_and_validate_dataset(
+    dataset_path: Path, folds: int
+) -> Tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
+    """Shared dataset loading for both Ridge and CatBoost training."""
+    if not dataset_path.exists() or not dataset_path.is_file():
+        raise CostEstimationError(f"dataset does not exist: {dataset_path}")
+
+    df = pd.read_csv(dataset_path)
+
+    # Accept both remediated (no risk_score_original) and legacy datasets
+    has_legacy = "risk_score_original" in df.columns
+    if has_legacy:
+        _ensure_columns(df, _LEGACY_REQUIRED_COLUMNS)
+    else:
+        _ensure_columns(df, REQUIRED_TRAINING_COLUMNS)
+
+    df = _clean_training_rows(df)
+    y_overrun = df[TARGET_OVERRUN].to_numpy(dtype=float)
+    y_actual = df[TARGET_ACTUAL_COST].to_numpy(dtype=float)
+    estimated_cost = df[ESTIMATED_COST].to_numpy(dtype=float)
+    return df, y_overrun, y_actual, estimated_cost
+
+
+def _compute_all_metrics(
+    y_overrun: np.ndarray,
+    y_actual: np.ndarray,
+    estimated_cost: np.ndarray,
+    oof_pred_overrun: np.ndarray,
+    full_pred_overrun: np.ndarray,
+    folds: int,
+    random_seed: int,
+) -> Tuple[Dict[str, Any], Dict[str, float]]:
+    """Shared metrics computation for both Ridge and CatBoost training."""
+    oof_actual_metrics = _evaluate_actual_cost(y_actual, estimated_cost, oof_pred_overrun)
+    oof_overrun_metrics = _evaluate_overrun(y_overrun, oof_pred_overrun)
+
+    baseline_metrics = {
+        "mae_cad": _mae(y_actual, estimated_cost),
+        "rmse_cad": _rmse(y_actual, estimated_cost),
+        "mape": _mape(y_actual, estimated_cost),
+        "r2": _r2(y_actual, estimated_cost),
+    }
+
+    oof_pred_actual = np.maximum(estimated_cost * (1.0 + (oof_pred_overrun / 100.0)), 0.0)
+    oof_ape = np.abs(y_actual - oof_pred_actual) / np.maximum(y_actual, 1.0)
+    residual_quantiles = {
+        "0.50": float(np.quantile(oof_ape, 0.50)),
+        "0.80": float(np.quantile(oof_ape, 0.80)),
+        "0.90": float(np.quantile(oof_ape, 0.90)),
+        "0.95": float(np.quantile(oof_ape, 0.95)),
+    }
+
+    final_actual_metrics = _evaluate_actual_cost(y_actual, estimated_cost, full_pred_overrun)
+    final_overrun_metrics = _evaluate_overrun(y_overrun, full_pred_overrun)
+
+    metrics = {
+        "cross_validation": {
+            "folds": folds,
+            "random_seed": random_seed,
+            "actual_cost": oof_actual_metrics,
+            "overrun_pct": oof_overrun_metrics,
+        },
+        "baseline_estimated_cost": {"actual_cost": baseline_metrics},
+        "train_fit": {
+            "actual_cost": final_actual_metrics,
+            "overrun_pct": final_overrun_metrics,
+        },
+        "prediction_interval_ape_quantiles": residual_quantiles,
+    }
+
+    dataset_stats = {
+        "estimated_cost_min": float(estimated_cost.min()),
+        "estimated_cost_max": float(estimated_cost.max()),
+        "overrun_pct_min": float(y_overrun.min()),
+        "overrun_pct_max": float(y_overrun.max()),
+        "actual_cost_min": float(y_actual.min()),
+        "actual_cost_max": float(y_actual.max()),
+    }
+
+    return metrics, dataset_stats
+
+
+def train_catboost_model(
+    dataset_path: Path,
+    output_model_path: Path,
+    *,
+    iterations: int = 500,
+    learning_rate: float = 0.05,
+    depth: int = 6,
+    folds: int = 5,
+    random_seed: int = 42,
+) -> Dict[str, Any]:
+    """Train CatBoost model for overrun prediction + Ridge for actual cost."""
+    try:
+        from catboost import CatBoostRegressor, Pool
+        import shap
+    except ImportError as e:
+        raise CostEstimationError(
+            f"CatBoost/SHAP not installed: {e}. Install: pip install catboost shap"
+        ) from e
+
+    logger = logging.getLogger(__name__)
+
+    df, y_overrun, y_actual, estimated_cost = _load_and_validate_dataset(dataset_path, folds)
+
+    # Prepare CatBoost features (native categoricals, no one-hot)
+    cat_indices = [NUMERIC_FEATURES.index(f) if f in NUMERIC_FEATURES else None for f in CATEGORICAL_FEATURES]
+    # CatBoost feature order: numeric features + categorical features
+    cb_feature_names = list(NUMERIC_FEATURES) + list(CATEGORICAL_FEATURES)
+
+    def _make_cb_matrix(frame: pd.DataFrame) -> np.ndarray:
+        parts = []
+        for col in NUMERIC_FEATURES:
+            parts.append(pd.to_numeric(frame[col], errors="coerce").fillna(0).to_numpy().reshape(-1, 1))
+        for col in CATEGORICAL_FEATURES:
+            parts.append(frame[col].astype(str).fillna("").to_numpy().reshape(-1, 1))
+        return np.hstack(parts)
+
+    cat_feature_indices = list(range(len(NUMERIC_FEATURES), len(NUMERIC_FEATURES) + len(CATEGORICAL_FEATURES)))
+
+    # Out-of-fold CatBoost evaluation
+    oof_pred_overrun = np.zeros(len(df), dtype=float)
+    for train_idx, valid_idx in _kfold_indices(len(df), folds=folds, seed=random_seed):
+        train_df = df.iloc[train_idx].reset_index(drop=True)
+        valid_df = df.iloc[valid_idx].reset_index(drop=True)
+
+        X_train = _make_cb_matrix(train_df)
+        X_valid = _make_cb_matrix(valid_df)
+        y_train = train_df[TARGET_OVERRUN].to_numpy(dtype=float)
+
+        train_pool = Pool(X_train, y_train, cat_features=cat_feature_indices, feature_names=cb_feature_names)
+        valid_pool = Pool(X_valid, cat_features=cat_feature_indices, feature_names=cb_feature_names)
+
+        fold_model = CatBoostRegressor(
+            iterations=iterations,
+            learning_rate=learning_rate,
+            depth=depth,
+            l2_leaf_reg=3,
+            random_seed=random_seed,
+            verbose=0,
+        )
+        fold_model.fit(train_pool, eval_set=Pool(X_valid, valid_df[TARGET_OVERRUN].to_numpy(dtype=float), cat_features=cat_feature_indices, feature_names=cb_feature_names), verbose=0)
+        oof_pred_overrun[valid_idx] = fold_model.predict(valid_pool)
+
+    # Train final CatBoost on all data
+    X_full = _make_cb_matrix(df)
+    full_pool = Pool(X_full, y_overrun, cat_features=cat_feature_indices, feature_names=cb_feature_names)
+    final_cb = CatBoostRegressor(
+        iterations=iterations,
+        learning_rate=learning_rate,
+        depth=depth,
+        l2_leaf_reg=3,
+        random_seed=random_seed,
+        verbose=0,
+    )
+    final_cb.fit(full_pool)
+    full_pred_overrun = final_cb.predict(X_full)
+
+    # SHAP expected value
+    explainer = shap.TreeExplainer(final_cb)
+    ev = explainer.expected_value
+    shap_expected = float(ev.item()) if hasattr(ev, 'item') else float(ev)
+    logger.info("CatBoost SHAP expected value (base overrun rate): %.2f%%", shap_expected)
+
+    # Also train Ridge for actual cost (existing behavior)
+    levels = _category_levels(df)
+    medians = _numeric_medians(df)
+    X_ridge = _build_feature_matrix(df, levels, medians)
+    ridge_model = _fit_ridge(X_ridge, y_overrun, ridge_alpha=10.0)
+
+    # Compute metrics
+    metrics, dataset_stats = _compute_all_metrics(
+        y_overrun, y_actual, estimated_cost, oof_pred_overrun, full_pred_overrun, folds, random_seed
+    )
+
+    # Compute feature min/max for similar project normalization
+    feature_ranges: Dict[str, Dict[str, float]] = {}
+    for col in SIMILAR_DISTANCE_FEATURES:
+        series = pd.to_numeric(df[col], errors="coerce").dropna()
+        feature_ranges[col] = {"min": float(series.min()), "max": float(series.max())}
+
+    # Save CatBoost model binary
+    cbm_path = output_model_path.parent / "catboost_overrun.cbm"
+    final_cb.save_model(str(cbm_path))
+
+    # Build v2.0 artifact JSON (unified metadata)
+    artifact = {
+        "artifact_version": "2.0",
+        "trained_at_utc": _utc_now_iso(),
+        "dataset_path": str(dataset_path),
+        "training_rows": len(df),
+        "model_type": "catboost+ridge",
+        "catboost_config": {
+            "iterations": iterations,
+            "learning_rate": learning_rate,
+            "depth": depth,
+            "l2_leaf_reg": 3,
+        },
+        "ridge_alpha": 10.0,
+        "numeric_features": list(NUMERIC_FEATURES),
+        "categorical_features": list(CATEGORICAL_FEATURES),
+        "catboost_feature_names": cb_feature_names,
+        "catboost_cat_indices": cat_feature_indices,
+        "category_levels": levels,
+        "numeric_medians": medians,
+        "feature_names": _feature_names(levels),  # For Ridge compatibility
+        "model": {  # Ridge weights for actual cost prediction
+            "bias": float(ridge_model.bias),
+            "weights": [float(v) for v in ridge_model.weights.tolist()],
+            "means": [float(v) for v in ridge_model.means.tolist()],
+            "stds": [float(v) for v in ridge_model.stds.tolist()],
+        },
+        "catboost_model_path": str(cbm_path),
+        "shap_expected_value": shap_expected,
+        "feature_ranges": feature_ranges,
+        "targets": {"primary": TARGET_OVERRUN, "derived": TARGET_ACTUAL_COST},
+        "metrics": metrics,
+        "dataset_stats": dataset_stats,
+    }
+
+    output_model_path.parent.mkdir(parents=True, exist_ok=True)
+    output_model_path.write_text(json.dumps(artifact, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    logger.info(
+        "CatBoost model trained: overrun CV R²=%.3f, actual cost CV R²=%.3f",
+        metrics["cross_validation"]["overrun_pct"]["r2"],
+        metrics["cross_validation"]["actual_cost"]["r2"],
+    )
+
+    return {
+        "success": True,
+        "model_path": str(output_model_path),
+        "catboost_model_path": str(cbm_path),
+        "training_rows": len(df),
+        "metrics": metrics,
+    }
+
+
 class CostEstimationService:
-    """Loads model artifact and serves project-level predictions."""
+    """Loads model artifact and serves project-level predictions with SHAP explainability."""
 
     DEFAULT_MODEL_PATH = (
         Path(__file__).resolve().parent.parent.parent
@@ -619,13 +904,21 @@ class CostEstimationService:
         self.model_path = model_path or self.DEFAULT_MODEL_PATH
         self._artifact: Optional[Dict[str, Any]] = None
         self._model: Optional[_RidgeModel] = None
+        self._catboost_model: Any = None  # CatBoostRegressor or None
+        self._shap_explainer: Any = None  # shap.TreeExplainer or None
+        self._dataset_df: Optional[pd.DataFrame] = None  # For similar project lookup
         if self.model_path.exists():
             self.load(self.model_path)
 
     def is_loaded(self) -> bool:
         return self._artifact is not None and self._model is not None
 
+    @property
+    def has_catboost(self) -> bool:
+        return self._catboost_model is not None
+
     def load(self, model_path: Optional[Path] = None) -> None:
+        logger = logging.getLogger(__name__)
         path = model_path or self.model_path
         if not path.exists():
             raise CostEstimationError(f"model artifact not found: {path}")
@@ -650,6 +943,35 @@ class CostEstimationService:
         self._artifact = artifact
         self.model_path = path
 
+        # Load CatBoost model if v2.0 artifact
+        version = artifact.get("artifact_version", "1.0")
+        if version >= "2.0":
+            cbm_path_str = artifact.get("catboost_model_path", "")
+            cbm_path = Path(cbm_path_str) if cbm_path_str else None
+            if cbm_path and cbm_path.exists():
+                try:
+                    from catboost import CatBoostRegressor
+                    import shap
+                    self._catboost_model = CatBoostRegressor()
+                    self._catboost_model.load_model(str(cbm_path))
+                    self._shap_explainer = shap.TreeExplainer(self._catboost_model)
+                    logger.info("CatBoost model loaded from %s", cbm_path)
+                except ImportError:
+                    logger.warning("CatBoost/SHAP not installed; falling back to Ridge only")
+                except Exception as e:
+                    logger.warning("Failed to load CatBoost model: %s; using Ridge fallback", e)
+
+            # Load dataset for similar project lookup
+            dataset_path_str = artifact.get("dataset_path", "")
+            if dataset_path_str:
+                ds_path = Path(dataset_path_str)
+                if ds_path.exists():
+                    try:
+                        self._dataset_df = pd.read_csv(ds_path)
+                        logger.info("Dataset loaded for similar projects: %d rows", len(self._dataset_df))
+                    except Exception as e:
+                        logger.warning("Failed to load dataset for similar projects: %s", e)
+
     def metadata(self) -> Dict[str, Any]:
         if self._artifact is None:
             return {
@@ -662,6 +984,9 @@ class CostEstimationService:
             "trained_at_utc": self._artifact.get("trained_at_utc"),
             "training_rows": self._artifact.get("training_rows"),
             "ridge_alpha": self._artifact.get("ridge_alpha"),
+            "model_type": self._artifact.get("model_type", "ridge"),
+            "has_catboost": self.has_catboost,
+            "shap_expected_value": self._artifact.get("shap_expected_value"),
             "metrics": self._artifact.get("metrics", {}),
         }
 
@@ -690,8 +1015,47 @@ class CostEstimationService:
             row[col] = str(raw).strip()
 
         input_df = pd.DataFrame([row])
-        X = _build_feature_matrix(input_df, levels, medians)
-        pred_overrun = float(_predict_overrun(X, self._model)[0])
+
+        # Use CatBoost for overrun prediction if available, else Ridge
+        shap_contributions: Optional[List[Dict[str, Any]]] = None
+        shap_base_rate: Optional[float] = None
+
+        if self._catboost_model is not None and self._shap_explainer is not None:
+            cb_features = list(NUMERIC_FEATURES) + list(CATEGORICAL_FEATURES)
+            cb_row = []
+            for col in NUMERIC_FEATURES:
+                cb_row.append(row[col])
+            for col in CATEGORICAL_FEATURES:
+                cb_row.append(row[col])
+            cb_matrix = np.array([cb_row], dtype=object)
+
+            pred_overrun = float(self._catboost_model.predict(cb_matrix)[0])
+
+            # SHAP values
+            sv = self._shap_explainer.shap_values(cb_matrix)
+            shap_vals = sv[0] if isinstance(sv, np.ndarray) else np.array(sv)[0]
+            shap_base_rate = float(self._artifact.get("shap_expected_value", 0.0))
+
+            # Build top-5 contributions sorted by absolute magnitude
+            contributions = []
+            for i, feat in enumerate(cb_features):
+                val = float(shap_vals[i])
+                if abs(val) < 0.001:
+                    continue
+                label = FEATURE_LABELS.get(feat, feat)
+                contributions.append({
+                    "feature": feat,
+                    "label": label,
+                    "value": row.get(feat, None),
+                    "contribution_pct": round(val, 2),
+                    "direction": "increase" if val > 0 else "decrease",
+                })
+            contributions.sort(key=lambda c: abs(c["contribution_pct"]), reverse=True)
+            shap_contributions = contributions[:5]
+        else:
+            X = _build_feature_matrix(input_df, levels, medians)
+            pred_overrun = float(_predict_overrun(X, self._model)[0])
+
         estimated_cost = float(row[ESTIMATED_COST])
         pred_actual_cost = max(0.0, estimated_cost * (1.0 + (pred_overrun / 100.0)))
 
@@ -739,7 +1103,7 @@ class CostEstimationService:
                 "training data range."
             )
 
-        return {
+        result: Dict[str, Any] = {
             "predicted_cost_overrun_pct": pred_overrun,
             "predicted_actual_cost_cad": pred_actual_cost,
             "estimated_cost_cad": estimated_cost,
@@ -756,6 +1120,20 @@ class CostEstimationService:
             "confidence_degraded": confidence_degraded,
             "warning": warning,
         }
+
+        if shap_contributions is not None:
+            result["shap_contributions"] = shap_contributions
+        if shap_base_rate is not None:
+            result["shap_base_rate_pct"] = shap_base_rate
+
+        result["model_info"] = {
+            "type": "catboost" if self._catboost_model is not None else "ridge",
+            "metrics": self._artifact.get("metrics", {}).get("cross_validation", {}),
+            "training_rows": self._artifact.get("training_rows"),
+            "data_source": "synthetic_remediated" if "2.0" <= self._artifact.get("artifact_version", "1.0") else "synthetic",
+        }
+
+        return result
 
     MAX_BATCH_SIZE = 200
 
@@ -774,6 +1152,163 @@ class CostEstimationService:
             self.predict_project(project, confidence_quantile=confidence_quantile)
             for project in projects
         ]
+
+    def find_similar_projects(
+        self,
+        project: Mapping[str, Any],
+        *,
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """Find the most similar projects in the training dataset."""
+        if self._dataset_df is None or self._artifact is None:
+            return []
+
+        df = self._dataset_df
+        project_type = str(project.get("project_type", ""))
+
+        # Filter by project_type (mandatory); relax if < top_k matches
+        type_mask = df["project_type"] == project_type
+        candidates = df[type_mask]
+        if len(candidates) < top_k:
+            # Relax: match category prefix (e.g., "commercial_*")
+            prefix = project_type.split("_")[0] if "_" in project_type else project_type
+            candidates = df[df["project_type"].str.startswith(prefix)]
+        if len(candidates) < top_k:
+            candidates = df  # Use entire dataset as fallback
+
+        # Compute min-max normalized Euclidean distance
+        feature_ranges = self._artifact.get("feature_ranges", {})
+        if not feature_ranges:
+            return []
+
+        dist_features = [f for f in SIMILAR_DISTANCE_FEATURES if f in feature_ranges]
+        if not dist_features:
+            return []
+
+        input_vec = np.zeros(len(dist_features))
+        for i, feat in enumerate(dist_features):
+            val = float(project.get(feat, 0))
+            fr = feature_ranges[feat]
+            rng = fr["max"] - fr["min"]
+            input_vec[i] = (val - fr["min"]) / rng if rng > 0 else 0.0
+
+        cand_matrix = np.zeros((len(candidates), len(dist_features)))
+        for i, feat in enumerate(dist_features):
+            vals = pd.to_numeric(candidates[feat], errors="coerce").fillna(0).to_numpy()
+            fr = feature_ranges[feat]
+            rng = fr["max"] - fr["min"]
+            cand_matrix[:, i] = (vals - fr["min"]) / rng if rng > 0 else 0.0
+
+        distances = np.sqrt(np.sum((cand_matrix - input_vec) ** 2, axis=1))
+        top_indices = np.argsort(distances)[:top_k]
+
+        results = []
+        for idx in top_indices:
+            row = candidates.iloc[idx]
+            # Find key difference: largest absolute feature delta
+            key_diff = ""
+            max_delta = 0.0
+            for feat in dist_features:
+                input_val = float(project.get(feat, 0))
+                match_val = float(row.get(feat, 0))
+                delta = abs(input_val - match_val)
+                # Normalize by range for comparison
+                fr = feature_ranges.get(feat, {})
+                rng = fr.get("max", 1) - fr.get("min", 0)
+                norm_delta = delta / rng if rng > 0 else 0
+                if norm_delta > max_delta:
+                    max_delta = norm_delta
+                    label = FEATURE_LABELS.get(feat, feat)
+                    direction = "higher" if match_val > input_val else "lower"
+                    key_diff = f"{direction} {label} ({match_val:,.0f} vs {input_val:,.0f})"
+
+            results.append({
+                "project_type": str(row.get("project_type", "")),
+                "location": str(row.get("location", "")),
+                "sqft": float(row.get("sqft", 0)),
+                "estimated_cost_cad": float(row.get("estimated_cost_cad", 0)),
+                "actual_overrun_pct": float(row.get("cost_overrun_pct", 0)),
+                "key_diff": key_diff,
+                "similarity_score": round(1.0 / (1.0 + float(distances[idx])), 3),
+            })
+
+        return results
+
+    def predict_what_if(
+        self,
+        project: Mapping[str, Any],
+        overrides: List[Dict[str, Any]],
+        *,
+        confidence_quantile: float = 0.90,
+    ) -> Dict[str, Any]:
+        """Predict with feature overrides for what-if analysis."""
+        if not overrides:
+            raise CostEstimationError("overrides list cannot be empty")
+
+        # Validate overrides
+        warnings: List[str] = []
+        modified_project = dict(project)
+        for override in overrides:
+            feat = override.get("feature", "")
+            if feat not in WHATIF_FEATURES:
+                raise CostEstimationError(
+                    f"Feature '{feat}' is not adjustable. "
+                    f"Allowed: {list(WHATIF_FEATURES.keys())}"
+                )
+            val = float(override.get("value", 0))
+            lo, hi = WHATIF_FEATURES[feat]
+            if val < lo or val > hi:
+                clamped = max(lo, min(hi, val))
+                warnings.append(f"{feat} clamped from {val} to {clamped} (range: {lo}-{hi})")
+                val = clamped
+            modified_project[feat] = val
+
+        modified_prediction = self.predict_project(modified_project, confidence_quantile=confidence_quantile)
+
+        # Compute delta — actual_cost derived from CatBoost overrun for consistency
+        modified_overrun = modified_prediction["predicted_cost_overrun_pct"]
+        estimated = float(project.get("estimated_cost_cad", 0))
+        modified_actual = max(0.0, estimated * (1.0 + modified_overrun / 100.0))
+        modified_prediction["predicted_actual_cost_cad"] = modified_actual
+
+        return {
+            "modified_prediction": modified_prediction,
+            "overrides_applied": overrides,
+            "warnings": warnings,
+        }
+
+    def get_data_transparency(self) -> Dict[str, Any]:
+        """Return dataset statistics and limitations for the transparency panel."""
+        if self._artifact is None:
+            return {"available": False}
+
+        stats = self._artifact.get("dataset_stats", {})
+        metrics = self._artifact.get("metrics", {})
+        cv = metrics.get("cross_validation", {})
+
+        return {
+            "available": True,
+            "dataset": {
+                "rows": self._artifact.get("training_rows", 0),
+                "source": "synthetic_remediated" if self._artifact.get("artifact_version", "1.0") >= "2.0" else "synthetic",
+                "features_numeric": len(NUMERIC_FEATURES),
+                "features_categorical": len(CATEGORICAL_FEATURES),
+            },
+            "stats": stats,
+            "model_performance": {
+                "overrun_r2": cv.get("overrun_pct", {}).get("r2"),
+                "overrun_mape": cv.get("overrun_pct", {}).get("mape"),
+                "actual_cost_r2": cv.get("actual_cost", {}).get("r2"),
+                "actual_cost_mape": cv.get("actual_cost", {}).get("mape"),
+            },
+            "limitations": [
+                "Training data is synthetic (generated, not collected from real projects)",
+                "Location cost adjustments based on Statistics Canada BCPI estimates",
+                "Duration values were capped at 520 weeks during data remediation",
+                "Risk score distribution was smoothed to remove artificial floor at 20.0",
+                "Model has not been validated against real construction project outcomes",
+            ],
+        }
 
     def _resolve_interval_quantile(self, requested: float) -> Tuple[float, float]:
         if self._artifact is None:

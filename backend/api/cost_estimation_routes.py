@@ -18,6 +18,7 @@ from backend.security.sanitizer import sanitize_identifier, sanitize_text
 from backend.services.cost_estimation_service import (
     CostEstimationError,
     CostEstimationService,
+    WHATIF_FEATURES,
     train_cost_estimation_model,
 )
 
@@ -115,7 +116,7 @@ class CostEstimationFeatures(BaseModel):
     num_subcontractors: int = Field(..., ge=0)
     budget_pressure: float = Field(..., ge=0)
     risk_score: float = Field(..., ge=0)
-    risk_score_original: float = Field(..., ge=0)
+    risk_score_original: Optional[float] = Field(default=None, ge=0)
 
     @field_validator("project_type", "location", mode="before")
     @classmethod
@@ -255,3 +256,56 @@ async def batch_predict_cost_estimation(
         "count": len(predictions),
         "predictions": predictions,
     }
+
+
+class WhatIfOverride(BaseModel):
+    feature: str = Field(..., max_length=64)
+    value: float
+
+
+class WhatIfRequest(BaseModel):
+    project: CostEstimationFeatures
+    overrides: List[WhatIfOverride] = Field(..., min_length=1, max_length=10)
+    confidence_quantile: float = Field(default=0.9, ge=0.5, le=0.99)
+
+
+class SimilarProjectsRequest(BaseModel):
+    project: CostEstimationFeatures
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
+@router.post("/what-if")
+async def what_if_prediction(request: WhatIfRequest) -> Dict[str, Any]:
+    """Scenario analysis: predict with feature overrides and SHAP comparison."""
+    service = await _get_service()
+    try:
+        result = await asyncio.to_thread(
+            service.predict_what_if,
+            project=request.project.model_dump(),
+            overrides=[o.model_dump() for o in request.overrides],
+            confidence_quantile=request.confidence_quantile,
+        )
+    except CostEstimationError as exc:
+        logger.warning("what-if prediction error: %s", exc)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"success": True, **result}
+
+
+@router.post("/similar")
+async def find_similar_projects(request: SimilarProjectsRequest) -> Dict[str, Any]:
+    """Find similar projects in the training dataset."""
+    service = await _get_service()
+    projects = await asyncio.to_thread(
+        service.find_similar_projects,
+        project=request.project.model_dump(),
+        top_k=request.top_k,
+    )
+    return {"success": True, "count": len(projects), "projects": projects}
+
+
+@router.get("/data-transparency")
+async def data_transparency() -> Dict[str, Any]:
+    """Return dataset statistics, model performance, and known limitations."""
+    service = await _get_service()
+    return await asyncio.to_thread(service.get_data_transparency)
