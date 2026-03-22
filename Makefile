@@ -57,18 +57,6 @@ test-comprehensive: ## Run comprehensive test suite
 	@echo "🧪 Running comprehensive test suite..."
 	$(PYTHON_BIN) tests/run_comprehensive_tests.py
 
-test-ocr: ## Run OCR integration tests
-	@echo "📷 Running OCR tests..."
-	$(PYTHON_BIN) scripts/testing/test_ocr.py
-
-test-rag: ## Run RAG system tests
-	@echo "🔍 Running RAG tests..."
-	$(PYTHON_BIN) scripts/testing/test_rag.py
-
-test-llama: ## Run llama.cpp integration tests
-	@echo "🦙 Running llama.cpp tests..."
-	$(PYTHON_BIN) scripts/testing/test_llama_cpp_simple.py
-
 test-phase1-gate: ## Run phase-1 corrected-plan quality gate
 	@echo "🛡️ Running phase-1 quality gate..."
 	$(PYTHON_BIN) -m py_compile \
