@@ -36,7 +36,7 @@
 ## 🚀 系统当前状态
 
 ### 前端服务 ✅ 正常运行
-- **地址**: http://localhost:3000
+- **地址**: http://localhost:3123
 - **页面**: 所有页面可访问
 - **功能**: 核心交互功能完整
 - **状态**: 开发服务器稳定运行
@@ -76,24 +76,24 @@
 ## 🔗 可访问页面
 
 ### 认证相关
-1. **登录页面**: http://localhost:3000/login
+1. **登录页面**: http://localhost:3123/login
    - 功能: 用户登录
    - 演示账户: demo@example.com / demo123
 
-2. **注册页面**: http://localhost:3000/register
+2. **注册页面**: http://localhost:3123/register
    - 功能: 新用户注册
    - 验证: 密码确认验证
 
 ### 核心功能页面
-3. **概览页面**: http://localhost:3000/overview
+3. **概览页面**: http://localhost:3123/overview
    - 状态: 需要登录后访问
    - 功能: 系统概览
 
-4. **工作流聊天**: http://localhost:3000/workflow-chat
+4. **工作流聊天**: http://localhost:3123/workflow-chat
    - 状态: 需要登录后访问
    - 功能: AI助手对话
 
-5. **文档管理**: http://localhost:3000/documents
+5. **文档管理**: http://localhost:3123/documents
    - 状态: 需要登录后访问
    - 功能: 文档上传和管理
 
@@ -108,7 +108,7 @@
 ## 🎯 用户体验流程
 
 ### 新用户流程
-1. 访问 http://localhost:3000 → 重定向到 `/overview`
+1. 访问 http://localhost:3123 → 重定向到 `/overview`
 2. 未登录 → 自动重定向到 `/login`
 3. 注册新账户 → 填写表单 → 自动登录
 4. 登录成功 → 重定向到 `/overview`

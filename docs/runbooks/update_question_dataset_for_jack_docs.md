@@ -1017,7 +1017,7 @@ Verify all new query cases pass (retrieve chunks from Jack's documents).
 **Step 6.4** — Manual UI check (Quick Tips display):
 1. Start backend: `make run`
 2. Start frontend: `make frontend-dev`
-3. Open `http://localhost:3000/workflow-chat`
+3. Open `http://localhost:3123/workflow-chat`
 4. Verify Quick Tips panel shows all 10 questions (5 Ontario + 5 NBC)
 5. Verify the layout is readable (no text overflow, buttons are clickable)
 

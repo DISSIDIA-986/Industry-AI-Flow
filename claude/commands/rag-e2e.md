@@ -9,7 +9,7 @@ Parse `$ARGUMENTS` with defaults:
 - `max_questions=180`
 - `parallel=2`
 - `nothink=on`
-- `frontend_url=http://localhost:3000`
+- `frontend_url=http://localhost:3123`
 
 Execution policy:
 - If `mode=smoke`: set `max_questions=min(max_questions,30)` and `parallel=1`.

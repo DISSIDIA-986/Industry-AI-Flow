@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3123",
     "build": "next build",
     "start": "next start",
     "check:next-config": "node -e \"const fs=require('fs');const both=fs.existsSync('next.config.js')&&fs.existsSync('next.config.ts');if(both){console.error('Both next.config.js and next.config.ts exist; keep only one.');process.exit(1);}console.log('Next config source check passed.');\"",

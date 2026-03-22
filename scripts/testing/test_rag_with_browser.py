@@ -37,7 +37,7 @@ class BrowserTestResult:
 class RAGBrowserTester:
     """RAG 系统浏览器自动化测试"""
 
-    def __init__(self, base_url: str = "http://localhost:3000"):
+    def __init__(self, base_url: str = "http://localhost:3123"):
         self.base_url = base_url
         self.test_queries = [
             "建筑项目中常见的成本超支原因有哪些？",
@@ -235,7 +235,7 @@ class RAGBrowserTester:
 
 def main():
     """主函数"""
-    tester = RAGBrowserTester(base_url="http://localhost:3000")
+    tester = RAGBrowserTester(base_url="http://localhost:3123")
     results = tester.test_rag_frontend()
 
     # 保存结果

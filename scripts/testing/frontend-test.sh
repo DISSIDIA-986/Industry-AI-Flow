@@ -11,7 +11,7 @@ echo ""
 
 # 1. 检查开发服务器
 echo "1. 检查开发服务器状态..."
-if curl -s http://localhost:3000 > /dev/null; then
+if curl -s http://localhost:3123 > /dev/null; then
   echo "✅ 开发服务器运行正常"
 else
   echo "❌ 开发服务器未运行"
@@ -37,8 +37,8 @@ pages=("workflow-chat" "documents-integrated" "data-dashboard" "cost-estimation"
 
 for page in "${pages[@]}"; do
   echo -n "   测试页面: /$page ... "
-  if curl -s "http://localhost:3000/$page" | grep -q "<title>"; then
-    TITLE=$(curl -s "http://localhost:3000/$page" | grep -o "<title>[^<]*</title>" | sed 's/<title>//' | sed 's/<\/title>//')
+  if curl -s "http://localhost:3123/$page" | grep -q "<title>"; then
+    TITLE=$(curl -s "http://localhost:3123/$page" | grep -o "<title>[^<]*</title>" | sed 's/<title>//' | sed 's/<\/title>//')
     echo "✅ 可访问 ($TITLE)"
   else
     echo "❌ 访问失败"
@@ -121,7 +121,7 @@ PASSED_TESTS=0
 
 # 开发服务器测试
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if curl -s http://localhost:3000 > /dev/null; then
+if curl -s http://localhost:3123 > /dev/null; then
   PASSED_TESTS=$((PASSED_TESTS + 1))
 fi
 
@@ -134,7 +134,7 @@ fi
 # 页面测试（6个页面）
 for page in "${pages[@]}"; do
   TOTAL_TESTS=$((TOTAL_TESTS + 1))
-  if curl -s "http://localhost:3000/$page" | grep -q "<title>"; then
+  if curl -s "http://localhost:3123/$page" | grep -q "<title>"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
   fi
 done

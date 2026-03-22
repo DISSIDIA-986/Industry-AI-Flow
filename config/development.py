@@ -44,7 +44,7 @@ class DevelopmentConfig(BaseConfig):
 
     # Development-specific settings
     ENABLE_CORS = True
-    CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS = ["http://localhost:3123", "http://127.0.0.1:3123"]
 
     # Rate limiting (relaxed for development)
     RATE_LIMIT_ENABLED = False

@@ -28,7 +28,7 @@ Run screenshot-first page result-driven E2E gate for data_dashboard, cost_estima
 /page-e2e-gate module=cost_estimation cycles=3
 
 # 完整参数
-/page-e2e-gate module=rag cycles=2 frontend_url=http://localhost:3000 rag_questions=50
+/page-e2e-gate module=rag cycles=2 frontend_url=http://localhost:3123 rag_questions=50
 
 # 带修复命令
 /page-e2e-gate module=data_dashboard cycles=5 repair='pytest tests/unit -q'
@@ -54,7 +54,7 @@ Run RAG multi-turn E2E validation from vectorized docs (question generation + be
 - `max_questions` - 最大问题数 (默认: 180)
 - `parallel` - 并发数 (默认: 2)
 - `nothink` - 禁用思考模式：`on | off` (默认: on)
-- `frontend_url` - 前端URL (默认: http://localhost:3000)
+- `frontend_url` - 前端URL (默认: http://localhost:3123)
 
 **使用示例**：
 ```bash

@@ -39,7 +39,7 @@
 ## 🚀 系统当前状态
 
 ### 前端服务 ✅ **正常运行**
-- **地址**: http://localhost:3000
+- **地址**: http://localhost:3123
 - **图表库**: ✅ recharts已安装
 - **数据可视化**: ✅ 完整实现
 - **性能**: ✅ 优化完成
@@ -51,12 +51,12 @@
 - **响应式**: 支持移动端和桌面端
 
 ### 可访问页面 ✅ **全部正常**
-1. **测试仪表板**: http://localhost:3000/test-dashboard
-2. **数据仪表板**: http://localhost:3000/data-dashboard (待修复布局)
-3. **工作流聊天**: http://localhost:3000/workflow-chat
-4. **文档管理**: http://localhost:3000/documents
-5. **登录页面**: http://localhost:3000/login
-6. **注册页面**: http://localhost:3000/register
+1. **测试仪表板**: http://localhost:3123/test-dashboard
+2. **数据仪表板**: http://localhost:3123/data-dashboard (待修复布局)
+3. **工作流聊天**: http://localhost:3123/workflow-chat
+4. **文档管理**: http://localhost:3123/documents
+5. **登录页面**: http://localhost:3123/login
+6. **注册页面**: http://localhost:3123/register
 
 ---
 

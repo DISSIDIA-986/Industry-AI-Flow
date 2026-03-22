@@ -104,7 +104,7 @@ This script performs:
 4. Ensure Python capstone environment exists.
 5. Write frontend env to align backend URL/port.
 6. Start backend (`uvicorn`) and wait for `/api/v1/health`.
-7. Start frontend (`next dev`) and wait for `http://127.0.0.1:3000`.
+7. Start frontend (`next dev`) and wait for `http://127.0.0.1:3123`.
 8. Run full-stack smoke script.
 
 ## 6. Smoke Gate Contents

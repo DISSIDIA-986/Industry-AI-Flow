@@ -212,7 +212,7 @@ make db-setup
 
 # 6. 启动服务
 make run                       # 后端 API :8000
-make frontend-dev              # 前端 :3000 (另一个终端)
+make frontend-dev              # 前端 :3123 (另一个终端)
 ```
 
 ### 依赖管理
@@ -274,7 +274,7 @@ cd frontend
 npm run dev
 ```
 
-- 默认访问地址: `http://localhost:3000`
+- 默认访问地址: `http://localhost:3123`
 - 前端通过 `frontend/src/app/api/backend/[...path]/route.ts` 代理到后端
 - 默认后端地址: `http://127.0.0.1:8000`（可在 `frontend/.env.local` 设置 `BACKEND_BASE_URL`）
 
