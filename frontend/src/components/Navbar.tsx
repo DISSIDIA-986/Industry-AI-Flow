@@ -40,8 +40,6 @@ export default function Navbar() {
   const secondaryNav = [
     { name: 'Intent Demo', href: '/intent-demo' },
     { name: 'System Overview', href: '/data-dashboard' },
-    { name: 'API Test', href: '/api-integration-test' },
-    { name: 'Component Demo', href: '/components-demo' },
   ]
 
   const allNavItems = [...primaryNav, ...secondaryNav]

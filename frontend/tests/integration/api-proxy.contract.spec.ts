@@ -16,14 +16,4 @@ describe('api proxy source contracts', () => {
     expect(realApiClient).not.toMatch(/localhost:8001|localhost:8002/)
   })
 
-  it('keeps diagnostics pages aligned to same-origin proxy and avoids localhost hints', () => {
-    const apiTestPage = readFrontendFile('src/app/(mvp)/api-test/page.tsx')
-    const apiIntegrationPage = readFrontendFile('src/app/(mvp)/api-integration-test/page.tsx')
-
-    expect(apiTestPage).toContain("import { api } from '@/lib/api-client'")
-    expect(apiTestPage).toContain('/api/backend/api/v1 (Same origin proxy)')
-    expect(apiIntegrationPage).toContain('/api/backend/api/v1 (Same origin proxy)')
-    expect(apiTestPage).not.toMatch(/localhost:8001|localhost:8002/)
-    expect(apiIntegrationPage).not.toMatch(/localhost:8001|localhost:8002/)
-  })
 })

@@ -9,7 +9,6 @@ const CORE_ROUTES = [
   '/documents-integrated',
   '/data-dashboard',
   '/cost-estimation',
-  '/api-integration-test',
 ] as const;
 
 interface ShellMetrics {
@@ -87,7 +86,6 @@ test.describe('Layout width and navbar persistence regressions', () => {
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
 
     const navFlow = [
-      { label: 'APItest', url: /\/api-integration-test$/ },
       { label: 'Document management', url: /\/documents-integrated$/ },
       { label: 'System Overview', url: /\/data-dashboard$/ },
       { label: 'cost estimate', url: /\/cost-estimation$/ },
