@@ -66,6 +66,7 @@ class DataAnalysisAgent:
         question: str,
         data_file_path: str,
         dataset_metadata: Optional[Dict[str, Any]] = None,
+        on_progress: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Analyze a dataset to answer the user's question.
@@ -74,23 +75,37 @@ class DataAnalysisAgent:
             question: User's analysis question
             data_file_path: Path to the data file
             dataset_metadata: Pre-extracted metadata (optional, extracted automatically if missing)
+            on_progress: Optional callback (stage, status, progress, detail) for SSE progress
 
         Returns:
             Dict containing answer, code, visualizations, and execution details
         """
+
+        def _progress(stage: str, status: str, progress: float, detail: str) -> None:
+            if on_progress is not None:
+                try:
+                    on_progress(stage, status, progress, detail)
+                except Exception as exc:
+                    logger.warning("on_progress callback failed: %s", exc)
+
         try:
             # 1. Validate file exists
+            _progress("file_parse", "running", 0.05, "Validating data file...")
             if not os.path.exists(data_file_path):
+                _progress("file_parse", "failed", 0.05, "File not found")
                 return {
                     "success": False,
                     "error": f"Data file not found: {data_file_path}",
                     "answer": "The dataset could not be located. Please verify the file path and retry.",
                 }
+            _progress("file_parse", "completed", 0.10, f"File: {os.path.basename(data_file_path)}")
 
             # 2. Extract dataset metadata
+            _progress("metadata_extract", "running", 0.12, "Extracting column info and statistics...")
             if not dataset_metadata:
                 dataset_metadata = self._extract_dataset_info(data_file_path)
             if isinstance(dataset_metadata, dict) and dataset_metadata.get("error"):
+                _progress("metadata_extract", "failed", 0.15, dataset_metadata["error"])
                 return {
                     "success": False,
                     "error": dataset_metadata["error"],
@@ -98,32 +113,53 @@ class DataAnalysisAgent:
                         "error", "Failed to extract dataset metadata."
                     ),
                 }
+            _progress(
+                "metadata_extract", "completed", 0.20,
+                f"{dataset_metadata.get('rows', '?')} rows × {dataset_metadata.get('columns', '?')} cols",
+            )
 
             # 3. Generate analysis code
+            _progress("code_generation", "running", 0.25, "AI generating analysis + visualization code...")
             analysis_code = self._generate_analysis_code(
                 question, data_file_path, dataset_metadata
             )
 
             if not analysis_code:
+                _progress("code_generation", "failed", 0.30, "Code generation failed")
                 return {
                     "success": False,
                     "error": "Failed to generate analysis code.",
                     "answer": "The analysis code could not be generated for this request.",
                 }
+            code_gen_mode = "llm"
+            _progress("code_generation", "completed", 0.40, "Code generated")
 
-            # Validate generated code before execution
+            # 4. Validate generated code (security check)
+            _progress("security_check", "running", 0.42, "Validating code security...")
             from backend.services.code_executor.validator import validate_code
 
             validation = validate_code(analysis_code, strict_mode=True)
             if not validation.is_valid:
-                return {
-                    "success": False,
-                    "error": f"Generated code failed validation: {validation.error}",
-                    "answer": "The generated analysis code did not pass security validation.",
-                }
+                # Try template fallback
+                _progress("security_check", "running", 0.45, "LLM code failed validation, using template fallback...")
+                analysis_code = self._generate_template_code(
+                    question, data_file_path, dataset_metadata
+                )
+                code_gen_mode = "template_fallback"
+                validation = validate_code(analysis_code, strict_mode=True)
+                if not validation.is_valid:
+                    _progress("security_check", "failed", 0.50, f"Validation failed: {validation.error}")
+                    return {
+                        "success": False,
+                        "error": f"Generated code failed validation: {validation.error}",
+                        "answer": "The generated analysis code did not pass security validation.",
+                    }
+            _progress("security_check", "completed", 0.50, f"Code validated ({code_gen_mode})")
 
-            # 4. Execute code in sandbox
+            # 5. Execute code in sandbox
+            _progress("sandbox_execution", "running", 0.55, "Executing in Docker sandbox...")
             if not self.code_execution_manager and not self.code_executor:
+                _progress("sandbox_execution", "failed", 0.55, "No execution provider")
                 return {
                     "success": False,
                     "error": "Code execution provider is unavailable",
@@ -142,27 +178,59 @@ class DataAnalysisAgent:
                     code=analysis_code, data_files=[data_file_path], timeout=30
                 )
 
-            # 5. Process execution results
+            # 6. Process execution results
+            _progress("result_render", "running", 0.85, "Processing results...")
             if execution_result["success"]:
                 answer = self._parse_execution_output(
                     execution_result["stdout"], question, dataset_metadata
                 )
 
-                return {
+                # Parse ANALYSIS_SUMMARY_JSON marker
+                analysis_summary = self._parse_analysis_summary(
+                    execution_result.get("stdout", "")
+                )
+
+                # Persist visualization output_files to TEMP_DATA_ROOT
+                # so frontend can fetch via /api/v1/files/visualizations/
+                visualizations = execution_result.get("visualizations", [])
+                output_files = execution_result.get("output_files", {})
+                if output_files:
+                    try:
+                        from backend.tools.visualization import (
+                            _persist_visualization_artifacts,
+                        )
+
+                        persisted = _persist_visualization_artifacts(output_files)
+                        if persisted:
+                            visualizations = persisted
+                    except Exception as exc:
+                        logger.warning("Failed to persist viz artifacts: %s", exc)
+
+                result = {
                     "success": True,
                     "answer": answer,
                     "code": analysis_code,
                     "stdout": execution_result["stdout"],
                     "execution_time": execution_result["execution_time"],
-                    "visualizations": execution_result.get("visualizations", []),
+                    "visualizations": visualizations,
                     "dataset_info": dataset_metadata,
+                    "code_generation": {
+                        "mode": code_gen_mode,
+                        "fallback_reason": None,
+                    },
                 }
+                if analysis_summary:
+                    result["analysis_summary"] = analysis_summary
+
+                _progress("result_render", "completed", 1.0, "Analysis complete")
+                return result
             else:
                 # Execution failed, generate fallback answer from metadata
                 fallback_answer = self._generate_fallback_answer(
                     question, dataset_metadata, execution_result.get("stderr", "")
                 )
 
+                _progress("result_render", "failed", 1.0, "Execution failed")
                 return {
                     "success": False,
                     "error": execution_result.get(
@@ -172,6 +240,10 @@ class DataAnalysisAgent:
                     "answer": fallback_answer,
                     "code": analysis_code,
                     "dataset_info": dataset_metadata,
+                    "code_generation": {
+                        "mode": code_gen_mode,
+                        "fallback_reason": execution_result.get("error"),
+                    },
                 }
 
         except Exception as e:
@@ -181,6 +253,19 @@ class DataAnalysisAgent:
                 "error": str(e),
                 "answer": "Data analysis failed due to an internal error.",
             }
+
+    @staticmethod
+    def _parse_analysis_summary(stdout: str) -> Optional[Dict[str, Any]]:
+        """Parse ANALYSIS_SUMMARY_JSON marker from execution output."""
+        if not stdout:
+            return None
+        match = re.search(r"ANALYSIS_SUMMARY_JSON=(.+)$", stdout, re.MULTILINE)
+        if not match:
+            return None
+        try:
+            return json.loads(match.group(1))
+        except (json.JSONDecodeError, ValueError):
+            return None
 
     def _extract_dataset_info(self, file_path: str) -> Dict[str, Any]:
         """
@@ -343,10 +428,17 @@ class DataAnalysisAgent:
             question, data_file_path, dataset_metadata
         )
 
+    @staticmethod
+    def _blocked_methods_list() -> str:
+        """Build blocked methods list dynamically from CodeValidator source of truth."""
+        from backend.services.code_executor.validator import CodeValidator
+
+        return ", ".join(f".{m}()" for m in sorted(CodeValidator.BLOCKED_METHOD_NAMES))
+
     def _build_code_generation_prompt(
         self, question: str, data_file_path: str, dataset_metadata: Dict[str, Any]
     ) -> str:
-        """Build the code generation prompt for the LLM."""
+        """Build the unified analysis+visualization code generation prompt."""
         clean_question = (
             question.replace("{", "").replace("}", "").replace("```", "").strip()[:500]
         )
@@ -356,43 +448,52 @@ class DataAnalysisAgent:
                 for col in dataset_metadata.get("columns_info", [])
             ]
         )
+        blocked = self._blocked_methods_list()
+        filename = os.path.basename(data_file_path)
 
-        return f"""You are a data analysis assistant. Write Python code to answer the user's question about the dataset.
+        return f"""You are a data analysis assistant. Write Python code that:
+1. Analyzes the dataset to answer the user's question
+2. Generates an appropriate visualization chart
 
-**Dataset Information**:
-- Filename: {os.path.basename(data_file_path)}
-- Rows: {dataset_metadata.get('rows', 'unknown')}
-- Columns: {dataset_metadata.get('columns', 'unknown')}
+**Dataset Metadata** (no raw data — privacy by design):
+- Filename: {filename}
+- Rows: {dataset_metadata.get('rows', 'unknown')}, Columns: {dataset_metadata.get('columns', 'unknown')}
 - Column details:
 {columns_desc}
 
 **User Question**: {clean_question}
 
-**Requirements**:
-1. Use pandas to load the data: pd.read_csv() or pd.read_excel()
-2. Data file path: /workspace/{os.path.basename(data_file_path)}
-3. Output results using print() statements
-4. Include data validation and handle missing values
-5. Save any visualizations to /workspace/ directory
-6. Keep the code concise and well-commented
-7. Code must complete within 30 seconds
+**Hard Requirements**:
+1. Use pandas as pd, numpy as np, matplotlib.pyplot as plt, seaborn as sns
+2. Read data from "/workspace/{filename}"
+3. Print analysis results clearly with print() statements
+4. Print a final JSON marker line: ANALYSIS_SUMMARY_JSON={{"analysis_type": "...", "key_findings": ["..."], "chart_type": "..."}}
+   Use json.dumps() to serialize the dict.
+5. Auto-detect the best chart type based on the data and question:
+   - Numeric trend over time → line chart
+   - Category comparison → bar chart
+   - Two numeric variables correlation → scatter plot
+   - Single variable distribution → histogram
+   - Proportion / composition → pie chart
+6. Save exactly one chart to "/workspace/analysis_chart.png"
+   with plt.savefig("/workspace/analysis_chart.png", dpi=150, bbox_inches="tight")
+7. try: plt.style.use("seaborn-v0_8-whitegrid")
+   except: plt.style.use("ggplot")
+8. Set figure size to (10, 6) minimum
+9. Include proper title, axis labels, and legend where appropriate
 
-**Example**:
-```python
-import pandas as pd
-import numpy as np
+**BLOCKED methods** (code validator will reject these — DO NOT USE):
+{blocked}
+Use instead: df.groupby(col)[y].mean(), df[col].value_counts(), df.pivot_table(), for-loops, list comprehensions
 
-# Load the dataset
-df = pd.read_csv('/workspace/{os.path.basename(data_file_path)}')
+**BLOCKED modules**: os, subprocess, sys, pathlib, socket, requests, urllib
+**BLOCKED functions**: open(), eval(), exec(), __import__(), compile(), input(), getattr(), setattr()
 
-# Perform analysis
-# ... your analysis code ...
+10. Handle missing values gracefully (dropna() or fillna() before plotting)
+11. All text in English only
+12. Code must complete within 30 seconds
 
-# Output results
-print("Analysis results: ...")
-```
-
-Return ONLY Python code. Wrap the code in ```python and ``` markers."""
+Return ONLY executable Python code, no markdown fences, no explanations."""
 
     def _extract_code_from_response(self, response: str) -> Optional[str]:
         """Extract Python code block from LLM response."""

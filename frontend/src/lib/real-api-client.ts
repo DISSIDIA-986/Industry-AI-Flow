@@ -46,7 +46,7 @@ const createRealApiClient = () => {
   const client = {
     async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
       const url = `${REAL_API_BASE_URL}${endpoint}`
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token') || localStorage.getItem('industry-aiflow-token')
       
       const headers = new Headers(options.headers)
       if (!headers.has('Content-Type')) {
@@ -304,7 +304,7 @@ export const realApiService = {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('industry-aiflow-token') || ''}`
         }
       })
       

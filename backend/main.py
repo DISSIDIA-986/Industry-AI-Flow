@@ -1544,64 +1544,36 @@ def _run_analysis_with_progress(
     generate_visualization: bool,
     chart_type: str,
 ) -> None:
-    """Run data analysis synchronously, emitting progress events via tracker."""
+    """Run unified analysis+viz pipeline, emitting 6-stage SSE progress events."""
     tracker = PipelineProgressTracker.get(job_id)
     if tracker is None:
         return
 
-    current_stage = "file_resolution"
+    current_stage = "file_parse"
     try:
-        tracker.update("file_resolution", "running", 0.1, "Resolving data file...")
+        # Resolve file
+        tracker.update("file_parse", "running", 0.05, "Resolving data file...")
         resolved = _resolve_data_file_for_analysis(data_file)
-        tracker.update("file_resolution", "completed", 0.15, f"File: {resolved}")
+        tracker.update("file_parse", "completed", 0.10, f"File: {resolved}")
 
-        current_stage = "code_generation"
-        tracker.update("code_generation", "running", 0.2, "AI generating analysis code...")
-        from backend.tools.data_analysis import data_analysis_tool
-
-        result = data_analysis_tool.invoke(
-            {
-                "data_file": resolved,
-                "analysis_type": analysis_type,
-                "target_column": target_column,
-                "columns": columns,
-                "instruction": instruction,
-            }
-        )
-        is_success = isinstance(result, dict) and bool(result.get("success", True))
-        code_gen_mode = "unknown"
-        if isinstance(result, dict):
-            cg = result.get("code_generation")
-            code_gen_mode = (
-                cg.get("mode", "unknown") if isinstance(cg, dict)
-                else result.get("code_gen_mode", "unknown")
-            )
-        tracker.update(
-            "code_generation",
-            "completed" if is_success else "failed",
-            0.6,
-            f"Analysis complete ({code_gen_mode})" if is_success else "Analysis failed",
+        # Use the unified DataAnalysisAgent pipeline with on_progress callback
+        from backend.services.data_analysis.data_analysis_agent import (
+            get_data_analysis_agent,
         )
 
-        viz_result = None
-        if generate_visualization and is_success:
-            tracker.update("visualization", "running", 0.65, f"Generating {chart_type} chart...")
-            try:
-                from backend.tools.visualization import visualization_tool
+        agent = get_data_analysis_agent()
 
-                viz_result = visualization_tool.invoke(
-                    {"data_file": resolved, "chart_type": chart_type, "instruction": instruction}
-                )
-                tracker.update("visualization", "completed", 0.9, "Chart generated")
-            except Exception as viz_err:
-                logger.warning("Visualization generation failed: %s", viz_err)
-                viz_result = {"error": str(viz_err)}
-                tracker.update("visualization", "failed", 0.9, f"Chart failed: {viz_err}")
-        elif generate_visualization:
-            tracker.update("visualization", "skipped", 0.9, "Skipped — analysis failed")
+        def on_progress(stage: str, status: str, progress: float, detail: str) -> None:
+            nonlocal current_stage
+            current_stage = stage
+            tracker.update(stage, status, progress, detail)
 
-        if viz_result is not None and isinstance(result, dict):
-            result["visualization"] = viz_result
+        question = instruction or f"Run a concise {analysis_type} analysis."
+        result = agent.analyze_query(
+            question=question,
+            data_file_path=resolved,
+            on_progress=on_progress,
+        )
 
         _analysis_job_results[job_id] = result
         tracker.update("done", "completed", 1.0, "Analysis complete")
@@ -1691,6 +1663,66 @@ async def stream_analysis_progress(job_id: str):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+class DataPreviewRequest(BaseModel):
+    data_file: str
+
+    @field_validator("data_file", mode="before")
+    @classmethod
+    def _sanitize_data_file(cls, value: str) -> str:
+        return sanitize_text(value, field_name="data_file", max_length=1024)
+
+
+@app.post("/api/v1/data/preview")
+async def preview_data(
+    request: DataPreviewRequest,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
+    """Return dataset metadata + first 5 rows for preview after upload."""
+    import pandas as _pd
+
+    resolved = _resolve_data_file_for_analysis(request.data_file)
+
+    if not os.path.exists(resolved):
+        raise HTTPException(status_code=404, detail="Data file not found. Upload a file first.")
+
+    file_size = os.path.getsize(resolved)
+    if file_size > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File exceeds 50MB limit for preview.")
+
+    from backend.services.data_analysis.data_analysis_agent import (
+        get_data_analysis_agent,
+    )
+
+    agent = get_data_analysis_agent()
+    metadata = agent._extract_dataset_info(resolved)
+    if metadata.get("error"):
+        raise HTTPException(status_code=400, detail=metadata["error"])
+
+    # Load sample rows (first 5)
+    try:
+        if resolved.endswith((".xlsx", ".xls")):
+            df = _pd.read_excel(resolved, nrows=5)
+        else:
+            df = _pd.read_csv(resolved, nrows=5)
+        sample_rows = df.fillna("").to_dict(orient="records")
+    except Exception as exc:
+        logger.warning("Failed to load sample rows: %s", exc)
+        sample_rows = []
+
+    preview_columns = []
+    for col in metadata.get("columns_info", []):
+        pc = {"name": col["name"], "type": col["type"]}
+        if sample_rows:
+            pc["sample"] = str(sample_rows[0].get(col["name"], ""))
+        preview_columns.append(pc)
+
+    return {
+        "metadata": metadata,
+        "sample_rows": sample_rows,
+        "preview_columns": preview_columns,
+    }
 
 
 @app.post("/api/v1/data/preprocess")
