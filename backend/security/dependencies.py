@@ -27,6 +27,7 @@ _PUBLIC_PATH_PREFIXES = (
     "/api/v1/health",
     "/api/v1/auth/",
     "/api/v1/data/analyze/stream/",  # SSE — EventSource can't send headers; UUID4 job_id is auth
+    "/api/v1/files/visualizations/",  # <img> tags can't send Authorization headers
 )
 
 
