@@ -52,20 +52,14 @@
 
 **Effort:** human: ~4 hours / CC: ~10 min
 
-### Extract shared node animation hook (DRY)
-**Priority:** Medium — **PLANNED: Will be completed in Full-Stack Enterprise Polish PR (2026-03-22)**
-**Added:** 2026-03-21 (eng review of Workflow Chat full polish)
-**Blocked by:** ~~Workflow Chat redesign must be completed first~~ UNBLOCKED — bundled into full-stack polish per eng review Issue 6A
+### ~~Extract shared node animation hook (DRY)~~ — DONE (2026-03-22)
+**Completed in:** Full-Stack Enterprise Polish commit `c179edae` + follow-up
 
-**What:** Extract `useNodeAnimation()` shared hook from PipelineFlowViz (`usePipelineAnimation`, 75 lines), IntentFlowViz (`useIntentAnimation`, 80 lines), and the new CompactPipelineViz animation. All three use identical proportional timing logic: iterate ALL_NODES, set active → sleep proportional delay → set completed/skipped.
-
-**Why:** 3 copies of nearly identical animation timing logic. Any animation behavior change (speed, easing, error states) needs 3 edits. Classic DRY violation. Deferred because touching 3 working pages risks regression before Capstone demo.
-
-**How to implement:**
-1. Create `frontend/src/hooks/useNodeAnimation.ts` with configurable: node list, total duration, latency map, completed set
-2. Return `{ nodeStates, triggerAnimation, isAnimating, reset }`
-3. Refactor PipelineFlowViz, IntentFlowViz, and CompactPipelineViz to use it
-4. Regression test all 3 pages: Dashboard, Intent Debugger, Workflow Chat
+**What was done:**
+1. Created `frontend/src/hooks/useNodeAnimation.ts` — shared hook with configurable node list, total duration, latency map
+2. Refactored `PipelineFlowViz.usePipelineAnimation()` to delegate to shared hook
+3. Refactored `IntentFlowViz.useIntentAnimation()` to delegate to shared hook
+4. CompactPipelineViz not refactored (unique dual-mode animation pattern — not worth forcing into shared hook)
 
 **Effort:** human: ~4 hours / CC: ~10 min
 
