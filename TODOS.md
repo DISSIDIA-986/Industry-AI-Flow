@@ -3,7 +3,7 @@
 ## Deferred Tasks
 
 ### Migrate E2E selectors from Tailwind classes to data-testid
-**Priority:** Medium — **PARTIAL (Intent Demo page done, 4 other pages remain)**
+**Priority:** Medium — **PARTIAL (Intent Demo done, Workflow Chat new elements will have data-testid, 3 other pages remain)**
 **Added:** 2026-03-19 (eng review of UI design system unification)
 **Blocked by:** Nothing — Intent Demo page has data-testid attributes as of Intent Debugger PR
 
@@ -49,6 +49,23 @@
 2. Update stage progress in DB at each stage transition (extract→chunk→embed→store)
 3. Modify list endpoint to include `processing_stage` in response for status='processing' documents
 4. Frontend polling fallback reads stage from API response instead of getting no progress
+
+**Effort:** human: ~4 hours / CC: ~10 min
+
+### Extract shared node animation hook (DRY)
+**Priority:** Medium
+**Added:** 2026-03-21 (eng review of Workflow Chat full polish)
+**Blocked by:** Workflow Chat redesign must be completed first (creates 3rd copy of animation logic)
+
+**What:** Extract `useNodeAnimation()` shared hook from PipelineFlowViz (`usePipelineAnimation`, 75 lines), IntentFlowViz (`useIntentAnimation`, 80 lines), and the new CompactPipelineViz animation. All three use identical proportional timing logic: iterate ALL_NODES, set active → sleep proportional delay → set completed/skipped.
+
+**Why:** 3 copies of nearly identical animation timing logic. Any animation behavior change (speed, easing, error states) needs 3 edits. Classic DRY violation. Deferred because touching 3 working pages risks regression before Capstone demo.
+
+**How to implement:**
+1. Create `frontend/src/hooks/useNodeAnimation.ts` with configurable: node list, total duration, latency map, completed set
+2. Return `{ nodeStates, triggerAnimation, isAnimating, reset }`
+3. Refactor PipelineFlowViz, IntentFlowViz, and CompactPipelineViz to use it
+4. Regression test all 3 pages: Dashboard, Intent Debugger, Workflow Chat
 
 **Effort:** human: ~4 hours / CC: ~10 min
 
