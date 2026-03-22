@@ -62,7 +62,7 @@ async def test_dispatch_route_success(monkeypatch):
             return DispatchResponse(
                 success=True,
                 text="ok",
-                provider="llama_cpp",
+                provider="ollama",
                 model="fake-local",
                 route_mode="local_only",
                 trace_id=req.trace_id,
@@ -86,7 +86,7 @@ async def test_dispatch_route_success(monkeypatch):
     assert resp.status_code == 200
     payload = resp.json()
     assert payload["answer"] == "ok"
-    assert payload["provider_used"] == "llama_cpp"
+    assert payload["provider_used"] == "ollama"
     assert payload["usage"]["total_tokens"] == 5
 
 
@@ -130,7 +130,7 @@ async def test_dispatch_route_forces_local_under_local_safe_mode(monkeypatch):
             return DispatchResponse(
                 success=True,
                 text="forced local",
-                provider="llama_cpp",
+                provider="ollama",
                 model="fake-local",
                 route_mode="local_only",
                 trace_id=req.trace_id,

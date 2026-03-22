@@ -31,7 +31,7 @@ class _FakeDispatchService:
         return DispatchResponse(
             success=True,
             text="ok",
-            provider="llama_cpp",
+            provider="ollama",
             model="fake-local",
             route_mode="local_only",
             trace_id=req.trace_id,

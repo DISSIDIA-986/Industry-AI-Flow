@@ -22,7 +22,7 @@ class TestLLMDispatchIntegration:
     def mock_clients(self):
         """EN"""
         with patch(
-            "backend.services.llm_integration.dispatch_service.LlamaCppClient"
+            "backend.services.llm_integration.dispatch_service.OllamaClient"
         ) as mock_llama, patch(
             "backend.services.llm_integration.dispatch_service.ZhipuClient"
         ) as mock_zhipu, patch(
@@ -64,7 +64,7 @@ class TestLLMDispatchIntegration:
 
         # EN
         assert result.success is True
-        assert result.provider == "llama_cpp"
+        assert result.provider == "ollama"
         assert result.text == "Local model response"
         assert result.fallback_triggered is False
         assert result.usage.total_tokens > 0
@@ -73,7 +73,7 @@ class TestLLMDispatchIntegration:
         # EN
         stats = service.cost_tracker.get_tenant_usage("test_tenant")
         assert stats["total_requests"] == 1
-        assert "llama_cpp" in stats["provider_breakdown"]
+        assert "ollama" in stats["provider_breakdown"]
 
     def test_cloud_only_end_to_end(self, service, mock_clients):
         """EN"""
@@ -112,7 +112,7 @@ class TestLLMDispatchIntegration:
 
         # EN
         assert result.success is True
-        assert result.provider == "llama_cpp"
+        assert result.provider == "ollama"
         assert result.fallback_triggered is False
 
         # EN
@@ -185,7 +185,7 @@ class TestLLMDispatchIntegration:
         stats = service.cost_tracker.get_tenant_usage("test_tenant")
 
         assert stats["total_requests"] == 10
-        assert stats["provider_breakdown"]["llama_cpp"]["request_count"] == 10
+        assert stats["provider_breakdown"]["ollama"]["request_count"] == 10
         assert stats["total_cost_usd"] > 0
 
     def test_budget_alert_integration(self, service, mock_clients):
@@ -346,9 +346,9 @@ class TestLLMDispatchIntegration:
     @pytest.mark.parametrize(
         "route_mode,expected_provider",
         [
-            (RouteMode.LOCAL_ONLY, "llama_cpp"),
+            (RouteMode.LOCAL_ONLY, "ollama"),
             (RouteMode.CLOUD_ONLY, ["zhipu", "openai"]),
-            (RouteMode.HYBRID_AUTO, "llama_cpp"),  # EN
+            (RouteMode.HYBRID_AUTO, "ollama"),  # EN
         ],
     )
     def test_route_modes_integration(

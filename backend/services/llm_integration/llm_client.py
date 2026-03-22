@@ -1,6 +1,6 @@
 """
 LLM Client Factory
-Supports Ollama and llama.cpp backends.
+Supports Ollama, Zhipu, and Groq backends.
 """
 import logging
 from abc import ABC, abstractmethod
@@ -38,12 +38,12 @@ class LLMClientFactory:
     @staticmethod
     def _normalize_backend(backend: Optional[str]) -> str:
         value = (backend or "").strip().lower()
-        if value in {"llama_cpp", "ollama", "zhipu", "groq"}:
+        if value in {"ollama", "zhipu", "groq"}:
             return value
         # Fallback: unrecognized backend value, use resolved local backend
-        local_backend = getattr(settings, "resolved_local_backend", "llama_cpp")
+        local_backend = getattr(settings, "resolved_local_backend", "ollama")
         return (
-            local_backend if local_backend in {"llama_cpp", "ollama"} else "llama_cpp"
+            local_backend if local_backend in {"ollama"} else "ollama"
         )
 
     @staticmethod
@@ -52,13 +52,13 @@ class LLMClientFactory:
         Create an LLM client for the specified backend.
 
         Args:
-            backend: Backend type ("ollama" or "llama_cpp")
+            backend: Backend type ("ollama", "zhipu", or "groq")
 
         Returns:
             An initialized LLM client instance
         """
         backend = LLMClientFactory._normalize_backend(
-            backend or getattr(settings, "llm_backend", "llama_cpp")
+            backend or getattr(settings, "llm_backend", "ollama")
         )
 
         try:
@@ -67,11 +67,6 @@ class LLMClientFactory:
 
                 logger.info("Using Ollama backend")
                 return OllamaClient()
-            elif backend == "llama_cpp":
-                from .llama_cpp_client import LlamaCppClient
-
-                logger.info("Using llama.cpp backend")
-                return LlamaCppClient()
             elif backend == "zhipu":
                 from .zhipu_client import ZhipuClient
 
@@ -89,11 +84,6 @@ class LLMClientFactory:
             logger.error(f"Failed to import {backend} client: {e}")
 
             # Fallback logic
-            if backend == "llama_cpp":
-                logger.warning("llama.cpp client unavailable, falling back to Ollama")
-                from .ollama_client import OllamaClient
-
-                return OllamaClient()
             if backend in {"zhipu", "groq"}:
                 raise RuntimeError(f"{backend} client requires the requests library")
             else:

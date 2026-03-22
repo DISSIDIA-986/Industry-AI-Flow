@@ -16,7 +16,7 @@ class ConversationSummarizer:
 
     def __init__(self) -> None:
         backend = settings.memory_summary_backend or getattr(
-            settings, "llm_backend", "llama_cpp"
+            settings, "llm_backend", "ollama"
         )
         try:
             self.client = LLMClientFactory.create_client(backend=backend)
