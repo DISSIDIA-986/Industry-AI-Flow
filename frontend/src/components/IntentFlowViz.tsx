@@ -10,15 +10,14 @@
  * └──────┘  └──────┘  └──────┘  ◇──────◇  └──────┘  └──────┘  ◇──────◇  └──────┘  └──────┘
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useCallback } from 'react'
 
+import { useNodeAnimation, type NodeState } from '@/hooks/useNodeAnimation'
 import type { NodeTraceEntry } from '@/lib/api-client'
 import {
   INTENT_WORKFLOW_NODES,
   INTENT_NODE_ICONS,
 } from '@/lib/intent-constants'
-
-type NodeState = 'idle' | 'active' | 'completed' | 'skipped' | 'error'
 
 interface IntentFlowVizProps {
   nodeStates: Record<string, NodeState>
@@ -195,88 +194,25 @@ export default function IntentFlowViz({
 
 /** Hook: animate intent workflow nodes sequentially using real trace data. */
 export function useIntentAnimation() {
-  const [nodeStates, setNodeStates] = useState<Record<string, NodeState>>({})
-  const animatingRef = useRef(false)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const nodeIds = INTENT_WORKFLOW_NODES.map((n) => n.id)
+  const { nodeStates, triggerAnimation: rawTrigger, isAnimating, reset } =
+    useNodeAnimation({ nodeIds })
 
   const triggerAnimation = useCallback(
     async (nodeTrace: NodeTraceEntry[]) => {
-      // Fast-complete if already animating
-      if (animatingRef.current) {
-        const final: Record<string, NodeState> = {}
-        INTENT_WORKFLOW_NODES.forEach((n) => { final[n.id] = 'completed' })
-        setNodeStates(final)
-        await sleep(100)
-      }
+      const completedNodes = nodeTrace
+        .filter((t) => t.decision !== 'error')
+        .map((t) => t.node_name)
+      const latencyMs: Record<string, number> = {}
+      nodeTrace.forEach((t) => { latencyMs[t.node_name] = t.duration_ms })
+      const failedNode = nodeTrace.find((t) => t.decision === 'error')?.node_name
 
-      animatingRef.current = true
-      setIsAnimating(true)
-
-      // Reset
-      const initial: Record<string, NodeState> = {}
-      INTENT_WORKFLOW_NODES.forEach((n) => { initial[n.id] = 'idle' })
-      setNodeStates(initial)
-
-      // Check reduced motion
-      const prefersReduced =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-      const traceMap = new Map(nodeTrace.map((t) => [t.node_name, t]))
-      const completedNames = new Set(nodeTrace.map((t) => t.node_name))
-
-      if (prefersReduced) {
-        const final: Record<string, NodeState> = {}
-        INTENT_WORKFLOW_NODES.forEach((n) => {
-          const t = traceMap.get(n.id)
-          final[n.id] = t
-            ? t.decision === 'error' ? 'error' : 'completed'
-            : 'skipped'
-        })
-        setNodeStates(final)
-        animatingRef.current = false
-        setIsAnimating(false)
-        return
-      }
-
-      // Proportional animation (4s total)
-      const TOTAL_ANIMATION_MS = 4000
-      const totalLatency = nodeTrace.reduce((a, t) => a + t.duration_ms, 0) || 1
-
-      for (const node of INTENT_WORKFLOW_NODES) {
-        const trace = traceMap.get(node.id)
-
-        if (!trace || !completedNames.has(node.id)) {
-          setNodeStates((prev) => ({ ...prev, [node.id]: 'skipped' }))
-          continue
-        }
-
-        if (trace.decision === 'error') {
-          setNodeStates((prev) => ({ ...prev, [node.id]: 'error' }))
-          break
-        }
-
-        setNodeStates((prev) => ({ ...prev, [node.id]: 'active' }))
-        const delay = Math.max(200, (trace.duration_ms / totalLatency) * TOTAL_ANIMATION_MS)
-        await sleep(delay)
-        setNodeStates((prev) => ({ ...prev, [node.id]: 'completed' }))
-      }
-
-      animatingRef.current = false
-      setIsAnimating(false)
+      await rawTrigger({ completedNodes, latencyMs, failedNode })
     },
-    [],
+    [rawTrigger],
   )
-
-  const reset = useCallback(() => {
-    setNodeStates({})
-    animatingRef.current = false
-    setIsAnimating(false)
-  }, [])
 
   return { nodeStates, triggerAnimation, isAnimating, reset } as const
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+export { type NodeState } from '@/hooks/useNodeAnimation'
