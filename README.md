@@ -459,7 +459,6 @@ Industry-AI-Flow/
 │   │   ├── intent-classifier.md       # 意图分类系统设计
 │   │   ├── prompt-management.md       # 提示管理策略
 │   │   ├── metadata-retrieval.md      # 元数据检索方案
-│   │   ├── llama.cpp.md               # 本地模型集成
 │   │   └── PaddleOCR.md               # OCR文字识别
 │   ├── implementation/                # 🔧 实现和部署文档
 │   │   ├── setup-guide.md             # 环境配置和安装
