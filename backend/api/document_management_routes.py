@@ -753,17 +753,37 @@ def get_document_content(
     conn = connect_db(settings.database_url)
     cur = conn.cursor()
     try:
+        # Try uploaded_documents_index first
         cur.execute(
             "SELECT file_path, mime_type FROM uploaded_documents_index "
             "WHERE id = %s AND tenant_id = %s",
             (doc_id, tenant_id),
         )
         rows = fetchall_dicts(cur)
-        if not rows:
-            raise HTTPException(status_code=404, detail="Document not found")
 
-        file_path_str = str(rows[0].get("file_path") or "")
-        mime_type = str(rows[0].get("mime_type") or "application/octet-stream")
+        if rows:
+            file_path_str = str(rows[0].get("file_path") or "")
+            mime_type = str(rows[0].get("mime_type") or "application/octet-stream")
+        else:
+            # Fallback: knowledge_base documents in the documents table
+            cur.execute(
+                "SELECT filepath, filename FROM documents WHERE id = %s",
+                (doc_id,),
+            )
+            vec_rows = fetchall_dicts(cur)
+            if not vec_rows:
+                raise HTTPException(status_code=404, detail="Document not found")
+            file_path_str = str(vec_rows[0].get("filepath") or "")
+            filename = str(vec_rows[0].get("filename") or "")
+            # Infer mime type from extension
+            ext = Path(filename).suffix.lower()
+            mime_map = {
+                ".pdf": "application/pdf", ".txt": "text/plain",
+                ".png": "image/png", ".jpg": "image/jpeg",
+                ".csv": "text/csv", ".json": "application/json",
+                ".md": "text/markdown",
+            }
+            mime_type = mime_map.get(ext, "application/octet-stream")
     finally:
         cur.close()
         conn.close()
@@ -773,13 +793,13 @@ def get_document_content(
 
     file_path = Path(file_path_str).resolve()
 
-    # Path traversal prevention: ensure file is within workspace/uploads
-    upload_root = UPLOAD_DIR.resolve()
-    if not file_path.is_relative_to(upload_root):
+    # Path traversal prevention: file must be within the project directory
+    project_root = Path(__file__).resolve().parent.parent.parent
+    if not file_path.is_relative_to(project_root):
         logger.warning(
             "Path traversal attempt blocked: %s not within %s",
             file_path,
-            upload_root,
+            project_root,
         )
         raise HTTPException(status_code=403, detail="Access denied")
 
