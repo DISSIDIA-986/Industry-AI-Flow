@@ -1,3 +1,4 @@
+import json as _json
 import logging
 import os
 import threading
@@ -8,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import psutil
-from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.responses import StreamingResponse as _StreamingResponse
@@ -1523,8 +1524,6 @@ async def analyze_data(
 # ---------------------------------------------------------------------------
 # Data Analysis — SSE streaming progress
 # ---------------------------------------------------------------------------
-
-import json as _json
 
 from backend.services.document_processing.progress_tracker import (
     PipelineProgressTracker,
