@@ -41,7 +41,7 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Thinking mode (`OLLAMA_ENABLE_THINKING`)**: Default `false`. Qwen3.5 supports a "thinking" mode that significantly increases first-token latency. Keep disabled for demo responsiveness.
 - **Metal/MPS acceleration**: Ollama on macOS uses Metal GPU by default — verify with `ollama ps` (should show GPU layers). If model runs on CPU only, performance will be 3-5x slower.
 - **Model size tradeoff**: 4B model (~28 TPS on M1 Max) vs 9B (~12 TPS). For live demo, 4B is recommended for faster response times.
-- **llama.cpp legacy**: Code still exists in `llama_cpp_client.py` but is deprecated. Config defaults now point to Ollama. Do not use `LLM_BACKEND=llama_cpp` unless specifically testing.
+- **llama.cpp legacy**: Removed. `llama_cpp_client.py` and all references deleted. Only `ollama` and `zhipu` backends remain.
 
 ### Non-Demo Features (Architecture Previews)
 - **Multi-tenant isolation** (X-Tenant-ID): future-proofing for enterprise deployment, NOT a demo requirement
@@ -180,7 +180,7 @@ Client → FastAPI (main.py)
 | Hybrid Search | `backend/services/retrieval/hybrid_search.py` | BM25 + vector + RRF fusion |
 | Reranker | `backend/services/retrieval/reranker.py` | bge-reranker-base cross-encoder |
 | Intent Workflow | `backend/services/intent_classification/intent_workflow.py` | 11-node State Graph |
-| LLM Client | `backend/services/llm_integration/llm_client.py` | Factory: ollama / zhipu (llama_cpp deprecated) |
+| LLM Client | `backend/services/llm_integration/llm_client.py` | Factory: ollama / zhipu / groq |
 | LLM Dispatch | `backend/services/llm_integration/dispatch_service.py` | Hybrid local+cloud routing |
 | Memory Manager | `backend/services/memory/manager.py` | 3-layer memory orchestration |
 | Prompt Manager | `backend/services/prompt_manager.py` | Versioned prompts with A/B testing |
@@ -220,7 +220,7 @@ Client → FastAPI (main.py)
 - **10-node workflow pipeline** (fixed order in `graph.py`): `intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness`
 - **Thread-safe lazy singletons**: Global `rag_engine`, `unified_orchestrator`, `code_executor` initialized with `threading.Lock()` double-checked locking in `main.py`
 - **Multi-tenant isolation**: `X-Tenant-ID` header → `TenantContext` → per-tenant rate limiting + audit logging
-- **LLM backend abstraction**: `LLMClientFactory.create_client(backend)` with `LLM_BACKEND` env var (`ollama|zhipu`; `llama_cpp` deprecated)
+- **LLM backend abstraction**: `LLMClientFactory.create_client(backend)` with `LLM_BACKEND` env var (`ollama|zhipu|groq`)
 - **Hybrid dispatch**: `hybrid_mode` config (`local_only|hybrid_auto|cloud_only`) with confidence-based fallback (`local_confidence_threshold: 0.75`)
 - **Memory guard**: `MEMORY_GUARD_LIMIT_MB` setting triggers GC or request rejection
 - **Intent workflow lifecycle**: Initialized in `main.py` `lifespan()` via `initialize_intent_routes()` — required for `/api/intent/classify` endpoint to work
@@ -238,7 +238,7 @@ PostgreSQL 14+ with pgvector extension. Schema managed via `backend/init_databas
 
 Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[...path]/route.ts`. Run with `make frontend-dev`.
 
-**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, System Overview, API Test, Component Demo). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
+**Navigation**: Navbar uses two-tier layout — 5 primary items (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation) + "More" dropdown (Intent Demo, System Overview). Login page auto-fills demo credentials (`demo@example.com` / `demo123`) via `useEffect` (not `useState` default, to avoid SSR hydration mismatch on mobile).
 
 **Dashboard** (`/simple-dashboard`): Pipeline Flow visualization — 10-node dark hero section with per-node SVG icons, sequential animation using real `node_latency_ms` data from workflow metadata. "Live Demo" button (amber accent) auto-runs on page load, sends real RAG query, replays pipeline execution. 3 status cards (Knowledge Base doc count, LLM Engine model, System Health) from real health endpoints. Recent Pipeline Executions table. `PipelineFlowViz.tsx` component + `usePipelineAnimation()` hook. When queries go through `intent_workflow` (not the 10-node pipeline), node states are inferred from metadata timestamps and agent type.
 
@@ -250,14 +250,14 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 
 **Data Analysis page** (`/data-analysis`): "Include Visualization" toggle replaces old "3) Generate Visualization" button — one click runs analysis + optional visualization. 8 chart types (line, bar, scatter, histogram, box, heatmap, violin, pie). Chart Type dropdown only visible when toggle is ON. Backend `/api/v1/data/analyze` accepts `generate_visualization` and `chart_type` params. Key Metrics grid uses a whitelist (`success`, `analysis_type`, `code_gen_mode`, `execution_time`) — hidden when no fields present. Success field shows colored dot (green/red). Uploaded Path field removed from UI (backend auto-handles paths; state kept internally for API calls, pre-filled with `tips.csv`). Results use `CollapsibleCode` for Generated Code (`generated_code_preview` fallback), Analysis Output (`raw_output` fallback), and Full Response JSON. E2E selectors in `run_data_analysis_browser_e2e.py` use checkbox selector for viz toggle.
 
-**Workflow Chat page** (`/workflow-chat`): Primary demo interaction surface — dark hero header (#1a1a2e) matching Dashboard and Intent Debugger, with API status indicator. Sidebar uses `lg:grid-cols-4` layout (3/4 chat, 1/4 sidebar). **Golden Questions** accordion in sidebar: 6 document categories (NBC 2020, Ontario Reg 213/91, Canada OHS, BC Building Code 2024, Quebec Safety Code, Canada Labour Code Part II) with 16 curated questions and 18 static follow-up chains for primary questions. Data in `frontend/src/lib/golden-questions.ts`, UI component `GoldenQuestions.tsx` with `data-testid` attributes. **CompactPipelineViz** sticky at sidebar bottom: dark vertical pipeline with sequential node animation during query, `response_node` holds active with elapsed timer until API responds, then snaps to real `completed_nodes` data. Handles `intent_workflow` metadata without `completed_nodes` via inference (same pattern as Dashboard). **Hybrid follow-up**: ref-based (`lastClickedGQRef`) Golden Question tracking — first GQ response gets static follow-ups, subsequent rounds use backend `suggested_questions`. Source citations always visible (compact single-line format, per CLAUDE.md demo requirement). Follow-up pills use blue-600 outline style. Mobile: Golden Questions collapse to toggle button, Pipeline hidden. Legacy `workflow-quick-tips.ts` preserved as fallback but not imported by default.
+**Workflow Chat page** (`/workflow-chat`): Primary demo interaction surface — dark hero header (#1a1a2e) matching Dashboard and Intent Debugger, with API status indicator. Sidebar uses `lg:grid-cols-4` layout (3/4 chat, 1/4 sidebar). **Golden Questions** accordion in sidebar: 6 document categories (NBC 2020, Ontario Reg 213/91, Canada OHS, BC Building Code 2024, Quebec Safety Code, Canada Labour Code Part II) with 16 curated questions and 18 static follow-up chains for primary questions. Data in `frontend/src/lib/golden-questions.ts`, UI component `GoldenQuestions.tsx` with `data-testid` attributes. **CompactPipelineViz** sticky at sidebar bottom: dark vertical pipeline with sequential node animation during query, `response_node` holds active with elapsed timer until API responds, then snaps to real `completed_nodes` data. Handles `intent_workflow` metadata without `completed_nodes` via inference (same pattern as Dashboard). **Hybrid follow-up**: ref-based (`lastClickedGQRef`) Golden Question tracking — first GQ response gets static follow-ups, subsequent rounds use backend `suggested_questions`. Source citations always visible (compact single-line format, per CLAUDE.md demo requirement). Follow-up pills use blue-600 outline style. Mobile: Golden Questions collapse to toggle button, Pipeline hidden. Legacy `workflow-quick-tips.ts` removed (replaced by Golden Questions).
 
 ## Configuration
 
 Key environment variables (in `.env`):
 
 ```bash
-LLM_BACKEND=ollama                  # ollama | zhipu (llama_cpp deprecated)
+LLM_BACKEND=ollama                  # ollama | zhipu | groq
 OLLAMA_HOST=http://localhost:11434
 POSTGRES_HOST=localhost
 POSTGRES_DB=ai_workflow
