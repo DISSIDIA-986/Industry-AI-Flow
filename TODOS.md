@@ -53,9 +53,9 @@
 **Effort:** human: ~4 hours / CC: ~10 min
 
 ### Extract shared node animation hook (DRY)
-**Priority:** Medium
+**Priority:** Medium — **PLANNED: Will be completed in Full-Stack Enterprise Polish PR (2026-03-22)**
 **Added:** 2026-03-21 (eng review of Workflow Chat full polish)
-**Blocked by:** Workflow Chat redesign must be completed first (creates 3rd copy of animation logic)
+**Blocked by:** ~~Workflow Chat redesign must be completed first~~ UNBLOCKED — bundled into full-stack polish per eng review Issue 6A
 
 **What:** Extract `useNodeAnimation()` shared hook from PipelineFlowViz (`usePipelineAnimation`, 75 lines), IntentFlowViz (`useIntentAnimation`, 80 lines), and the new CompactPipelineViz animation. All three use identical proportional timing logic: iterate ALL_NODES, set active → sleep proportional delay → set completed/skipped.
 

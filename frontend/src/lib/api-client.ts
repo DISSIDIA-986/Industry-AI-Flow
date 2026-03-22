@@ -650,6 +650,33 @@ export async function runDataAnalysis(
   })
 }
 
+/**
+ * Start a streaming data analysis job — returns job_id for SSE subscription.
+ */
+export async function startDataAnalysisJob(
+  config: RuntimeAppConfig,
+  payload: {
+    data_file: string
+    analysis_type?: string
+    [key: string]: unknown
+  },
+): Promise<{ job_id: string }> {
+  return requestBackend<{ job_id: string }>('/api/v1/data/analyze/start', {
+    method: 'POST',
+    config,
+    body: payload,
+    timeoutMs: 15_000,
+  })
+}
+
+/**
+ * Build the SSE stream URL for a data analysis job.
+ * Uses the Next.js backend proxy at /api/backend/.
+ */
+export function dataAnalysisStreamUrl(_config: RuntimeAppConfig, jobId: string): string {
+  return `/api/backend/api/v1/data/analyze/stream/${encodeURIComponent(jobId)}`
+}
+
 export async function generateVisualization(
   config: RuntimeAppConfig,
   payload: {
