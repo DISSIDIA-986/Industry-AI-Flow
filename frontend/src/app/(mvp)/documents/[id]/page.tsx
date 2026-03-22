@@ -12,18 +12,19 @@ import type {
 } from "@/lib/real-api-client";
 
 // react-pdf must be loaded client-side only (PDF.js worker)
+// Worker config MUST happen inside the same dynamic import to use the same module instance
 const Document = dynamic(
-  () => import("react-pdf").then((mod) => mod.Document),
+  () =>
+    import("react-pdf").then((mod) => {
+      mod.pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      return mod.Document;
+    }),
   { ssr: false }
 );
 const Page = dynamic(
   () => import("react-pdf").then((mod) => mod.Page),
   { ssr: false }
 );
-
-// Configure PDF.js worker — bundled locally to avoid CDN dependency during demo
-import { pdfjs } from "react-pdf";
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 // Import react-pdf styles
 import "react-pdf/dist/Page/AnnotationLayer.css";
