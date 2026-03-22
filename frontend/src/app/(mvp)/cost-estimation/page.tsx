@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppConfig } from "@/components/app-config-context";
+import DarkHeroWrapper from "@/components/DarkHeroWrapper";
 import {
   getCostHealth,
   predictCost,
@@ -365,22 +366,36 @@ export default function CostEstimationPage() {
 
   return (
     <section className="page-stack">
-      {/* Hero */}
-      <article className="hero-card">
-        <p className="eyebrow">Cost Prediction</p>
-        <h2 style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>
-          Predict construction cost overruns
-        </h2>
-        <p>
-          Enter project parameters below. The model analyzes 10,000 historical
-          projects to predict whether your project will go over budget.
-        </p>
-        {isDefaultData && (
-          <span className="chip" style={{ marginTop: "0.5rem", display: "inline-block" }}>
-            Sample Data
-          </span>
-        )}
-      </article>
+      {/* Dark Hero */}
+      <DarkHeroWrapper data-testid="cost-estimation-hero" className="mb-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Cost Prediction
+            </p>
+            <h1 className="text-xl font-bold text-gray-200 mt-1">
+              Construction cost overrun prediction
+            </h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Ridge regression ML model trained on 10,000+ historical projects with confidence intervals
+            </p>
+            {isDefaultData && (
+              <span className="inline-block mt-1.5 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-400">
+                Sample Data
+              </span>
+            )}
+          </div>
+          <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500">
+            {modelHealth && modelHealth.mape !== null && (
+              <>
+                <span>MAPE {(modelHealth.mape * 100).toFixed(1)}%</span>
+                <span className="text-gray-600">·</span>
+                <span>R² {modelHealth.r2?.toFixed(3)}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </DarkHeroWrapper>
 
       {/* Single Prediction */}
       <article className="panel-card">

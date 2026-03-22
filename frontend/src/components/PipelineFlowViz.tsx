@@ -10,7 +10,8 @@
  *   245ms      12ms       8ms      1850ms      340ms
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useCallback, useRef } from 'react'
+import { useNodeAnimation, type NodeState } from '@/hooks/useNodeAnimation'
 import { ALL_NODES } from './PipelineInsight'
 
 export const NODE_LABELS: Record<string, string> = {
@@ -39,8 +40,6 @@ export const NODE_ICONS: Record<string, string> = {
   response_node: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z',
   groundedness_node: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
 }
-
-type NodeState = 'idle' | 'active' | 'completed' | 'skipped' | 'error'
 
 interface PipelineFlowVizProps {
   nodeStates: Record<string, NodeState>
@@ -202,12 +201,11 @@ export default function PipelineFlowViz({
 
 /**
  * Hook: animate pipeline nodes sequentially using real latency data.
- * Returns [nodeStates, triggerAnimation, isAnimating]
+ * Delegates to shared useNodeAnimation hook.
  */
 export function usePipelineAnimation() {
-  const [nodeStates, setNodeStates] = useState<Record<string, NodeState>>({})
-  const animatingRef = useRef(false)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const { nodeStates, triggerAnimation: rawTrigger, isAnimating, reset } =
+    useNodeAnimation({ nodeIds: ALL_NODES })
 
   const triggerAnimation = useCallback(
     async (
@@ -215,74 +213,13 @@ export function usePipelineAnimation() {
       latencyMs: Record<string, number>,
       failedNode?: string,
     ) => {
-      if (animatingRef.current) return
-      animatingRef.current = true
-      setIsAnimating(true)
-
-      // Reset all to idle
-      const initial: Record<string, NodeState> = {}
-      ALL_NODES.forEach((n) => { initial[n] = 'idle' })
-      setNodeStates(initial)
-
-      // Check prefers-reduced-motion
-      const prefersReduced =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-      if (prefersReduced) {
-        // Show final state immediately
-        const final: Record<string, NodeState> = {}
-        ALL_NODES.forEach((n) => {
-          final[n] = n === failedNode ? 'error' : completedNodes.includes(n) ? 'completed' : 'skipped'
-        })
-        setNodeStates(final)
-        animatingRef.current = false
-        setIsAnimating(false)
-        return
-      }
-
-      // Calculate proportional delays (total 4s animation)
-      const TOTAL_ANIMATION_MS = 4000
-      const totalLatency = Object.values(latencyMs).reduce((a, b) => a + b, 0) || 1
-
-      for (const node of ALL_NODES) {
-        if (node === failedNode) {
-          setNodeStates((prev) => ({ ...prev, [node]: 'error' }))
-          break // stop animation at the failed node
-        }
-        if (!completedNodes.includes(node)) {
-          setNodeStates((prev) => ({ ...prev, [node]: 'skipped' }))
-          continue
-        }
-
-        // Active state
-        setNodeStates((prev) => ({ ...prev, [node]: 'active' }))
-
-        const nodeMs = latencyMs[node] || 0
-        const delay = Math.max(200, (nodeMs / totalLatency) * TOTAL_ANIMATION_MS)
-        await sleep(delay)
-
-        // Completed state
-        setNodeStates((prev) => ({ ...prev, [node]: 'completed' }))
-      }
-
-      animatingRef.current = false
-      setIsAnimating(false)
+      await rawTrigger({ completedNodes, latencyMs, failedNode })
     },
-    [],
+    [rawTrigger],
   )
-
-  const reset = useCallback(() => {
-    setNodeStates({})
-    animatingRef.current = false
-    setIsAnimating(false)
-  }, [])
 
   return { nodeStates, triggerAnimation, isAnimating, reset } as const
 }
 
-// Simple sleep utility
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+export { type NodeState } from '@/hooks/useNodeAnimation'
 

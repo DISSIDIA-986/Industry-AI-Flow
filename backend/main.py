@@ -1,3 +1,4 @@
+import json as _json
 import logging
 import os
 import threading
@@ -11,6 +12,7 @@ import psutil
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.responses import StreamingResponse as _StreamingResponse
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -1517,6 +1519,178 @@ async def analyze_data(
             status_code=500,
             detail="An internal error occurred. Please try again.",
         )
+
+
+# ---------------------------------------------------------------------------
+# Data Analysis — SSE streaming progress
+# ---------------------------------------------------------------------------
+
+from backend.services.document_processing.progress_tracker import (
+    PipelineProgressTracker,
+)
+
+_analysis_job_results: Dict[str, Any] = {}
+_analysis_job_timestamps: Dict[str, float] = {}  # job_id → time.monotonic()
+_ANALYSIS_JOB_TTL = 300  # 5 minutes — matches PipelineProgressTracker TTL
+
+
+def _run_analysis_with_progress(
+    job_id: str,
+    data_file: str,
+    analysis_type: str,
+    target_column: Optional[str],
+    columns: Optional[List[str]],
+    instruction: Optional[str],
+    generate_visualization: bool,
+    chart_type: str,
+) -> None:
+    """Run data analysis synchronously, emitting progress events via tracker."""
+    tracker = PipelineProgressTracker.get(job_id)
+    if tracker is None:
+        return
+
+    current_stage = "file_resolution"
+    try:
+        tracker.update("file_resolution", "running", 0.1, "Resolving data file...")
+        resolved = _resolve_data_file_for_analysis(data_file)
+        tracker.update("file_resolution", "completed", 0.15, f"File: {resolved}")
+
+        current_stage = "code_generation"
+        tracker.update("code_generation", "running", 0.2, "AI generating analysis code...")
+        from backend.tools.data_analysis import data_analysis_tool
+
+        result = data_analysis_tool.invoke(
+            {
+                "data_file": resolved,
+                "analysis_type": analysis_type,
+                "target_column": target_column,
+                "columns": columns,
+                "instruction": instruction,
+            }
+        )
+        is_success = isinstance(result, dict) and bool(result.get("success", True))
+        code_gen_mode = "unknown"
+        if isinstance(result, dict):
+            cg = result.get("code_generation")
+            code_gen_mode = (
+                cg.get("mode", "unknown") if isinstance(cg, dict)
+                else result.get("code_gen_mode", "unknown")
+            )
+        tracker.update(
+            "code_generation",
+            "completed" if is_success else "failed",
+            0.6,
+            f"Analysis complete ({code_gen_mode})" if is_success else "Analysis failed",
+        )
+
+        viz_result = None
+        if generate_visualization and is_success:
+            tracker.update("visualization", "running", 0.65, f"Generating {chart_type} chart...")
+            try:
+                from backend.tools.visualization import visualization_tool
+
+                viz_result = visualization_tool.invoke(
+                    {"data_file": resolved, "chart_type": chart_type, "instruction": instruction}
+                )
+                tracker.update("visualization", "completed", 0.9, "Chart generated")
+            except Exception as viz_err:
+                logger.warning("Visualization generation failed: %s", viz_err)
+                viz_result = {"error": str(viz_err)}
+                tracker.update("visualization", "failed", 0.9, f"Chart failed: {viz_err}")
+        elif generate_visualization:
+            tracker.update("visualization", "skipped", 0.9, "Skipped — analysis failed")
+
+        if viz_result is not None and isinstance(result, dict):
+            result["visualization"] = viz_result
+
+        _analysis_job_results[job_id] = result
+        tracker.update("done", "completed", 1.0, "Analysis complete")
+        tracker.complete()
+    except Exception as exc:
+        logger.exception("Streaming analysis job %s failed: %s", job_id, exc)
+        _analysis_job_results[job_id] = {"error": str(exc), "success": False}
+        if tracker:
+            tracker.fail(current_stage, str(exc))
+
+
+@app.post("/api/v1/data/analyze/start")
+async def start_analysis_job(
+    request: DataAnalysisRequest,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
+    """Initiate a data analysis job — returns job_id for SSE streaming."""
+    import asyncio as _aio
+    import time as _time
+
+    # TTL cleanup: remove stale job results older than 5 minutes
+    now = _time.monotonic()
+    stale = [k for k, ts in _analysis_job_timestamps.items() if now - ts > _ANALYSIS_JOB_TTL]
+    for k in stale:
+        _analysis_job_results.pop(k, None)
+        _analysis_job_timestamps.pop(k, None)
+
+    job_id = str(uuid4())
+    _analysis_job_timestamps[job_id] = now
+    PipelineProgressTracker(job_id)
+    _aio.get_running_loop().run_in_executor(
+        None,
+        _run_analysis_with_progress,
+        job_id,
+        request.data_file,
+        request.analysis_type,
+        request.target_column,
+        request.columns,
+        request.instruction,
+        request.generate_visualization,
+        request.chart_type,
+    )
+    log_audit(
+        action="data.analyze.start",
+        tenant=tenant,
+        status="accepted",
+        detail={"job_id": job_id, "data_file": request.data_file},
+    )
+    return {"job_id": job_id}
+
+
+@app.get("/api/v1/data/analyze/stream/{job_id}")
+async def stream_analysis_progress(job_id: str):
+    """Stream analysis pipeline progress via SSE."""
+    import asyncio as _aio
+
+    tracker = PipelineProgressTracker.get(job_id)
+
+    async def event_generator():
+        if tracker is None or tracker.async_queue is None:
+            yield f"event: error\ndata: {_json.dumps({'error': 'Job not found', 'job_id': job_id})}\n\n"
+            return
+        try:
+            while True:
+                try:
+                    event = await _aio.wait_for(tracker.async_queue.get(), timeout=30.0)
+                except _aio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                if event is None:
+                    final = _analysis_job_results.pop(job_id, None)
+                    if final is not None:
+                        yield f"event: result\ndata: {_json.dumps(final, default=str)}\n\n"
+                    return
+                yield f"event: stage\ndata: {_json.dumps(event.to_dict())}\n\n"
+        except _aio.CancelledError:
+            return
+        finally:
+            tracker.close()
+
+    return _StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/api/v1/data/preprocess")
