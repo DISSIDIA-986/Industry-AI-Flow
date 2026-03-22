@@ -1,4 +1,14 @@
-"""Workflow graph entrypoints."""
+"""Workflow graph entrypoints.
+
+10-node fixed-order execution pipeline:
+  intent → safety → cost_estimation → retrieval → rerank →
+  prompt → route → code_exec → response → groundedness
+
+Each node has an individual timeout SLA (seconds).  If a node
+exceeds its SLA, an ``asyncio.TimeoutError`` is caught and an
+``ErrorCode.NODE_TIMEOUT`` is written to ``state["error_code"]``.
+The global 300 s timeout remains as a safety net.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +29,21 @@ from backend.services.workflows.nodes.response_node import response_node
 from backend.services.workflows.nodes.retrieval_node import retrieval_node
 from backend.services.workflows.nodes.route_node import route_node
 from backend.services.workflows.nodes.safety_node import safety_node
-from backend.services.workflows.state import WorkflowState
+from backend.services.workflows.state import ErrorCode, WorkflowState
+
+# Per-node timeout SLAs (seconds).  Generous for demo stability.
+NODE_TIMEOUTS: dict[str, float] = {
+    "intent_node": 30,
+    "safety_node": 10,
+    "cost_estimation_node": 20,
+    "retrieval_node": 60,
+    "rerank_node": 30,
+    "prompt_node": 5,
+    "route_node": 5,
+    "code_exec_node": 90,
+    "response_node": 60,
+    "groundedness_node": 15,
+}
 
 
 async def run_prompt_stage(state: WorkflowState, services: Any) -> WorkflowState:
@@ -40,20 +64,38 @@ async def _run_node(
     metrics = state.setdefault("metrics", {})
     node_latency = metrics.setdefault("node_latency_ms", {})
     completed_nodes = metadata.setdefault("completed_nodes", [])
+    timeout = NODE_TIMEOUTS.get(node_name, 60)
 
     try:
-        updated = await handler(state, services)
+        updated = await asyncio.wait_for(
+            handler(state, services), timeout=timeout
+        )
         node_latency[node_name] = int((time.perf_counter() - started) * 1000)
         if node_name not in completed_nodes:
             completed_nodes.append(node_name)
         return updated
+    except asyncio.TimeoutError:
+        elapsed = int((time.perf_counter() - started) * 1000)
+        node_latency[node_name] = elapsed
+        logger.error(
+            "Workflow node '%s' timed out after %ds (SLA: %ds)",
+            node_name, elapsed // 1000, int(timeout),
+        )
+        metadata["failed_node"] = node_name
+        metadata["error_code"] = ErrorCode.NODE_TIMEOUT.value
+        state["error"] = (
+            f"Processing timed out at {node_name.replace('_node', '')} stage. "
+            "Please try again."
+        )
+        return state
     except Exception as exc:  # pragma: no cover - safety net
         node_latency[node_name] = int((time.perf_counter() - started) * 1000)
         logger.exception("Workflow node '%s' failed: %s", node_name, exc)
         metadata["failed_node"] = node_name
-        state[
-            "error"
-        ] = "I encountered an issue processing your request. Please try again."
+        metadata["error_code"] = ErrorCode.UNKNOWN_ERROR.value
+        state["error"] = (
+            "I encountered an issue processing your request. Please try again."
+        )
         return state
 
 
@@ -106,7 +148,8 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
                 node_name=node_name, handler=handler, state=state, services=services
             )
 
-        if state.get("error") or not state.get("response"):
+        failed = (state.get("metadata") or {}).get("failed_node")
+        if (state.get("error") or not state.get("response")) and failed != "response_node":
             state = await _run_node("response_node", response_node, state, services)
         if state.get("error") and not state.get("response"):
             state[

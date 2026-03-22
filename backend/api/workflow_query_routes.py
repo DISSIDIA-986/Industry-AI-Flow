@@ -303,6 +303,7 @@ async def workflow_health() -> WorkflowHealth:
 async def workflow_query(
     request: WorkflowQueryRequest,
     workflow: WorkflowRunner = Depends(get_workflow_runner),
+    debug: bool = False,
 ) -> WorkflowQueryResponse:
     ensure_rag_english_query(request.query, field="query")
 
@@ -507,6 +508,22 @@ async def workflow_query(
             "workflow_runner": metadata.get("workflow_runner", "intent_workflow"),
         },
     )
+
+    if debug:
+        response.metadata["_debug"] = {
+            "trace_id": trace_id,
+            "pipeline_nodes": list(
+                (result.get("metrics") or {}).get("node_latency_ms", {}).keys()
+            ),
+            "node_latency_ms": (result.get("metrics") or {}).get(
+                "node_latency_ms", {}
+            ),
+            "error_code": metadata.get("error_code"),
+            "failed_node": metadata.get("failed_node"),
+            "workflow_runner": metadata.get("workflow_runner", "intent_workflow"),
+            "total_duration_ms": latency_ms,
+        }
+
     return response
 
 

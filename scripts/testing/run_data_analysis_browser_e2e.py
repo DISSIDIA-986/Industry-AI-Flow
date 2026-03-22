@@ -40,15 +40,16 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATASET_DIR = PROJECT_ROOT / "test_resources" / "datasets" / "e2e_public"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "temp"
-DEFAULT_FRONTEND_URL = "http://127.0.0.1:3001"
+DEFAULT_FRONTEND_URL = "http://127.0.0.1:3123"
 
 LOGIN_EMAIL_SELECTOR = 'input[type="email"]'
 LOGIN_PASSWORD_SELECTOR = 'input[type="password"]'
 LOGIN_BUTTON_SELECTOR = 'button:has-text("Log in")'
-RUN_ANALYSIS_BUTTON_SELECTOR = 'button:has-text("2) Run Analysis")'
-INCLUDE_VIZ_CHECKBOX_SELECTOR = 'input[type="checkbox"]'
+RUN_ANALYSIS_BUTTON_SELECTOR = '[data-testid="run-analysis-btn"]'
+INCLUDE_VIZ_CHECKBOX_SELECTOR = '[data-testid="include-viz-toggle"]'
 UPLOAD_BUTTON_SELECTOR = 'button:has-text("1) Upload Data")'
-PROCESSING_BUTTON_SELECTOR = 'button:has-text("Processing...")'
+PROCESSING_BUTTON_SELECTOR = 'button:has-text("Analyzing...")'
+PIPELINE_VIZ_SELECTOR = '[data-testid="analysis-pipeline-viz"]'
 ERROR_SELECTOR = "p.error-text"
 
 # ---------------------------------------------------------------------------
@@ -281,11 +282,10 @@ def _snapshot_refs() -> dict[str, str]:
         return {}
     refs: dict[str, str] = {}
     patterns = {
-        "uploaded_path": r'^\-\s+textbox\s+"Uploaded Path"\s+\[ref=([^\]]+)\]',
         "instruction": r'^\-\s+textbox\s+"Analysis Instruction"\s+\[ref=([^\]]+)\]',
         "analysis_type": r'^\-\s+combobox\s+"Analysis Type"\s+\[ref=([^\]]+)\]',
         "chart_type": r'^\-\s+combobox\s+"Chart Type"\s+\[ref=([^\]]+)\]',
-        "run_analysis": r'^\-\s+button\s+"2\)\s*Run Analysis"\s+\[ref=([^\]]+)\]',
+        "run_analysis": r'^\-\s+button\s+".*Run Analysis"\s+\[ref=([^\]]+)\]',
         "include_viz": r'^\-\s+checkbox\s+"Include Visualization"\s+\[ref=([^\]]+)\]',
     }
     for line in (out or "").splitlines():
@@ -308,7 +308,7 @@ def _set_form_values(
     instruction: str,
     refs: dict[str, str],
 ) -> tuple[bool, str]:
-    path_target = refs.get("uploaded_path") or 'label:has-text("Uploaded Path") input'
+    # Uploaded Path field removed from UI — file path is pre-filled internally
     instruction_target = (
         refs.get("instruction") or 'label:has-text("Analysis Instruction") input'
     )
@@ -316,10 +316,6 @@ def _set_form_values(
         refs.get("analysis_type") or 'label:has-text("Analysis Type") select'
     )
     chart_target = refs.get("chart_type") or 'label:has-text("Chart Type") select'
-
-    ok, out = _run_agent_browser(["fill", path_target, data_file], timeout=25)
-    if not ok:
-        return False, f"fill_path_failed: {out}"
 
     ok, out = _run_agent_browser(
         ["fill", instruction_target, instruction], timeout=20
@@ -337,20 +333,18 @@ def _set_form_values(
     if not ok:
         return False, f"select_chart_type_failed: {out}"
 
-    # Verify form values
+    # Verify form values (Uploaded Path field removed — only check analysis/chart type)
     verify_js = r"""
 (() => {
   const labels = Array.from(document.querySelectorAll('label'));
-  let pathInput = null, instrInput = null, analysisSelect = null, chartSelect = null;
+  let instrInput = null, analysisSelect = null, chartSelect = null;
   for (const label of labels) {
     const t = (label.textContent || '').trim();
-    if (!pathInput && t.includes('Uploaded Path')) pathInput = label.querySelector('input');
     if (!instrInput && t.includes('Analysis Instruction')) instrInput = label.querySelector('input');
     if (!analysisSelect && t.includes('Analysis Type')) analysisSelect = label.querySelector('select');
     if (!chartSelect && t.includes('Chart Type')) chartSelect = label.querySelector('select');
   }
   return JSON.stringify({
-    path: pathInput ? pathInput.value : null,
     instruction: instrInput ? instrInput.value : null,
     analysis_type: analysisSelect ? analysisSelect.value : null,
     chart_type: chartSelect ? chartSelect.value : null,
@@ -364,9 +358,7 @@ def _set_form_values(
     parsed = _parse_agent_json_output(vout)
     if isinstance(parsed, dict):
         if (
-            _normalize_path(str(parsed.get("path") or ""))
-            != _normalize_path(data_file)
-            or parsed.get("analysis_type") != analysis_type
+            parsed.get("analysis_type") != analysis_type
             or parsed.get("chart_type") != chart_type
         ):
             return False, f"form_mismatch: {parsed}"
