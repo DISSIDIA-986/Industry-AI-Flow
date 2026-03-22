@@ -276,6 +276,10 @@ class Settings(BaseSettings):
     )
     require_user_auth: bool = os.getenv("REQUIRE_USER_AUTH", "false").lower() == "true"
     auth_jwt_secret: str = os.getenv("AUTH_JWT_SECRET", "")
+    demo_user_password: str = os.getenv("DEMO_USER_PASSWORD", "")
+    allow_registration: bool = (
+        os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"
+    )
     auth_jwt_algorithm: str = os.getenv("AUTH_JWT_ALGORITHM", "HS256")
     auth_jwt_issuer: str = os.getenv("AUTH_JWT_ISSUER", "")
     auth_jwt_audience: str = os.getenv("AUTH_JWT_AUDIENCE", "")
