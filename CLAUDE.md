@@ -194,7 +194,9 @@ Client → FastAPI (main.py)
 | Capability Registry | `backend/services/intent_classification/capability_registry.py` | YAML-driven heuristic classification with exclusive_keywords |
 | Error Codes | `backend/services/workflows/state.py` | ErrorCode enum (12 codes) for structured pipeline failures |
 | Shared Animation Hook | `frontend/src/hooks/useNodeAnimation.ts` | Shared sequential node animation (PipelineFlowViz, IntentFlowViz) |
-| DarkHeroWrapper | `frontend/src/components/DarkHeroWrapper.tsx` | Shared dark hero container (#1a1a2e) for all 6 demo pages |
+| Document Routes | `backend/api/document_management_routes.py` | Upload, delete, versioning + preview detail/content/summary/chunks |
+| Summary Generator | `scripts/generate_document_summaries.py` | Batch AI summary generation for document_profiles |
+| DarkHeroWrapper | `frontend/src/components/DarkHeroWrapper.tsx` | Shared dark hero container (#1a1a2e) for all 7 demo pages |
 
 ### API Routes
 
