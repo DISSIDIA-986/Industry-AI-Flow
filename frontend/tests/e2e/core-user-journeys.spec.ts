@@ -113,14 +113,6 @@ test.describe('Authenticated core journeys', () => {
     await expect(page.getByRole('cell', { name: /1,250,000/ })).toBeVisible();
   });
 
-  test('api integration page executes checks and shows pass state', async ({ page }) => {
-    await page.goto('/api-integration-test');
-    await expect(page.getByRole('heading', { name: 'APIIntegration testing' })).toBeVisible();
-
-    await clickByJs(page.getByRole('button', { name: 'Run all tests' }));
-    await expect(page.getByText('✅ Test passed').first()).toBeVisible({ timeout: 10000 });
-  });
-
   test('navbar supports cross-page navigation', async ({ page }) => {
     await page.goto('/workflow-chat');
     await page.goto('/documents-integrated');

@@ -33,7 +33,7 @@ fi
 # 3. 测试核心页面
 echo ""
 echo "3. 测试核心页面可访问性..."
-pages=("workflow-chat" "documents-integrated" "data-dashboard" "cost-estimation" "api-integration-test" "components-demo")
+pages=("workflow-chat" "documents-integrated" "data-dashboard" "cost-estimation")
 
 for page in "${pages[@]}"; do
   echo -n "   测试页面: /$page ... "

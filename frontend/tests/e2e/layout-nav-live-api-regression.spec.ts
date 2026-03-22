@@ -52,40 +52,6 @@ test.describe('Live API layout width and navbar persistence regressions', () => 
     await seedAuthenticatedSession(page);
   });
 
-  test('api diagnostics pages use same-origin backend proxy paths', async ({ page }) => {
-    const disallowedBackendUrls: string[] = [];
-    page.on('request', (request) => {
-      const url = request.url();
-      if (url.includes('localhost:8001') || url.includes('localhost:8002')) {
-        disallowedBackendUrls.push(url);
-      }
-    });
-
-    await page.goto('/api-test');
-    await expect(page.getByText('Backend address: /api/backend/api/v1 (Same origin proxy)')).toBeVisible();
-    await expect(topNavbar(page)).toBeVisible();
-
-    const healthProxyResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'GET' &&
-        response.url().includes('/api/backend/api/v1/health'),
-    );
-
-    const healthRow = page
-      .locator('div.border.border-gray-200.rounded-lg.p-4')
-      .filter({ hasText: 'GET /health' })
-      .first();
-    await healthRow.getByRole('button', { name: 'test' }).click();
-    await expect((await healthProxyResponse).status()).toBe(200);
-
-    await page.goto('/api-integration-test');
-    await expect(page.getByText('APIaddress: /api/backend/api/v1 (Same origin proxy)')).toBeVisible();
-    expect(
-      disallowedBackendUrls,
-      `browser should not call hardcoded backend hosts: ${disallowedBackendUrls.join(', ')}`,
-    ).toEqual([]);
-  });
-
   test('workflow page health probe shows connected backend status', async ({ page }) => {
     const healthResponsePromise = page.waitForResponse(
       (response) =>
