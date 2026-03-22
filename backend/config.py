@@ -36,7 +36,7 @@ class Settings(BaseSettings):
         os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "180")
     )
 
-    # llama.cpp (主要后端)
+    # llama.cpp (DEPRECATED — kept for config compatibility with dispatch_service.py)
     llama_model_path: str = os.getenv(
         "LLAMA_MODEL_PATH", "models/qwen2.5-7b-instruct.gguf"
     )
@@ -447,7 +447,7 @@ class Settings(BaseSettings):
         )
         for candidate in candidates:
             value = self._normalize_token(candidate)
-            if value in {"llama_cpp", "ollama"}:
+            if value in {"ollama"}:
                 return value
         return "ollama"
 

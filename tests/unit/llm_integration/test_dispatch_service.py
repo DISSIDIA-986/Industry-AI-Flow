@@ -34,7 +34,7 @@ class TestDispatchService:
         assert hasattr(service, "openai_client")
         assert hasattr(service, "cost_tracker")
 
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_local_only_mode_success(self, mock_llama_client, service):
         """EN"""
         # MockEN
@@ -52,12 +52,12 @@ class TestDispatchService:
         result = service.generate(request)
 
         assert result.success is True
-        assert result.provider == "llama_cpp"
+        assert result.provider == "ollama"
         assert result.text == "Local response"
         assert result.fallback_triggered is False
         assert result.usage.total_tokens > 0
 
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_local_only_mode_failure(self, mock_llama_client, service):
         """EN"""
         # MockEN
@@ -79,7 +79,7 @@ class TestDispatchService:
         assert result.provider is None
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_hybrid_mode_local_success(self, mock_llama, mock_zhipu, service):
         """EN"""
         # MockEN
@@ -97,11 +97,11 @@ class TestDispatchService:
         result = service.generate(request)
 
         assert result.success is True
-        assert result.provider == "llama_cpp"
+        assert result.provider == "ollama"
         assert result.fallback_triggered is False
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_hybrid_mode_cloud_fallback(self, mock_llama, mock_zhipu, service):
         """ENfallback"""
         # MockEN
@@ -187,7 +187,7 @@ class TestDispatchService:
             assert request.temperature == temperature
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_cost_tracking(self, mock_llama, mock_zhipu, service):
         """EN"""
         # MockEN
@@ -210,7 +210,7 @@ class TestDispatchService:
         assert final_stats["total_requests"] == initial_requests + 1
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_budget_alert(self, mock_llama, mock_zhipu, service):
         """EN"""
         # EN
@@ -234,7 +234,7 @@ class TestDispatchService:
         # EN
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     def test_redaction_before_cloud_call(self, mock_llama, mock_zhipu, service):
         """EN"""
         # MockEN
@@ -258,7 +258,7 @@ class TestDispatchService:
         """ENDispatchResultEN"""
         result = DispatchResult(
             success=True,
-            provider="llama_cpp",
+            provider="ollama",
             text="Test response",
             usage=LLMUsage(prompt_tokens=100, completion_tokens=50, total_tokens=150),
             latency_ms=1000,
@@ -266,20 +266,20 @@ class TestDispatchService:
         )
 
         assert result.success is True
-        assert result.provider == "llama_cpp"
+        assert result.provider == "ollama"
         assert result.text == "Test response"
         assert result.usage.total_tokens == 150
         assert result.latency_ms == 1000
         assert result.fallback_triggered is False
 
     @patch("backend.services.llm_integration.dispatch_service.ZhipuClient")
-    @patch("backend.services.llm_integration.dispatch_service.LlamaCppClient")
+    @patch("backend.services.llm_integration.dispatch_service.OllamaClient")
     @pytest.mark.parametrize(
         "route_mode,expected_provider",
         [
-            (RouteMode.LOCAL_ONLY, "llama_cpp"),
+            (RouteMode.LOCAL_ONLY, "ollama"),
             (RouteMode.CLOUD_ONLY, "zhipu"),  # EN openai
-            (RouteMode.HYBRID_AUTO, "llama_cpp"),  # EN
+            (RouteMode.HYBRID_AUTO, "ollama"),  # EN
         ],
     )
     def test_route_modes(
@@ -303,7 +303,7 @@ class TestDispatchService:
 
         assert result.success is True
         if route_mode == RouteMode.LOCAL_ONLY:
-            assert result.provider == "llama_cpp"
+            assert result.provider == "ollama"
         elif route_mode == RouteMode.CLOUD_ONLY:
             assert result.provider in ["zhipu", "openai"]
 
@@ -315,7 +315,7 @@ class TestDispatchService:
         errors = []
 
         with patch(
-            "backend.services.llm_integration.dispatch_service.LlamaCppClient"
+            "backend.services.llm_integration.dispatch_service.OllamaClient"
         ) as mock_llama:
             mock_instance = Mock()
             mock_instance.generate.return_value = "Response"
@@ -350,7 +350,7 @@ class TestDispatchService:
     def test_latency_tracking(self, service):
         """EN"""
         with patch(
-            "backend.services.llm_integration.dispatch_service.LlamaCppClient"
+            "backend.services.llm_integration.dispatch_service.OllamaClient"
         ) as mock_llama:
             import time
 

@@ -87,7 +87,7 @@ def test_local_only_uses_local_client():
 
     res = service.generate(req)
     assert res.success is True
-    assert res.provider in {"llama_cpp", "ollama"}
+    assert res.provider == "ollama"
     assert res.text == "local answer"
 
 
@@ -151,5 +151,5 @@ def test_cloud_only_request_is_forced_to_local_in_local_safe_mode():
 
     res = service.generate(req)
     assert res.success is True
-    assert res.provider in {"llama_cpp", "ollama"}
+    assert res.provider == "ollama"
     assert res.route_mode == "local_only"

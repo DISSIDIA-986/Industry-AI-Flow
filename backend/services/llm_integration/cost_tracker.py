@@ -29,7 +29,6 @@ class BudgetPolicy:
 class CostTracker:
     # USD per 1M tokens (input, output). Local backends are zero-cost.
     DEFAULT_RATE_TABLE: Dict[str, Dict[str, tuple]] = {
-        "llama_cpp": {"*": (0.0, 0.0)},
         "ollama": {"*": (0.0, 0.0)},
         "zhipu": {
             "glm-4.7": (2.0, 8.0),

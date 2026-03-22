@@ -81,7 +81,7 @@ def _make_config(**overrides):
         enable_conversation_memory=True,
         memory_short_term_window=4,
         memory_summary_trigger_messages=2,
-        memory_summary_backend="llama_cpp",
+        memory_summary_backend="ollama",
         memory_summary_max_tokens=256,
         memory_long_term_top_k=3,
         memory_long_term_min_relevance=0.3,
