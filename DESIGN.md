@@ -48,7 +48,7 @@
   - Warning: #f59e0b (amber-500) / soft: #fef3c7
   - Error: #dc2626 (red-600) / soft: #fef2f2
   - Info: #2563eb (blue-600) / soft: #dbeafe
-- **Dark Hero Section:** #1a1a2e — used ONLY for the Pipeline visualization hero. This is a deliberate departure from the light theme to create visual contrast and convey technical depth. Text on dark: #e5e7eb (gray-200), muted: #6b7280 (gray-500), active nodes: #60a5fa (blue-400), completed nodes: #34d399 (emerald-400).
+- **Dark Hero Section:** #1a1a2e — used for page hero headers and pipeline visualization sections across demo pages (Dashboard, Intent Debugger, Workflow Chat). Creates visual contrast and conveys technical depth. Compact variant (px-6 py-4 rounded-2xl) for page headers; full-width variant for pipeline/flow visualizations. Text on dark: #e5e7eb (gray-200), muted: #6b7280 (gray-500), active nodes: #60a5fa (blue-400), completed nodes: #34d399 (emerald-400).
 - **Dark mode strategy:** CSS custom properties in `globals.css`. Reduce saturation 10-20% for primary/accent. Dark surfaces: #0f172a (slate-900), #1e293b (slate-800).
 
 ## Spacing
