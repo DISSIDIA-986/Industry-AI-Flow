@@ -220,6 +220,13 @@ models/**/*.safetensors
 # Dogfood testing output (screenshots, videos, reports)
 dogfood-output/
 
+# Workspace artifacts (screenshots, uploads managed by backend)
+workspace/screenshots/
+workspace/uploads/
+
+# Codex session context
+.context/
+
 # Large binary documents — RAG seed docs kept on disk, not in git
 test_resources/documents/**/*.pdf
 test_resources/documents/**/*.doc
