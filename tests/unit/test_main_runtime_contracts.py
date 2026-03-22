@@ -9,6 +9,9 @@ import backend.main as main_module
 from backend.main import app
 from backend.services.database.driver_compat import connect as connect_db
 from backend.services.language_policy import RAG_CHINESE_QUERY_UNSUPPORTED
+from tests.conftest import get_demo_auth_headers
+
+_AUTH = get_demo_auth_headers()
 
 
 def _cleanup_uploaded_documents_index(*tenant_ids: str) -> None:
@@ -49,7 +52,7 @@ async def test_documents_list_returns_empty_array_when_no_uploads():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        resp = await client.get("/api/v1/documents", headers={"X-Tenant-ID": tenant_id})
+        resp = await client.get("/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_id})
 
     assert resp.status_code == 200
     assert resp.json() == []
@@ -85,7 +88,7 @@ async def test_documents_list_falls_back_to_indexed_docs_for_default_tenant(
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        resp = await client.get("/api/v1/documents", headers={"X-Tenant-ID": tenant_id})
+        resp = await client.get("/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_id})
 
     assert resp.status_code == 200
     assert resp.json() == indexed_docs
@@ -108,7 +111,7 @@ async def test_documents_list_does_not_fallback_to_indexed_docs_for_non_default_
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        resp = await client.get("/api/v1/documents", headers={"X-Tenant-ID": tenant_id})
+        resp = await client.get("/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_id})
 
     assert resp.status_code == 200
     assert resp.json() == []
@@ -133,15 +136,15 @@ async def test_documents_upload_then_list_returns_document_for_same_tenant():
                     "text/plain",
                 )
             },
-            headers={"X-Tenant-ID": tenant_a},
+            headers={**_AUTH, "X-Tenant-ID": tenant_a},
         )
         assert upload.status_code == 200
 
         tenant_a_docs = await client.get(
-            "/api/v1/documents", headers={"X-Tenant-ID": tenant_a}
+            "/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_a}
         )
         tenant_b_docs = await client.get(
-            "/api/v1/documents", headers={"X-Tenant-ID": tenant_b}
+            "/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_b}
         )
 
     assert tenant_a_docs.status_code == 200
@@ -169,7 +172,7 @@ async def test_documents_list_persists_after_metadata_cache_reset(monkeypatch):
         upload = await client.post(
             "/api/v1/documents/upload",
             files={"file": ("restart_check.txt", b"persistence smoke", "text/plain")},
-            headers={"X-Tenant-ID": tenant_id},
+            headers={**_AUTH, "X-Tenant-ID": tenant_id},
         )
         assert upload.status_code == 200
 
@@ -178,7 +181,7 @@ async def test_documents_list_persists_after_metadata_cache_reset(monkeypatch):
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        resp = await client.get("/api/v1/documents", headers={"X-Tenant-ID": tenant_id})
+        resp = await client.get("/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_id})
 
     assert resp.status_code == 200
     docs_payload = resp.json()
@@ -202,6 +205,7 @@ async def test_data_analyze_rejects_untrusted_absolute_path(monkeypatch):
         resp = await client.post(
             "/api/v1/data/analyze",
             json={"data_file": "/tmp/not_allowed/data.csv", "analysis_type": "eda"},
+            headers=_AUTH,
         )
 
     assert resp.status_code == 400
@@ -241,6 +245,7 @@ async def test_data_analyze_records_error_audit_when_tool_returns_business_failu
         resp = await client.post(
             "/api/v1/data/analyze",
             json={"data_file": "housing.csv", "analysis_type": "eda"},
+            headers=_AUTH,
         )
 
     assert resp.status_code == 200
@@ -280,6 +285,7 @@ async def test_unified_query_records_error_audit_when_business_result_fails(
         resp = await client.post(
             "/api/v1/unified/query",
             json={"question": "test unified request"},
+            headers=_AUTH,
         )
 
     assert resp.status_code == 200
@@ -367,6 +373,7 @@ async def test_rag_query_rejects_chinese_input(monkeypatch):
         resp = await client.post(
             "/api/v1/rag/query",
             json={"question": "请总结这份招标文件的关键内容", "top_k": 3},
+            headers=_AUTH,
         )
 
     assert resp.status_code == 400
