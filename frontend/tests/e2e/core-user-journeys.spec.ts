@@ -87,7 +87,7 @@ test.describe('Authenticated core journeys', () => {
   });
 
   test('system overview renders four module health cards', async ({ page }) => {
-    await page.goto('/data-dashboard');
+    await page.goto('/overview');
     await expect(page.getByRole('heading', { name: 'System Overview' })).toBeVisible();
     await expect(page.getByText('Real-time health and performance across all AI modules')).toBeVisible();
 
@@ -118,8 +118,8 @@ test.describe('Authenticated core journeys', () => {
     await page.goto('/documents-integrated');
     await expect(page).toHaveURL(/\/documents-integrated$/);
 
-    await page.goto('/data-dashboard');
-    await expect(page).toHaveURL(/\/data-dashboard$/);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/overview$/);
 
     await page.goto('/cost-estimation');
     await expect(page).toHaveURL(/\/cost-estimation$/);

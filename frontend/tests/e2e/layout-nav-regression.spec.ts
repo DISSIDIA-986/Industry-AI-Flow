@@ -7,7 +7,7 @@ const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 const CORE_ROUTES = [
   '/workflow-chat',
   '/documents-integrated',
-  '/data-dashboard',
+  '/overview',
   '/cost-estimation',
 ] as const;
 
@@ -87,7 +87,7 @@ test.describe('Layout width and navbar persistence regressions', () => {
 
     const navFlow = [
       { label: 'Document management', url: /\/documents-integrated$/ },
-      { label: 'System Overview', url: /\/data-dashboard$/ },
+      { label: 'Intent Demo', url: /\/intent-demo$/ },
       { label: 'cost estimate', url: /\/cost-estimation$/ },
       { label: 'Workflow chat', url: /\/workflow-chat$/ },
     ] as const;

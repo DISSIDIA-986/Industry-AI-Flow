@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isMoreOpen, setIsMoreOpen] = useState(false)
-  const moreRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -18,32 +16,14 @@ export default function Navbar() {
     router.push('/login')
   }
 
-  // Close "More" dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
-        setIsMoreOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const primaryNav = [
+  const navItems = [
     { name: 'Dashboard', href: '/simple-dashboard' },
     { name: 'Workflow Chat', href: '/workflow-chat' },
     { name: 'Documents', href: '/documents-integrated' },
     { name: 'Dynamic Analytics', href: '/data-analysis' },
     { name: 'Cost Estimation', href: '/cost-estimation' },
-  ]
-
-  const secondaryNav = [
     { name: 'Intent Demo', href: '/intent-demo' },
-    { name: 'System Overview', href: '/data-dashboard' },
   ]
-
-  const allNavItems = [...primaryNav, ...secondaryNav]
-  const isSecondaryActive = secondaryNav.some((item) => pathname === item.href)
 
   return (
     <nav className="bg-white border-b border-gray-200">
@@ -57,7 +37,7 @@ export default function Navbar() {
             </div>
 
             <div className="hidden lg:ml-6 lg:flex lg:items-center lg:space-x-1">
-              {primaryNav.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
@@ -70,41 +50,6 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
-
-              {/* More dropdown */}
-              <div className="relative" ref={moreRef}>
-                <button
-                  onClick={() => setIsMoreOpen(!isMoreOpen)}
-                  className={`px-2.5 py-1.5 text-sm font-medium rounded-md transition whitespace-nowrap flex items-center space-x-1 ${
-                    isSecondaryActive
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <span>More</span>
-                  <svg className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isMoreOpen && (
-                  <div className="absolute left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    {secondaryNav.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={() => setIsMoreOpen(false)}
-                        className={`block px-4 py-2 text-sm transition ${
-                          pathname === item.href
-                            ? 'text-blue-600 bg-blue-50 font-medium'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
-                        }`}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -152,7 +97,7 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="lg:hidden border-t border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {allNavItems.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}

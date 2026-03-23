@@ -57,13 +57,20 @@ const STAGE_LABELS: Record<string, string> = {
   result_render: "Result Render",
 };
 
-const STAGE_ICONS: Record<string, string> = {
-  file_parse: "📄",
-  metadata_extract: "📊",
-  code_generation: "🤖",
-  security_check: "🛡️",
-  sandbox_execution: "⚙️",
-  result_render: "📈",
+/* SVG icon paths (Heroicons outline, consistent with PipelineFlowViz) */
+const STAGE_SVG: Record<string, string> = {
+  file_parse:
+    "M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z",
+  metadata_extract:
+    "M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12",
+  code_generation:
+    "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4",
+  security_check:
+    "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+  sandbox_execution:
+    "M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01",
+  result_render:
+    "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z",
 };
 
 /* ------------------------------------------------------------------ */
@@ -497,7 +504,9 @@ export default function DataAnalysisPage() {
                     return (
                       <div key={stageId} className="flex items-center flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-base flex-shrink-0">{STAGE_ICONS[stageId]}</span>
+                          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d={STAGE_SVG[stageId]} />
+                          </svg>
                           <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} />
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-gray-300 truncate">
@@ -527,7 +536,9 @@ export default function DataAnalysisPage() {
                       "bg-gray-600";
                     return (
                       <div key={stageId} className="flex items-center gap-2">
-                        <span className="text-sm flex-shrink-0">{STAGE_ICONS[stageId]}</span>
+                        <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d={STAGE_SVG[stageId]} />
+                        </svg>
                         <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} />
                         <span className="text-xs text-gray-300">{STAGE_LABELS[stageId]}</span>
                         {ev?.detail && (
