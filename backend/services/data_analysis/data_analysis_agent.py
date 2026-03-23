@@ -271,19 +271,29 @@ class DataAnalysisAgent:
         """
         Extract metadata from a dataset file (columns, types, statistics).
 
+        Privacy by design: This function extracts structural metadata only.
+        Raw data values (top_values, sample_rows) are kept in the metadata dict
+        for local use (frontend preview) but are NEVER included in the LLM prompt
+        built by _build_code_generation_prompt(). The prompt only uses column
+        names and types — see that method for the privacy boundary.
+
         Args:
             file_path: Path to the data file
 
         Returns:
             Dict with dataset metadata (columns, rows, statistics)
         """
+        # Large file guard: cap rows read to prevent OOM on huge files.
+        # total_rows is counted separately so metadata reports the real dataset size.
+        _NROWS_GUARD = 10_000
+
         try:
             # Load data file
             if file_path.endswith(".csv"):
                 df = None
                 for enc in ("utf-8", "utf-8-sig", "latin-1"):
                     try:
-                        df = pd.read_csv(file_path, encoding=enc)
+                        df = pd.read_csv(file_path, encoding=enc, nrows=_NROWS_GUARD)
                         break
                     except UnicodeDecodeError:
                         continue
@@ -291,12 +301,37 @@ class DataAnalysisAgent:
                     return {
                         "error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."
                     }
+                # Count real total rows using csv.reader so quoted multiline
+                # fields are counted correctly (raw line count would overcount).
+                import csv as _csv
+
+                try:
+                    with open(file_path, newline="", encoding="utf-8") as f:
+                        reader = _csv.reader(f)
+                        next(reader, None)  # skip header
+                        total_rows = sum(1 for _ in reader)
+                except Exception:
+                    total_rows = len(df)
             elif file_path.endswith((".xlsx", ".xls")):
                 df = pd.read_excel(file_path)
+                total_rows = len(df)
             elif file_path.endswith(".json"):
                 df = pd.read_json(file_path)
+                total_rows = len(df)
             else:
                 return {"error": "Unsupported data file format."}
+
+            # PII column name detection (warning only — column names are structural
+            # metadata required for correct code generation, not aliased)
+            from backend.services.data_analysis.pii_detector import detect_pii_columns
+
+            pii_warnings = detect_pii_columns(df.columns.tolist())
+            if pii_warnings:
+                logger.warning(
+                    "Detected potentially sensitive column names: %s. "
+                    "Column names (not data) will be sent to cloud LLM for code generation.",
+                    pii_warnings,
+                )
 
             # Build column metadata
             columns_info = []
@@ -346,9 +381,12 @@ class DataAnalysisAgent:
 
                 columns_info.append(col_info)
 
+            truncated = total_rows > len(df)
             return {
                 "filename": os.path.basename(file_path),
-                "rows": len(df),
+                "rows": total_rows,
+                "rows_sampled": len(df) if truncated else total_rows,
+                "truncated": truncated,
                 "columns": len(df.columns),
                 "column_names": df.columns.tolist(),
                 "columns_info": columns_info,
