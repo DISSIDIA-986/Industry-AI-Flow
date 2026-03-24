@@ -10,7 +10,7 @@
 - [Prompt Management](./architecture/prompt-management.md)
 - [Metadata Retrieval](./architecture/metadata-retrieval.md)
 - [Memory System](./architecture/memory-system.md)
-- [llama.cpp Integration](./architecture/llama.cpp.md)
+- ~~[llama.cpp Integration](./architecture/llama.cpp.md)~~ *(removed — Ollama replaced llama.cpp)*
 - [PaddleOCR Integration](./architecture/PaddleOCR.md)
 - [Database Optimization Design](./architecture/database-optimization-design.md)
 
