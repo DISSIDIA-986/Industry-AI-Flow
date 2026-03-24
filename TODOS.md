@@ -80,3 +80,12 @@
 5. Playback controls: step forward/back through turns, show intent evolution
 
 **Effort:** human: ~2 days / CC: ~20 min
+
+### ~~Update DESIGN.md Decisions Log — Presentation Materials Token Unification~~ — DONE (2026-03-23)
+**Completed in:** design-consultation session
+
+**What was done:**
+1. Added 3 entries to DESIGN.md Decisions Log (poster migration, architecture diagrams, module colors)
+2. Added "Presentation Materials" section to DESIGN.md documenting all showcase artifacts
+3. Added module color system (blue/amber/emerald/purple) to Color section
+4. Updated Dark Hero Section page list to all 7 demo pages

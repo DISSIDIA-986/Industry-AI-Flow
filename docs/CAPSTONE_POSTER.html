@@ -5,13 +5,13 @@
 <title>Industry AI Flow - Capstone Poster</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #4F46E5;
-    --primary-dark: #312E81;
-    --accent-teal: #0D9488;
-    --accent-rose: #E11D48;
+    --primary: #2563EB;
+    --primary-dark: #1E40AF;
+    --accent-teal: #F59E0B;
+    --accent-rose: #DC2626;
     --dk: #0F172A;
     --gray: #475569;
     --lt: #94A3B8;
@@ -43,11 +43,11 @@
   }
   .ambient-b1 {
     position: absolute; top: -8%; left: -8%; width: 900px; height: 900px;
-    background: radial-gradient(circle, rgba(79,70,229,0.06) 0%, transparent 70%); border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%); border-radius: 50%;
   }
   .ambient-b2 {
     position: absolute; bottom: -5%; right: -15%; width: 1100px; height: 1100px;
-    background: radial-gradient(circle, rgba(13,148,136,0.04) 0%, transparent 70%); border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%); border-radius: 50%;
   }
 
   .content {
@@ -57,16 +57,16 @@
     padding: 0.9in 1.3in 0.8in;
     gap: 0.4in;
   }
-  h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--dk); line-height: 1.15; }
+  h1,h2,h3,h4 { font-family: 'Inter', sans-serif; color: var(--dk); line-height: 1.15; }
 
   /* ========== HERO ========== */
   .hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .hero-badge {
     display: inline-flex; align-items: center; gap: 12px;
-    background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(13,148,136,0.08));
+    background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(245,158,11,0.08));
     color: var(--primary-dark); padding: 10px 30px; border-radius: 100px;
     font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;
-    border: 2px solid rgba(79,70,229,0.15);
+    border: 2px solid rgba(37,99,235,0.15);
   }
   .hero-badge .sait { color: var(--accent-teal); }
   .hero h1 {
@@ -86,11 +86,11 @@
     position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
     width: 58px; height: 58px; background: var(--dk); color: var(--wh);
     border-radius: 50%; display: flex; justify-content: center; align-items: center;
-    font-family: 'Outfit'; font-weight: 800; font-size: 21px;
+    font-family: 'Inter'; font-weight: 800; font-size: 21px;
     border: 5px solid var(--bg); z-index: 2;
   }
   .ps-card { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-  .ps-header { display: flex; align-items: center; gap: 14px; font-family: 'Outfit'; font-size: 34px; font-weight: 800; }
+  .ps-header { display: flex; align-items: center; gap: 14px; font-family: 'Inter'; font-size: 34px; font-weight: 800; }
   .ps-card.problem .ps-header { color: var(--accent-rose); }
   .ps-card.solution .ps-header { color: var(--accent-teal); }
   .ps-header svg { width: 40px; height: 40px; flex-shrink: 0; }
@@ -102,7 +102,7 @@
   .sec-label .num {
     width: 38px; height: 38px; border-radius: 10px; background: var(--primary); color: var(--wh);
     display: flex; justify-content: center; align-items: center;
-    font-family: 'Outfit'; font-weight: 800; font-size: 20px;
+    font-family: 'Inter'; font-weight: 800; font-size: 20px;
   }
   .sec-label h2 { font-size: 34px; font-weight: 800; }
   .sec-label .sub { font-size: 20px; color: var(--lt); margin-left: auto; }
@@ -131,105 +131,95 @@
   .cap-tag.gt { background: #DCFCE7; color: #15803D; }
   .cap-tag.pt { background: #F3E8FF; color: #7E22CE; }
 
-  /* ========== PRODUCT ARCHITECTURE (inline) ========== */
+  /* ========== ARCHITECTURE SHARED ========== */
   .arch-frame {
-    background: var(--wh); border-radius: 20px; padding: 28px 32px;
+    background: var(--wh); border-radius: 20px; padding: 36px 40px;
     box-shadow: 0 10px 30px rgba(15,23,42,0.04), 0 0 0 1px var(--bdr);
-    flex: 1;
+    display: flex; flex-direction: column;
   }
-  .pa { display: flex; flex-direction: column; gap: 18px; height: 100%; }
-  .pa-header {
-    background: linear-gradient(to right, #4F46E5, #7C3AED);
-    border-radius: 12px; padding: 16px 28px; color: white;
-    display: flex; align-items: center; gap: 18px;
-  }
-  .pa-header strong { font-size: 20px; white-space: nowrap; }
-  .pa-nodes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .pa-nd { background: rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 14px; font-size: 15px; }
-  .pa-arr { opacity: 0.5; font-size: 15px; }
 
-  .pa-cols { display: flex; gap: 18px; flex: 1; }
-  .pa-col-left { width: 240px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
-  .pa-input {
-    background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;
+  /* ========== PRODUCT ARCHITECTURE (infographic blocks) ========== */
+  .pa-infographic {
+    display: flex; flex-direction: column; gap: 16px; flex: 1;
   }
-  .pa-input h5 { font-size: 17px; font-weight: 700; color: var(--dk); margin-bottom: 10px; }
-  .pa-input-item { font-size: 15px; color: var(--gray); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
-  .pa-input-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .pa-intent-bar {
+    background: linear-gradient(to right, #2563EB, #7C3AED);
+    border-radius: 14px; padding: 20px 36px; color: white;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    font-size: 24px; font-weight: 700;
+  }
+  .pa-intent-bar .pa-nd { background: rgba(255,255,255,0.18); border-radius: 6px; padding: 6px 14px; font-size: 18px; font-weight: 600; }
+  .pa-intent-bar .pa-arr { opacity: 0.4; font-size: 16px; }
 
-  .pa-col-center { flex: 1; display: flex; gap: 14px; }
-  .pa-cap {
-    flex: 1; border-radius: 14px; padding: 20px 18px; border-left: 5px solid;
-    display: flex; flex-direction: column; gap: 10px;
+  .pa-blocks { display: flex; gap: 20px; flex: 1; }
+  .pa-block {
+    flex: 1; border-radius: 18px; padding: 32px 30px;
+    display: flex; flex-direction: column; gap: 16px;
   }
-  .pa-cap.blue { background: #EFF6FF; border-color: #3B82F6; }
-  .pa-cap.green { background: #F0FDF4; border-color: #16A34A; }
-  .pa-cap.purple { background: #FDF4FF; border-color: #9333EA; }
-  .pa-cap h5 { font-size: 18px; font-weight: 700; }
-  .pa-cap.blue h5 { color: #1E40AF; }
-  .pa-cap.green h5 { color: #166534; }
-  .pa-cap.purple h5 { color: #6B21A8; }
-  .pa-cap .badge-sm {
-    font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 8px;
-    border-radius: 8px; align-self: flex-start; letter-spacing: 0.3px;
+  .pa-block.blue { background: #EFF6FF; border: 2.5px solid #3B82F6; }
+  .pa-block.green { background: #F0FDF4; border: 2.5px solid #16A34A; }
+  .pa-block.purple { background: #FDF4FF; border: 2.5px solid #9333EA; }
+  .pa-block-tag {
+    font-size: 15px; font-weight: 700; text-transform: uppercase; padding: 5px 14px;
+    border-radius: 10px; align-self: flex-start; letter-spacing: 0.5px;
   }
-  .pa-cap.blue .badge-sm { background: #DBEAFE; color: #1D4ED8; }
-  .pa-cap.green .badge-sm { background: #DCFCE7; color: #15803D; }
-  .pa-cap.purple .badge-sm { background: #F3E8FF; color: #7E22CE; }
-  .pa-step { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--gray); }
-  .pa-sn {
-    width: 22px; height: 22px; border-radius: 50%; color: white; font-size: 12px; font-weight: 700;
+  .pa-block.blue .pa-block-tag { background: #DBEAFE; color: #1D4ED8; }
+  .pa-block.green .pa-block-tag { background: #DCFCE7; color: #15803D; }
+  .pa-block.purple .pa-block-tag { background: #F3E8FF; color: #7E22CE; }
+  .pa-block h3 { font-size: 30px; font-weight: 800; line-height: 1.15; }
+  .pa-block.blue h3 { color: #1E40AF; }
+  .pa-block.green h3 { color: #166534; }
+  .pa-block.purple h3 { color: #6B21A8; }
+  .pa-block-steps { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .pa-block-step {
+    display: flex; align-items: center; gap: 12px; font-size: 20px; color: var(--gray); font-weight: 500;
+  }
+  .pa-block-num {
+    width: 30px; height: 30px; border-radius: 50%; color: white; font-size: 16px; font-weight: 700;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .pa-cap.blue .pa-sn { background: #3B82F6; }
-  .pa-cap.green .pa-sn { background: #16A34A; }
-  .pa-cap.purple .pa-sn { background: #9333EA; }
-
-  .pa-col-right { width: 220px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
-  .pa-output {
-    background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px;
+  .pa-block.blue .pa-block-num { background: #3B82F6; }
+  .pa-block.green .pa-block-num { background: #16A34A; }
+  .pa-block.purple .pa-block-num { background: #9333EA; }
+  .pa-block-output {
+    margin-top: auto; padding-top: 14px; border-top: 1.5px solid rgba(0,0,0,0.08);
+    font-size: 18px; font-weight: 600; color: var(--dk);
   }
-  .pa-output h5 { font-size: 16px; font-weight: 700; color: var(--dk); margin-bottom: 8px; }
-  .pa-output-item { font-size: 14px; color: var(--gray); padding: 4px 0; }
+  .pa-block-output span { display: block; font-size: 15px; font-weight: 400; color: var(--gray); margin-top: 2px; }
 
   .pa-bottom {
-    background: linear-gradient(to right, #059669, #0D9488);
-    border-radius: 10px; padding: 14px 28px; color: white; font-size: 16px; font-weight: 600;
-    display: flex; justify-content: center; gap: 32px;
+    background: linear-gradient(to right, #059669, #2563EB);
+    border-radius: 12px; padding: 18px 36px; color: white; font-size: 20px; font-weight: 600;
+    display: flex; justify-content: center; gap: 36px;
   }
 
-  /* ========== SYSTEM ARCHITECTURE (inline) ========== */
-  .sa { display: flex; flex-direction: column; gap: 10px; height: 100%; justify-content: space-between; }
-  .sa-layer {
-    border-radius: 12px; padding: 16px 22px;
-    border: 1px solid rgba(0,0,0,0.06);
-    display: flex; align-items: flex-start; gap: 18px;
+  /* ========== SYSTEM ARCHITECTURE (color bands) ========== */
+  .sa-bands { display: flex; flex-direction: column; gap: 0; flex: 1; border-radius: 14px; overflow: hidden; }
+  .sa-band {
+    display: flex; align-items: center; gap: 28px;
+    padding: 22px 32px; flex: 1;
   }
-  .sa-lbl {
-    font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-    white-space: nowrap; min-width: 200px; padding-top: 3px;
+  .sa-band-lbl {
+    font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    min-width: 240px; white-space: nowrap;
   }
-  .sa-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.07); margin-left: 6px; }
-  .sa-items { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
-  .sa-item {
-    background: white; border-radius: 8px; padding: 10px 16px;
-    border: 1px solid rgba(0,0,0,0.07); font-size: 15px; color: #334155; font-weight: 500;
+  .sa-band-tag {
+    font-size: 15px; font-weight: 600; padding: 4px 12px; border-radius: 6px;
+    background: rgba(255,255,255,0.6); margin-left: 8px; display: inline-block;
   }
-  .sa-item .sub { font-size: 12px; color: #94A3B8; display: block; margin-top: 2px; }
-  .sa-item.hl { border: 2px solid #6366F1; box-shadow: 0 0 8px rgba(99,102,241,0.1); }
-  .sa-arrow { text-align: center; color: #CBD5E1; font-size: 14px; line-height: 1; margin: -1px 0; }
-  .sl1 { background: linear-gradient(to right, #DBEAFE, #E0E7FF); }
-  .sl1 .sa-lbl { color: #1E40AF; }
-  .sl2 { background: linear-gradient(to right, #E0E7FF, #EDE9FE); }
-  .sl2 .sa-lbl { color: #4338CA; }
-  .sl3 { background: linear-gradient(to right, #EDE9FE, #FCE7F3); }
-  .sl3 .sa-lbl { color: #7E22CE; }
-  .sl4 { background: linear-gradient(to right, #FEF3C7, #FFEDD5); }
-  .sl4 .sa-lbl { color: #92400E; }
-  .sl5 { background: linear-gradient(to right, #D1FAE5, #CCFBF1); }
-  .sl5 .sa-lbl { color: #065F46; }
-  .sl6 { background: linear-gradient(to right, #F1F5F9, #E2E8F0); }
-  .sl6 .sa-lbl { color: #334155; }
+  .sa-band-items { display: flex; gap: 12px; flex-wrap: wrap; flex: 1; }
+  .sa-band-item {
+    background: rgba(255,255,255,0.75); border-radius: 10px; padding: 12px 20px;
+    font-size: 19px; color: #1E293B; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.9); backdrop-filter: blur(4px);
+  }
+  .sa-band-item .sub { font-size: 14px; color: rgba(0,0,0,0.45); display: block; margin-top: 2px; }
+  .sa-band-item.hl { border: 2px solid rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .sa-b1 { background: linear-gradient(135deg, #DBEAFE, #E0E7FF); } .sa-b1 .sa-band-lbl { color: #1E40AF; }
+  .sa-b2 { background: linear-gradient(135deg, #EDE9FE, #F3E8FF); } .sa-b2 .sa-band-lbl { color: #6D28D9; }
+  .sa-b3 { background: linear-gradient(135deg, #FEF3C7, #FFEDD5); } .sa-b3 .sa-band-lbl { color: #92400E; }
+  .sa-b4 { background: linear-gradient(135deg, #D1FAE5, #CCFBF1); } .sa-b4 .sa-band-lbl { color: #065F46; }
+  /* .sl1-.sl6 removed — replaced by .sa-b1-.sa-b4 color bands */
 
   /* ========== FOOTER ========== */
   .footer {
@@ -245,12 +235,12 @@
     padding: 8px 18px; border-radius: 100px; font-size: 18px; font-weight: 600;
   }
   .f-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-  .f-meta .prog { font-family: 'Outfit'; font-size: 22px; font-weight: 700; color: var(--dk); }
+  .f-meta .prog { font-family: 'Inter'; font-size: 22px; font-weight: 700; color: var(--dk); }
   .f-meta .sch { font-size: 18px; color: var(--gray); }
   .f-meta .dt { font-size: 16px; color: var(--lt); }
   .footer-right { display: flex; align-items: center; gap: 20px; }
   .qr-text { display: flex; flex-direction: column; gap: 4px; text-align: right; }
-  .qr-text strong { font-family: 'Outfit'; font-size: 26px; color: var(--dk); }
+  .qr-text strong { font-family: 'Inter'; font-size: 26px; color: var(--dk); }
   .qr-text span { font-size: 18px; color: var(--lt); }
   .qr-box {
     width: 110px; height: 110px; background: var(--wh);
@@ -309,191 +299,284 @@
       </div>
       <div class="cap-c">
         <div class="cap-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-        <div class="cap-tag gt">ML Prediction</div>
+        <div class="cap-tag gt">ML + Explainability</div>
         <h3>Cost Estimation</h3>
-        <p>Ridge regression on 10K+ project records predicts cost overruns with confidence intervals and risk factor breakdowns.</p>
+        <p>CatBoost + Ridge dual model on 10K remediated projects. SHAP TreeExplainer shows top-5 cost drivers. What-if scenarios and similar project lookup.</p>
       </div>
       <div class="cap-c">
         <div class="cap-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l4-8 4 5 3-3 7 6"/></svg></div>
-        <div class="cap-tag pt">Code Generation</div>
+        <div class="cap-tag pt">Code Gen + SSE</div>
         <h3>Dynamic Data Analysis</h3>
-        <p>Upload any dataset — AI generates and executes analysis code in a secure Docker sandbox with automatic charts.</p>
+        <p>Upload any dataset — merged AI prompt generates analysis + visualization in one call. 6-node SSE pipeline with PII detection and Docker/E2B sandbox.</p>
       </div>
     </section>
 
     <!-- 4-5. ARCHITECTURE DIAGRAMS (flex-grow to fill space) -->
     <div style="flex:1; display:flex; flex-direction:column; gap:0.4in; min-height:0;">
 
-    <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
-    <div class="sec-label"><div class="num">2</div><h2>Product Architecture</h2><span class="sub">How users interact with the AI platform</span></div>
+    <!-- PRODUCT ARCHITECTURE: Infographic blocks -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+    <div class="sec-label"><div class="num">2</div><h2>Product Architecture</h2><span class="sub">Three AI capabilities powered by one intelligent router</span></div>
     <div class="arch-frame">
-      <div class="pa">
-        <!-- Intent pipeline -->
-        <div class="pa-header">
-          <strong>11-Node Intent Classification</strong>
-          <div class="pa-nodes">
-            <span class="pa-nd">Input</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Language</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Keywords</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Safety</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Classify</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Confidence</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Clarify</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Context</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Reformulate</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Extract</span><span class="pa-arr">-></span>
-            <span class="pa-nd">Route</span>
+      <div class="pa-infographic">
+        <div class="pa-intent-bar">
+          <strong style="font-size:22px;">11-Node Intent Router</strong>
+          <span class="pa-nd">Input</span><span class="pa-arr">&#8594;</span>
+          <span class="pa-nd">Classify</span><span class="pa-arr">&#8594;</span>
+          <span class="pa-nd">Confidence</span><span class="pa-arr">&#8594;</span>
+          <span class="pa-nd">Route</span>
+        </div>
+        <div class="pa-blocks">
+          <div class="pa-block blue">
+            <div class="pa-block-tag">Primary Feature</div>
+            <h3>RAG Knowledge QA</h3>
+            <div class="pa-block-steps">
+              <div class="pa-block-step"><div class="pa-block-num">1</div> Hybrid Search (BM25 + pgvector)</div>
+              <div class="pa-block-step"><div class="pa-block-num">2</div> Cross-Encoder Reranking</div>
+              <div class="pa-block-step"><div class="pa-block-num">3</div> LLM Cited Generation</div>
+            </div>
+            <div class="pa-block-output">Cited Answers <span>Source references + groundedness check</span></div>
+          </div>
+          <div class="pa-block green">
+            <div class="pa-block-tag">ML + Explainability</div>
+            <h3>Cost Estimation</h3>
+            <div class="pa-block-steps">
+              <div class="pa-block-step"><div class="pa-block-num">1</div> CatBoost + Ridge Dual Model</div>
+              <div class="pa-block-step"><div class="pa-block-num">2</div> SHAP Top-5 Cost Drivers</div>
+              <div class="pa-block-step"><div class="pa-block-num">3</div> What-If + Similar Projects</div>
+            </div>
+            <div class="pa-block-output">Cost Intelligence <span>Overrun prediction + SHAP waterfall</span></div>
+          </div>
+          <div class="pa-block purple">
+            <div class="pa-block-tag">SSE Pipeline</div>
+            <h3>Data Analysis</h3>
+            <div class="pa-block-steps">
+              <div class="pa-block-step"><div class="pa-block-num">1</div> PII Detect + Metadata Extract</div>
+              <div class="pa-block-step"><div class="pa-block-num">2</div> Cloud LLM Code Generation</div>
+              <div class="pa-block-step"><div class="pa-block-num">3</div> Docker Sandbox Execution</div>
+            </div>
+            <div class="pa-block-output">Charts + Insights <span>6-node SSE real-time streaming</span></div>
           </div>
         </div>
-        <!-- 3-column: Input | Capabilities | Output -->
-        <div class="pa-cols">
-          <div class="pa-col-left">
-            <div class="pa-input">
-              <h5>Document Upload</h5>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#3B82F6;"></div> PDF Documents</div>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#D97706;"></div> Scanned Images (OCR)</div>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#16A34A;"></div> CSV / Spreadsheets</div>
-            </div>
-            <div class="pa-input">
-              <h5>Natural Language Query</h5>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#7C3AED;"></div> Construction Questions</div>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#DB2777;"></div> Cost Estimation</div>
-              <div class="pa-input-item"><div class="pa-input-dot" style="background:#0D9488;"></div> Data Analysis</div>
-            </div>
-          </div>
-          <div class="pa-col-center">
-            <div class="pa-cap blue">
-              <div class="badge-sm">Primary</div>
-              <h5>RAG Knowledge QA</h5>
-              <div class="pa-step"><div class="pa-sn">1</div> Chunking (512 chars, 128 overlap)</div>
-              <div class="pa-step"><div class="pa-sn">2</div> BM25 + pgvector + RRF fusion</div>
-              <div class="pa-step"><div class="pa-sn">3</div> bge-reranker cross-encoder</div>
-              <div class="pa-step"><div class="pa-sn">4</div> LLM cited generation</div>
-            </div>
-            <div class="pa-cap green">
-              <div class="badge-sm">ML</div>
-              <h5>Cost Estimation</h5>
-              <div class="pa-step"><div class="pa-sn">1</div> Feature extraction</div>
-              <div class="pa-step"><div class="pa-sn">2</div> Ridge regression</div>
-              <div class="pa-step"><div class="pa-sn">3</div> Confidence + risk score</div>
-            </div>
-            <div class="pa-cap purple">
-              <div class="badge-sm">Code Gen</div>
-              <h5>Dynamic Data Analysis</h5>
-              <div class="pa-step"><div class="pa-sn">1</div> Metadata-only extraction</div>
-              <div class="pa-step"><div class="pa-sn">2</div> Cloud LLM code gen</div>
-              <div class="pa-step"><div class="pa-sn">3</div> Docker sandbox exec</div>
-              <div class="pa-step"><div class="pa-sn">4</div> Visualizations returned</div>
-            </div>
-          </div>
-          <div class="pa-col-right">
-            <div class="pa-output">
-              <h5>Cited Answers</h5>
-              <div class="pa-output-item">Source-grounded responses</div>
-              <div class="pa-output-item">Document references</div>
-              <div class="pa-output-item">Groundedness check</div>
-            </div>
-            <div class="pa-output">
-              <h5>Predictions</h5>
-              <div class="pa-output-item">Cost overrun estimates</div>
-              <div class="pa-output-item">Confidence intervals</div>
-            </div>
-            <div class="pa-output">
-              <h5>Visualizations</h5>
-              <div class="pa-output-item">Auto-generated charts</div>
-              <div class="pa-output-item">Statistical summaries</div>
-            </div>
-          </div>
-        </div>
-        <!-- Privacy bar -->
         <div class="pa-bottom">
           <span>Privacy by Design</span>
           <span>|</span>
-          <span>Metadata-Only Cloud Transfer</span>
+          <span>PII Detection + Metadata-Only Cloud</span>
           <span>|</span>
-          <span>Local LLM Processing (Ollama)</span>
+          <span>Local LLM (Ollama Metal GPU)</span>
           <span>|</span>
-          <span>Docker Sandbox Isolation</span>
+          <span>Docker + E2B Sandbox</span>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- 10-NODE WORKFLOW PIPELINE -->
+    <div style="background:var(--wh); border-radius:18px; padding:28px 32px; box-shadow:0 10px 30px rgba(15,23,42,0.04), 0 0 0 1px var(--bdr);">
+      <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--lt); margin-bottom:16px;">10-Node Execution Pipeline <span style="font-weight:400; text-transform:none; letter-spacing:0;">— fixed-order workflow processing every query</span></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#EFF6FF; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Intent</div>
+          <div style="font-size:11px; color:var(--lt);">245ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#FEF2F2; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Safety</div>
+          <div style="font-size:11px; color:var(--lt);">12ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#F0FDF4; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Cost</div>
+          <div style="font-size:11px; color:var(--lt);">85ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#EFF6FF; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Retrieval</div>
+          <div style="font-size:11px; color:var(--lt);">1.85s</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#EFF6FF; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 6v12"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Rerank</div>
+          <div style="font-size:11px; color:var(--lt);">340ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#FAF5FF; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333EA" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Prompt</div>
+          <div style="font-size:11px; color:var(--lt);">15ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#FAF5FF; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333EA" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Route</div>
+          <div style="font-size:11px; color:var(--lt);">8ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#FFFBEB; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Execute</div>
+          <div style="font-size:11px; color:var(--lt);">~15s</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#ECFDF5; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Response</div>
+          <div style="font-size:11px; color:var(--lt);">120ms</div>
+        </div>
+        <div style="color:#CBD5E1; font-size:16px;">&#8594;</div>
+        <div style="flex:1; text-align:center;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#ECFDF5; margin:0 auto 6px; display:flex; align-items:center; justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--dk);">Verify</div>
+          <div style="font-size:11px; color:var(--lt);">45ms</div>
         </div>
       </div>
     </div>
 
-    </div><!-- end product arch wrapper -->
+    <!-- KEY METRICS: Big numbers strip -->
+    <div style="display:flex; gap:20px;">
+      <div class="metric-card" style="flex:1; background:linear-gradient(135deg,#1E293B,#334155); border-radius:18px; padding:28px 24px; text-align:center;">
+        <div style="font-size:52px; font-weight:900; color:#60A5FA; line-height:1; font-family:'Inter';">28</div>
+        <div style="font-size:18px; font-weight:600; color:#E2E8F0; margin-top:8px;">Construction</div>
+        <div style="font-size:15px; color:#94A3B8;">Documents Indexed</div>
+      </div>
+      <div class="metric-card" style="flex:1; background:linear-gradient(135deg,#1E293B,#334155); border-radius:18px; padding:28px 24px; text-align:center;">
+        <div style="font-size:52px; font-weight:900; color:#34D399; line-height:1; font-family:'Inter';">10K</div>
+        <div style="font-size:18px; font-weight:600; color:#E2E8F0; margin-top:8px;">Training Projects</div>
+        <div style="font-size:15px; color:#94A3B8;">BCPI Remediated Dataset</div>
+      </div>
+      <div class="metric-card" style="flex:1; background:linear-gradient(135deg,#1E293B,#334155); border-radius:18px; padding:28px 24px; text-align:center;">
+        <div style="font-size:52px; font-weight:900; color:#C084FC; line-height:1; font-family:'Inter';">11+10</div>
+        <div style="font-size:18px; font-weight:600; color:#E2E8F0; margin-top:8px;">Node Pipeline</div>
+        <div style="font-size:15px; color:#94A3B8;">Intent + Workflow Graphs</div>
+      </div>
+      <div class="metric-card" style="flex:1; background:linear-gradient(135deg,#1E293B,#334155); border-radius:18px; padding:28px 24px; text-align:center;">
+        <div style="font-size:52px; font-weight:900; color:#FBBF24; line-height:1; font-family:'Inter';">0.993</div>
+        <div style="font-size:18px; font-weight:600; color:#E2E8F0; margin-top:8px;">R² Cost Accuracy</div>
+        <div style="font-size:15px; color:#94A3B8;">Ridge Regression Model</div>
+      </div>
+    </div>
 
-    <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
-    <div class="sec-label"><div class="num">3</div><h2>System Architecture</h2><span class="sub">Six-layer technical stack with cross-cutting concerns</span></div>
+    <!-- SYSTEM ARCHITECTURE: Color bands -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+    <div class="sec-label"><div class="num">3</div><h2>System Architecture</h2><span class="sub">Four-layer stack from frontend to data</span></div>
     <div class="arch-frame">
-      <div class="sa">
-        <div class="sa-layer sl1">
-          <div class="sa-lbl">L1 - UI Layer<span class="sa-tag">Next.js App Router</span></div>
-          <div class="sa-items">
-            <div class="sa-item">Chat Interface<span class="sub">workflow-chat</span></div>
-            <div class="sa-item">Data Dashboard<span class="sub">data-dashboard</span></div>
-            <div class="sa-item">Document Manager<span class="sub">documents-integrated</span></div>
-            <div class="sa-item">Cost Estimator<span class="sub">dashboard</span></div>
-            <div class="sa-item">API Proxy<span class="sub">backend/[...path]</span></div>
+      <div class="sa-bands">
+        <div class="sa-band sa-b1">
+          <div class="sa-band-lbl">Frontend<span class="sa-band-tag">Next.js 16</span></div>
+          <div class="sa-band-items">
+            <div class="sa-band-item">Workflow Chat</div>
+            <div class="sa-band-item">Cost Estimation</div>
+            <div class="sa-band-item">Data Analysis</div>
+            <div class="sa-band-item">Documents</div>
+            <div class="sa-band-item">Intent Debugger</div>
+            <div class="sa-band-item">Overview</div>
+            <div class="sa-band-item">Dashboard</div>
           </div>
         </div>
-        <div class="sa-arrow">&#x25BC;</div>
-        <div class="sa-layer sl2">
-          <div class="sa-lbl">L2 - API Gateway<span class="sa-tag">FastAPI + Middleware</span></div>
-          <div class="sa-items">
-            <div class="sa-item">Router Mount<span class="sub">main.py</span></div>
-            <div class="sa-item">Auth Middleware<span class="sub">API key validation</span></div>
-            <div class="sa-item">Tenant Isolation<span class="sub">X-Tenant-ID</span></div>
-            <div class="sa-item">Input Validation<span class="sub">Pydantic models</span></div>
-            <div class="sa-item">Rate Limiter<span class="sub">Per-tenant</span></div>
+        <div class="sa-band sa-b2">
+          <div class="sa-band-lbl">API + Security<span class="sa-band-tag">FastAPI</span></div>
+          <div class="sa-band-items">
+            <div class="sa-band-item">JWT Auth</div>
+            <div class="sa-band-item">Tenant Isolation</div>
+            <div class="sa-band-item">Rate Limiter</div>
+            <div class="sa-band-item">Audit Logger</div>
+            <div class="sa-band-item">Input Sanitizer</div>
           </div>
         </div>
-        <div class="sa-arrow">&#x25BC;</div>
-        <div class="sa-layer sl3">
-          <div class="sa-lbl">L3 - Business<span class="sa-tag">Orchestration</span></div>
-          <div class="sa-items">
-            <div class="sa-item hl">Intent Classification<span class="sub">11-Node LangGraph StateGraph</span></div>
-            <div class="sa-item">Routing Decision<span class="sub">routing_decision.py</span></div>
-            <div class="sa-item hl">Workflow Pipeline<span class="sub">10-Node Fixed-Order (graph.py)</span></div>
-            <div class="sa-item">Prompt Manager<span class="sub">A/B testing + versioning</span></div>
-            <div class="sa-item">Memory Manager<span class="sub">3-layer memory</span></div>
+        <div class="sa-band sa-b3">
+          <div class="sa-band-lbl">AI Engine<span class="sa-band-tag">LangGraph</span></div>
+          <div class="sa-band-items">
+            <div class="sa-band-item hl">Intent Classifier<span class="sub">11-Node</span></div>
+            <div class="sa-band-item hl">Pipeline<span class="sub">10-Node</span></div>
+            <div class="sa-band-item">RAG Engine<span class="sub">Hybrid Search</span></div>
+            <div class="sa-band-item">CatBoost + SHAP<span class="sub">Cost ML</span></div>
+            <div class="sa-band-item">Code Executor<span class="sub">Docker</span></div>
           </div>
         </div>
-        <div class="sa-arrow">&#x25BC;</div>
-        <div class="sa-layer sl4">
-          <div class="sa-lbl">L4 - AI Runtime<span class="sa-tag">Models &amp; Execution</span></div>
-          <div class="sa-items">
-            <div class="sa-item">RAG Engine<span class="sub">BM25 + pgvector + RRF + reranker + cache</span></div>
-            <div class="sa-item">LLM Dispatch<span class="sub">Ollama (local) / Zhipu / Gemini (cloud)</span></div>
-            <div class="sa-item">Code Executor<span class="sub">Docker sandbox + validator</span></div>
-            <div class="sa-item">Cost Estimation<span class="sub">Ridge regression, 10K dataset</span></div>
-            <div class="sa-item">Unified Agent<span class="sub">12 tools</span></div>
-          </div>
-        </div>
-        <div class="sa-arrow">&#x25BC;</div>
-        <div class="sa-layer sl5">
-          <div class="sa-lbl">L5 - Data Storage<span class="sa-tag">PostgreSQL + pgvector</span></div>
-          <div class="sa-items">
-            <div class="sa-item">document_chunks<span class="sub">vector(768) + text + metadata</span></div>
-            <div class="sa-item">prompt_versions<span class="sub">A/B testing scores</span></div>
-            <div class="sa-item">conversation_memories<span class="sub">3-layer with embeddings</span></div>
-            <div class="sa-item">llm_usage_logs<span class="sub">Cost per tenant/model</span></div>
-            <div class="sa-item">ML Model Store<span class="sub">Trained artifacts</span></div>
-          </div>
-        </div>
-        <div class="sa-arrow">&#x25BC;</div>
-        <div class="sa-layer sl6">
-          <div class="sa-lbl">L6 - Security<span class="sa-tag">Hardened Infrastructure</span></div>
-          <div class="sa-items">
-            <div class="sa-item">Sanitizer<span class="sub">XSS / injection</span></div>
-            <div class="sa-item">Rate Limiter<span class="sub">Per-tenant throttle</span></div>
-            <div class="sa-item">Audit Logger<span class="sub">Tenant-aware</span></div>
-            <div class="sa-item">Prometheus<span class="sub">Metrics export</span></div>
-            <div class="sa-item">Language Policy<span class="sub">English-only</span></div>
-            <div class="sa-item">Secret Manager<span class="sub">Credential vault</span></div>
-            <div class="sa-item">Memory Guard<span class="sub">OOM protection</span></div>
+        <div class="sa-band sa-b4">
+          <div class="sa-band-lbl">Data + LLM<span class="sa-band-tag">PostgreSQL</span></div>
+          <div class="sa-band-items">
+            <div class="sa-band-item">pgvector<span class="sub">768-dim</span></div>
+            <div class="sa-band-item">Ollama<span class="sub">Qwen3.5 · GPU</span></div>
+            <div class="sa-band-item">Cloud LLM<span class="sub">Zhipu / Groq</span></div>
+            <div class="sa-band-item">bge-reranker<span class="sub">Cross-encoder</span></div>
           </div>
         </div>
       </div>
     </div>
-    </div><!-- end system arch wrapper -->
+    </div>
+
+    <!-- REQUEST FLOW: Horizontal pipeline visual -->
+    <div style="background:linear-gradient(to right,#2563EB,#7C3AED,#059669); border-radius:16px; padding:24px 40px; display:flex; align-items:center; justify-content:center; gap:0;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;">
+        <span style="background:rgba(255,255,255,0.95); color:#1E293B; font-size:19px; font-weight:700; padding:10px 22px; border-radius:10px;">User Query</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.2); color:white; font-size:18px; font-weight:600; padding:8px 18px; border-radius:8px;">Next.js</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.2); color:white; font-size:18px; font-weight:600; padding:8px 18px; border-radius:8px;">FastAPI</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.2); color:white; font-size:18px; font-weight:600; padding:8px 18px; border-radius:8px;">Auth</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.35); color:white; font-size:18px; font-weight:700; padding:8px 18px; border-radius:8px; border:1.5px solid rgba(255,255,255,0.5);">Intent (11-Node)</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.35); color:white; font-size:18px; font-weight:700; padding:8px 18px; border-radius:8px; border:1.5px solid rgba(255,255,255,0.5);">Pipeline (10-Node)</span>
+        <span style="color:rgba(255,255,255,0.7); font-size:22px;">&#8594;</span>
+        <span style="background:rgba(255,255,255,0.95); color:#059669; font-size:19px; font-weight:700; padding:10px 22px; border-radius:10px;">Response + Citations</span>
+      </div>
+    </div>
+
+    <!-- KNOWLEDGE BASE COVERAGE -->
+    <div style="display:flex; gap:16px;">
+      <div style="flex:1; background:#EFF6FF; border-radius:14px; padding:20px 22px; border-left:4px solid #2563EB;">
+        <div style="font-size:20px; font-weight:800; color:#1E40AF; margin-bottom:6px;">NBC 2020</div>
+        <div style="font-size:15px; color:#475569;">National Building Code of Canada — fire safety, structural, plumbing</div>
+      </div>
+      <div style="flex:1; background:#F0FDF4; border-radius:14px; padding:20px 22px; border-left:4px solid #16A34A;">
+        <div style="font-size:20px; font-weight:800; color:#166534; margin-bottom:6px;">Ontario Reg. 213/91</div>
+        <div style="font-size:15px; color:#475569;">Construction safety — fall protection, scaffolding, excavation</div>
+      </div>
+      <div style="flex:1; background:#EFF6FF; border-radius:14px; padding:20px 22px; border-left:4px solid #2563EB;">
+        <div style="font-size:20px; font-weight:800; color:#1E40AF; margin-bottom:6px;">BC Building Code</div>
+        <div style="font-size:15px; color:#475569;">2024 edition — seismic, energy efficiency, accessibility</div>
+      </div>
+      <div style="flex:1; background:#F0FDF4; border-radius:14px; padding:20px 22px; border-left:4px solid #16A34A;">
+        <div style="font-size:20px; font-weight:800; color:#166534; margin-bottom:6px;">Canada OHS</div>
+        <div style="font-size:15px; color:#475569;">Occupational health & safety — employer obligations, PPE</div>
+      </div>
+      <div style="flex:1; background:#FFFBEB; border-radius:14px; padding:20px 22px; border-left:4px solid #F59E0B;">
+        <div style="font-size:20px; font-weight:800; color:#92400E; margin-bottom:6px;">Labour Code II</div>
+        <div style="font-size:15px; color:#475569;">Canada Labour Code Part II — employee rights, work refusal</div>
+      </div>
+      <div style="flex:1; background:#FAF5FF; border-radius:14px; padding:20px 22px; border-left:4px solid #9333EA;">
+        <div style="font-size:20px; font-weight:800; color:#6B21A8; margin-bottom:6px;">Quebec Safety</div>
+        <div style="font-size:15px; color:#475569;">Quebec construction safety code — provincial requirements</div>
+      </div>
+    </div>
 
     </div><!-- end architecture flex container -->
 
@@ -506,9 +589,9 @@
           <span>LangGraph</span>
           <span>PostgreSQL + pgvector</span>
           <span>Ollama (Qwen 3.5)</span>
-          <span>Next.js</span>
-          <span>Docker</span>
-          <span>scikit-learn</span>
+          <span>Next.js 16</span>
+          <span>Docker + E2B</span>
+          <span>CatBoost + SHAP</span>
         </div>
         <div class="f-meta">
           <span class="prog">Integrated AI Program</span>

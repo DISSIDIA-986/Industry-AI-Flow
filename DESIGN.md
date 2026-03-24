@@ -48,7 +48,13 @@
   - Warning: #f59e0b (amber-500) / soft: #fef3c7
   - Error: #dc2626 (red-600) / soft: #fef2f2
   - Info: #2563eb (blue-600) / soft: #dbeafe
-- **Dark Hero Section:** #1a1a2e — used for page hero headers and pipeline visualization sections across demo pages (Dashboard, Intent Debugger, Workflow Chat). Creates visual contrast and conveys technical depth. Compact variant (px-6 py-4 rounded-2xl) for page headers; full-width variant for pipeline/flow visualizations. Text on dark: #e5e7eb (gray-200), muted: #6b7280 (gray-500), active nodes: #60a5fa (blue-400), completed nodes: #34d399 (emerald-400).
+- **Dark Hero Section:** #1a1a2e — used for page hero headers and pipeline visualization sections across all 7 demo pages (Dashboard, Workflow Chat, Documents, Data Analysis, Cost Estimation, Intent Debugger, System Overview). Creates visual contrast and conveys technical depth. Compact variant (px-6 py-4 rounded-2xl) for page headers; full-width variant for pipeline/flow visualizations. Text on dark: #e5e7eb (gray-200), muted: #6b7280 (gray-500), active nodes: #60a5fa (blue-400), completed nodes: #34d399 (emerald-400).
+- **Module colors** (used in architecture diagrams + frontend pipeline visualizations):
+  - RAG: #2563EB (blue-600) — matches primary
+  - Cost Estimation: #16A34A (green-600) — as established in C4 diagrams
+  - Data Analysis: #9333EA (purple-600) — as established in C4 diagrams
+  - Intent Classification: #7C3AED (violet-600) — orchestration layer
+  - Note: Poster Key Metrics strip uses amber/emerald for visual variety; diagrams use green/purple per C4 convention
 - **Dark mode strategy:** CSS custom properties in `globals.css`. Reduce saturation 10-20% for primary/accent. Dark surfaces: #0f172a (slate-900), #1e293b (slate-800).
 
 ## Spacing
@@ -163,6 +169,14 @@ All design tokens are defined as CSS custom properties on `:root` for consistenc
 ### Preview Page Reference
 Preview HTML at `/tmp/design-consultation-preview-doc-detail.html` — open in browser to see the full rendered design.
 
+## Presentation Materials
+
+All showcase materials (architecture diagrams, poster, PPT) use the same design system as the product.
+
+- **Architecture Diagrams** (`docs/ARCHITECTURE_DIAGRAM.drawio`, `docs/PRODUCT_ARCHITECTURE.drawio`): C4 Container style with colored containers per capability path (blue=RAG, green=Cost, purple=Data Analysis). Updated 2026-03-24.
+- **Capstone Poster** (`docs/CAPSTONE_POSTER.html`): Migrated to DESIGN.md tokens on 2026-03-23. Uses `--primary: #2563EB`, Inter for all headings, `--accent-teal: #F59E0B` (amber).
+- **PPT**: `docs/presentation/Industry_AI_Flow_Capstone_Presentation.pptx` — binary file, manual review checklist in design plan.
+
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
@@ -172,3 +186,6 @@ Preview HTML at `/tmp/design-consultation-preview-doc-detail.html` — open in b
 | 2026-03-21 | Dark Pipeline hero (#1a1a2e) | Deliberate departure from industry-standard white backgrounds. Creates visual hierarchy and communicates technical depth. |
 | 2026-03-21 | Industrial/Utilitarian aesthetic | Matches construction industry "serious work" ethos. Function over decoration. |
 | 2026-03-22 | Document Detail page design specs | Two-column layout (preview + AI panel), reuses DarkHeroWrapper, all tokens from existing system. No new colors, fonts, or patterns. Consistency with Dashboard/Cost Estimation prioritized. |
+| 2026-03-23 | Poster migrated to DESIGN.md tokens | Poster's `--primary` changed from #4F46E5 (indigo) to #2563EB (blue-600). Heading font changed from Outfit to Inter. Accent changed from teal to amber-500. All presentation materials now use the unified design system. |
+| 2026-03-23 | Architecture diagrams updated (C4 Container) | System Architecture + Product Architecture diagrams updated: removed llama.cpp, added CatBoost+SHAP+What-If, updated to Gemini/Zhipu dual fallback, 28 docs, JWT auth, 7 demo pages, SSE pipeline, PII detector. |
+| 2026-03-23 | Module color system defined | 4-module colors (blue/amber/emerald/purple) for architecture diagrams and pipeline visualizations. CVD-safe quadrant with grayscale border-style fallbacks. |
