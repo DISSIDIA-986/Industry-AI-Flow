@@ -113,7 +113,7 @@ sequenceDiagram
 - **OCR**: PaddleOCR（需 Python 3.13.x）
 - **检索**: 混合检索（BM25 + 向量 + RRF融合）
 - **重排序**: bge-reranker-base cross-encoder
-- **Cloud LLM**: Zhipu AI / Gemini（仅用于代码生成任务）
+- **Cloud LLM**: Zhipu AI / Groq（仅用于代码生成任务）
 
 ## ⚠️ 环境要求
 
