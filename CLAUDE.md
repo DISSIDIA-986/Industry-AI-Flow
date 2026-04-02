@@ -16,7 +16,7 @@ Industry AI Flow is a **SAIT Capstone project** (Integrated AI program) — a co
 **The system has three core capabilities, all of which must work flawlessly during the Capstone Showcase demo:**
 
 ### 1. RAG Knowledge QA (Primary Feature)
-Users upload construction documents (PDF, images, CSV) → system vectorizes and stores in pgvector → users ask questions → system returns accurate, cited answers via hybrid retrieval (BM25 + vector + RRF + bge-reranker). Currently 28 construction documents loaded (21 processed, 7 missing).
+Users upload construction documents (PDF, images, CSV) → system vectorizes and stores in pgvector → users ask questions → system returns accurate, cited answers via hybrid retrieval (BM25 + vector + RRF + bge-reranker). Currently 16 construction documents loaded (16 processed, 41,017 chunks). Includes 6 Canadian codes (NBC 2020, Ontario Reg 213/91, Canada OHS, BC Building Code 2024, Quebec Safety Code, Canada Labour Code Part II) and 10 US federal documents (GSA, Caltrans, UFGS, OSHA, BIM).
 
 ### 2. Construction Cost Estimation (ML Prediction + Explainability)
 Uses a partner-provided construction cost dataset (10,000 synthetic projects, remediated with Statistics Canada BCPI location multipliers) with **CatBoost + Ridge dual model**: CatBoost for overrun % prediction with SHAP explainability, Ridge for actual cost prediction. Features: project_type, sqft, floors, location, contractor_rating, risk_score, etc. (14 numeric + 2 categorical; `risk_score_original` dropped post-remediation). **SHAP TreeExplainer** provides per-prediction Top-5 factor contributions. **What-if scenario analysis** with 5 adjustable parameters (contractor_rating, num_change_orders, weather_risk_factor, material_volatility, budget_pressure). **Similar project lookup** finds 5 most comparable projects from the training dataset. **Data transparency panel** shows model performance, dataset limitations, and remediation log.
@@ -44,7 +44,7 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Mac Studio (M1 Max, 32GB RAM)** — sole demo machine
 - **Public URL**: `https://iai.dissidia.me/` via Cloudflare Tunnel → `localhost:3123` (Next.js frontend)
 - Stable internet at venue (cloud APIs + Cloudflare Tunnel accessible)
-- Docker installed and required (`CODE_EXECUTION_PROVIDER=docker`)
+- E2B cloud sandbox for code execution (`CODE_EXECUTION_PROVIDER=e2b`), Docker available as fallback
 - Single-operator demo (evaluators watch, don't interact directly)
 
 ### Demo-Critical Requirements
@@ -262,7 +262,7 @@ Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[..
 Key environment variables (in `.env`):
 
 ```bash
-LLM_BACKEND=ollama                  # ollama | zhipu | groq
+LLM_BACKEND=zhipu                   # ollama | zhipu | groq
 OLLAMA_HOST=http://localhost:11434
 POSTGRES_HOST=localhost
 POSTGRES_DB=ai_workflow
@@ -272,7 +272,7 @@ TOP_K=8                             # Retrieval count
 OCR_LANG=en                         # en | ch | en+ch
 REQUIRE_API_KEY=false
 ENABLE_PROMETHEUS_METRICS=true
-CODE_EXECUTION_PROVIDER=docker      # docker | auto | ppio
+CODE_EXECUTION_PROVIDER=e2b          # docker | e2b | auto | ppio
 DEMO_USER_PASSWORD=<strong>         # Required — no fallback, crash if missing
 AUTH_JWT_SECRET=<strong>             # Required when REQUIRE_USER_AUTH=true
 REQUIRE_USER_AUTH=true              # Enforce JWT auth on all non-public endpoints
