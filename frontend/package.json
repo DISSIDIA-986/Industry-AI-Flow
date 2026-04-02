@@ -13,7 +13,8 @@
     "test:integration": "vitest run tests/integration --reporter=verbose",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "postinstall": "[ \"$(uname)\" = \"Darwin\" ] && find node_modules -name '*.node' -type f -exec codesign --force --sign - {} + 2>/dev/null || true"
   },
   "dependencies": {
     "next": "16.1.6",
