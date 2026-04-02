@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+__pycache__/
+
+# Build output
+dist/
+build/
+*.min.js
+*.min.css
+
+# Large files
+*.zip
+*.tar.gz
+*.dmg
+*.pkg
+*.whl
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and temp
+*.log
+/tmp/
+coverage/
+.nyc_output/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets (also prevents accidental commits)
+.env.local
+.env.*.local
+credentials.json
+*.pem
+*.key
