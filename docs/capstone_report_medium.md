@@ -1,4 +1,4 @@
-# From Documents to Decisions: How a Two-Person Team Built an AI System for the Construction Industry
+# From Documents to Decisions: How a Three-Person Team Built an AI System for the Construction Industry
 
 *By Angel Bustamante, Jason Niu, and Jack Si*
 *SAIT Capstone Project — Integrated AI Program, April 2026*
