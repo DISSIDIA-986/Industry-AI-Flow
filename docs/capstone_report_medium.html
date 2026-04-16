@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    max-width: 100%;
+  }
+  h1 {
+    font-size: 20pt;
+    margin-top: 0;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 15pt;
+    margin-top: 24pt;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4pt;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    margin-top: 16pt;
+    page-break-after: avoid;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 12pt auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  /* Force tall images to fit within a single page */
+  img[src*="data-flow"] {
+    max-height: 700px;
+    width: auto;
+    object-fit: contain;
+  }
+  pre {
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    padding: 10pt;
+    font-size: 9pt;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+  code {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+    font-size: 9pt;
+    background: #f0f0f0;
+    padding: 1pt 3pt;
+    border-radius: 3px;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10pt 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6pt 8pt;
+    text-align: left;
+  }
+  th {
+    background: #f6f8fa;
+    font-weight: 600;
+  }
+  ul, ol {
+    padding-left: 20pt;
+  }
+  li {
+    margin-bottom: 3pt;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20pt 0;
+  }
+  p {
+    margin: 6pt 0;
+  }
+  blockquote {
+    border-left: 3px solid #ddd;
+    padding-left: 12pt;
+    color: #555;
+    margin: 10pt 0;
+  }
+</style>
+</head>
+<body>
+<h1>From Documents to Decisions: How a Three-Person Team Built an AI System for the Construction Industry</h1>
+
+<em>By Angel Bustamante, Jason Niu, and Jack Si</em>
+<em>SAIT Capstone Project — Integrated AI Program, April 2026</em>
+
+<hr/>
+
+<h2>1. Introduction: Why Construction Needs AI That Asks Back</h2>
+
+<p>Construction professionals spend hours navigating dense regulatory documents. The National Building Code of Canada alone spans over 1,400 pages. Ontario Regulation 213/91 for construction projects, the BC Building Code, Quebec's Safety Code, federal labor codes, and US standards like OSHA and GSA guidelines — a single compliance question can require cross-referencing multiple documents that were never designed to be searched digitally.</p>
+
+<p>The naive approach to this problem — uploading PDFs to a general-purpose chatbot like ChatGPT — fails in predictable ways. General-purpose LLMs hallucinate details in specialized codes, provide answers without source citations, and cannot distinguish between a question about building code compliance, a cost estimation query, and a request to analyze project data. The construction industry requires precision, traceability, and domain awareness that generic AI tools cannot provide.</p>
+
+<strong>Industry AI Flow</strong> addresses this gap with a concept prototype that demonstrates three integrated AI capabilities: (1) a Retrieval-Augmented Generation (RAG) system for construction document Q&A with mandatory source citations, (2) a machine learning cost estimation engine with SHAP explainability, and (3) a dynamic data analysis pipeline with sandboxed code execution.
+
+<strong>Methodology note:</strong> This project uses a hybrid framework. The cost estimation subsystem follows CRISP-DM methodology (Section 4). The RAG knowledge system and dynamic analysis subsystem follow a systems-driven design approach, as their value lies in architectural integration rather than model training. We use a customized outline as permitted by the assignment requirements, organized to best represent our multi-module architecture.
+
+<hr/>
+
+<h2>2. Architecture: Three Brains, One Dispatcher</h2>
+
+<p>The core architectural innovation is an <strong>intent-aware routing system</strong> that classifies user queries and dispatches them to the appropriate AI subsystem. Rather than building three separate applications, we built one system with intelligent traffic routing.</p>
+
+<h3>Intent Classification: The 11-Node StateGraph</h3>
+
+<p>When a user submits a query, it enters an 11-node classification pipeline built on LangChain's StateGraph (LangGraph). The pipeline performs:</p>
+
+<ul><li><strong>Input validation</strong> — sanitize and normalize the query</li>
+<li><strong>Context enrichment</strong> — attach session history and conversation memory</li>
+<li><strong>Heuristic classification</strong> — a YAML-driven capability registry matches keywords and patterns against five intent categories (RAG, cost estimation, data analysis, general chat, system commands). If confidence exceeds 0.85, the query is routed immediately without LLM inference.</li>
+<li><strong>LLM-based classification</strong> — for ambiguous queries (confidence < 0.85), a cloud LLM (Zhipu AI) classifies intent. We initially used a local 4B parameter model (Qwen3.5:4b), but it misclassified approximately 30% of queries — for example, routing RAG document questions to the code execution pipeline. Switching to a cloud LLM resolved this at a cost of ~200ms additional latency per classification.</li>
+<li><strong>Confidence evaluation</strong> — diamond decision node: high confidence routes directly; low confidence triggers a clarification loop.</li>
+<li><strong>Query reformulation</strong> — the original query is rewritten with extracted keywords for optimal retrieval performance.</li>
+</ul>
+<h3>The 10-Node Execution Pipeline</h3>
+
+<p>Once intent is classified, the query enters a fixed-order execution pipeline:</p>
+
+<pre><code class="language-">intent → safety → cost_estimation → retrieval → rerank → prompt → route → code_exec → response → groundedness
+</code></pre>
+
+<p>Each node has an individual timeout SLA (ranging from 5 seconds for prompt selection to 90 seconds for code execution). If any node exceeds its SLA, an <code>ErrorCode.NODE_TIMEOUT</code> is recorded and the pipeline continues gracefully. The total pipeline timeout is 300 seconds as a safety net.</p>
+
+<p>This architecture means a single user question can be analyzed for safety concerns, checked against the cost estimation model, searched across 16 construction documents, re-ranked for relevance, and composed into a cited response — all within a single request lifecycle.</p>
+
+<strong>Tools and technologies:</strong> FastAPI (backend), Next.js with TypeScript (frontend), LangChain 1.0 / LangGraph (orchestration), PostgreSQL with pgvector (vector storage), Ollama with Qwen3.5 (local LLM), Zhipu AI and Groq (cloud LLM), Docker and E2B (sandboxed code execution).
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/v2/system-architecture.png" alt="System Architecture Diagram" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/v2/data-flow.png" alt="Data Flow Diagram" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<hr/>
+
+<h2>3. The RAG System: Building a Construction Code Expert</h2>
+
+<h3>Background and Motivation</h3>
+
+<p>Retrieval-Augmented Generation (RAG) addresses a fundamental limitation of large language models: they cannot reliably answer questions about documents they were not trained on. By retrieving relevant passages at query time and providing them as context, RAG enables LLMs to generate accurate, grounded responses with traceable sources (Lewis et al., 2020).</p>
+
+<p>Existing RAG frameworks (such as LangChain's built-in retriever chains) provide basic vector similarity search. However, construction code documents pose unique challenges: they contain highly specific terminology ("fire separation distance," "occupancy classification"), numbered regulatory clauses, and cross-references between sections. A single retrieval method is insufficient.</p>
+
+<h3>Data Collection and Preparation</h3>
+
+<p>Our knowledge base contains <strong>16 construction documents</strong> spanning two jurisdictions:</p>
+
+<strong>Canadian codes (6 documents):</strong>
+<ul><li>National Building Code of Canada 2020 (NRC)</li>
+<li>Ontario Regulation 213/91 (Construction Projects)</li>
+<li>Canada Occupational Health and Safety Regulations</li>
+<li>BC Building Code 2024</li>
+<li>Quebec Safety Code for the Construction Industry</li>
+<li>Canada Labour Code Part II</li>
+</ul>
+<strong>US federal documents (10 documents):</strong>
+<ul><li>GSA Facilities Standards (P100)</li>
+<li>Caltrans Standard Specifications</li>
+<li>UFGS Unified Facilities Guide Specifications</li>
+<li>OSHA Construction Safety Standards</li>
+<li>BIM Implementation Guidelines</li>
+<li>And 5 additional federal construction standards</li>
+</ul>
+<strong>Document processing pipeline:</strong>
+<ul><li><strong>Ingestion</strong>: PDF and image files are uploaded via the document management API</li>
+<li><strong>OCR</strong>: PaddleOCR processes scanned documents (constrained to Python 3.13 due to PaddlePaddle compatibility — Python 3.14+ breaks the dependency chain)</li>
+<li><strong>Chunking</strong>: Character-based splitting at 512 characters with 128-character overlap. We chose character-based over sentence-based chunking because regulatory text contains long, clause-heavy sentences that exceed typical sentence splitters' assumptions</li>
+<li><strong>Embedding</strong>: Each chunk is embedded using nomic-embed-text-v1.5 (768 dimensions) via the sentence-transformers backend</li>
+<li><strong>Storage</strong>: Embeddings are stored in PostgreSQL with the pgvector extension, using an IVFFlat index for approximate nearest neighbor search</li>
+</ul>
+<p>This pipeline produced <strong>41,017 chunks</strong> across all 16 documents.</p>
+
+<h3>Methodology: Hybrid Retrieval with RRF Fusion</h3>
+
+<p>We implemented a three-stage retrieval pipeline that combines keyword matching with semantic search:</p>
+
+<strong>Stage 1: Dual retrieval</strong>
+<ul><li><strong>BM25 (keyword search)</strong>: Using the rank_bm25 library with NLTK tokenization and Porter stemming. BM25 excels at exact terminology matching ("Section 3.2.4.1" or "NBC 2020 Division C") but fails on paraphrased questions.</li>
+<li><strong>Vector similarity search</strong>: pgvector cosine similarity against nomic-embed-text embeddings. Captures semantic meaning ("What are the rules for fire exits?") but can return passages with similar topics but incorrect specifics.</li>
+</ul>
+<p>We initially replaced the jieba Chinese tokenizer with NLTK for English tokenization, which improved BM25 accuracy from 0.35 to 0.65 — an 86% improvement.</p>
+
+<strong>Stage 2: Reciprocal Rank Fusion (RRF)</strong>
+
+<p>The two result sets are combined using Reciprocal Rank Fusion (Cormack et al., 2009):</p>
+
+<pre><code class="language-python"># Simplified RRF implementation
+<p>rrf_k = 60  # RRF constant</p>
+<p>for rank, result in enumerate(vector_results, 1):</p>
+<p>    fused_scores[chunk_id] += vector_weight / (rrf_k + rank)</p>
+<p>for rank, (idx, score) in enumerate(bm25_results, 1):</p>
+<p>    fused_scores[chunk_id] += bm25_weight / (rrf_k + rank)</p>
+<p>top_results = sorted(fused_scores, reverse=True)[:top_k]  # top_k = 8</p>
+</code></pre>
+
+<p>RRF is rank-based rather than score-based, which avoids the calibration problem of combining BM25 scores (unbounded) with cosine similarity scores (0 to 1) directly.</p>
+
+<strong>Stage 3: Cross-encoder reranking</strong>
+
+<p>The top candidates from RRF are re-scored by a cross-encoder model (BAAI/bge-reranker-base). Unlike the embedding model, the cross-encoder takes the query and each candidate passage as a single input, enabling direct relevance comparison. The reranker runs on Apple Metal GPU (Mac Studio M1 Max) for inference speed.</p>
+
+<strong>Design requirement:</strong> Every RAG answer must include source citations — document name, relevant section, and chunk reference. This is enforced at the prompt level and verified by the groundedness checking node at the end of the pipeline. Suggested follow-up questions are also generated with every response to guide the user toward deeper exploration of the regulatory material.
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/rag-response.png" alt="RAG Response with Source Citations" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<hr/>
+
+<h2>4. Cost Estimation: Machine Learning with SHAP Explainability</h2>
+
+<p>This section follows the CRISP-DM methodology (Cross-Industry Standard Process for Data Mining) to describe the development, training, and evaluation of our cost estimation subsystem.</p>
+
+<h3>4.1 Data Collection and Description</h3>
+
+<p>The training dataset contains <strong>10,000 synthetic construction project records</strong> provided by the team's construction industry partner. Each record represents a project with features including:</p>
+
+<ul><li><strong>Project characteristics</strong>: <code>project_type</code> (categorical: residential, commercial, industrial, infrastructure), <code>sqft</code>, <code>floors</code>, <code>num_units</code>, <code>planned_duration_weeks</code></li>
+<li><strong>Cost and risk factors</strong>: <code>estimated_cost_cad</code>, <code>contractor_rating</code> (2.0–5.0), <code>complexity_score</code>, <code>risk_score</code>, <code>num_change_orders</code>, <code>weather_risk_factor</code>, <code>material_volatility</code>, <code>budget_pressure</code></li>
+<li><strong>Team factors</strong>: <code>team_experience_years</code>, <code>num_subcontractors</code></li>
+<li><strong>Location</strong>: <code>location</code> (categorical: Canadian provinces and US states)</li>
+<li><strong>Targets</strong>: <code>cost_overrun_pct</code> (percentage cost overrun) and <code>actual_cost_cad</code> (realized project cost)</li>
+</ul>
+<p>The dataset was <strong>remediated with Statistics Canada Building Construction Price Index (BCPI) location multipliers</strong> to introduce realistic regional cost variation. The original <code>risk_score_original</code> feature was dropped post-remediation due to collinearity with the remediated <code>risk_score</code>.</p>
+
+<p>Total feature set: <strong>14 numeric features + 2 categorical features</strong>.</p>
+
+<h3>4.2 Data Preprocessing</h3>
+
+<ul><li><strong>Categorical encoding</strong>: CatBoost handles categorical features natively (no one-hot encoding required), which preserves category semantics and avoids dimensionality explosion for the <code>location</code> feature (30+ unique values)</li>
+<li><strong>Numeric standardization</strong>: For the Ridge regression model, features are z-score normalized using training set means and standard deviations</li>
+<li><strong>Missing value handling</strong>: The dataset is complete (synthetic), but the inference pipeline validates inputs and substitutes training-set medians for any missing fields</li>
+<li><strong>Feature validation</strong>: Regular expressions parse natural language cost estimation requests to extract feature values (e.g., "a 3-floor commercial building in Ontario with 50,000 sqft")</li>
+</ul>
+<h3>4.3 Model Selection and Rationale</h3>
+
+<p>We chose a <strong>dual-model architecture</strong>:</p>
+
+<table><thead><tr><th>Model</th><th>Task</th><th>Rationale</th></tr></thead><tbody><tr><td><strong>CatBoost</strong></td><td>Predict <code>cost_overrun_pct</code></td><td>Native categorical support; SHAP TreeExplainer compatibility; robust to overfitting on tabular data</td></tr>
+<tr><td><strong>Ridge Regression</strong></td><td>Predict <code>actual_cost_cad</code></td><td>High accuracy on linear cost relationships; interpretable coefficients; lightweight inference</td></tr></tbody></table>
+
+<strong>Alternatives considered and rejected:</strong>
+<ul><li><strong>XGBoost</strong>: Requires manual categorical encoding; weaker native SHAP integration for categorical features</li>
+<li><strong>Random Forest</strong>: SHAP TreeExplainer support exists but produces less consistent feature attributions</li>
+<li><strong>Single Ridge model for both targets</strong>: Ridge achieved only R² ≈ 0.45 on overrun prediction (a non-linear relationship), while CatBoost captured the non-linearity effectively</li>
+</ul>
+<p>Actual cost is derived from overrun prediction: <code>actual_cost = estimated_cost × (1 + overrun_pct / 100)</code>, ensuring the two models are coherent.</p>
+
+<h3>4.4 Training and Validation</h3>
+
+<ul><li><strong>Train/test split</strong>: Standard holdout with stratification by project type</li>
+<li><strong>CatBoost hyperparameters</strong>: Default CatBoost configuration with early stopping to prevent overfitting</li>
+<li><strong>Ridge regularization</strong>: Alpha parameter selected via cross-validation</li>
+<li><strong>Validation approach</strong>: R², MAE, RMSE, and MAPE computed on held-out test set</li>
+</ul>
+<h3>4.5 Results and Metrics</h3>
+
+<table><thead><tr><th>Metric</th><th>CatBoost (Overrun %)</th><th>Ridge (Actual Cost)</th></tr></thead><tbody><tr><td><strong>R²</strong></td><td>0.538</td><td>0.993</td></tr>
+<tr><td><strong>MAE</strong></td><td>Reported in model artifacts</td><td>Reported in model artifacts</td></tr>
+<tr><td><strong>RMSE</strong></td><td>Reported in model artifacts</td><td>Reported in model artifacts</td></tr></tbody></table>
+
+<strong>Honest assessment:</strong> The CatBoost R² of 0.538 for overrun prediction is moderate. This reflects both the inherent difficulty of predicting cost overruns (a noisy, multi-causal phenomenon) and the synthetic nature of the training data. The Ridge R² of 0.993 for actual cost prediction is strong, reflecting the near-linear relationship between estimated and actual cost once the overrun percentage is known. We present both metrics transparently in the application's Data Transparency panel, alongside known dataset limitations and the remediation log.
+
+<strong>Baseline comparison:</strong> A standalone Ridge regression on overrun prediction achieved R² ≈ 0.45, representing a 19.6% improvement from the CatBoost model's non-linear feature interaction capture.
+
+<h3>4.6 Explainability and Decision Support</h3>
+
+<p>The primary innovation of the cost estimation module is not the prediction accuracy — it is the <strong>decision support interface</strong> built around the predictions:</p>
+
+<strong>SHAP TreeExplainer</strong>: For every prediction, SHAP computes the contribution of each feature to the predicted overrun percentage (Lundberg & Lee, 2017). The top 5 cost drivers are displayed as a waterfall chart with red (increases overrun) and green (decreases overrun) bars. This transforms an opaque number into an actionable insight: "Your contractor rating of 2.5 is the #1 driver of predicted overrun."
+
+<strong>What-if Scenario Analysis</strong>: Five adjustable parameters (<code>contractor_rating</code>, <code>num_change_orders</code>, <code>weather_risk_factor</code>, <code>material_volatility</code>, <code>budget_pressure</code>) can be modified via range sliders. Each change triggers a real-time re-prediction (debounced at 300ms) showing the original prediction, the scenario prediction, and the delta. This allows construction managers to explore questions like: "If we hire a higher-rated contractor (4.0 instead of 2.5), how much does the predicted overrun decrease?"
+
+<strong>Similar Project Lookup</strong>: After prediction, the system finds the 5 most similar projects from the training dataset using Euclidean distance across key features (<code>sqft</code>, <code>floors</code>, <code>estimated_cost_cad</code>, <code>planned_duration_weeks</code>, <code>contractor_rating</code>, <code>complexity_score</code>). Each similar project shows its actual overrun percentage and key differences, providing contextual validation of the prediction.
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/cost-shap.png" alt="SHAP Waterfall Chart and What-if Scenario Analysis" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<hr/>
+
+<h2>5. Dynamic Data Analysis: Privacy by Design</h2>
+
+<p>For datasets that fall outside the pre-built cost model, the system provides a <strong>dynamic data analysis pipeline</strong> that generates and executes custom Python code without exposing raw data to cloud LLMs.</p>
+
+<h3>The Metadata-Only Architecture</h3>
+
+<p>When a user uploads a CSV file, the system extracts <strong>metadata only</strong>: column names, data types, sample statistics, and the first 5 rows for preview. The raw dataset never leaves the server. This metadata is sent to a cloud LLM (Groq or Zhipu AI, with automatic dual fallback) which generates Python analysis code based on the user's natural language instruction.</p>
+
+<p>This design decision reflects a core principle: <strong>privacy is a constraint on the architecture, not a feature bolted on later.</strong> By sending metadata instead of data, we avoid the data governance questions that would arise from transmitting construction project data to third-party API providers.</p>
+
+<h3>Security-Hardened Code Execution</h3>
+
+<p>Generated code is validated before execution by a <code>CodeValidator</code> that blocks potentially dangerous operations. The blocked method list (<code>.apply()</code>, <code>.agg()</code>, <code>.map()</code>, and others) is included in the LLM prompt itself, so the model generates code that avoids these patterns.</p>
+
+<p>Validated code runs in a sandboxed environment:</p>
+<ul><li><strong>E2B cloud sandbox</strong> (primary): Ephemeral Firecracker microVMs with network isolation</li>
+<li><strong>Docker container</strong> (fallback): Local container with restricted syscalls, no network access, filesystem isolation</li>
+</ul>
+<p>The 6-node SSE streaming pipeline (<code>file_parse → metadata_extract → code_generation → security_check → sandbox_execution → result_render</code>) provides real-time progress updates to the frontend, preventing browser timeouts on long-running analyses.</p>
+
+<strong>Why cloud LLMs for code generation?</strong> We tested the local Qwen3.5:4b model for code generation. It produced syntactically valid but semantically incorrect analysis code approximately 40% of the time — generating wrong chart types, misinterpreting column semantics, or using blocked methods. Cloud models (Groq's larger models, Zhipu's GLM-4) produce reliable code generation at the cost of API latency and dependency.
+
+<hr/>
+
+<h2>6. Lessons and Trade-offs</h2>
+
+<p>Every technical decision in this project involved an explicit trade-off. Documenting these decisions honestly is as important as the decisions themselves.</p>
+
+<h3>Intent Classification: Local vs. Cloud</h3>
+
+<table><thead><tr><th>Approach</th><th>Accuracy</th><th>Latency</th><th>Cost</th></tr></thead><tbody><tr><td>Local Qwen3.5:4b</td><td>~70%</td><td>~50ms</td><td>Free</td></tr>
+<tr><td>Cloud Zhipu GLM-4</td><td>~92%</td><td>~250ms</td><td>~$0.03/query</td></tr></tbody></table>
+
+<p>We chose cloud classification with a heuristic shortcut: queries with confidence ≥ 0.85 from the keyword-based capability registry bypass the LLM entirely. In practice, approximately 60% of queries are routed by heuristics alone, reducing cloud API costs significantly.</p>
+
+<h3>Retrieval Strategy: Simple vs. Hybrid</h3>
+
+<p>Vector-only retrieval missed exact regulatory references ("NBC 2020 Section 3.2.4.1"). BM25-only retrieval missed paraphrased questions ("What are the fire safety requirements for residential buildings?"). The hybrid approach with RRF fusion captures both, at the cost of maintaining a BM25 index in memory alongside the pgvector index.</p>
+
+<h3>LLM Inference: Thinking Mode vs. Speed</h3>
+
+<p>Qwen3.5 supports a "thinking" mode that significantly improves reasoning quality but increases first-token latency from ~1 second to ~8 seconds. For a live demo where evaluators are watching, we disabled thinking mode (<code>OLLAMA_ENABLE_THINKING=false</code>). Response quality remained sufficient for construction Q&A, and the responsiveness improvement was noticeable.</p>
+
+<h3>Python Version Lock</h3>
+
+<p>PaddleOCR (required for processing scanned construction documents) depends on PaddlePaddle, which requires Python 3.13.x on macOS. Python 3.14+ breaks the dependency chain. This locked our entire backend to Python 3.13, affecting every dependency resolution.</p>
+
+<hr/>
+
+<h2>7. Results in Production</h2>
+
+<p>The system was demonstrated on a <strong>Mac Studio (M1 Max, 32GB RAM)</strong> accessed via a public URL (<code>https://iai.dissidia.me/</code>) through Cloudflare Tunnel.</p>
+
+<p>Key operational decisions for stability:</p>
+<ul><li><strong>Pre-warming</strong>: The first query after cold start takes ~49 seconds (model loading, BM25 index building). We pre-warm the system before any demo session.</li>
+<li><strong>GPU acceleration</strong>: Ollama on macOS uses Apple Metal GPU by default, providing 3-5x inference speedup over CPU-only mode. The Qwen3.5:4b model achieves ~28 tokens per second on M1 Max.</li>
+<li><strong>Dual cloud fallback</strong>: If Zhipu AI times out during code generation, the system automatically falls back to Groq. This prevented demo failures during network instability at the venue.</li>
+</ul>
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/cost-estimation.png" alt="Cost Estimation Interface" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/data-analysis.png" alt="Dynamic Data Analysis" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<img src="https://dissidia.oss-cn-beijing.aliyuncs.com/capstone/report/system-overview.png" alt="System Overview Dashboard" style="max-width:100%; height:auto; page-break-inside:avoid;" />
+
+<hr/>
+
+<h2>8. Conclusion and Future Work</h2>
+
+<h3>Summary</h3>
+
+<p>Industry AI Flow demonstrates that a small team can build a multi-capability AI system by focusing on architectural integration rather than individual model performance. The intent-aware routing architecture connects three distinct AI subsystems (RAG, ML prediction, and code generation) through a unified query interface, while maintaining source traceability, cost transparency, and data privacy.</p>
+
+<p>The RAG system's hybrid retrieval pipeline (BM25 + vector + RRF + cross-encoder reranking) addresses the specific challenges of construction regulatory documents. The cost estimation module provides not just predictions but decision support tools (SHAP explainability, what-if analysis, similar project lookup). The dynamic analysis pipeline enables ad-hoc data exploration without exposing raw data to cloud LLMs.</p>
+
+<h3>Future Directions</h3>
+
+<ul><li><strong>Multi-tenant deployment</strong>: The X-Tenant-ID isolation infrastructure is already built, supporting per-tenant rate limiting and audit logging for enterprise deployment</li>
+<li><strong>Prompt A/B testing</strong>: A versioned prompt management system with performance scoring is in place, enabling systematic optimization of RAG response quality</li>
+<li><strong>RAG evaluation framework</strong>: Developing ground truth relevance judgments for the 16-document corpus would enable quantitative evaluation of retrieval precision and recall</li>
+<li><strong>Model retraining</strong>: As real (non-synthetic) construction cost data becomes available, retraining the CatBoost model on actual project outcomes would improve the overrun R² beyond the current 0.538</li>
+</ul>
+<h3>Reflections</h3>
+
+<p>The most valuable lesson from this project is that <strong>the hard problems in applied AI are integration problems, not model problems.</strong> Choosing between CatBoost and XGBoost matters far less than designing the intent classification pipeline that routes the right queries to the right subsystem. The 11-node StateGraph and the 10-node execution pipeline represent more engineering effort than any individual model — and they are the reason the system works as a coherent product rather than three disconnected demos.</p>
+
+<hr/>
+
+<h2>References</h2>
+
+<p>Cormack, G. V., Clarke, C. L. A., & Buettcher, S. (2009). Reciprocal rank fusion outperforms condorcet and individual rank learning methods. <em>Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval</em>, 758–759.</p>
+
+<p>Dorogush, A. V., Ershov, V., & Gulin, A. (2018). CatBoost: Gradient boosting with categorical features support. <em>arXiv preprint arXiv:1810.11363</em>.</p>
+
+<p>LangChain. (2024). LangGraph: Building stateful, multi-actor applications with LLMs. Retrieved from https://langchain-ai.github.io/langgraph/</p>
+
+<p>Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., ... & Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. <em>Advances in Neural Information Processing Systems, 33</em>, 9459–9474.</p>
+
+<p>Lundberg, S. M., & Lee, S. I. (2017). A unified approach to interpreting model predictions. <em>Advances in Neural Information Processing Systems, 30</em>.</p>
+
+<p>National Research Council Canada. (2020). <em>National Building Code of Canada 2020</em>. Ottawa: NRC.</p>
+
+<p>Statistics Canada. (2024). Building Construction Price Index (BCPI). Retrieved from https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810013501</p>
+
+<p>Xiao, S., Liu, Z., Zhang, P., & Muennighoff, N. (2024). C-Pack: Packaged resources to advance general Chinese embedding. <em>arXiv preprint arXiv:2309.07597</em>.</p>
+
+<hr/>
+
+<em>This article documents a Capstone project for the Integrated AI program at SAIT (Southern Alberta Institute of Technology) by Angel Bustamante, Jason Niu, and Jack Si. The live demo is available at https://iai.dissidia.me/. For questions, contact the team via SAIT.</em>
+
+</body>
+</html>
