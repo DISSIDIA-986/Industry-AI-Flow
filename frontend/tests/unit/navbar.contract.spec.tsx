@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: pushMock,
   }),
+  usePathname: () => '/',
 }))
 
 vi.mock('@/contexts/AuthContext', () => ({
