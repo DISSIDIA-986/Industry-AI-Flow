@@ -15,7 +15,7 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.errors import GraphRecursionError  # P0 修复: 捕获递归异常
+from langgraph.errors import GraphRecursionError  # P0 fix: catch recursion exception
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
@@ -2100,7 +2100,7 @@ class IntentClassificationWorkflow:
             }
 
         except GraphRecursionError as e:
-            # P0 修复: 捕获递归异常，返回受控错误
+            # P0 fix: catch recursion exception and return controlled error
             logger.error(f"Workflow recursion limit exceeded: {str(e)}")
             return {
                 "success": False,
@@ -2221,7 +2221,7 @@ class IntentClassificationWorkflow:
             }
 
         except GraphRecursionError as e:
-            # P0 修复: 捕获递归异常，返回受控错误
+            # P0 fix: catch recursion exception and return controlled error
             logger.error(
                 f"Workflow recursion limit exceeded during continuation: {str(e)}"
             )
