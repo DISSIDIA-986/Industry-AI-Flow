@@ -219,14 +219,38 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
     async def _traced_execute() -> WorkflowState:
         if lf is None:
             return await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
-        with lf.start_as_current_observation(
-            name="workflow.10_node_pipeline",
-            input={"query": query_text[:2000]},
-            metadata={"tenant_id": tenant_id, "pipeline": "10_node"},
-        ) as root:
+
+        # Defensive open: if the SDK fails starting the root span, run the
+        # pipeline untraced. Observability must never break the request path.
+        span_ctx = None
+        root = None
+        try:
+            span_ctx = lf.start_as_current_observation(
+                name="workflow.10_node_pipeline",
+                input={"query": query_text[:2000]},
+                metadata={"tenant_id": tenant_id, "pipeline": "10_node"},
+            )
+            root = span_ctx.__enter__()
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.debug("Langfuse root span open failed (%s) — untraced", exc)
+            return await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
+
+        try:
             try:
                 result = await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
-                md = result.get("metadata") or {}
+            except asyncio.TimeoutError:
+                if root is not None:
+                    try:
+                        root.update(
+                            output={"status": "pipeline_timeout"},
+                            metadata={"error_code": "PIPELINE_TIMEOUT"},
+                            level="ERROR",
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                raise
+            md = result.get("metadata") or {}
+            if root is not None:
                 try:
                     root.update(
                         output={
@@ -243,17 +267,13 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
                     )
                 except Exception:  # pylint: disable=broad-except
                     pass
-                return result
-            except asyncio.TimeoutError:
+            return result
+        finally:
+            if span_ctx is not None:
                 try:
-                    root.update(
-                        output={"status": "pipeline_timeout"},
-                        metadata={"error_code": "PIPELINE_TIMEOUT"},
-                        level="ERROR",
-                    )
+                    span_ctx.__exit__(None, None, None)
                 except Exception:  # pylint: disable=broad-except
                     pass
-                raise
 
     try:
         return await _traced_execute()

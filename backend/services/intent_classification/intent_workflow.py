@@ -2018,21 +2018,35 @@ class IntentClassificationWorkflow:
             }
 
             lf = get_langfuse() if is_enabled() else None
-            if lf is None:
-                result = await runnable_workflow.ainvoke(initial_state, config=config)
-            else:
-                with lf.start_as_current_observation(
-                    name="intent_workflow.11_node",
-                    input={"query": (query or "")[:2000]},
-                    metadata={
-                        "session_id": session_id,
-                        "user_id": user_id,
-                        "route_mode": route_mode,
-                    },
-                ) as root:
-                    result = await runnable_workflow.ainvoke(
-                        initial_state, config=config
+            # Defensive open: if the SDK fails starting the root span, invoke
+            # the workflow untraced. Observability must never fail the request.
+            root_span_ctx = None
+            root = None
+            if lf is not None:
+                try:
+                    root_span_ctx = lf.start_as_current_observation(
+                        name="intent_workflow.11_node",
+                        input={"query": (query or "")[:2000]},
+                        metadata={
+                            "session_id": session_id,
+                            "user_id": user_id,
+                            "route_mode": route_mode,
+                        },
                     )
+                    root = root_span_ctx.__enter__()
+                except Exception as exc:  # pylint: disable=broad-except
+                    logger.debug(
+                        "Langfuse intent root span open failed (%s) — untraced",
+                        exc,
+                    )
+                    root_span_ctx = None
+                    root = None
+
+            try:
+                result = await runnable_workflow.ainvoke(
+                    initial_state, config=config
+                )
+                if root is not None:
                     try:
                         md = result.get("metadata") or {}
                         intent = result.get("intent_result")
@@ -2066,6 +2080,12 @@ class IntentClassificationWorkflow:
                                 },
                             },
                         )
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            finally:
+                if root_span_ctx is not None:
+                    try:
+                        root_span_ctx.__exit__(None, None, None)
                     except Exception:  # pylint: disable=broad-except
                         pass
 
