@@ -27,15 +27,22 @@ class LangfuseLLMWrapper:
     drop-in replacement — the rest of the codebase sees the same interface.
     """
 
+    # Map concrete client class names to the backend label used in span names.
+    # Kept local so we never touch the network just to learn what we're wrapping
+    # (OllamaClient.get_model_info() makes an HTTP POST, which would regress
+    # startup time on the local demo path).
+    _BACKEND_BY_CLASS = {
+        "OllamaClient": "ollama",
+        "ZhipuClient": "zhipu",
+        "GroqClient": "groq",
+    }
+
     def __init__(self, inner: Any) -> None:
         self._inner = inner
-        try:
-            info = inner.get_model_info()
-            self._backend = info.get("backend", "unknown")
-            self._model = info.get("model", "unknown")
-        except Exception:  # pylint: disable=broad-except
-            self._backend = "unknown"
-            self._model = "unknown"
+        self._backend = self._BACKEND_BY_CLASS.get(
+            type(inner).__name__, "unknown"
+        )
+        self._model = getattr(inner, "model", "unknown")
 
     def generate(
         self,
