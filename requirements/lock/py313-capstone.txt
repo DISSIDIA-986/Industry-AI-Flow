@@ -44,3 +44,6 @@ pytest-cov==4.1.0
 # CatBoost + SHAP for cost estimation explainability
 catboost>=1.2.10
 shap>=0.51.0
+
+# Langfuse observability (cloud, US region)
+langfuse==4.3.1
