@@ -62,21 +62,23 @@ class LLMClientFactory:
         )
 
         try:
+            from backend.observability.langfuse_llm_wrapper import wrap
+
             if backend == "ollama":
                 from .ollama_client import OllamaClient
 
                 logger.info("Using Ollama backend")
-                return OllamaClient()
+                return wrap(OllamaClient())
             elif backend == "zhipu":
                 from .zhipu_client import ZhipuClient
 
                 logger.info("Using Zhipu cloud backend")
-                return ZhipuClient()
+                return wrap(ZhipuClient())
             elif backend == "groq":
                 from .groq_client import GroqClient
 
                 logger.info("Using Groq cloud backend")
-                return GroqClient()
+                return wrap(GroqClient())
             else:
                 raise ValueError(f"Unsupported LLM backend: {backend}")
 
