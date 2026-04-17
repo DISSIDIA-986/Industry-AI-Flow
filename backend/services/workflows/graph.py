@@ -19,6 +19,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from backend.observability.langfuse_client import get_langfuse, is_enabled
 from backend.services.workflows.nodes.code_exec_node import code_exec_node
 from backend.services.workflows.nodes.cost_estimation_node import cost_estimation_node
 from backend.services.workflows.nodes.groundedness_node import groundedness_node
@@ -66,37 +67,85 @@ async def _run_node(
     completed_nodes = metadata.setdefault("completed_nodes", [])
     timeout = NODE_TIMEOUTS.get(node_name, 60)
 
+    lf = get_langfuse() if is_enabled() else None
+    span_ctx = (
+        lf.start_as_current_observation(
+            name=node_name,
+            as_type="span",
+            metadata={"timeout_sla_s": timeout},
+        )
+        if lf is not None
+        else None
+    )
+
     try:
-        updated = await asyncio.wait_for(
-            handler(state, services), timeout=timeout
-        )
-        node_latency[node_name] = int((time.perf_counter() - started) * 1000)
-        if node_name not in completed_nodes:
-            completed_nodes.append(node_name)
-        return updated
-    except asyncio.TimeoutError:
-        elapsed = int((time.perf_counter() - started) * 1000)
-        node_latency[node_name] = elapsed
-        logger.error(
-            "Workflow node '%s' timed out after %ds (SLA: %ds)",
-            node_name, elapsed // 1000, int(timeout),
-        )
-        metadata["failed_node"] = node_name
-        metadata["error_code"] = ErrorCode.NODE_TIMEOUT.value
-        state["error"] = (
-            f"Processing timed out at {node_name.replace('_node', '')} stage. "
-            "Please try again."
-        )
-        return state
-    except Exception as exc:  # pragma: no cover - safety net
-        node_latency[node_name] = int((time.perf_counter() - started) * 1000)
-        logger.exception("Workflow node '%s' failed: %s", node_name, exc)
-        metadata["failed_node"] = node_name
-        metadata["error_code"] = ErrorCode.UNKNOWN_ERROR.value
-        state["error"] = (
-            "I encountered an issue processing your request. Please try again."
-        )
-        return state
+        if span_ctx is not None:
+            span = span_ctx.__enter__()
+        try:
+            updated = await asyncio.wait_for(
+                handler(state, services), timeout=timeout
+            )
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            node_latency[node_name] = elapsed_ms
+            if node_name not in completed_nodes:
+                completed_nodes.append(node_name)
+            if span_ctx is not None:
+                try:
+                    span.update(
+                        output={"status": "ok"},
+                        metadata={"latency_ms": elapsed_ms, "timeout_sla_s": timeout},
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            return updated
+        except asyncio.TimeoutError:
+            elapsed = int((time.perf_counter() - started) * 1000)
+            node_latency[node_name] = elapsed
+            logger.error(
+                "Workflow node '%s' timed out after %ds (SLA: %ds)",
+                node_name, elapsed // 1000, int(timeout),
+            )
+            metadata["failed_node"] = node_name
+            metadata["error_code"] = ErrorCode.NODE_TIMEOUT.value
+            state["error"] = (
+                f"Processing timed out at {node_name.replace('_node', '')} stage. "
+                "Please try again."
+            )
+            if span_ctx is not None:
+                try:
+                    span.update(
+                        output={"status": "timeout"},
+                        metadata={"latency_ms": elapsed, "error_code": "NODE_TIMEOUT"},
+                        level="ERROR",
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            return state
+        except Exception as exc:  # pragma: no cover - safety net
+            elapsed = int((time.perf_counter() - started) * 1000)
+            node_latency[node_name] = elapsed
+            logger.exception("Workflow node '%s' failed: %s", node_name, exc)
+            metadata["failed_node"] = node_name
+            metadata["error_code"] = ErrorCode.UNKNOWN_ERROR.value
+            state["error"] = (
+                "I encountered an issue processing your request. Please try again."
+            )
+            if span_ctx is not None:
+                try:
+                    span.update(
+                        output={"status": "error", "error": str(exc)[:500]},
+                        metadata={"latency_ms": elapsed, "error_code": "UNKNOWN_ERROR"},
+                        level="ERROR",
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            return state
+    finally:
+        if span_ctx is not None:
+            try:
+                span_ctx.__exit__(None, None, None)
+            except Exception:  # pylint: disable=broad-except
+                pass
 
 
 async def run_workflow_pipeline(state: WorkflowState, services: Any) -> WorkflowState:
@@ -161,8 +210,51 @@ async def run_workflow_pipeline(state: WorkflowState, services: Any) -> Workflow
         metadata["node_latency_ms"] = metrics.get("node_latency_ms", {})
         return state
 
+    lf = get_langfuse() if is_enabled() else None
+    query_text = state.get("query") or state.get("user_message") or ""
+    tenant_id = (state.get("metadata") or {}).get("tenant_id")
+
+    async def _traced_execute() -> WorkflowState:
+        if lf is None:
+            return await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
+        with lf.start_as_current_observation(
+            name="workflow.10_node_pipeline",
+            input={"query": query_text[:2000]},
+            metadata={"tenant_id": tenant_id, "pipeline": "10_node"},
+        ) as root:
+            try:
+                result = await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
+                md = result.get("metadata") or {}
+                try:
+                    root.update(
+                        output={
+                            "status": md.get("pipeline_status"),
+                            "response_preview": (result.get("response") or "")[:500],
+                        },
+                        metadata={
+                            "completed_nodes": md.get("completed_nodes"),
+                            "failed_node": md.get("failed_node"),
+                            "error_code": md.get("error_code"),
+                            "node_latency_ms": md.get("node_latency_ms"),
+                            "intent": md.get("intent"),
+                        },
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                return result
+            except asyncio.TimeoutError:
+                try:
+                    root.update(
+                        output={"status": "pipeline_timeout"},
+                        metadata={"error_code": "PIPELINE_TIMEOUT"},
+                        level="ERROR",
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                raise
+
     try:
-        return await asyncio.wait_for(_execute_pipeline(), timeout=300.0)
+        return await _traced_execute()
     except asyncio.TimeoutError:
         state["error"] = "Request timed out. Please try again."
         state["response"] = "Request timed out. Please try again."
