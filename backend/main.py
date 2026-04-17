@@ -652,7 +652,24 @@ async def lifespan(_: FastAPI):
     except Exception as e:
         logger.warning("OCR pre-warming failed (non-critical): %s", e)
 
+    # Pre-warm Langfuse client (runs auth_check once, populates singleton)
+    try:
+        from backend.observability.langfuse_client import is_enabled
+
+        if is_enabled():
+            logger.info("Langfuse observability ready")
+    except Exception as e:
+        logger.warning("Langfuse pre-warm failed (non-critical): %s", e)
+
     yield
+
+    # Flush pending Langfuse traces on shutdown so nothing gets dropped
+    try:
+        from backend.observability.langfuse_client import shutdown as lf_shutdown
+
+        lf_shutdown()
+    except Exception as e:
+        logger.debug("Langfuse shutdown error (non-critical): %s", e)
 
 
 app = FastAPI(

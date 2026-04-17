@@ -15,11 +15,12 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.errors import GraphRecursionError  # P0 修复: 捕获递归异常
+from langgraph.errors import GraphRecursionError  # P0 fix: catch recursion exception
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from backend.config import settings
+from backend.observability.langfuse_client import get_langfuse, is_enabled
 from backend.services.context_manager import ContextManager, SessionContext
 from backend.services.intent_classification.intent_classifier import (
     IntentClassifier,
@@ -63,7 +64,10 @@ class WorkflowState(TypedDict):
 
 
 def _trace_node(node_name: str):
-    """Decorator that records per-node timing and decision in node_trace."""
+    """Decorator that records per-node timing and decision in node_trace.
+
+    Also emits a Langfuse span per node when observability is enabled.
+    """
 
     def decorator(fn):
         @functools.wraps(fn)
@@ -77,12 +81,25 @@ def _trace_node(node_name: str):
                 "decision": "completed",
                 "metadata": {},
             }
+
+            lf = get_langfuse() if is_enabled() else None
+            span_ctx = None
+            span = None
+            if lf is not None:
+                try:
+                    span_ctx = lf.start_as_current_observation(
+                        name=node_name, as_type="span"
+                    )
+                    span = span_ctx.__enter__()
+                except Exception:  # pylint: disable=broad-except
+                    span_ctx = None
+                    span = None
+
             try:
                 result = await fn(self, state)
                 elapsed = time.perf_counter() - start
                 trace_entry["end_ms"] = elapsed * 1000
                 trace_entry["duration_ms"] = round(elapsed * 1000, 1)
-                # Node functions can set _trace_decision / _trace_meta on state
                 if isinstance(result, dict):
                     trace_entry["decision"] = result.get(
                         "_trace_decision", "completed"
@@ -90,6 +107,17 @@ def _trace_node(node_name: str):
                     trace_entry["metadata"] = result.get("_trace_meta", {})
                     result.pop("_trace_decision", None)
                     result.pop("_trace_meta", None)
+                if span is not None:
+                    try:
+                        span.update(
+                            output={"decision": trace_entry["decision"]},
+                            metadata={
+                                "latency_ms": int(elapsed * 1000),
+                                **(trace_entry["metadata"] or {}),
+                            },
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        pass
                 return result
             except Exception as exc:
                 elapsed = time.perf_counter() - start
@@ -97,12 +125,25 @@ def _trace_node(node_name: str):
                 trace_entry["duration_ms"] = round(elapsed * 1000, 1)
                 trace_entry["decision"] = "error"
                 trace_entry["metadata"] = {"error": str(exc)[:200]}
+                if span is not None:
+                    try:
+                        span.update(
+                            output={"decision": "error", "error": str(exc)[:500]},
+                            metadata={"latency_ms": int(elapsed * 1000)},
+                            level="ERROR",
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        pass
                 raise
             finally:
                 traces = state.get("node_trace", [])
                 traces.append(trace_entry)
-                # Update state in-place (LangGraph passes mutable dicts)
                 state["node_trace"] = traces
+                if span_ctx is not None:
+                    try:
+                        span_ctx.__exit__(None, None, None)
+                    except Exception:  # pylint: disable=broad-except
+                        pass
 
         return wrapper
 
@@ -1975,7 +2016,58 @@ class IntentClassificationWorkflow:
                 "configurable": {"thread_id": thread_id or session_id},
                 "recursion_limit": settings.workflow_recursion_limit,  # P0 fix: set recursion limit
             }
-            result = await runnable_workflow.ainvoke(initial_state, config=config)
+
+            lf = get_langfuse() if is_enabled() else None
+            if lf is None:
+                result = await runnable_workflow.ainvoke(initial_state, config=config)
+            else:
+                with lf.start_as_current_observation(
+                    name="intent_workflow.11_node",
+                    input={"query": (query or "")[:2000]},
+                    metadata={
+                        "session_id": session_id,
+                        "user_id": user_id,
+                        "route_mode": route_mode,
+                    },
+                ) as root:
+                    result = await runnable_workflow.ainvoke(
+                        initial_state, config=config
+                    )
+                    try:
+                        md = result.get("metadata") or {}
+                        intent = result.get("intent_result")
+                        root.update(
+                            output={
+                                "agent_response_preview": (
+                                    str(result.get("agent_response") or "")[:500]
+                                ),
+                                "clarification_needed": result.get(
+                                    "clarification_needed", False
+                                ),
+                            },
+                            metadata={
+                                "intent": (intent.to_dict() if intent else None),
+                                "routing_decision": (
+                                    result["routing_decision"].to_dict()
+                                    if result.get("routing_decision")
+                                    else None
+                                ),
+                                "node_count": len(result.get("node_trace") or []),
+                                "error": result.get("error"),
+                                **{
+                                    k: v
+                                    for k, v in md.items()
+                                    if k
+                                    in {
+                                        "agent_execution_status",
+                                        "clarification_round",
+                                        "workflow_runner",
+                                    }
+                                },
+                            },
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        pass
 
             # Extract and return the workflow result
             metadata = result.get("metadata") or {}
@@ -2008,7 +2100,7 @@ class IntentClassificationWorkflow:
             }
 
         except GraphRecursionError as e:
-            # P0 修复: 捕获递归异常，返回受控错误
+            # P0 fix: catch recursion exception and return controlled error
             logger.error(f"Workflow recursion limit exceeded: {str(e)}")
             return {
                 "success": False,
@@ -2129,7 +2221,7 @@ class IntentClassificationWorkflow:
             }
 
         except GraphRecursionError as e:
-            # P0 修复: 捕获递归异常，返回受控错误
+            # P0 fix: catch recursion exception and return controlled error
             logger.error(
                 f"Workflow recursion limit exceeded during continuation: {str(e)}"
             )
