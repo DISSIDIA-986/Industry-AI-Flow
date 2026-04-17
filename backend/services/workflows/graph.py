@@ -68,19 +68,21 @@ async def _run_node(
     timeout = NODE_TIMEOUTS.get(node_name, 60)
 
     lf = get_langfuse() if is_enabled() else None
-    span_ctx = (
-        lf.start_as_current_observation(
-            name=node_name,
-            as_type="span",
-            metadata={"timeout_sla_s": timeout},
-        )
-        if lf is not None
-        else None
-    )
+    span_ctx = None
+    span = None
+    if lf is not None:
+        try:
+            span_ctx = lf.start_as_current_observation(
+                name=node_name,
+                as_type="span",
+                metadata={"timeout_sla_s": timeout},
+            )
+            span = span_ctx.__enter__()
+        except Exception:  # pylint: disable=broad-except
+            span_ctx = None
+            span = None
 
     try:
-        if span_ctx is not None:
-            span = span_ctx.__enter__()
         try:
             updated = await asyncio.wait_for(
                 handler(state, services), timeout=timeout

@@ -83,12 +83,17 @@ def _trace_node(node_name: str):
             }
 
             lf = get_langfuse() if is_enabled() else None
-            span_ctx = (
-                lf.start_as_current_observation(name=node_name, as_type="span")
-                if lf is not None
-                else None
-            )
-            span = span_ctx.__enter__() if span_ctx is not None else None
+            span_ctx = None
+            span = None
+            if lf is not None:
+                try:
+                    span_ctx = lf.start_as_current_observation(
+                        name=node_name, as_type="span"
+                    )
+                    span = span_ctx.__enter__()
+                except Exception:  # pylint: disable=broad-except
+                    span_ctx = None
+                    span = None
 
             try:
                 result = await fn(self, state)
