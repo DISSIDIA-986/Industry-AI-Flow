@@ -157,18 +157,35 @@ def eda_plan_from_metadata(
             "low-cardinality categorical columns (after excluding ID-like)."
         )
 
-    mc_reason = _model_comparison_reason(rows, columns_info)
+    # Model-comparison decision (stretch goal). Lives in a sibling module
+    # so the EDA planner stays metadata-only. Planner returns a dict with
+    # exactly the shape this plan embeds, so we can splice it in directly.
+    from backend.services.data_analysis.analysis_planner import (
+        decide_model_comparison,
+    )
 
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "eda": {"charts": charts},
-        "model_comparison": {
+    try:
+        model_comparison = decide_model_comparison(dataset_metadata)
+    except Exception as exc:
+        # Never let the planner kill EDA. Log and fall back to disabled.
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "model-comparison planner failed, falling back to disabled: %s",
+            exc,
+        )
+        model_comparison = {
             "enabled": False,
             "target_column": None,
             "task": None,
             "models": [],
-            "reason": mc_reason,
-        },
+            "reason": f"planner raised {type(exc).__name__}",
+        }
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "eda": {"charts": charts},
+        "model_comparison": model_comparison,
         "rationale": " ".join(rationale_parts).strip()
         or "Deterministic plan from dataset metadata.",
         "user_question": user_question[:500] if user_question else "",
