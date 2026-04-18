@@ -262,11 +262,19 @@ def _build_combined_snippet(
 
 def _loader_block(ext: str) -> str:
     if ext == "csv":
+        # sep=None + engine="python" matches the metadata reader so
+        # semicolon/tab-delimited files (e.g. UCI wine-quality) parse
+        # into the same column shape the planner saw. Without this,
+        # the sandbox would see one giant string column and every
+        # chart template would fail on "column not found".
         return (
             "try:\n"
-            "    _df = _pd.read_csv(_DATA_PATH)\n"
+            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
             "except UnicodeDecodeError:\n"
-            "    _df = _pd.read_csv(_DATA_PATH, encoding='latin-1')\n"
+            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python', encoding='latin-1')\n"
+            "except Exception:\n"
+            "    # Sniff failure — fall back to comma default.\n"
+            "    _df = _pd.read_csv(_DATA_PATH)\n"
         )
     if ext in {"xlsx", "xls"}:
         return "_df = _pd.read_excel(_DATA_PATH)\n"
@@ -275,7 +283,7 @@ def _loader_block(ext: str) -> str:
     # Default: try CSV — matches extract_dataset_info's treatment of
     # unknown extensions (it errors out up there, so we should rarely
     # hit this).
-    return "_df = _pd.read_csv(_DATA_PATH)\n"
+    return "_df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
 
 
 def _chart_block(idx: int, spec: Dict[str, Any]) -> List[str]:
