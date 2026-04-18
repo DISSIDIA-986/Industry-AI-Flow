@@ -428,6 +428,39 @@ def _read_result_payload() -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {"ok": False, "raw": out}
 
 
+def _read_grid_state() -> dict[str, Any]:
+    """Count EDA chart tiles and detect model-comparison section.
+
+    Added for Plan-as-JSON multi-chart grid rollout. Returns
+    ``{chart_count, ok_count, failed_count, has_model_section, chart_types}``
+    so the suite can assert multi-chart rendering instead of the legacy
+    single-image check.
+    """
+    js = r"""
+(() => {
+  const grid = document.querySelector('[data-testid="eda-chart-grid"]');
+  const tiles = grid ? Array.from(grid.querySelectorAll('[data-testid^="eda-chart-"]')) : [];
+  const types = tiles.map(t => t.getAttribute('data-chart-type') || '').filter(Boolean);
+  const statuses = tiles.map(t => t.getAttribute('data-chart-status') || 'unknown');
+  const okCount = statuses.filter(s => s === 'ok').length;
+  const failedCount = statuses.filter(s => s === 'failed').length;
+  const model = document.querySelector('[data-testid="model-comparison-section"]');
+  return JSON.stringify({
+    chart_count: tiles.length,
+    ok_count: okCount,
+    failed_count: failedCount,
+    has_model_section: !!model,
+    chart_types: types,
+  });
+})()
+"""
+    ok, out = _run_eval(js, timeout=15)
+    if not ok:
+        return {"chart_count": 0, "error": out}
+    parsed = _parse_agent_json_output(out)
+    return parsed if isinstance(parsed, dict) else {"chart_count": 0, "raw": out}
+
+
 def _read_viz_payload() -> dict[str, Any]:
     js = r"""
 (() => {
@@ -636,9 +669,33 @@ def _run_case(
             result["viz_file_path"] = viz_file
             result["viz_success"] = vrj.get("success")
 
-        if done_ok and isinstance(rj, dict) and rj.get("success") is not False:
+        # DOM-level multi-chart grid check (Plan-as-JSON rollout).
+        # Soft floor of 1 chart tolerates single-column edge cases like
+        # airline-passengers.csv (2 columns); a warning is logged when
+        # count < 3 so regressions surface in the report.
+        grid_state = _read_grid_state()
+        result["eda_chart_count"] = int(grid_state.get("chart_count") or 0)
+        result["eda_ok_count"] = int(grid_state.get("ok_count") or 0)
+        result["eda_failed_count"] = int(grid_state.get("failed_count") or 0)
+        result["has_model_section"] = bool(grid_state.get("has_model_section"))
+        result["eda_chart_types"] = grid_state.get("chart_types") or []
+        grid_ok = result["eda_ok_count"] >= 1
+        if result["eda_ok_count"] < 3:
+            result["grid_warning"] = (
+                f"only {result['eda_ok_count']} chart(s) rendered — "
+                "multi-chart EDA expected >= 3"
+            )
+
+        if (
+            done_ok
+            and isinstance(rj, dict)
+            and rj.get("success") is not False
+            and grid_ok
+        ):
             result["success"] = True
             break
+        if not grid_ok:
+            result["error"] = result.get("error") or "no_charts_rendered"
 
         if attempt < 3:
             _run_agent_browser(["wait", "900"], timeout=10)
@@ -704,7 +761,13 @@ def run_suite(
         if r["success"]:
             mode = r.get("code_gen_mode", "?")
             priv = "ok" if r.get("privacy_ok") else "?"
-            extra = f" (mode={mode}, privacy={priv})"
+            charts = r.get("eda_ok_count", 0)
+            failed = r.get("eda_failed_count", 0)
+            warn = r.get("grid_warning")
+            chart_info = f"charts={charts}" + (f"/failed={failed}" if failed else "")
+            extra = f" (mode={mode}, {chart_info}, privacy={priv})"
+            if warn:
+                extra += f" [WARN: {warn}]"
         else:
             extra = f" ({r.get('error', r.get('analysis_summary', ''))[:60]})"
         print(f"    [{icon}] {'PASS' if r['success'] else 'FAIL'}{extra}")
@@ -737,6 +800,9 @@ def run_suite(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"  Report: {report_path}")
+    # Emitted in key=value form so run_page_result_driven_gate.py can parse
+    # the adapter output and locate the report file.
+    print(f"output_dir={out_dir}")
 
     # Case index markdown
     lines = [

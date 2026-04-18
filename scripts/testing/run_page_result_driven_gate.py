@@ -56,6 +56,15 @@ MODULE_ADAPTERS: Dict[str, ModuleAdapter] = {
         report_filename=None,
         default_threshold=0.7,
     ),
+    "data_analysis": ModuleAdapter(
+        module="data_analysis",
+        script_path=PROJECT_ROOT
+        / "scripts"
+        / "testing"
+        / "run_data_analysis_browser_e2e.py",
+        report_filename="data_analysis_browser_e2e_report.json",
+        default_threshold=1.0,
+    ),
 }
 
 
@@ -238,6 +247,9 @@ def _evaluate_report(
         return _evaluate_cost_estimation(report, min_rate)
     if module == "rag":
         return _evaluate_rag(report, min_rate)
+    if module == "data_analysis":
+        # Report shape matches data_dashboard (total_cases/success_cases/cases[]).
+        return _evaluate_data_dashboard(report, min_rate)
     raise ValueError(f"Unsupported module: {module}")
 
 
@@ -256,7 +268,7 @@ def _build_module_command(
     python_exec = sys.executable or "python3"
     base = [python_exec, str(adapter.script_path)]
 
-    if module in {"data_dashboard", "cost_estimation"}:
+    if module in {"data_dashboard", "cost_estimation", "data_analysis"}:
         cmd = [
             *base,
             "--frontend-url",
