@@ -36,6 +36,45 @@ interface AnalysisSummary {
   chart_type?: string;
 }
 
+interface ChartItem {
+  id: string;
+  type: string;
+  status: "ok" | "failed";
+  url: string | null;
+  summary?: string | Record<string, unknown>;
+  error?: string;
+}
+
+/** Format a chart summary for inline display.
+ *  Composer emits object summaries like {column, mean, std} for deterministic
+ *  charts. Back-compat: strings pass through untouched.
+ */
+function formatChartSummary(s: string | Record<string, unknown> | undefined): string | null {
+  if (!s) return null;
+  if (typeof s === "string") return s;
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(s)) {
+    if (v === null || v === undefined) continue;
+    let text: string;
+    if (typeof v === "number") {
+      text = Number.isInteger(v) ? String(v) : v.toFixed(3);
+    } else if (typeof v === "string") {
+      text = v;
+    } else {
+      continue;
+    }
+    parts.push(`${k}=${text}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
+interface ModelComparisonSection {
+  enabled: boolean;
+  task?: string;
+  target_column?: string;
+  metrics?: Record<string, Record<string, number>>;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Pipeline stage configuration (6-node)                              */
 /* ------------------------------------------------------------------ */
@@ -287,6 +326,89 @@ export default function DataAnalysisPage() {
       filename,
       url: `/api/backend/api/v1/files/visualizations/${encodeURIComponent(filename)}`,
       isImage: ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension),
+    };
+  }, [result]);
+
+  // Multi-chart grid derived from composer `charts[]`. Falls back to flat
+  // `visualizations[]` when the response came from the legacy codegen path.
+  const chartGrid = useMemo<ChartItem[]>(() => {
+    if (!result) return [];
+    const imageExts = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+    const toUrl = (raw: string | null | undefined): string | null => {
+      if (!raw) return null;
+      const fn = basename(raw);
+      const ext = fn.split(".").pop()?.toLowerCase() ?? "";
+      if (!imageExts.includes(ext)) return null;
+      return `/api/backend/api/v1/files/visualizations/${encodeURIComponent(fn)}`;
+    };
+
+    const charts = result.charts;
+    if (Array.isArray(charts) && charts.length > 0) {
+      return charts.map((c, idx) => {
+        const row = (c || {}) as Record<string, unknown>;
+        const status = row.status === "ok" ? "ok" : "failed";
+        return {
+          id: typeof row.id === "string" ? row.id : `chart_${idx}`,
+          type: typeof row.type === "string" ? row.type : "chart",
+          status,
+          url: status === "ok" ? toUrl(row.image_filename as string | undefined) : null,
+          summary:
+            typeof row.summary === "string"
+              ? row.summary
+              : row.summary && typeof row.summary === "object"
+                ? (row.summary as Record<string, unknown>)
+                : undefined,
+          error: typeof row.error === "string" ? row.error : undefined,
+        };
+      });
+    }
+
+    // Legacy fallback: response has only `visualizations`.
+    const viz = result.visualizations;
+    if (Array.isArray(viz) && viz.length > 0) {
+      return viz
+        .map((item, idx): ChartItem | null => {
+          if (!item || typeof item !== "object") return null;
+          const row = item as Record<string, unknown>;
+          const raw =
+            (typeof row.path === "string" && row.path) ||
+            (typeof row.filename === "string" && row.filename) ||
+            null;
+          const url = toUrl(raw);
+          if (!url) return null;
+          return {
+            id: `chart_${idx}`,
+            type: "chart",
+            status: "ok",
+            url,
+          };
+        })
+        .filter((x): x is ChartItem => x !== null);
+    }
+
+    return [];
+  }, [result]);
+
+  const chartFailures = useMemo(
+    () => chartGrid.filter((c) => c.status === "failed"),
+    [chartGrid]
+  );
+
+  const modelComparison = useMemo<ModelComparisonSection | null>(() => {
+    if (!result) return null;
+    const mc = result.model_comparison;
+    if (!mc || typeof mc !== "object") return null;
+    const row = mc as Record<string, unknown>;
+    if (row.enabled !== true) return null;
+    return {
+      enabled: true,
+      task: typeof row.task === "string" ? row.task : undefined,
+      target_column:
+        typeof row.target_column === "string" ? row.target_column : undefined,
+      metrics:
+        row.metrics && typeof row.metrics === "object"
+          ? (row.metrics as Record<string, Record<string, number>>)
+          : undefined,
     };
   }, [result]);
 
@@ -617,8 +739,72 @@ export default function DataAnalysisPage() {
               </div>
             )}
 
-            {/* Chart — PRIMARY visual, largest */}
-            {visualizationAsset && visualizationAsset.isImage && (
+            {/* Partial failure banner — some charts failed but grid still has content */}
+            {chartFailures.length > 0 && chartGrid.length > chartFailures.length && (
+              <div
+                className="artifact-card border-amber-200 bg-amber-50/50"
+                data-testid="partial-failure-banner"
+              >
+                <p className="text-sm text-amber-700">
+                  {chartGrid.length - chartFailures.length} of {chartGrid.length} charts rendered.
+                  {" "}
+                  Failed: {chartFailures.map((c) => c.type).join(", ")}.
+                </p>
+              </div>
+            )}
+
+            {/* Chart grid — PRIMARY visuals (multi-chart EDA panel) */}
+            {chartGrid.length > 0 && (
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                data-testid="eda-chart-grid"
+              >
+                {chartGrid.map((chart, idx) => {
+                  return (
+                    <div
+                      key={chart.id}
+                      className="artifact-card"
+                      data-testid={`eda-chart-${idx}`}
+                      data-chart-type={chart.type}
+                      data-chart-status={chart.status}
+                    >
+                      {chart.status === "ok" && chart.url ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className="w-full rounded-lg border border-gray-200 shadow-sm"
+                            src={chart.url}
+                            alt={`${chart.type} chart`}
+                            style={{ maxWidth: "100%", aspectRatio: "10/6" }}
+                          />
+                          <p className="mt-2 text-xs uppercase tracking-wide text-gray-500">
+                            {chart.type}
+                          </p>
+                          {(() => {
+                            const formatted = formatChartSummary(chart.summary);
+                            return formatted ? (
+                              <p className="mt-1 text-sm text-gray-700">{formatted}</p>
+                            ) : null;
+                          })()}
+                        </>
+                      ) : (
+                        <div className="text-sm text-amber-700">
+                          <p className="font-medium">{chart.type} — failed</p>
+                          {chart.error && (
+                            <p className="mt-1 text-xs text-gray-600">{chart.error}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Back-compat single-chart wrapper: keeps old `analysis-chart`
+                testid alive when composer returns nothing but the legacy flat
+                visualizations list was too. Renders nothing new visually. */}
+            {chartGrid.length === 0 && visualizationAsset && visualizationAsset.isImage && (
               <div className="artifact-card" data-testid="analysis-chart">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -630,12 +816,65 @@ export default function DataAnalysisPage() {
               </div>
             )}
 
-            {/* Chart generation failed but analysis OK */}
-            {!visualizationAsset && result.success !== false && (
+            {/* No charts at all — analysis completed without visuals */}
+            {chartGrid.length === 0 && !visualizationAsset && result.success !== false && (
               <div className="artifact-card border-amber-200 bg-amber-50/50">
                 <p className="text-sm text-amber-700">
                   Chart could not be generated, but analysis results are ready above.
                 </p>
+              </div>
+            )}
+
+            {/* Model Comparison — stretch goal; only rendered when planner emits it */}
+            {modelComparison && (
+              <div
+                className="artifact-card"
+                data-testid="model-comparison-section"
+              >
+                <p className="result-label">
+                  Model Comparison{modelComparison.task ? ` · ${modelComparison.task}` : ""}
+                </p>
+                {modelComparison.target_column && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Target column: <span className="font-mono">{modelComparison.target_column}</span>
+                  </p>
+                )}
+                {modelComparison.metrics && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table
+                      className="w-full text-sm"
+                      data-testid="model-metrics-table"
+                    >
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          <th className="text-left px-3 py-1.5 font-medium text-gray-700">Model</th>
+                          {Object.keys(
+                            Object.values(modelComparison.metrics)[0] || {}
+                          ).map((metric) => (
+                            <th
+                              key={metric}
+                              className="text-left px-3 py-1.5 font-medium text-gray-700"
+                            >
+                              {metric}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(modelComparison.metrics).map(([model, scores]) => (
+                          <tr key={model} className="border-b border-gray-100">
+                            <td className="px-3 py-1.5 font-mono text-gray-900">{model}</td>
+                            {Object.values(scores).map((v, i) => (
+                              <td key={i} className="px-3 py-1.5 text-gray-600">
+                                {typeof v === "number" ? v.toFixed(3) : String(v)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

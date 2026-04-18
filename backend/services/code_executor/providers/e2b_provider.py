@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import threading
@@ -31,7 +32,7 @@ class E2BExecutionProvider:
         *,
         api_key: Optional[str] = None,
         timeout_seconds: int = 60,
-        failure_threshold: int = 3,
+        failure_threshold: int = 5,
         cooldown_seconds: int = 30,
     ):
         self.enabled = enabled
@@ -178,7 +179,28 @@ class E2BExecutionProvider:
                 "failure_count": self._failure_count,
                 "last_error": self._last_error,
             }
-        # Quick connectivity check: create and immediately kill a sandbox
+        # Quick connectivity check: create and immediately kill a sandbox.
+        #
+        # IMPORTANT: Sandbox.create() is a sync network call that can block
+        # for 5-15s cold (or hang entirely on bad network). If we call it
+        # inline inside this async function, we block the event loop —
+        # lifespan warmup AND auto/cloud fallback paths would both freeze
+        # the server while waiting. Off-load to a worker thread so asyncio
+        # callers can use asyncio.wait_for to bound the wait and the loop
+        # stays responsive.
+        try:
+            return await asyncio.to_thread(self._health_sync)
+        except Exception as exc:  # pragma: no cover — defensive; _health_sync
+            # already swallows its own exceptions and returns a dict.
+            return {
+                "provider": "e2b",
+                "healthy": False,
+                "status": "unreachable",
+                "error": str(exc),
+            }
+
+    def _health_sync(self) -> dict:
+        """Sync body of health(). Blocking — call via to_thread from async."""
         try:
             from e2b_code_interpreter import Sandbox
 

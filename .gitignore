@@ -253,3 +253,9 @@ docs/presentation/*.pptx
 # Frontend node modules
 frontend/nextjs/node_modules/
 .gstack/
+
+# CatBoost training artifacts (generated, not source)
+catboost_info/
+
+# Infographic scratch output
+infographic/

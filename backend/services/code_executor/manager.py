@@ -41,12 +41,18 @@ class CodeExecutionManager:
                 return ExecutionResult(
                     success=False, error=f"{requested_mode} provider unavailable"
                 )
-            cloud_health = await self._provider_health(self.cloud_provider)
-            if cloud_health is not None and not cloud_health.get("healthy", False):
-                return ExecutionResult(
-                    success=False,
-                    error=f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}",
-                )
+            # E2B bypass: E2BExecutionProvider.health() spins a full sandbox,
+            # and execute() spins another — that is 2x Sandbox.create() per
+            # request. Skip manager-level health for e2b mode; the provider's
+            # own circuit breaker handles failure detection. PPIO keeps its
+            # health gate because auto/cloud fallback tests depend on it.
+            if requested_mode != "e2b":
+                cloud_health = await self._provider_health(self.cloud_provider)
+                if cloud_health is not None and not cloud_health.get("healthy", False):
+                    return ExecutionResult(
+                        success=False,
+                        error=f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}",
+                    )
             return await self.cloud_provider.execute(code, files, timeout_s)
 
         if requested_mode == "auto" and self.cloud_provider is not None:
@@ -83,11 +89,15 @@ class CodeExecutionManager:
         if requested_mode in {"ppio", "e2b"}:
             if self.cloud_provider is None:
                 return self._error_result(f"{requested_mode} provider unavailable")
-            cloud_health = self._provider_health_sync(self.cloud_provider)
-            if cloud_health is not None and not cloud_health.get("healthy", False):
-                return self._error_result(
-                    f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}"
-                )
+            # E2B bypass: see docstring on async execute() above — health()
+            # cost is a full Sandbox.create+kill, duplicating the real
+            # execute's Sandbox.create. Skip for e2b, keep for ppio.
+            if requested_mode != "e2b":
+                cloud_health = self._provider_health_sync(self.cloud_provider)
+                if cloud_health is not None and not cloud_health.get("healthy", False):
+                    return self._error_result(
+                        f"Cloud provider unhealthy: {cloud_health.get('status', 'unknown')}"
+                    )
             return self._execute_provider_sync(
                 self.cloud_provider, code, data_files, timeout
             )
