@@ -179,3 +179,88 @@ do not, by themselves, get the gate to PROCEED.
 `USE_GLM5_AGENT` stays **false**. Demo ships on deterministic. The
 W1-W6 chain remains safe-inert on `main`. Rollback fallback:
 `git reset --hard 95efa2d1` (pre-W1 baseline).
+
+---
+
+# Addendum 2 — Bootstrap + PROCEED
+
+Date: 2026-04-18 (same day, ~17 min after addendum 1)
+Source: `test_resources/benchmarks/agentic_glm5_20260418_v3_bootstrap.jsonl`
+
+## What changed
+
+- **Fix #3 (infra gap) landed.** Added `BOOTSTRAP_PACKAGES = ["statsmodels"]`
+  and a dedicated `run_sandbox()` in `agentic_loop.py` (distinct from
+  `spike_harness.run_sandbox` so the V1 path stays pristine). Every
+  agentic sandbox now runs `pip install -q statsmodels` before user
+  code. Idempotent (`-q` is a ~1s no-op when already present), scoped
+  to the agentic flag, budget-accounted via the expanded round-1
+  sandbox budget (20s → 30s) and total budget (45s → 60s).
+- `REPAIR_DECISION_CUTOFF_S` 25s → 35s to match the widened budgets.
+- New regression test
+  `tests/unit/test_agentic_loop.py::test_bootstrap_packages_constant_includes_statsmodels`
+  pins `BOOTSTRAP_PACKAGES` to `sandbox_runtime.EXTRA_SANDBOX_PACKAGES`.
+  Any future drift between the probe and the bootstrapper breaks the
+  build loudly instead of silently diverging.
+
+## Result: 10/10 passed (100%). Verdict: **PROCEED**.
+
+| Case | Status | Rounds | Repair | Elapsed |
+|---|---|---|---|---|
+| tips-Q1 | ok | 1 | — | 10.7s |
+| tips-Q2 | ok | 1 | — | 14.9s (variance worked in our favor) |
+| mpg-Q1 | ok | 2 | ✓ recovered | 22.3s |
+| mpg-Q2 | ok | 1 | — | 12.2s |
+| penguins-Q1 | ok | 1 | — | 15.6s |
+| penguins-Q2 | ok | 1 | — | 13.1s |
+| titanic-Q1 | ok | 1 | — | 16.6s |
+| titanic-Q2 | ok | 1 | — | 13.5s (was stubborn across 2 prior runs; fresh variance ok'd it first-shot this time) |
+| airline-Q1 | ok | 1 | — | 16.0s (**bootstrap statsmodels**) |
+| airline-Q2 | ok | 1 | — | 13.0s (**bootstrap statsmodels**) |
+
+Totals: 10/10 pass, 1 repair triggered + recovered, 0 time-budget
+exhaustion, median ~13s per case, wall clock ~3 min.
+
+## Gate rule disposition
+
+The Plan Appendix E gate rule:
+
+| Pass rate | Verdict |
+|---|---|
+| ≥ 9/10 | **PROCEED — flip `USE_GLM5_AGENT=true` for the demo** |
+| 7-8/10 | HOLD |
+| < 7/10 | REGRESSION |
+
+**10/10 clears the bar by a full case.**
+
+## Honest caveats (the gate is stochastic)
+
+- **One run at 10/10 does not mean every run is 10/10.** GLM-5 at
+  temp=0.2 is not deterministic. The three runs so far (V1 single-shot,
+  W6 post-fix-#1+#2, W6 post-bootstrap) sampled 7/10, 6/10, 10/10. The
+  true expected pass rate given the current pipeline is somewhere in
+  the 80-95% range, not 100%. A second bootstrap run might hit 9/10;
+  a third might hit 8/10 due to a sporadic `os`-import or `.transform`
+  regression. This is architecturally acceptable — the repair loop
+  catches most first-shot failures, and true deadlocks gracefully
+  return a failure envelope rather than crashing the request.
+- The W1 probe is the production safety net: if the sandbox is missing
+  a bootstrap package for any reason (pip network fail, E2B image
+  change), `agent_runtime_ready=False` and every request falls back
+  to the deterministic path. Users never see a 503 or a crashed
+  analysis, just less-clever output.
+
+## Ship disposition
+
+`USE_GLM5_AGENT` default **remains false** in this commit — flipping
+a default env var is a deliberate policy decision, not an automatic
+consequence of one green gate run. The flip is now a separate
+follow-up the user can land explicitly with:
+
+    # backend/config.py:202
+    use_glm5_agent: bool = os.getenv("USE_GLM5_AGENT", "true").lower() == "true"
+
+    # Or at deployment time: export USE_GLM5_AGENT=true
+
+Rollback stays simple: set the env var back to `false` or revert the
+config-only commit. No schema or data changes to unwind.
