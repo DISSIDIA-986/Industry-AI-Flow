@@ -214,6 +214,65 @@ async def test_budget_exhausted_mid_round2(sample_csv, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_repair_prompt_handles_fstring_braces_in_previous_output(
+    sample_csv, monkeypatch
+):
+    """Regression guard for the W6 airline-Q1 bug.
+
+    If round-1 code contains a Python f-string like ``f"Peak: {peak_month}"``,
+    that literal {peak_month} ends up inside the ``previous_json`` slot of
+    the repair prompt. The old ``render_prompt(format_map)`` path raised
+    ``ValueError: Prompt rendered with leftover placeholders: ['{peak_month}']``
+    before round 2 could even start, so the case failed with rounds=0.
+    Fix: ``_build_repair_prompt`` now substitutes via ``.replace()``,
+    which does not scan slot *values* for unfilled placeholders.
+    """
+    call_count = {"n": 0}
+
+    async def _fake_llm(prompt: str) -> str:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # Valid JSON but the code inside contains an f-string that looks
+            # like a template placeholder. Validator will reject it (uses .agg)
+            # so repair fires — that's how we exercise _build_repair_prompt.
+            return json.dumps(
+                {
+                    "status": "ok",
+                    "business_goal": "Monthly trend",
+                    "analysis_plan": "Decompose and print peak",
+                    "assumptions": [],
+                    "python_code": (
+                        "peak_month = 'Jul'\n"
+                        "print(f'Peak month: {peak_month}')\n"
+                        "df.groupby('size').agg({'tip': 'mean'})\n"
+                    ),
+                    "produces_chart": False,
+                }
+            )
+        # Round 2: return a clean, validator-passing response.
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        return _make_successful_sandbox_result()
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    # This call used to raise ValueError before the fix.
+    result = await run_agentic_analysis(
+        question="Describe trend",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+
+    assert call_count["n"] == 2, "repair round should have fired"
+    assert result.success is True
+    assert result.repair_triggered is True
+    assert result.repair_recovered is True
+    # Most importantly: no exception — the {peak_month} literal survived
+    # the substitution path without being mistaken for an unfilled slot.
+
+
+@pytest.mark.asyncio
 async def test_unanswerable_is_terminal_success_no_repair(sample_csv, monkeypatch):
     """Model claims the question can't be answered → no repair, success=True
     with status='unanswerable'."""

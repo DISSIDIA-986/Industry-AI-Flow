@@ -271,6 +271,18 @@ def _build_repair_prompt(
     previous: RoundRecord,
     trigger: str,
 ) -> str:
+    """Render the repair prompt without going through str.format_map.
+
+    The repair prompt embeds the model's previous round-1 output
+    (``previous_json``) and its failure detail verbatim. Both commonly
+    contain Python f-strings like ``f"Peak month: {peak_month}"`` that
+    would trip ``render_prompt``'s leftover-placeholder guard. V1 never
+    hit this because V1 has no repair loop. Using ``.replace()``
+    substitution sidesteps format_map's brace-handling entirely — slot
+    values can now contain arbitrary ``{word}`` text safely, and the
+    static template still has no way to reference an unfilled slot
+    because every known slot is explicitly substituted below.
+    """
     previous_json = {
         "status": (previous.parsed or {}).get("status"),
         "business_goal": (previous.parsed or {}).get("business_goal"),
@@ -284,19 +296,21 @@ def _build_repair_prompt(
         or previous.sandbox_exception_type
         or "unspecified failure"
     )
-    text, _, _ = render_prompt(
-        str(REPAIR_TEMPLATE_PATH),
-        {
-            "repair_trigger_type": trigger,
-            "failure_detail": failure_detail,
-            "question": question,
-            "previous_json": json.dumps(previous_json, ensure_ascii=False, indent=2),
-            "filename": filename,
-            "n_rows": profile["n_rows"],
-            "n_cols": profile["n_cols"],
-            "column_profile_table": profile["column_profile_table"],
-        },
-    )
+
+    slots: Dict[str, str] = {
+        "repair_trigger_type": str(trigger),
+        "failure_detail": str(failure_detail),
+        "question": str(question),
+        "previous_json": json.dumps(previous_json, ensure_ascii=False, indent=2),
+        "filename": str(filename),
+        "n_rows": str(profile["n_rows"]),
+        "n_cols": str(profile["n_cols"]),
+        "column_profile_table": str(profile["column_profile_table"]),
+    }
+
+    text = REPAIR_TEMPLATE_PATH.read_text(encoding="utf-8")
+    for name, value in slots.items():
+        text = text.replace("{" + name + "}", value)
     return text
 
 
