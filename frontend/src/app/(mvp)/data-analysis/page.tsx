@@ -811,7 +811,9 @@ export default function DataAnalysisPage() {
                             style={{ maxWidth: "100%", aspectRatio: "10/6" }}
                           />
                           <p className="mt-2 text-xs uppercase tracking-wide text-gray-500">
-                            {chart.type}
+                            {chart.type === "model_comparison"
+                              ? "Model Comparison"
+                              : chart.type}
                           </p>
                           {(() => {
                             const formatted = formatChartSummary(chart.summary);

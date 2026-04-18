@@ -36,6 +36,7 @@ def compose_eda_response(
     question: str,
     dataset_metadata: Dict[str, Any],
     generated_code: str = "",
+    model_execution: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Turn executor output + plan into the final response envelope.
 
@@ -122,6 +123,14 @@ def compose_eda_response(
             }
         )
 
+    # Merge model-comparison chart (if any) into the grid, so the frontend
+    # renders it alongside the EDA tiles without a separate code path.
+    _merge_model_chart_into_grid(
+        charts=charts,
+        ordered_visualizations=ordered_visualizations,
+        model_execution=model_execution,
+    )
+
     ok_count = sum(1 for c in charts if c["status"] == "ok")
     total = len(charts)
     success = bool(execution.get("success")) and ok_count > 0
@@ -157,8 +166,10 @@ def compose_eda_response(
         },
         "dataset_info": dataset_metadata,
         "execution_time": float(execution.get("execution_time") or 0.0),
-        "model_comparison": plan.get("model_comparison")
-        or {"enabled": False, "reason": "not available"},
+        "model_comparison": _build_model_comparison_block(
+            plan.get("model_comparison") or {},
+            model_execution,
+        ),
         "stdout": execution.get("stdout", ""),
         "stderr": execution.get("stderr", ""),
     }
@@ -369,3 +380,119 @@ def _build_answer(
     if rationale:
         return f"{header} {rationale}"
     return header
+
+
+# ---------------------------------------------------------------------------
+# model comparison merge
+# ---------------------------------------------------------------------------
+
+
+def _build_model_comparison_block(
+    planned: Dict[str, Any],
+    executed: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Fuse the planner's intent with the executor's result.
+
+    ``planned`` is what ``chart_plan`` put in the plan (enabled flag,
+    target, task, models, reason). ``executed`` is what
+    ``chart_executor.execute_model_comparison`` returned (metrics,
+    image filename, actual success/failure).
+
+    If executor was never called (``executed is None``), pass the plan's
+    block through unchanged so callers that skip the model stage keep
+    the existing shape. If executor ran, its result is authoritative
+    for metrics and success; planner fields (target, task, reason)
+    stay as context.
+    """
+    base: Dict[str, Any] = {
+        "enabled": bool(planned.get("enabled")),
+        "target_column": planned.get("target_column"),
+        "task": planned.get("task"),
+        "models": list(planned.get("models") or []),
+        "reason": planned.get("reason") or "",
+        "metrics": {},
+        "image_filename": None,
+    }
+
+    if executed is None:
+        return base
+
+    base["metrics"] = dict(executed.get("metrics") or {})
+    # ``image_filename`` here is the sandbox-side name; the persisted
+    # path is handled via the charts[] / visualizations[] merge below.
+    # Frontend uses charts[] for rendering, so this field is metadata
+    # only.
+    base["image_filename"] = executed.get("image_filename")
+    # Executor reason beats planner reason once we've actually tried.
+    if executed.get("reason"):
+        base["reason"] = executed["reason"]
+    # If the executor failed despite being enabled, mark enabled=False
+    # so the frontend's `enabled === true` gate hides the (empty) panel.
+    if not executed.get("success"):
+        base["enabled"] = False
+    return base
+
+
+def _merge_model_chart_into_grid(
+    *,
+    charts: List[Dict[str, Any]],
+    ordered_visualizations: List[Dict[str, str]],
+    model_execution: Optional[Dict[str, Any]],
+) -> None:
+    """Append the persisted model-comparison image into the grid in place.
+
+    Mutates ``charts`` and ``ordered_visualizations`` so the caller can
+    continue to compute ok_count / visualizations without branching on
+    whether the model stage ran.
+
+    No-op when model execution was skipped, failed, or produced no
+    image. The main ``model_comparison`` response block already carries
+    the metrics table either way.
+    """
+    if not model_execution or not model_execution.get("success"):
+        return
+
+    image_filename = model_execution.get("image_filename")
+    output_files = model_execution.get("output_files") or {}
+    if not image_filename or image_filename not in output_files:
+        return
+
+    # Reuse the same per-chart persistence helper so naming collisions
+    # get the same treatment (original filename → persisted filename).
+    fake_spec = [
+        {
+            "id": "chart_99_model_comparison",
+            "type": "model_comparison",
+            "image_filename": image_filename,
+        }
+    ]
+    persisted_map = _persist_charts(fake_spec, output_files)
+    persisted = persisted_map.get(image_filename)
+    if not persisted:
+        return
+
+    target = model_execution.get("target_column") or "target"
+    task = model_execution.get("task") or "model"
+    summary = {
+        "target": target,
+        "task": task,
+        "n_models": len(model_execution.get("metrics") or {}),
+    }
+
+    charts.append(
+        {
+            "id": "chart_99_model_comparison",
+            "type": "model_comparison",
+            "status": "ok",
+            "image_filename": persisted["filename"],
+            "summary": summary,
+            "error": None,
+            "params": {"target_column": target, "task": task},
+        }
+    )
+    ordered_visualizations.append(
+        {
+            "filename": persisted["filename"],
+            "path": persisted["path"],
+        }
+    )
