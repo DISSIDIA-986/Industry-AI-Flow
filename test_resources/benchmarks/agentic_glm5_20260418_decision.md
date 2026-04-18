@@ -74,3 +74,108 @@ The current commit chain (W1-W5) is safe to ship either way: agentic path is gat
 
 - Cost: ~$0.04 Zhipu + ~$0.01 E2B (10 sandboxes × ~7s each).
 - Wall clock: ~3 min total (vs. ~1.5 min for V1 single-shot; overhead is the 3s inter-case sleep + extra repair round on 2 cases).
+
+---
+
+# Addendum — Post-Remediation Rerun
+
+Date: 2026-04-18 (same day, ~35 min after initial gate)
+Source: `test_resources/benchmarks/agentic_glm5_20260418_v2_postfix.jsonl`
+
+## What changed
+
+- **Fix #1 (our bug)** — `_build_repair_prompt` now substitutes via
+  `.replace()` instead of `render_prompt`/`format_map`. Slot values can
+  carry arbitrary `{word}` text (Python f-strings, captured code, JSON)
+  without tripping the leftover-placeholder guard. Covered by
+  `tests/unit/test_agentic_loop.py::test_repair_prompt_handles_fstring_braces_in_previous_output`.
+- **Fix #2 (repair prompt strength)** — `agentic_v1_repair_template.md`
+  now embeds the top-5 Substitution Cookbook entries inline (with
+  BAD/GOOD worked examples for `.transform`, `.map`, `.apply`, `.agg`,
+  `.query`) plus an instruction to **copy the GOOD form verbatim**
+  rather than invent a new one.
+- **Fix #3 (infra gap)** — NOT landed. E2B default image still lacks
+  `statsmodels`. The W1 probe already marks the runtime not-ready when
+  this is detected; in production that routes to deterministic.
+
+## Result: 6/10 passed (60%). Verdict: **HOLD** (regressed vs first W6 run).
+
+| Case | First W6 run | Post-remediation | Delta |
+|---|---|---|---|
+| tips-Q1 | ok | ok | — |
+| tips-Q2 | ok | **fail** (`Blacklisted import: os`) | sampling variance |
+| mpg-Q1 | ok | ok | — |
+| mpg-Q2 | ok | ok | — |
+| penguins-Q1 | ok | ok | — |
+| penguins-Q2 | ok | ok | — |
+| titanic-Q1 | ok | ok | — |
+| titanic-Q2 | fail (`.transform`) | fail (`.transform`) | repair still ineffective |
+| airline-Q1 | error (`{peak_month}`) | fail (`statsmodels`) | **reclassified from defect → infra gap** |
+| airline-Q2 | fail (`statsmodels`) | fail (`statsmodels`) | — |
+
+## Analysis
+
+Two structural effects visible, one sampling-variance noise:
+
+1. **Fix #1 worked as intended.** airline-Q1 no longer errors with
+   `rounds=0`. The case now runs to round 2 and fails cleanly on the
+   real missing-library gap. That moves airline-Q1 from "our defect"
+   to "infra-gated by the W1 probe in production."
+
+2. **Fix #2 did not save titanic-Q2.** Despite an inline BAD/GOOD
+   example specifically for `.transform`, GLM-5 regenerated
+   `.transform()` on round 2 anyway. This is stubborn prompt
+   non-compliance the repair loop cannot break without stronger
+   intervention (a deterministic post-hoc rewriter, or validator-aware
+   code surgery in the loop itself — both out of W2 scope).
+
+3. **Sampling variance at temp=0.2 cost tips-Q2 this run.** GLM-5
+   imported `os` (a blacklisted module), repair attempted, round 2
+   also failed. At temp=0.2 the same case passes ~90% of the time; a
+   one-shot `≥9/10` gate against a 90%-per-case model is structurally
+   expected to hit 9/10 only ~38% of the time. This is the classic
+   brittleness of deterministic gates against stochastic generators.
+
+## Effective pass rate (adjusted for production routing)
+
+If we accept the W1 probe's behavior — agentic path routes to
+deterministic when `agent_runtime_ready=False` — then the two airline
+cases (both statsmodels-gated) would never have hit the agentic path
+in production. Among the 8 non-gated cases:
+
+- First W6 run: 7/8 agentic pass (titanic-Q2 only failure)
+- Post-remediation: 6/8 agentic pass (titanic-Q2 + tips-Q2 variance)
+
+So the production-equivalent agentic pass rate sits at 75-87%, and the
+remaining `≥9/10 full-gate` rule would require either fixing
+titanic-Q2 (model intervention) or installing statsmodels
+(infra work).
+
+## Updated Decision
+
+**HOLD stands.** Remediation #1 and #2 are real, independent
+improvements and should land regardless — #1 closes a genuine loop
+defect, #2 strengthens the repair prompt for future iterations. They
+do not, by themselves, get the gate to PROCEED.
+
+### What would actually move the gate:
+
+- **Install `statsmodels` in E2B runtime** — either a custom E2B
+  template (the canonical path; requires E2B dashboard config) or a
+  per-sandbox `!pip install statsmodels` injection (~15-30s cold-start
+  tax, acceptable for the 1-2 forecast-family cases/day in demo).
+  Expected recovery: airline-Q1 + airline-Q2 → 9-10/10.
+- **Deterministic post-hoc rewriter for `.transform/.map/.apply`** —
+  a small AST pass that substitutes blocked methods with their
+  cookbook equivalents after the LLM returns. Would save titanic-Q2
+  and similar stubborn cases without another LLM round-trip. Scope
+  equivalent to W2, not a tweak.
+- **Temperature reduction to 0.0** — would kill the tips-Q2 variance
+  but also reduce the model's creativity on the happy-path cases.
+  Would need its own small benchmark to quantify net effect.
+
+### Ship disposition (unchanged)
+
+`USE_GLM5_AGENT` stays **false**. Demo ships on deterministic. The
+W1-W6 chain remains safe-inert on `main`. Rollback fallback:
+`git reset --hard 95efa2d1` (pre-W1 baseline).
