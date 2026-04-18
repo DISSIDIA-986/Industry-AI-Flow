@@ -1,0 +1,25 @@
+Agentic spike gate summary  (generated 2026-04-18T23:24:03.683873+00:00)
+Source: /Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/benchmarks/agentic_glm5_20260418.jsonl
+
+Overall pass: 7/10 (70%)
+Repair rounds triggered: 2/10
+Repair rounds recovered: 0/2
+
+By task_family:
+  classification : 1/2
+  correlation    : 1/1
+  descriptive    : 3/3
+  forecast       : 0/1
+  regression     : 2/2
+  time-series    : 0/1
+
+Fail modes:
+  Blocked method call             : 1
+  agentic_loop_exception          : 1
+  ---------------------------------------------------------------------------ModuleNotFoundError                       Traceback (most recent call last)Cell In[1], line 22
+     17 df.index.freq = 'MS'
+     19 # 3. Modeling (Holt-Winters)
+     20 # Using multiplicative trend/seasonality due to increasing seasonal amplitude
+     21 # Note: 1
+
+VERDICT: HOLD — keep deterministic default, iterate prompt / fix infra gaps
