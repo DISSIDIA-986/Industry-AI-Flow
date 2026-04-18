@@ -46,4 +46,4 @@ catboost>=1.2.10
 shap>=0.51.0
 
 # Langfuse observability (cloud, US region)
-langfuse==4.3.1
+langfuse==3.14.6
