@@ -418,7 +418,14 @@ export default function DataAnalysisPage() {
   const pipelineSummary = useMemo(() => {
     const completedCount = STAGE_ORDER.filter(s => stages[s]?.status === "completed").length;
     const totalMs = Object.values(stages).reduce((sum, ev) => sum + (ev.elapsed_ms || 0), 0);
-    const modeLabel = codeGenMode === "llm" ? "LLM Generated" : codeGenMode === "template_fallback" ? "Template Fallback" : codeGenMode || "";
+    const modeLabel =
+      codeGenMode === "llm"
+        ? "LLM Generated"
+        : codeGenMode === "deterministic_planner"
+          ? "Deterministic Planner"
+          : codeGenMode === "template_fallback"
+            ? "Template Fallback"
+            : codeGenMode || "";
     return `${completedCount}/${STAGE_ORDER.length} stages · ${(totalMs / 1000).toFixed(1)}s${modeLabel ? ` · ${modeLabel}` : ""}`;
   }, [stages, codeGenMode]);
 
@@ -689,22 +696,48 @@ export default function DataAnalysisPage() {
             >
               {result.success === false ? "Analysis Error" : "Analysis Complete"}
               {analysisSummary?.chart_type && ` — ${analysisSummary.chart_type}`}
-              {codeGenMode && ` (${codeGenMode === "llm" ? "LLM" : "Fallback"})`}
+              {codeGenMode && ` (${
+                codeGenMode === "llm"
+                  ? "LLM"
+                  : codeGenMode === "deterministic_planner"
+                    ? "Deterministic"
+                    : codeGenMode === "template_fallback"
+                      ? "Fallback"
+                      : codeGenMode
+              })`}
             </div>
 
             {/* Code generation mode badge */}
             {codeGenMode && (
               <div className="flex items-center gap-2 text-sm" data-testid="code-gen-mode-badge">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                {(() => {
+                  const isPreferred =
+                    codeGenMode === "llm" || codeGenMode === "deterministic_planner";
+                  const label =
                     codeGenMode === "llm"
-                      ? "bg-emerald-900/20 text-emerald-400 border border-emerald-800"
-                      : "bg-amber-900/20 text-amber-400 border border-amber-800"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${codeGenMode === "llm" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                  {codeGenMode === "llm" ? "LLM Generated" : "Template Fallback"}
-                </span>
+                      ? "LLM Generated"
+                      : codeGenMode === "deterministic_planner"
+                        ? "Deterministic Planner"
+                        : codeGenMode === "template_fallback"
+                          ? "Template Fallback"
+                          : codeGenMode;
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                        isPreferred
+                          ? "bg-emerald-900/20 text-emerald-400 border border-emerald-800"
+                          : "bg-amber-900/20 text-amber-400 border border-amber-800"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isPreferred ? "bg-emerald-500" : "bg-amber-500"
+                        }`}
+                      />
+                      {label}
+                    </span>
+                  );
+                })()}
                 {(() => {
                   const cg = result.code_generation;
                   const reason = typeof cg === "object" && cg !== null ? (cg as Record<string, unknown>).fallback_reason : null;

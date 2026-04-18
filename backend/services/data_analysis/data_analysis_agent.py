@@ -314,12 +314,31 @@ class DataAnalysisAgent:
             # Load data file
             if file_path.endswith(".csv"):
                 df = None
+                # sep=None + engine="python" triggers csv.Sniffer so files that
+                # use ';' or '\t' as delimiter (e.g. UCI wine-quality) parse
+                # into proper columns instead of a single 500-char string.
+                # Falls back to sep="," on sniff failure so standard comma
+                # CSVs keep the faster C engine path where possible.
                 for enc in ("utf-8", "utf-8-sig", "latin-1"):
                     try:
-                        df = pd.read_csv(file_path, encoding=enc, nrows=_NROWS_GUARD)
+                        df = pd.read_csv(
+                            file_path,
+                            encoding=enc,
+                            nrows=_NROWS_GUARD,
+                            sep=None,
+                            engine="python",
+                        )
                         break
                     except UnicodeDecodeError:
                         continue
+                    except pd.errors.ParserError:
+                        try:
+                            df = pd.read_csv(
+                                file_path, encoding=enc, nrows=_NROWS_GUARD
+                            )
+                            break
+                        except UnicodeDecodeError:
+                            continue
                 if df is None:
                     return {
                         "error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."
