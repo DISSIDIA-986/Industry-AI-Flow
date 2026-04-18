@@ -702,6 +702,41 @@ async def lifespan(_: FastAPI):
         except Exception as e:
             logger.warning("E2B pre-warm failed (non-critical): %s", e)
 
+    # Agentic path readiness probe (Plan Appendix E W1).
+    # Runs only when USE_GLM5_AGENT=true. Verifies every package in
+    # EXTRA_SANDBOX_PACKAGES is importable in the E2B default image.
+    # On failure, agent_runtime_ready stays false and analyze_query()
+    # falls back silently to the deterministic path. No 503 anywhere.
+    if settings.use_glm5_agent:
+        try:
+            from backend.services.code_executor.sandbox_runtime import (
+                set_agent_runtime_ready,
+                verify_sandbox_packages,
+            )
+
+            readiness = await verify_sandbox_packages(
+                api_key=settings.e2b_api_key
+            )
+            set_agent_runtime_ready(readiness.ready)
+            if readiness.ready:
+                logger.info(
+                    "Agentic runtime ready (probe %.1fs, packages verified)",
+                    readiness.elapsed_s,
+                )
+            else:
+                logger.error(
+                    "Agentic runtime NOT ready: missing=%s error=%s. "
+                    "Analysis will fall back to deterministic path.",
+                    readiness.missing,
+                    readiness.error,
+                )
+        except Exception as e:  # noqa: BLE001 — probe must never break startup
+            logger.error(
+                "Agentic runtime probe crashed (non-critical): %s. "
+                "Falling back to deterministic path.",
+                e,
+            )
+
     yield
 
     # Flush pending Langfuse traces on shutdown so nothing gets dropped

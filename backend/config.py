@@ -194,6 +194,12 @@ class Settings(BaseSettings):
     e2b_timeout_seconds: int = int(os.getenv("E2B_TIMEOUT_SECONDS", "60"))
     e2b_failure_threshold: int = int(os.getenv("E2B_FAILURE_THRESHOLD", "3"))
     e2b_cooldown_seconds: int = int(os.getenv("E2B_COOLDOWN_SECONDS", "30"))
+
+    # Dynamic Data Analysis agentic path (Plan Appendix E, W4)
+    # When true: analyze_query() routes to backend/services/data_analysis/agentic_loop.py
+    # When false: existing deterministic chart_plan.py flow (unchanged).
+    # Defaults false. See Plan E.5 for rollout sequence.
+    use_glm5_agent: bool = os.getenv("USE_GLM5_AGENT", "false").lower() == "true"
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
     )  # Docker image name
