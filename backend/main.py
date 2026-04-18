@@ -661,6 +661,47 @@ async def lifespan(_: FastAPI):
     except Exception as e:
         logger.warning("Langfuse pre-warm failed (non-critical): %s", e)
 
+    # Pre-warm E2B sandbox to eliminate first-click flakiness.
+    # E2BExecutionProvider.health() offloads the sync Sandbox.create() to a
+    # worker thread internally (see e2b_provider.py:_health_sync), so awaiting
+    # it here does not block the event loop. wait_for enforces a hard 15s
+    # budget so a stalled network cannot hang startup.
+    #
+    # Fires when provider == "e2b" OR when auto mode has E2B wired as the
+    # cloud fallback. Auto+E2B is a legitimate deployment shape where the
+    # first docker-fail fallback hits a cold E2B sandbox, so the warmup
+    # matters there too.
+    _provider_setting = (settings.code_execution_provider or "").strip().lower()
+    _e2b_prewarm_needed = _provider_setting == "e2b" or (
+        _provider_setting == "auto"
+        and getattr(settings, "enable_e2b_code_execution", False)
+    )
+    if _e2b_prewarm_needed:
+        try:
+            import asyncio as _asyncio
+
+            from backend.services.code_executor import get_code_execution_manager
+
+            manager = get_code_execution_manager()
+            if manager is not None and manager.cloud_provider is not None:
+                health = await _asyncio.wait_for(
+                    manager.cloud_provider.health(), timeout=15.0
+                )
+                if health.get("healthy"):
+                    logger.info("E2B sandbox pre-warmed")
+                else:
+                    logger.warning(
+                        "E2B pre-warm health check unhealthy: %s",
+                        health.get("status", "unknown"),
+                    )
+        except TimeoutError:
+            logger.warning(
+                "E2B pre-warm timed out after 15s (non-critical); "
+                "first request will pay cold-start cost"
+            )
+        except Exception as e:
+            logger.warning("E2B pre-warm failed (non-critical): %s", e)
+
     yield
 
     # Flush pending Langfuse traces on shutdown so nothing gets dropped

@@ -27,6 +27,32 @@ logger = logging.getLogger(__name__)
 code_executor: Any | None = None
 
 
+class _LegacyExecutorAdapter:
+    """Shim that exposes a ``CodeExecutionManager``-style ``execute_code``
+    signature on top of the legacy single-provider executor.
+
+    The legacy executor (``DockerCodeExecutor`` / ``get_code_executor()``)
+    has ``execute_code(code, data_files=None, timeout=None)`` with no
+    ``mode`` argument. ``chart_executor.execute_eda`` calls through with
+    ``mode=`` so we swallow it here. Keeps the legacy fallback path
+    working when ``get_code_execution_manager()`` returns ``None``.
+    """
+
+    def __init__(self, legacy_executor: Any) -> None:
+        self._exec = legacy_executor
+
+    def execute_code(
+        self,
+        code: str,
+        data_files: Optional[List[str]] = None,
+        timeout: Optional[int] = None,
+        mode: Optional[str] = None,  # ignored; legacy executor has a fixed backend
+    ) -> Dict[str, Any]:
+        return self._exec.execute_code(
+            code=code, data_files=data_files, timeout=timeout
+        )
+
+
 class DataAnalysisAgent:
     """Data Analysis Agent - generates and executes code to analyze datasets."""
 
@@ -118,133 +144,130 @@ class DataAnalysisAgent:
                 f"{dataset_metadata.get('rows', '?')} rows × {dataset_metadata.get('columns', '?')} cols",
             )
 
-            # 3. Generate analysis code
-            _progress("code_generation", "running", 0.25, "AI generating analysis + visualization code...")
-            analysis_code = self._generate_analysis_code(
-                question, data_file_path, dataset_metadata
+            # 3. Build deterministic EDA plan from metadata
+            #
+            # Replaces the former LLM code-gen path. The plan is a pure
+            # function of dataset metadata (chart_plan.py), so this stage
+            # cannot hit a cloud API failure, JSON parse retry, or
+            # prompt-regression flake. Critical for demo stability.
+            _progress("code_generation", "running", 0.25, "Planning charts from dataset shape...")
+            from backend.services.data_analysis.chart_plan import (
+                eda_plan_from_metadata,
             )
 
-            if not analysis_code:
-                _progress("code_generation", "failed", 0.30, "Code generation failed")
-                return {
-                    "success": False,
-                    "error": "Failed to generate analysis code.",
-                    "answer": "The analysis code could not be generated for this request.",
-                }
-            code_gen_mode = "llm"
-            _progress("code_generation", "completed", 0.40, "Code generated")
+            plan = eda_plan_from_metadata(dataset_metadata, user_question=question)
+            chart_count = len((plan.get("eda") or {}).get("charts") or [])
+            code_gen_mode = "deterministic_planner"
+            _progress(
+                "code_generation",
+                "completed",
+                0.40,
+                f"Planned {chart_count} chart(s)",
+            )
 
             # 4. Validate generated code (security check)
-            _progress("security_check", "running", 0.42, "Validating code security...")
+            #
+            # The deterministic snippet is built from frozen templates we
+            # own. We still run CodeValidator in strict mode as belt-and-
+            # suspenders: if a future render helper slips in a blocked
+            # method (.apply/.agg/.map), this catches it before the
+            # sandbox ever sees the code. Covered by
+            # test_combined_snippet_passes_strict_validator.
+            _progress("security_check", "running", 0.42, "Validating snippet...")
             from backend.services.code_executor.validator import validate_code
+            from backend.services.data_analysis.chart_executor import (
+                _build_combined_snippet,
+                execute_eda,
+            )
 
-            validation = validate_code(analysis_code, strict_mode=True)
-            if not validation.is_valid:
-                # Try template fallback
-                _progress("security_check", "running", 0.45, "LLM code failed validation, using template fallback...")
-                analysis_code = self._generate_template_code(
-                    question, data_file_path, dataset_metadata
-                )
-                code_gen_mode = "template_fallback"
-                validation = validate_code(analysis_code, strict_mode=True)
+            charts_spec = (plan.get("eda") or {}).get("charts") or []
+            snippet_for_validation = (
+                _build_combined_snippet(charts_spec, data_file_path)
+                if charts_spec
+                else ""
+            )
+            if snippet_for_validation:
+                validation = validate_code(snippet_for_validation, strict_mode=True)
                 if not validation.is_valid:
-                    _progress("security_check", "failed", 0.50, f"Validation failed: {validation.error}")
+                    _progress(
+                        "security_check",
+                        "failed",
+                        0.50,
+                        f"Validation failed: {validation.error}",
+                    )
                     return {
                         "success": False,
-                        "error": f"Generated code failed validation: {validation.error}",
-                        "answer": "The generated analysis code did not pass security validation.",
+                        "error": f"Deterministic snippet failed validation: {validation.error}",
+                        "answer": "The analysis snippet did not pass security validation. This is a bug in the chart templates.",
+                        "dataset_info": dataset_metadata,
+                        "code_generation": {
+                            "mode": code_gen_mode,
+                            "fallback_reason": validation.error,
+                        },
                     }
-            _progress("security_check", "completed", 0.50, f"Code validated ({code_gen_mode})")
+            _progress("security_check", "completed", 0.50, f"Validated ({code_gen_mode})")
 
-            # 5. Execute code in sandbox
-            _progress("sandbox_execution", "running", 0.55, "Executing in Docker sandbox...")
-            if not self.code_execution_manager and not self.code_executor:
+            # 5. Execute combined snippet in a SINGLE sandbox invocation.
+            #
+            # This is the structural fix for first-run flakiness: the
+            # old path would spin one Sandbox.create() per chart. Now all
+            # N charts share one sandbox; partial failures are isolated
+            # via CHART_OK_JSON / CHART_FAILED_JSON stdout markers.
+            _progress("sandbox_execution", "running", 0.55, "Rendering charts in sandbox...")
+            execution_runner = self.code_execution_manager
+            if execution_runner is None and self.code_executor is not None:
+                # Legacy executor path: older deployments/tests inject
+                # ``data_analysis_agent.code_executor`` directly (or only have
+                # Docker wired). Wrap it so ``execute_eda`` can call
+                # ``.execute_code(code, data_files, timeout, mode=...)`` even
+                # though the legacy executor's signature lacks ``mode``.
+                execution_runner = _LegacyExecutorAdapter(self.code_executor)
+            if execution_runner is None:
                 _progress("sandbox_execution", "failed", 0.55, "No execution provider")
                 return {
                     "success": False,
                     "error": "Code execution provider is unavailable",
                     "answer": "Data analysis is temporarily unavailable because the execution provider is offline.",
-                }
-
-            if self.code_execution_manager is not None:
-                execution_result = self.code_execution_manager.execute_code(
-                    code=analysis_code,
-                    data_files=[data_file_path],
-                    timeout=30,
-                    mode=settings.code_execution_provider,
-                )
-            else:
-                execution_result = self.code_executor.execute_code(
-                    code=analysis_code, data_files=[data_file_path], timeout=30
-                )
-
-            # 6. Process execution results
-            _progress("result_render", "running", 0.85, "Processing results...")
-            if execution_result["success"]:
-                answer = self._parse_execution_output(
-                    execution_result["stdout"], question, dataset_metadata
-                )
-
-                # Parse ANALYSIS_SUMMARY_JSON marker
-                analysis_summary = self._parse_analysis_summary(
-                    execution_result.get("stdout", "")
-                )
-
-                # Persist visualization output_files to TEMP_DATA_ROOT
-                # so frontend can fetch via /api/v1/files/visualizations/
-                visualizations = execution_result.get("visualizations", [])
-                output_files = execution_result.get("output_files", {})
-                if output_files:
-                    try:
-                        from backend.tools.visualization import (
-                            _persist_visualization_artifacts,
-                        )
-
-                        persisted = _persist_visualization_artifacts(output_files)
-                        if persisted:
-                            visualizations = persisted
-                    except Exception as exc:
-                        logger.warning("Failed to persist viz artifacts: %s", exc)
-
-                result = {
-                    "success": True,
-                    "answer": answer,
-                    "code": analysis_code,
-                    "stdout": execution_result["stdout"],
-                    "execution_time": execution_result["execution_time"],
-                    "visualizations": visualizations,
                     "dataset_info": dataset_metadata,
                     "code_generation": {
                         "mode": code_gen_mode,
-                        "fallback_reason": None,
+                        "fallback_reason": "no code_execution_manager",
                     },
                 }
-                if analysis_summary:
-                    result["analysis_summary"] = analysis_summary
 
+            execution_result = execute_eda(
+                plan=plan,
+                data_file_path=data_file_path,
+                code_execution_manager=execution_runner,
+                mode=settings.code_execution_provider,
+                timeout_s=60,
+            )
+
+            # 6. Compose the legacy-shaped response envelope.
+            _progress("result_render", "running", 0.85, "Composing charts and findings...")
+            from backend.services.data_analysis.report_composer import (
+                compose_eda_response,
+            )
+
+            composed = compose_eda_response(
+                plan=plan,
+                execution=execution_result,
+                question=question,
+                dataset_metadata=dataset_metadata,
+                generated_code=execution_result.get("code") or "",
+            )
+
+            if composed.get("success"):
                 _progress("result_render", "completed", 1.0, "Analysis complete")
-                return result
             else:
-                # Execution failed, generate fallback answer from metadata
-                fallback_answer = self._generate_fallback_answer(
-                    question, dataset_metadata, execution_result.get("stderr", "")
+                _progress(
+                    "result_render",
+                    "failed",
+                    1.0,
+                    composed.get("stderr") or "no charts rendered",
                 )
 
-                _progress("result_render", "failed", 1.0, "Execution failed")
-                return {
-                    "success": False,
-                    "error": execution_result.get(
-                        "error", "Code execution failed during data analysis."
-                    ),
-                    "stderr": execution_result.get("stderr", ""),
-                    "answer": fallback_answer,
-                    "code": analysis_code,
-                    "dataset_info": dataset_metadata,
-                    "code_generation": {
-                        "mode": code_gen_mode,
-                        "fallback_reason": execution_result.get("error"),
-                    },
-                }
+            return composed
 
         except Exception as e:
             logger.error(f"Data analysis agent error: {e}")
@@ -333,56 +356,137 @@ class DataAnalysisAgent:
                     pii_warnings,
                 )
 
-            # Build column metadata
+            # Build column metadata.
+            #
+            # Each column gets a semantic `role` so chart_plan.py does not have
+            # to reverse-engineer pandas dtype strings. Roles:
+            #   "numeric"     — int/float/uint/nullable Int/Float, NOT bool
+            #   "categorical" — object or pandas CategoricalDtype
+            #   "boolean"     — bool
+            #   "datetime"    — datetime64[ns] etc
+            #   "unknown"     — anything else (timedelta, period, extension types)
+            #
+            # Also tags `is_id_like`: unique count approaches row count, so the
+            # column is probably an ID/timestamp-as-int/ZIP and should not be
+            # plotted by heuristic. Threshold 0.9 to allow small duplicates.
             columns_info = []
+
+            def _safe_float(val, default=0.0):
+                try:
+                    f = float(val)
+                    if not math.isfinite(f):
+                        return default
+                    return f
+                except (TypeError, ValueError):
+                    return default
+
             for col in df.columns:
-                col_type = str(df[col].dtype)
-                col_info = {
+                series = df[col]
+                col_type = str(series.dtype)
+                non_null = int(series.count())
+                null_count = int(series.isnull().sum())
+
+                # Role classification — use pandas helpers so nullable / uint /
+                # extension types are handled correctly.
+                is_bool = pd.api.types.is_bool_dtype(series)
+                is_numeric = (
+                    pd.api.types.is_numeric_dtype(series) and not is_bool
+                )
+                is_datetime = pd.api.types.is_datetime64_any_dtype(series)
+                is_categorical = isinstance(
+                    series.dtype, pd.CategoricalDtype
+                ) or series.dtype == object
+
+                if is_bool:
+                    role = "boolean"
+                elif is_numeric:
+                    role = "numeric"
+                elif is_datetime:
+                    role = "datetime"
+                elif is_categorical:
+                    role = "categorical"
+                else:
+                    role = "unknown"
+
+                col_info: Dict[str, Any] = {
                     "name": col,
                     "type": col_type,
-                    "non_null_count": int(df[col].count()),
-                    "null_count": int(df[col].isnull().sum()),
+                    "role": role,
+                    "non_null_count": non_null,
+                    "null_count": null_count,
                 }
 
-                if df[col].dtype in ["int64", "float64"]:
-                    # Guard against all-NaN columns: mean/min/max/std return NaN
-                    # which breaks json.dumps() serialization
-                    def _safe_float(val, default=0.0):
-                        try:
-                            f = float(val)
-                            if not math.isfinite(f):
-                                return default
-                            return f
-                        except (TypeError, ValueError):
-                            return default
-
-                    col_info.update(
-                        {
-                            "mean": _safe_float(df[col].mean()),
-                            "min": _safe_float(df[col].min()),
-                            "max": _safe_float(df[col].max()),
-                            "std": _safe_float(df[col].std()),
-                        }
+                # ID-like: near-unique values + column name that reads as an
+                # identifier. Both conditions must hold, otherwise continuous
+                # numeric columns (prices, coordinates, sensor readings) that
+                # happen to be mostly unique get excluded from every chart.
+                if non_null > 0 and role in {"numeric", "categorical"}:
+                    unique_count = int(series.nunique(dropna=True))
+                    col_info["unique_values"] = unique_count
+                    uniqueness = unique_count / non_null
+                    name_lower = str(col).strip().lower()
+                    name_is_id = bool(
+                        re.match(r"^(id|uuid|guid|row_?(id|num|index))$", name_lower)
+                        or re.search(r"(^|_)(id|uuid|guid)$", name_lower)
+                        or name_lower.startswith("row_")
+                    )
+                    col_info["is_id_like"] = (
+                        non_null >= 10 and uniqueness >= 0.98 and name_is_id
                     )
 
-                # Categorical column statistics
-                elif df[col].dtype == "object":
-                    unique_count = df[col].nunique()
-                    if unique_count <= 20:  # Low cardinality - include value counts
-                        value_counts = df[col].value_counts().to_dict()
-                        col_info.update(
-                            {
-                                "unique_values": unique_count,
-                                "top_values": dict(list(value_counts.items())[:5]),
-                            }
+                if role == "numeric":
+                    col_info.update(
+                        {
+                            "mean": _safe_float(series.mean()),
+                            "min": _safe_float(series.min()),
+                            "max": _safe_float(series.max()),
+                            "std": _safe_float(series.std()),
+                        }
+                    )
+                elif role == "categorical":
+                    unique_count = col_info.get("unique_values", 0)
+                    if unique_count <= 20:
+                        value_counts = series.value_counts().to_dict()
+                        col_info["top_values"] = dict(
+                            list(value_counts.items())[:5]
                         )
-                    else:
-                        col_info["unique_values"] = unique_count
 
                 columns_info.append(col_info)
 
+            # Precompute top-correlated numeric pair so chart_plan.py can
+            # stay pure (no df access). Uses the already-in-memory sample.
+            # Excludes ID-like columns (monotonic sequences, timestamps-as-int,
+            # ZIP codes) because correlations between them are noise.
+            top_corr_pair: Optional[Dict[str, Any]] = None
+            try:
+                numeric_cols = [
+                    c["name"]
+                    for c in columns_info
+                    if c.get("role") == "numeric"
+                    and float(c.get("std") or 0.0) > 0.0
+                    and not c.get("is_id_like", False)
+                ]
+                if len(numeric_cols) >= 2:
+                    corr = df[numeric_cols].corr(method="pearson").abs()
+                    best_rho = -1.0
+                    best_pair = None
+                    for i, a in enumerate(numeric_cols):
+                        for b in numeric_cols[i + 1 :]:
+                            rho = float(corr.at[a, b])
+                            if math.isfinite(rho) and rho > best_rho:
+                                best_rho = rho
+                                best_pair = (a, b)
+                    if best_pair is not None:
+                        top_corr_pair = {
+                            "col_a": best_pair[0],
+                            "col_b": best_pair[1],
+                            "abs_rho": best_rho,
+                        }
+            except Exception as exc:
+                logger.debug("top_corr_pair computation skipped: %s", exc)
+
             truncated = total_rows > len(df)
-            return {
+            metadata: Dict[str, Any] = {
                 "filename": os.path.basename(file_path),
                 "rows": total_rows,
                 "rows_sampled": len(df) if truncated else total_rows,
@@ -393,6 +497,9 @@ class DataAnalysisAgent:
                 "memory_usage": int(df.memory_usage(deep=True).sum()),
                 "has_index": df.index.name is not None,
             }
+            if top_corr_pair is not None:
+                metadata["top_corr_pair"] = top_corr_pair
+            return metadata
 
         except Exception as e:
             logger.error(f"Failed to extract dataset metadata: {e}")

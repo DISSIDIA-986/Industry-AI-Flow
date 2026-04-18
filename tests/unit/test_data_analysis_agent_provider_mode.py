@@ -20,23 +20,35 @@ class _FakeManager:
 
     def execute_code(self, **kwargs) -> dict:
         self.calls.append(kwargs)
+        # Fake one successful chart so the deterministic pipeline runs
+        # end-to-end and surfaces success=True. We emit a valid
+        # CHART_OK_JSON marker and matching output_files bytes.
+        stdout = (
+            'CHART_OK_JSON={"idx": 0, "type": "histogram", "status": "ok", '
+            '"image_filename": "chart_00_histogram.png", '
+            '"summary": {"column": "a", "count": 20, "mean": 10.5}}'
+        )
         return {
             "success": True,
-            "stdout": "summary ok",
+            "stdout": stdout,
             "stderr": "",
             "error": None,
             "execution_time": 0.1,
-            "visualizations": [],
-            "output_files": {},
+            "visualizations": ["chart_00_histogram.png"],
+            "output_files": {"chart_00_histogram.png": b"\x89PNG"},
         }
 
 
 def test_data_analysis_agent_prefers_provider_manager(monkeypatch, tmp_path: Path):
+    # Dataset needs real variance so the deterministic planner picks
+    # at least one chart. Otherwise the planner returns an empty plan
+    # and the executor short-circuits without touching the manager.
     data_file = tmp_path / "sample.csv"
     with data_file.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["a", "b"])
         writer.writeheader()
-        writer.writerow({"a": 1, "b": 2})
+        for i in range(20):
+            writer.writerow({"a": i, "b": i * 2 + (i % 3)})
 
     fake_manager = _FakeManager()
     monkeypatch.setattr(

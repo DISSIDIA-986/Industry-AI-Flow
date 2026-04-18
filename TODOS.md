@@ -3,7 +3,7 @@
 ## Deferred Tasks
 
 ### Migrate E2E selectors from Tailwind classes to data-testid
-**Priority:** Medium — **PARTIAL (Intent Demo done, Workflow Chat new elements will have data-testid, 3 other pages remain)**
+**Priority:** Medium — **PARTIAL (Intent Demo + Workflow Chat + Data Analysis done — 2 other pages remain: RAG Agent, Cost Estimation, Dashboard)**
 **Added:** 2026-03-19 (eng review of UI design system unification)
 **Blocked by:** Nothing — Intent Demo page has data-testid attributes as of Intent Debugger PR
 
