@@ -214,6 +214,22 @@ async def test_budget_exhausted_mid_round2(sample_csv, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_packages_constant_includes_statsmodels():
+    """Smoke test: BOOTSTRAP_PACKAGES stays in sync with the W1 probe's
+    EXTRA_SANDBOX_PACKAGES. Any drift between the two lists breaks the
+    W6 remediation contract (probe says missing → loop installs at
+    request time). Cheap guard against accidental divergence."""
+    from backend.services.code_executor.sandbox_runtime import (
+        EXTRA_SANDBOX_PACKAGES,
+    )
+
+    assert set(agentic_loop.BOOTSTRAP_PACKAGES) == set(EXTRA_SANDBOX_PACKAGES), (
+        f"BOOTSTRAP_PACKAGES {agentic_loop.BOOTSTRAP_PACKAGES} drifted from "
+        f"sandbox_runtime.EXTRA_SANDBOX_PACKAGES {EXTRA_SANDBOX_PACKAGES}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_repair_prompt_handles_fstring_braces_in_previous_output(
     sample_csv, monkeypatch
 ):

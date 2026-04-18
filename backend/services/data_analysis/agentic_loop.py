@@ -17,13 +17,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
+from backend.services.code_executor.providers.base import ExecutionResult
 from backend.services.data_analysis.spike_harness import (
     extract_profile,
     extract_summary_json,
     load_dataframe,
     parse_json_response,
     render_prompt,
-    run_sandbox,
     validate_code,
 )
 
@@ -35,15 +35,25 @@ SYSTEM_PROMPT_PATH = PROMPT_DIR / "agentic_v1_system.md"
 USER_TEMPLATE_PATH = PROMPT_DIR / "agentic_v1_user_template.md"
 REPAIR_TEMPLATE_PATH = PROMPT_DIR / "agentic_v1_repair_template.md"
 
-# Budget constants (Plan E.3 W2).
-DEFAULT_TOTAL_BUDGET_S: float = 45.0
-REPAIR_DECISION_CUTOFF_S: float = 25.0  # past this, skip repair even on failure
+# Budget constants (Plan E.3 W2; expanded in W6-remediation to absorb the
+# ~10-15s bootstrap pip install cost. Original 45s/20s sizing assumed
+# no bootstrap; with BOOTSTRAP_PACKAGES we need headroom so the outer
+# asyncio.wait_for doesn't pre-empt legitimate pip+user-code wall time).
+DEFAULT_TOTAL_BUDGET_S: float = 60.0
+REPAIR_DECISION_CUTOFF_S: float = 35.0  # past this, skip repair even on failure
 DEFAULT_ROUND1_LLM_BUDGET_S: float = 12.0
-DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 20.0
+DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0
 DEFAULT_ROUND2_LLM_BUDGET_S: float = 10.0
 
 # Sampling (Plan A.6.2).
 SAMPLING = {"temperature": 0.2, "top_p": 0.95, "max_tokens": 4096}
+
+# Packages pre-installed in every agentic sandbox before user code runs.
+# Keep in sync with sandbox_runtime.EXTRA_SANDBOX_PACKAGES — the W1 probe
+# verifies these are importable at startup; the loop installs them at
+# request time for sandboxes that lack them. The installer is idempotent:
+# `pip install -q` is a ~1s no-op when the package is already present.
+BOOTSTRAP_PACKAGES: List[str] = ["statsmodels"]
 
 # Predeclared repair trigger set (Plan A.6.4 / E.3 W2).
 REPAIR_TRIGGERS = frozenset(
@@ -126,6 +136,159 @@ class PlanExecutionResult:
 
 
 ProgressCallback = Callable[[str, str, float, str], None]
+
+
+# ---------------------------------------------------------------------------
+# Sandbox runner (with bootstrap pip install)
+# ---------------------------------------------------------------------------
+
+
+async def run_sandbox(
+    code: str,
+    csv_files: Dict[str, bytes],
+    timeout_s: int = 60,
+    bootstrap_packages: Optional[List[str]] = None,
+) -> ExecutionResult:
+    """Run ``code`` in a fresh E2B sandbox, installing bootstrap packages first.
+
+    Distinct from ``spike_harness.run_sandbox`` (no bootstrap) so the V1
+    spike runner is untouched and monkeypatch targets stay stable in
+    ``tests/unit/test_agentic_loop.py`` (patches ``agentic_loop.run_sandbox``).
+
+    The bootstrap step runs ``pip install -q <packages>`` inside the
+    sandbox before user code executes. `pip install -q` is idempotent:
+    no-op when the package is already present (E2B default image cases).
+    When missing (forecast-family cases needing statsmodels), this
+    closes the W6 infra gap at ~10-20s cold-install cost per sandbox.
+
+    Budget accounting: the bootstrap install is counted against the
+    caller's ``timeout_s``. Callers budgeting ``timeout_s`` for user
+    code only must pad accordingly.
+    """
+    import time as _time
+
+    from backend.config import settings
+
+    packages = list(bootstrap_packages or BOOTSTRAP_PACKAGES)
+
+    try:
+        from e2b_code_interpreter import Sandbox
+    except ImportError as exc:
+        return ExecutionResult(
+            success=False,
+            stdout="",
+            stderr=str(exc),
+            error=f"e2b-code-interpreter not installed: {exc!s}",
+            execution_time_s=0.0,
+            output_files={},
+        )
+
+    if not settings.e2b_api_key:
+        return ExecutionResult(
+            success=False,
+            stdout="",
+            stderr="E2B_API_KEY not configured",
+            error="provider_misconfigured",
+            execution_time_s=0.0,
+            output_files={},
+        )
+
+    start = _time.monotonic()
+    sbx = None
+    try:
+        sbx = await asyncio.to_thread(Sandbox.create, api_key=settings.e2b_api_key)
+
+        # Bootstrap: pip install any packages the sandbox might be missing.
+        # Run synchronously in a thread so event loop stays responsive.
+        if packages:
+            pkg_args = " ".join(packages)
+            bootstrap_code = (
+                "import subprocess, sys\n"
+                f"r = subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', {', '.join(repr(p) for p in packages)}], "
+                "capture_output=True, text=True, timeout=90)\n"
+                "if r.returncode != 0:\n"
+                "    print('BOOTSTRAP_PIP_FAIL:' + r.stderr[-400:])\n"
+                "else:\n"
+                f"    print('BOOTSTRAP_PIP_OK:{pkg_args}')\n"
+            )
+            try:
+                await asyncio.to_thread(sbx.run_code, bootstrap_code, timeout=30.0)
+            except Exception as exc:  # noqa: BLE001 — bootstrap failure is non-fatal
+                logger.warning("bootstrap pip install raised: %s", exc)
+                # Continue anyway — user code will fail naturally on
+                # ModuleNotFoundError if the package was actually needed.
+
+        # Upload CSVs into /workspace and /home/user (matches prod paths).
+        if csv_files:
+            for name, content in csv_files.items():
+                await asyncio.to_thread(sbx.files.write, f"/workspace/{name}", content)
+                await asyncio.to_thread(sbx.files.write, f"/home/user/{name}", content)
+
+        # Run user code.
+        execution = await asyncio.to_thread(
+            sbx.run_code, code, timeout=float(timeout_s)
+        )
+
+        stdout_parts: List[str] = []
+        stderr_parts: List[str] = []
+        if hasattr(execution, "logs") and execution.logs:
+            stdout_parts = execution.logs.stdout or []
+            stderr_parts = execution.logs.stderr or []
+        stdout = "".join(stdout_parts) if stdout_parts else (execution.text or "")
+        stderr = "".join(stderr_parts)
+        error_msg: Optional[str] = None
+        if execution.error:
+            err = execution.error
+            error_msg = str(getattr(err, "traceback", None) or err)
+            if not stderr:
+                stderr = error_msg
+
+        # Collect generated files (chart PNGs, mainly).
+        output_files: Dict[str, bytes] = {}
+        try:
+            entries = await asyncio.to_thread(sbx.files.list, "/workspace")
+            for entry in entries:
+                name = getattr(entry, "name", None)
+                if not name:
+                    continue
+                if not name.lower().endswith(
+                    (".png", ".jpg", ".jpeg", ".svg", ".html", ".pdf")
+                ):
+                    continue
+                try:
+                    content = await asyncio.to_thread(
+                        sbx.files.read, f"/workspace/{name}", format="bytes"
+                    )
+                    if content:
+                        output_files[name] = content
+                except Exception:  # noqa: BLE001
+                    continue
+        except Exception:  # noqa: BLE001 — download is best-effort
+            pass
+
+        return ExecutionResult(
+            success=error_msg is None,
+            stdout=stdout,
+            stderr=stderr,
+            error=error_msg,
+            execution_time_s=_time.monotonic() - start,
+            output_files=output_files,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface any sandbox-level failure
+        return ExecutionResult(
+            success=False,
+            stdout="",
+            stderr=str(exc)[:500],
+            error=f"{type(exc).__name__}: {exc!s}",
+            execution_time_s=_time.monotonic() - start,
+            output_files={},
+        )
+    finally:
+        if sbx is not None:
+            try:
+                await asyncio.to_thread(sbx.kill)
+            except Exception:  # noqa: BLE001 — cleanup best-effort
+                pass
 
 
 # ---------------------------------------------------------------------------
