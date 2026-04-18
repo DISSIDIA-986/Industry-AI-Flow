@@ -499,3 +499,140 @@ def test_sandbox_crash_preserves_stdout_stderr(_tmp_temp_data_dir):
     assert result["success"] is False
     assert result["stdout"] == "partial output"
     assert result["stderr"] == "SandboxTimeout"
+
+
+# ---------------------------------------------------------------------------
+# model comparison merge
+# ---------------------------------------------------------------------------
+
+
+def _model_execution(
+    *,
+    success: bool = True,
+    image_in_output_files: bool = True,
+    target: str = "quality",
+    task: str = "classification",
+) -> Dict[str, Any]:
+    output_files = (
+        {"model_comparison.png": b"\x89PNG\r\n\x1a\nfake"}
+        if image_in_output_files
+        else {}
+    )
+    return {
+        "success": success,
+        "enabled": True,
+        "reason": "ok" if success else "training failed",
+        "target_column": target,
+        "task": task,
+        "metrics": {
+            "RandomForestClassifier": {"accuracy": 0.87, "f1": 0.85},
+            "LogisticRegression": {"accuracy": 0.75, "f1": 0.72},
+        },
+        "image_filename": "model_comparison.png" if success else None,
+        "output_files": output_files,
+        "stdout": "",
+        "stderr": "",
+        "execution_time": 1.5,
+    }
+
+
+def test_model_execution_none_preserves_eda_only_shape(_tmp_temp_data_dir):
+    """No model stage → model_comparison block reflects plan, no chart added."""
+    plan = _plan(mc_enabled=False)
+    plan["model_comparison"]["reason"] = "stretch goal"
+    result = compose_eda_response(
+        plan=plan,
+        execution=_execution([]),
+        question="q",
+        dataset_metadata=_metadata(),
+        model_execution=None,
+    )
+    assert result["model_comparison"]["enabled"] is False
+    assert result["model_comparison"]["reason"] == "stretch goal"
+    assert result["model_comparison"]["metrics"] == {}
+    # No model chart merged into grid.
+    assert all(c["type"] != "model_comparison" for c in result["charts"])
+
+
+def test_model_execution_success_merges_chart_and_metrics(_tmp_temp_data_dir):
+    plan = _plan(mc_enabled=True)
+    plan["model_comparison"].update(
+        {"target_column": "quality", "task": "classification", "models": ["RFC"]}
+    )
+    result = compose_eda_response(
+        plan=plan,
+        execution=_execution([]),
+        question="q",
+        dataset_metadata=_metadata(),
+        model_execution=_model_execution(),
+    )
+    mc = result["model_comparison"]
+    assert mc["enabled"] is True
+    assert mc["target_column"] == "quality"
+    assert mc["task"] == "classification"
+    assert "RandomForestClassifier" in mc["metrics"]
+    assert mc["metrics"]["RandomForestClassifier"]["accuracy"] == 0.87
+
+    # Chart merged into grid with type=model_comparison.
+    model_tiles = [c for c in result["charts"] if c["type"] == "model_comparison"]
+    assert len(model_tiles) == 1
+    tile = model_tiles[0]
+    assert tile["status"] == "ok"
+    assert tile["image_filename"] is not None
+
+    # And included in flat visualizations list.
+    viz_names = [v["filename"] for v in result["visualizations"]]
+    assert any("model_comparison" in n for n in viz_names)
+
+
+def test_model_execution_failure_hides_enabled_flag(_tmp_temp_data_dir):
+    """If model stage ran but failed, enabled=False so frontend hides the panel."""
+    plan = _plan(mc_enabled=True)
+    plan["model_comparison"]["target_column"] = "label"
+    plan["model_comparison"]["task"] = "classification"
+    plan["model_comparison"]["reason"] = "ok"
+    result = compose_eda_response(
+        plan=plan,
+        execution=_execution([]),
+        question="q",
+        dataset_metadata=_metadata(),
+        model_execution=_model_execution(
+            success=False, image_in_output_files=False, target="label"
+        ),
+    )
+    assert result["model_comparison"]["enabled"] is False
+    # Reason overridden by executor's.
+    assert "failed" in result["model_comparison"]["reason"].lower()
+    # No model chart merged since success=False.
+    assert all(c["type"] != "model_comparison" for c in result["charts"])
+
+
+def test_model_execution_image_missing_from_output_files_skips_merge(
+    _tmp_temp_data_dir,
+):
+    """success=True but image not in output_files → don't break grid."""
+    plan = _plan(mc_enabled=True)
+    result = compose_eda_response(
+        plan=plan,
+        execution=_execution([]),
+        question="q",
+        dataset_metadata=_metadata(),
+        # success=True but image_in_output_files=False contradicts — mock
+        # the belt-and-suspenders path.
+        model_execution={
+            "success": True,
+            "enabled": True,
+            "target_column": "quality",
+            "task": "classification",
+            "metrics": {"RFC": {"accuracy": 0.8}},
+            "image_filename": "model_comparison.png",
+            "output_files": {},  # <-- missing file
+            "reason": "trained",
+            "stdout": "",
+            "stderr": "",
+        },
+    )
+    # Metrics still surface...
+    assert result["model_comparison"]["metrics"]["RFC"]["accuracy"] == 0.8
+    # ...but no chart merged (since no bytes to persist).
+    assert all(c["type"] != "model_comparison" for c in result["charts"])
