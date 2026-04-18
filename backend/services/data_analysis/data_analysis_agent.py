@@ -243,6 +243,50 @@ class DataAnalysisAgent:
                 timeout_s=60,
             )
 
+            # 5b. Stretch: model comparison stage. Runs ONLY when the
+            # planner flipped enabled=True (target detected, row cap ok,
+            # etc.). Isolated sandbox invocation so a model-stage timeout
+            # doesn't kill the EDA results we already have.
+            model_execution_result: Optional[Dict[str, Any]] = None
+            mc_plan = plan.get("model_comparison") or {}
+            if mc_plan.get("enabled"):
+                from backend.services.data_analysis.chart_executor import (
+                    execute_model_comparison,
+                )
+
+                _progress(
+                    "sandbox_execution",
+                    "running",
+                    0.75,
+                    f"Training {len(mc_plan.get('models') or [])} models on "
+                    f"target={mc_plan.get('target_column')!r}...",
+                )
+                try:
+                    model_execution_result = execute_model_comparison(
+                        plan=plan,
+                        data_file_path=data_file_path,
+                        code_execution_manager=execution_runner,
+                        mode=settings.code_execution_provider,
+                        timeout_s=45,
+                    )
+                except Exception as exc:
+                    # Never let the model stage kill the response. Log and
+                    # fall through with the EDA results we already have.
+                    logger.warning(
+                        "model comparison stage failed: %s", exc, exc_info=True
+                    )
+                    model_execution_result = {
+                        "success": False,
+                        "enabled": True,
+                        "reason": f"model stage raised {type(exc).__name__}",
+                        "metrics": {},
+                        "image_filename": None,
+                        "output_files": {},
+                        "stdout": "",
+                        "stderr": str(exc)[:500],
+                        "execution_time": 0.0,
+                    }
+
             # 6. Compose the legacy-shaped response envelope.
             _progress("result_render", "running", 0.85, "Composing charts and findings...")
             from backend.services.data_analysis.report_composer import (
@@ -255,6 +299,7 @@ class DataAnalysisAgent:
                 question=question,
                 dataset_metadata=dataset_metadata,
                 generated_code=execution_result.get("code") or "",
+                model_execution=model_execution_result,
             )
 
             if composed.get("success"):

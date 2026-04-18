@@ -547,3 +547,405 @@ def _degraded_result(
         "output_files": {},
         "code": "",
     }
+
+
+# ===========================================================================
+# Model comparison (stretch)
+# ===========================================================================
+
+_MODEL_IMAGE_FILENAME = "model_comparison.png"
+
+_MODEL_MARKER_RE = re.compile(
+    r"^(MODEL_OK_JSON|MODEL_FAILED_JSON)=(\{.*\})\s*$",
+    re.MULTILINE,
+)
+
+
+def execute_model_comparison(
+    plan: Dict[str, Any],
+    data_file_path: str,
+    code_execution_manager: Any,
+    mode: Optional[str] = None,
+    timeout_s: int = 18,
+) -> Dict[str, Any]:
+    """Run the stretch-goal model comparison stage.
+
+    Trains two models side-by-side (from ``plan.model_comparison.models``)
+    on the uploaded dataset in a single E2B sandbox, renders a comparison
+    visualization (confusion matrices for classification, predicted-vs-
+    actual scatters for regression), and returns a metrics table.
+
+    Reads the same dataset the EDA stage reads. Runs in its own sandbox
+    invocation (separate from ``execute_eda``) so the 12s model budget
+    is isolated from the EDA budget.
+
+    Returns:
+        {
+          "success": bool,
+          "enabled": bool,          # False if plan had it gated off
+          "reason": str,            # why it ran or didn't
+          "target_column": str | None,
+          "task": "classification" | "regression" | None,
+          "metrics": {model_name: {metric: value, ...}, ...},
+          "image_filename": str | None,
+          "output_files": dict,     # for report_composer persistence
+          "stdout": str,
+          "stderr": str,
+          "execution_time": float,
+          "code": str,
+        }
+    """
+    mc = plan.get("model_comparison") or {}
+    if not mc.get("enabled"):
+        return {
+            "success": False,
+            "enabled": False,
+            "reason": mc.get("reason") or "model comparison disabled",
+            "target_column": None,
+            "task": None,
+            "metrics": {},
+            "image_filename": None,
+            "output_files": {},
+            "stdout": "",
+            "stderr": "",
+            "execution_time": 0.0,
+            "code": "",
+        }
+
+    if code_execution_manager is None:
+        return {
+            "success": False,
+            "enabled": True,
+            "reason": "code execution manager unavailable",
+            "target_column": mc.get("target_column"),
+            "task": mc.get("task"),
+            "metrics": {},
+            "image_filename": None,
+            "output_files": {},
+            "stdout": "",
+            "stderr": "code execution manager unavailable",
+            "execution_time": 0.0,
+            "code": "",
+        }
+
+    snippet = _build_model_snippet(mc, data_file_path)
+
+    from backend.config import settings
+
+    effective_mode = (
+        mode or settings.code_execution_provider or "docker"
+    ).strip().lower()
+
+    execution = code_execution_manager.execute_code(
+        code=snippet,
+        data_files=[data_file_path],
+        timeout=timeout_s,
+        mode=effective_mode,
+    )
+
+    stdout = execution.get("stdout", "") or ""
+    stderr = execution.get("stderr", "") or ""
+    output_files = execution.get("output_files", {}) or {}
+    marker = _parse_model_marker(stdout)
+
+    # Image only counts if it actually came back from the sandbox.
+    image_filename = None
+    if marker and marker.get("status") == "ok":
+        emitted = marker.get("image_filename")
+        if emitted and emitted in output_files:
+            image_filename = emitted
+
+    success = bool(
+        execution.get("success")
+        and marker
+        and marker.get("status") == "ok"
+        and image_filename
+    )
+
+    if success:
+        reason = (
+            f"trained {len(marker.get('metrics') or {})} model(s) "
+            f"on target={mc.get('target_column')!r}, "
+            f"task={mc.get('task')}"
+        )
+    else:
+        reason = (
+            (marker or {}).get("error")
+            or stderr.strip().splitlines()[-1] if stderr.strip()
+            else "model comparison failed — no completion marker"
+        )
+
+    return {
+        "success": success,
+        "enabled": True,
+        "reason": reason,
+        "target_column": mc.get("target_column"),
+        "task": mc.get("task"),
+        "metrics": (marker or {}).get("metrics") or {},
+        "image_filename": image_filename,
+        "output_files": output_files,
+        "stdout": stdout,
+        "stderr": stderr,
+        "execution_time": float(execution.get("execution_time") or 0.0),
+        "code": snippet,
+    }
+
+
+def _parse_model_marker(stdout: str) -> Optional[Dict[str, Any]]:
+    """Return the last MODEL_*_JSON marker from stdout, or None.
+
+    Last marker wins so a retry inside the snippet can override an
+    earlier failure without cluttering the output.
+    """
+    if not stdout:
+        return None
+    last: Optional[Dict[str, Any]] = None
+    for match in _MODEL_MARKER_RE.finditer(stdout):
+        try:
+            payload = json.loads(match.group(2))
+        except json.JSONDecodeError:
+            continue
+        status = "ok" if match.group(1) == "MODEL_OK_JSON" else "failed"
+        payload["status"] = status
+        last = payload
+    return last
+
+
+def _build_model_snippet(mc: Dict[str, Any], data_file_path: str) -> str:
+    """Assemble the single-sandbox model comparison snippet.
+
+    Strategy:
+      1. Load data (same loader as EDA).
+      2. Isolate target + features, drop rows with missing target.
+      3. Fill missing feature values (median for numeric, mode for cat).
+      4. One-hot encode small-cardinality categoricals. Drop high-
+         cardinality columns (would blow feature space on demo data).
+      5. Encode target if classification.
+      6. Train/test split with stratify fallback.
+      7. Fit + predict each model, compute metrics.
+      8. Render 1x2 subplot figure (confusion matrices / pred-vs-actual).
+      9. Emit MODEL_OK_JSON / MODEL_FAILED_JSON marker.
+
+    Robustness: every non-trivial step lives inside a try/except that,
+    on failure, emits MODEL_FAILED_JSON and exits cleanly. The sandbox
+    should never raise an unhandled exception.
+    """
+    basename = os.path.basename(data_file_path)
+    ext = basename.rsplit(".", 1)[-1].lower() if "." in basename else ""
+    sandbox_path = f"/workspace/{basename}"
+    target = mc["target_column"]
+    task = mc["task"]
+    models = mc.get("models") or []
+
+    # Hard-coded model imports: matching names declared by analysis_planner.
+    # Any new model must be added here AND in _fit_block below.
+    lines: List[str] = [
+        "# Auto-generated model comparison snippet (chart_executor.py)",
+        "import json as _json",
+        "import numpy as _np",
+        "import pandas as _pd",
+        "import matplotlib",
+        "matplotlib.use('Agg')",
+        "import matplotlib.pyplot as plt",
+        "from sklearn.model_selection import train_test_split",
+        "from sklearn.preprocessing import LabelEncoder",
+        "from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor",
+        "from sklearn.linear_model import LogisticRegression, Ridge",
+        "from sklearn.metrics import (",
+        "    accuracy_score, precision_score, recall_score, f1_score,",
+        "    confusion_matrix,",
+        "    r2_score, mean_squared_error, mean_absolute_error,",
+        ")",
+        "",
+        f"_DATA_PATH = {sandbox_path!r}",
+        f"_TARGET = {target!r}",
+        f"_TASK = {task!r}",
+        f"_MODELS = {list(models)!r}",
+        f"_IMAGE = '/workspace/{_MODEL_IMAGE_FILENAME}'",
+        "",
+        "def _emit(status, **extra):",
+        "    marker = 'MODEL_OK_JSON' if status == 'ok' else 'MODEL_FAILED_JSON'",
+        "    payload = {'task': _TASK, 'target': _TARGET}",
+        "    payload.update(extra)",
+        "    print(f'{marker}=' + _json.dumps(payload, default=str))",
+        "",
+        "try:",
+        "    " + _loader_block(ext).replace("\n", "\n    ").rstrip(),
+        "",
+        "    if _TARGET not in _df.columns:",
+        "        _emit('failed', error=f'target column {_TARGET!r} not found in data')",
+        "        raise SystemExit(0)",
+        "",
+        "    # Drop rows with missing target; degenerate otherwise.",
+        "    _df = _df[_df[_TARGET].notna()].copy()",
+        "    if len(_df) < 20:",
+        "        _emit('failed', error=f'only {len(_df)} rows after dropping NaN targets')",
+        "        raise SystemExit(0)",
+        "",
+        "    # Cap at 10k rows for training speed.",
+        "    if len(_df) > 10000:",
+        "        _df = _df.sample(n=10000, random_state=42).reset_index(drop=True)",
+        "",
+        "    _y = _df[_TARGET]",
+        "    _X = _df.drop(columns=[_TARGET])",
+        "",
+        "    # Fill numeric NaN with median, object NaN with mode (or 'missing').",
+        "    for _col in _X.columns:",
+        "        if _pd.api.types.is_numeric_dtype(_X[_col]):",
+        "            _X[_col] = _X[_col].fillna(_X[_col].median())",
+        "        else:",
+        "            try:",
+        "                _mode = _X[_col].mode(dropna=True)",
+        "                _fill = _mode.iloc[0] if not _mode.empty else 'missing'",
+        "            except Exception:",
+        "                _fill = 'missing'",
+        "            _X[_col] = _X[_col].fillna(_fill)",
+        "",
+        "    # One-hot encode object columns with <=10 unique values.",
+        "    # Drop higher-cardinality object columns (would blow feature space).",
+        "    _dropped_cols = []",
+        "    _encode_cols = []",
+        "    for _col in list(_X.columns):",
+        "        if _pd.api.types.is_numeric_dtype(_X[_col]):",
+        "            continue",
+        "        if _X[_col].nunique(dropna=False) <= 10:",
+        "            _encode_cols.append(_col)",
+        "        else:",
+        "            _dropped_cols.append(_col)",
+        "    if _dropped_cols:",
+        "        _X = _X.drop(columns=_dropped_cols)",
+        "    if _encode_cols:",
+        "        _X = _pd.get_dummies(_X, columns=_encode_cols, drop_first=True)",
+        "",
+        "    if _X.shape[1] == 0:",
+        "        _emit('failed', error='no usable features after preprocessing')",
+        "        raise SystemExit(0)",
+        "",
+        "    # Encode target for classification.",
+        "    _target_classes = None",
+        "    if _TASK == 'classification':",
+        "        _le = LabelEncoder()",
+        "        _y_enc = _le.fit_transform(_y.astype(str))",
+        "        _target_classes = list(_le.classes_)",
+        "    else:",
+        "        _y_enc = _pd.to_numeric(_y, errors='coerce')",
+        "        _mask = ~_np.isnan(_y_enc)",
+        "        _y_enc = _y_enc[_mask]",
+        "        _X = _X.loc[_mask.values].reset_index(drop=True)",
+        "",
+        "    # Train/test split — stratify for classification with fallback.",
+        "    _stratify = _y_enc if _TASK == 'classification' else None",
+        "    try:",
+        "        _Xtr, _Xte, _ytr, _yte = train_test_split(",
+        "            _X, _y_enc, test_size=0.2, random_state=42, stratify=_stratify",
+        "        )",
+        "    except ValueError:",
+        "        # Stratify failed (rare class with <2 samples). Retry without.",
+        "        _Xtr, _Xte, _ytr, _yte = train_test_split(",
+        "            _X, _y_enc, test_size=0.2, random_state=42",
+        "        )",
+        "",
+        "    _results = {}",
+        "    _preds = {}",
+        "",
+        "    for _model_name in _MODELS:",
+        "        try:",
+        _fit_block_indent(),
+        "        except Exception as _exc:",
+        "            _results[_model_name] = {'error': str(_exc)[:200]}",
+        "",
+        "    # Render comparison figure — 1x2 subplots, one per model.",
+        "    _n_models = max(1, len(_preds))",
+        "    _fig, _axes = plt.subplots(1, _n_models, figsize=(6 * _n_models, 5))",
+        "    if _n_models == 1:",
+        "        _axes = [_axes]",
+        "    _ax_idx = 0",
+        "    for _mname, _yhat in _preds.items():",
+        "        _ax = _axes[_ax_idx]",
+        "        if _TASK == 'classification':",
+        "            _cm = confusion_matrix(_yte, _yhat)",
+        "            _im = _ax.imshow(_cm, cmap='Blues', aspect='auto')",
+        "            _ax.set_title(f'{_mname}\\nConfusion Matrix')",
+        "            _ax.set_xlabel('Predicted')",
+        "            _ax.set_ylabel('Actual')",
+        "            if _target_classes and len(_target_classes) <= 10:",
+        "                _ticks = list(range(len(_target_classes)))",
+        "                _ax.set_xticks(_ticks)",
+        "                _ax.set_yticks(_ticks)",
+        "                _ax.set_xticklabels(_target_classes, rotation=45, ha='right', fontsize=8)",
+        "                _ax.set_yticklabels(_target_classes, fontsize=8)",
+        "            for _i in range(_cm.shape[0]):",
+        "                for _j in range(_cm.shape[1]):",
+        "                    _ax.text(_j, _i, str(int(_cm[_i, _j])), ha='center', va='center', fontsize=9, color='black')",
+        "        else:",
+        "            _ax.scatter(_yte, _yhat, alpha=0.5, s=20, color='#3b82f6')",
+        "            _lo = float(min(_np.min(_yte), _np.min(_yhat)))",
+        "            _hi = float(max(_np.max(_yte), _np.max(_yhat)))",
+        "            _ax.plot([_lo, _hi], [_lo, _hi], 'r--', linewidth=1)",
+        "            _ax.set_xlabel('Actual')",
+        "            _ax.set_ylabel('Predicted')",
+        "            _ax.set_title(f'{_mname}\\nPredicted vs Actual')",
+        "        _ax_idx += 1",
+        "    _fig.tight_layout()",
+        "    _fig.savefig(_IMAGE, dpi=100)",
+        "    plt.close('all')",
+        "",
+        "    _emit(",
+        "        'ok',",
+        "        image_filename=_IMAGE.rsplit('/', 1)[-1],",
+        "        metrics=_results,",
+        "        n_train=int(len(_ytr)),",
+        "        n_test=int(len(_yte)),",
+        "        n_features=int(_X.shape[1]),",
+        "        dropped_columns=_dropped_cols,",
+        "        encoded_columns=_encode_cols,",
+        "    )",
+        "except SystemExit:",
+        "    raise",
+        "except Exception as _exc:",
+        "    _emit('failed', error=str(_exc)[:300])",
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _fit_block_indent() -> str:
+    """Return the indented fit+score block for the model loop.
+
+    Separate function because nested indent inside the big list is
+    unreadable. Uses if/elif on the model name string (from planner)
+    so we stay on the CodeValidator whitelist (no eval/getattr on
+    module-level classes).
+    """
+    lines = [
+        "            _lower = _model_name.lower()",
+        "            if _lower == 'randomforestclassifier':",
+        "                _m = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=1)",
+        "            elif _lower == 'logisticregression':",
+        "                _m = LogisticRegression(max_iter=1000, random_state=42)",
+        "            elif _lower == 'randomforestregressor':",
+        "                _m = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1)",
+        "            elif _lower == 'ridge':",
+        "                _m = Ridge(random_state=42)",
+        "            else:",
+        "                _results[_model_name] = {'error': f'unknown model {_model_name!r}'}",
+        "                continue",
+        "            _m.fit(_Xtr, _ytr)",
+        "            _yhat = _m.predict(_Xte)",
+        "            _preds[_model_name] = _yhat",
+        "            if _TASK == 'classification':",
+        "                _results[_model_name] = {",
+        "                    'accuracy': round(float(accuracy_score(_yte, _yhat)), 4),",
+        "                    'precision': round(float(precision_score(_yte, _yhat, average='weighted', zero_division=0)), 4),",
+        "                    'recall': round(float(recall_score(_yte, _yhat, average='weighted', zero_division=0)), 4),",
+        "                    'f1': round(float(f1_score(_yte, _yhat, average='weighted', zero_division=0)), 4),",
+        "                }",
+        "            else:",
+        "                _rmse = float(_np.sqrt(mean_squared_error(_yte, _yhat)))",
+        "                _results[_model_name] = {",
+        "                    'r2': round(float(r2_score(_yte, _yhat)), 4),",
+        "                    'rmse': round(_rmse, 4),",
+        "                    'mae': round(float(mean_absolute_error(_yte, _yhat)), 4),",
+        "                }",
+    ]
+    return "\n".join(lines)

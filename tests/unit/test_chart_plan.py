@@ -335,18 +335,42 @@ def test_high_cardinality_categorical_skipped():
 # --- model comparison gating --------------------------------------------
 
 
-def test_model_comparison_disabled_by_default_with_reason():
-    cols = [_numeric_col("x"), _numeric_col("y")]
+def test_model_comparison_disabled_when_no_target_match():
+    # Column names that don't look like targets (no y/label/class/etc.)
+    # and the last column is ID-like, so the fallback refuses it.
+    cols = [
+        _numeric_col("feature_a"),
+        _numeric_col("feature_b"),
+        _numeric_col("row_index", is_id_like=True),
+    ]
     plan = eda_plan_from_metadata(_metadata(cols, rows=1000))
     mc = plan["model_comparison"]
     assert mc["enabled"] is False
-    assert "stretch" in mc["reason"].lower()
+    # Reason should explain it's the target detection that gave up.
+    assert "target" in mc["reason"].lower()
+
+
+def test_model_comparison_enabled_when_target_name_matches():
+    # UCI wine-quality shape: numeric features + a 'quality' target.
+    cols = [
+        _numeric_col("alcohol", std=1.0),
+        _numeric_col("pH", std=0.5),
+        _numeric_col("quality", unique=6, std=1.0),  # target, 6 discrete values
+    ]
+    plan = eda_plan_from_metadata(_metadata(cols, rows=1000))
+    mc = plan["model_comparison"]
+    assert mc["enabled"] is True
+    assert mc["target_column"] == "quality"
+    # unique=6 < 10 → classification task even for a numeric role.
+    assert mc["task"] == "classification"
+    assert "RandomForestClassifier" in mc["models"]
 
 
 def test_model_comparison_reason_mentions_row_cap_when_over_50k():
-    cols = [_numeric_col("x")]
+    cols = [_numeric_col("feature_a"), _numeric_col("label", unique=3)]
     plan = eda_plan_from_metadata(_metadata(cols, rows=75_000))
     reason = plan["model_comparison"]["reason"].lower()
+    assert plan["model_comparison"]["enabled"] is False
     assert "50" in reason
     assert "row" in reason
 
