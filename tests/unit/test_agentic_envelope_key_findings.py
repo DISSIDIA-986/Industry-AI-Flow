@@ -77,6 +77,60 @@ def test_synthesize_from_alternate_score_keys():
     assert leader.startswith("Best model: C")
 
 
+def test_metric_label_preserved_not_hardcoded_as_auc():
+    """Codex review fix: when the summary reports accuracy, bullets must
+    say `accuracy=0.93`, not `AUC=0.93`. Mislabeling metrics as AUC is
+    user-visible misinformation if the user asked for accuracy/R²/etc.
+    """
+    summary = {
+        "model_comparison": {
+            "RF": {"accuracy": 0.93, "std": 0.02},
+            "LR": {"accuracy": 0.88, "std": 0.03},
+        },
+    }
+    out = _extract_key_findings(summary, plan={})
+    assert "accuracy=" in out[0]  # "Best model: RF (accuracy=0.9300 ± 0.020)"
+    assert "AUC=" not in out[0]
+    for bullet in out[1:]:
+        assert "accuracy=" in bullet
+        assert "AUC=" not in bullet
+
+
+def test_metric_label_auc_still_works_for_auc_summaries():
+    """AUC summaries still render with AUC label — this is the common
+    live-demo path, must not regress from the label generalization."""
+    summary = {
+        "model_comparison": {
+            "RF": {"mean_auc": 0.87, "std_auc": 0.02},
+            "GB": {"mean_auc": 0.89, "std_auc": 0.019},
+        },
+    }
+    out = _extract_key_findings(summary, plan={})
+    assert out[0].startswith("Best model: GB")
+    assert "AUC=0.89" in out[0]
+    assert "± 0.019" in out[0]
+
+
+def test_error_metric_ranks_ascending():
+    """MAE / RMSE are error metrics (lower is better). The header bullet
+    should identify the lowest-error model as 'Best'."""
+    summary = {
+        "model_comparison": {
+            "LinReg": {"mae": 3.4},
+            "RF": {"mae": 2.1},
+            "XGB": {"mae": 2.8},
+        },
+    }
+    out = _extract_key_findings(summary, plan={})
+    # Best MAE is 2.1 (RF), which should lead.
+    assert out[0].startswith("Best model: RF")
+    assert "MAE=2.1" in out[0]
+    # Bullets should be sorted ascending (lowest error first).
+    assert "RF" in out[1]  # 2.1
+    assert "XGB" in out[2]  # 2.8
+    assert "LinReg" in out[3]  # 3.4
+
+
 def test_generic_fallback_for_simple_scalar_summary():
     """No key_findings, no model_comparison, but a single numeric top-level
     field → synthesize a single 'key: value' bullet so the panel isn't
