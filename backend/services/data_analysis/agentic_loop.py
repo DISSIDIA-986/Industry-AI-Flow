@@ -35,14 +35,17 @@ SYSTEM_PROMPT_PATH = PROMPT_DIR / "agentic_v1_system.md"
 USER_TEMPLATE_PATH = PROMPT_DIR / "agentic_v1_user_template.md"
 REPAIR_TEMPLATE_PATH = PROMPT_DIR / "agentic_v1_repair_template.md"
 
-# Budget constants (Plan E.3 W2; expanded in W6-remediation to absorb the
-# ~10-15s bootstrap pip install cost. Original 45s/20s sizing assumed
-# no bootstrap; with BOOTSTRAP_PACKAGES we need headroom so the outer
-# asyncio.wait_for doesn't pre-empt legitimate pip+user-code wall time).
-DEFAULT_TOTAL_BUDGET_S: float = 60.0
-REPAIR_DECISION_CUTOFF_S: float = 35.0  # past this, skip repair even on failure
+# Budget constants (Plan E.3 W2; widened post-Codex-review 2026-04-18 so
+# the outer asyncio.wait_for in _run_one_round accounts for BOTH the
+# bootstrap pip install AND the user-code timeout separately. Before
+# this, outer wait=sandbox_budget+5 could fire at 35s while the
+# sandbox was legitimately spending ~15s on bootstrap + ~25s on user
+# code, misclassifying a valid cold-sandbox run as sandbox_timeout).
+BOOTSTRAP_BUDGET_S: float = 20.0  # max wall for pip install step inside run_sandbox
+DEFAULT_TOTAL_BUDGET_S: float = 80.0
+REPAIR_DECISION_CUTOFF_S: float = 50.0  # past this, skip repair even on failure
 DEFAULT_ROUND1_LLM_BUDGET_S: float = 12.0
-DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0
+DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0   # user code only; bootstrap is separate
 DEFAULT_ROUND2_LLM_BUDGET_S: float = 10.0
 
 # Sampling (Plan A.6.2).
@@ -94,13 +97,38 @@ class RoundRecord:
     elapsed_ms: int = 0
 
     def is_successful(self) -> bool:
-        """Round fully succeeded: code ran, sandbox clean."""
+        """Round fully succeeded: code ran, sandbox clean, summary line present.
+
+        A sandbox-successful round that completely dropped the required
+        ANALYSIS_SUMMARY_JSON line is NOT a success — the frontend
+        would render empty key_findings and the repair loop never got
+        to re-request the line. Round classification is intentionally
+        asymmetric per finding severity:
+
+          summary_emitted=False  → fire repair (model forgot the line)
+          summary_emitted=True
+            + summary_parsed=None → soft success (model tried, JSON
+              malformed; degrade to empty key_findings but keep the
+              chart + analysis prose. Better UX than a "failed"
+              response over a JSON formatting nit).
+
+        Codex review 2026-04-18 originally flagged both cases as bugs;
+        we adopt this middle ground after the v4 gate rerun showed two
+        cases where the model emitted a malformed JSON line but
+        produced a perfectly good chart — failing them would throw
+        away working output over a cosmetic parse issue.
+        """
         if not self.parsed:
             return False
         if self.parsed.get("status") == "unanswerable":
             # Unanswerable is a terminal success, not a failure to repair
             return True
-        return self.validator_pass and self.sandbox_success
+        if not (self.validator_pass and self.sandbox_success):
+            return False
+        if not self.summary_emitted:
+            # Model completely omitted the summary marker → repair-worthy.
+            return False
+        return True
 
 
 @dataclass
@@ -212,7 +240,9 @@ async def run_sandbox(
                 f"    print('BOOTSTRAP_PIP_OK:{pkg_args}')\n"
             )
             try:
-                await asyncio.to_thread(sbx.run_code, bootstrap_code, timeout=30.0)
+                await asyncio.to_thread(
+                    sbx.run_code, bootstrap_code, timeout=BOOTSTRAP_BUDGET_S
+                )
             except Exception as exc:  # noqa: BLE001 — bootstrap failure is non-fatal
                 logger.warning("bootstrap pip install raised: %s", exc)
                 # Continue anyway — user code will fail naturally on
@@ -296,6 +326,68 @@ async def run_sandbox(
 # ---------------------------------------------------------------------------
 
 
+# Hard cap on dataset size for the agentic path. Beyond this, _load_once
+# raises and run_agentic_analysis returns an error result — analyze_query
+# then falls back transparently to the deterministic path. Demo-sized
+# capstone CSVs are single-digit MB; 100MB is a generous ceiling.
+MAX_DATASET_BYTES: int = 100 * 1024 * 1024
+
+
+def _load_once(data_file_path: str) -> Tuple[Any, bytes]:
+    """Read the file once, return (dataframe, raw_bytes).
+
+    Replaces the prior `load_dataframe(path) + Path(path).read_bytes()`
+    pair which read the file 2-3 times (load_dataframe itself re-reads
+    internally). We do one disk read, parse the bytes via BytesIO for
+    pandas, and hand the same buffer to the sandbox upload path.
+
+    Mirrors load_dataframe's encoding fallback chain for CSVs, falls
+    back to the original load_dataframe for unsupported types we don't
+    want to reimplement (JSON, Parquet later).
+
+    Raises ValueError for files larger than MAX_DATASET_BYTES so the
+    API worker doesn't try to hold a 500MB buffer in memory.
+    """
+    import pandas as pd  # local import to keep module import cheap
+    from io import BytesIO
+
+    path = Path(data_file_path)
+    size = path.stat().st_size
+    if size > MAX_DATASET_BYTES:
+        raise ValueError(
+            f"Dataset exceeds agentic path size cap "
+            f"({size} > {MAX_DATASET_BYTES} bytes). Use deterministic path."
+        )
+
+    raw = path.read_bytes()
+    name_lower = data_file_path.lower()
+
+    if name_lower.endswith(".csv"):
+        for enc in ("utf-8", "utf-8-sig", "latin-1"):
+            try:
+                df = pd.read_csv(BytesIO(raw), encoding=enc, sep=None, engine="python")
+                return df, raw
+            except UnicodeDecodeError:
+                continue
+            except pd.errors.ParserError:
+                try:
+                    df = pd.read_csv(BytesIO(raw), encoding=enc)
+                    return df, raw
+                except UnicodeDecodeError:
+                    continue
+        raise ValueError(f"Could not decode CSV: {data_file_path}")
+
+    if name_lower.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(BytesIO(raw))
+        return df, raw
+
+    # Uncommon types — delegate to the existing helper. Slightly less
+    # efficient (it re-reads from disk) but avoids reimplementing the
+    # JSON/other paths here. The page cache should keep this cheap.
+    df = load_dataframe(data_file_path)
+    return df, raw
+
+
 def _classify_repair_trigger(record: RoundRecord) -> Optional[str]:
     """Map a failed round to one of the predeclared repair trigger types.
 
@@ -313,6 +405,13 @@ def _classify_repair_trigger(record: RoundRecord) -> Optional[str]:
         return "validator_rejection"
     if record.sandbox_timeout:
         return "sandbox_timeout"
+    if record.sandbox_success and not record.summary_emitted:
+        # Sandbox ran clean but model completely forgot the required
+        # ANALYSIS_SUMMARY_JSON line. Fires summary_json_parse_error so
+        # round 2 gets a chance to re-emit the summary (Codex 2026-04-18).
+        # Malformed-but-emitted JSON is treated as soft success by
+        # is_successful — we keep the chart rather than fail over nits.
+        return "summary_json_parse_error"
     if not record.sandbox_success:
         return "sandbox_runtime_error"
     return None  # round was actually successful
@@ -377,7 +476,13 @@ async def _run_one_round(
         rec.elapsed_ms = int((time.monotonic() - t0) * 1000)
         return rec
 
-    # Sandbox (budgeted)
+    # Sandbox (budgeted). `sandbox_budget_s` is the budget for the USER
+    # code only; bootstrap pip install inside run_sandbox has its own
+    # BOOTSTRAP_BUDGET_S wall. The outer asyncio.wait_for must cover
+    # BOTH, plus a small slack for file upload and result download,
+    # otherwise a cold-sandbox run spending most of its budget on real
+    # work gets preempted and misclassified as sandbox_timeout.
+    outer_wait_s = BOOTSTRAP_BUDGET_S + sandbox_budget_s + 5
     try:
         exec_result = await asyncio.wait_for(
             run_sandbox(
@@ -385,7 +490,7 @@ async def _run_one_round(
                 csv_files={csv_filename: csv_bytes},
                 timeout_s=int(sandbox_budget_s),
             ),
-            timeout=sandbox_budget_s + 5,  # hard asyncio wall 5s past sandbox SLA
+            timeout=outer_wait_s,
         )
         rec.sandbox_success = exec_result.success
         rec.sandbox_stdout = exec_result.stdout
@@ -414,16 +519,26 @@ async def _run_one_round(
 
 
 def _build_user_prompt(filename: str, question: str, profile: Dict[str, Any]) -> str:
-    text, _, _ = render_prompt(
-        str(USER_TEMPLATE_PATH),
-        {
-            "filename": filename,
-            "n_rows": profile["n_rows"],
-            "n_cols": profile["n_cols"],
-            "column_profile_table": profile["column_profile_table"],
-            "question": question,
-        },
-    )
+    """Render the round-1 user prompt via .replace() substitution.
+
+    Symmetric with `_build_repair_prompt`: avoids `str.format_map` so
+    slot values (specifically `column_profile_table`, which embeds raw
+    sample cell values) can contain arbitrary `{word}` text without
+    tripping render_prompt's leftover-placeholder guard. A CSV cell
+    literally reading "hello {name}" would otherwise blow up the
+    agentic path with a ValueError and silently fall back to
+    deterministic for that dataset (Codex review finding, 2026-04-18).
+    """
+    slots: Dict[str, str] = {
+        "filename": str(filename),
+        "n_rows": str(profile["n_rows"]),
+        "n_cols": str(profile["n_cols"]),
+        "column_profile_table": str(profile["column_profile_table"]),
+        "question": str(question),
+    }
+    text = USER_TEMPLATE_PATH.read_text(encoding="utf-8")
+    for name, value in slots.items():
+        text = text.replace("{" + name + "}", value)
     return text
 
 
@@ -540,10 +655,19 @@ async def run_agentic_analysis(
     loop_start = time.monotonic()
     filename = Path(data_file_path).name
 
-    # Load profile
+    # Load profile — single read for both pandas and sandbox upload.
+    #
+    # Before this refactor the agentic path read the file up to 3x:
+    # spike_harness.load_dataframe itself re-reads internally, and then
+    # run_agentic_analysis called Path.read_bytes() again for the
+    # sandbox upload. With USE_GLM5_AGENT default=true that put every
+    # upload through multiple full-file reads in the API worker, which
+    # was a latency + OOM risk on large CSVs (Codex review finding,
+    # 2026-04-18). _load_once reads bytes once and uses BytesIO for
+    # the dataframe, sharing the same buffer with the sandbox upload.
     _emit("code_generation", "running", 0.22, "Analyzing with GLM-5...")
     try:
-        df = load_dataframe(data_file_path)
+        df, csv_bytes = _load_once(data_file_path)
     except Exception as exc:  # noqa: BLE001
         return PlanExecutionResult(
             success=False,
@@ -552,7 +676,6 @@ async def run_agentic_analysis(
             total_elapsed_s=time.monotonic() - loop_start,
         )
     profile = extract_profile(df, filename=filename, total_rows=len(df))
-    csv_bytes = Path(data_file_path).read_bytes()
     system_text = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
 
     # ------- Round 1 -------

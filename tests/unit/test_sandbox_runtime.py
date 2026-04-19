@@ -11,7 +11,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.services.code_executor.sandbox_runtime import (
+# The patch targets below (`e2b_code_interpreter.Sandbox.create`) trigger
+# an import of the optional `e2b-code-interpreter` package. On dev
+# machines that don't install E2B (CI without an API key, most open-
+# source contributors) that raises ModuleNotFoundError before any assert.
+# importorskip defers that failure into a clean skip so the file doesn't
+# fail out of the box.
+pytest.importorskip("e2b_code_interpreter")
+
+from backend.services.code_executor.sandbox_runtime import (  # noqa: E402
     SandboxReadiness,
     set_agent_runtime_ready,
     is_agent_runtime_ready,

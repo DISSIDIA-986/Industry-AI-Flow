@@ -214,6 +214,182 @@ async def test_budget_exhausted_mid_round2(sample_csv, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_round1_user_prompt_accepts_brace_literals_in_sample_data(
+    sample_csv, monkeypatch, tmp_path
+):
+    """Codex review P2 — a CSV cell like `hello {foo}` must NOT crash
+    round 1. Before the fix, `_build_user_prompt` used format_map whose
+    leftover-placeholder guard rejected the substituted text. Now the
+    builder uses .replace() substitution, symmetric with the repair
+    builder, and any literal {word} text in sample values survives
+    through to the LLM verbatim.
+    """
+    import pandas as pd
+
+    csv = tmp_path / "with_braces.csv"
+    # First sample value is f-string-looking literal text the model
+    # might legitimately see in user-uploaded marketing copy or paths.
+    pd.DataFrame(
+        {
+            "name": ["hello {foo}", "ok {bar}", "fine"],
+            "count": [1, 2, 3],
+        }
+    ).to_csv(csv, index=False)
+
+    async def _fake_llm(prompt: str) -> str:
+        assert "{foo}" in prompt, "slot value should round-trip literal braces"
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        return _make_successful_sandbox_result()
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Count rows",
+        data_file_path=str(csv),
+        llm_caller=_fake_llm,
+    )
+    assert result.success is True
+
+
+@pytest.mark.asyncio
+async def test_malformed_summary_json_is_soft_success_not_failure(
+    sample_csv, monkeypatch
+):
+    """Refinement after v4 gate rerun: if the model EMITTED the
+    ANALYSIS_SUMMARY_JSON line but the JSON inside is malformed, treat
+    the round as soft success (keep the chart) — don't throw away a
+    working output over a JSON parse nit. Only a completely MISSING
+    summary line fires repair (see the next test).
+    """
+    async def _fake_llm(prompt: str) -> str:
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        # Emitted BUT the JSON payload is malformed (trailing garbage).
+        return ExecutionResult(
+            success=True,
+            stdout='ANALYSIS_SUMMARY_JSON={"n": 4,,}\n',
+            stderr="",
+            error=None,
+            execution_time_s=0.5,
+            output_files={},
+        )
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Q",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+    # Soft success — no repair fires, round count stays at 1.
+    assert result.success is True
+    assert result.repair_triggered is False
+    assert len(result.rounds) == 1
+    # summary_emitted True, summary_parsed None — both surfaced on the
+    # terminal round so callers can telemetry the degradation.
+    assert result.rounds[-1].summary_emitted is True
+    assert result.rounds[-1].summary_parsed is None
+
+
+@pytest.mark.asyncio
+async def test_completely_missing_summary_triggers_repair(
+    sample_csv, monkeypatch
+):
+    """Codex review P2 — a round that passes validation + sandbox but
+    forgot the ANALYSIS_SUMMARY_JSON line entirely must fire repair.
+    Different from the malformed case above: "forgot" means the marker
+    string isn't even in stdout.
+    """
+    call_count = {"n": 0}
+
+    async def _fake_llm(prompt: str) -> str:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # Valid code, no summary marker.
+            return json.dumps(
+                {
+                    "status": "ok",
+                    "business_goal": "Count",
+                    "analysis_plan": "Count rows",
+                    "assumptions": [],
+                    "python_code": "df = pd.read_csv('/workspace/sample.csv')\nprint(len(df))\n",
+                    "produces_chart": False,
+                }
+            )
+        # Round 2: now includes the summary line.
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        # First call: no summary marker in stdout.
+        # Second call: summary present (matches _make_successful_sandbox_result default).
+        if "ANALYSIS_SUMMARY_JSON" in code:
+            return _make_successful_sandbox_result()
+        # Round 1 code prints len only, no summary.
+        return ExecutionResult(
+            success=True,
+            stdout="42\n",  # no ANALYSIS_SUMMARY_JSON line
+            stderr="",
+            error=None,
+            execution_time_s=0.5,
+            output_files={},
+        )
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Count rows",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+
+    assert call_count["n"] == 2, "round 2 must fire when summary JSON missing"
+    assert result.repair_triggered is True
+    assert result.repair_trigger_type == "summary_json_parse_error"
+
+
+def test_load_once_reads_file_exactly_one_time(tmp_path, monkeypatch):
+    """Codex review P2 — _load_once must not re-read the file. Counts
+    Path.read_bytes calls against a real temp file."""
+    import pandas as pd
+
+    from backend.services.data_analysis import agentic_loop as al
+
+    csv = tmp_path / "tiny.csv"
+    pd.DataFrame({"a": [1, 2], "b": [3, 4]}).to_csv(csv, index=False)
+
+    read_count = {"n": 0}
+    real_read_bytes = Path.read_bytes
+
+    def _counting_read(self):  # type: ignore[no-untyped-def]
+        read_count["n"] += 1
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(Path, "read_bytes", _counting_read)
+
+    df, raw = al._load_once(str(csv))
+    assert read_count["n"] == 1, f"expected 1 read, got {read_count['n']}"
+    assert len(df) == 2
+    assert isinstance(raw, bytes) and len(raw) > 0
+
+
+def test_load_once_rejects_oversized_files(tmp_path):
+    """Codex review P2 — MAX_DATASET_BYTES guard should raise rather
+    than let a 500MB CSV OOM the API worker."""
+    from backend.services.data_analysis import agentic_loop as al
+
+    big = tmp_path / "big.csv"
+    # Write one byte over the cap via truncate (sparse file, cheap).
+    with big.open("wb") as f:
+        f.truncate(al.MAX_DATASET_BYTES + 1)
+
+    with pytest.raises(ValueError, match="size cap"):
+        al._load_once(str(big))
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_packages_constant_includes_statsmodels():
     """Smoke test: BOOTSTRAP_PACKAGES stays in sync with the W1 probe's
     EXTRA_SANDBOX_PACKAGES. Any drift between the two lists breaks the
