@@ -42,14 +42,34 @@ REPAIR_TEMPLATE_PATH = PROMPT_DIR / "agentic_v1_repair_template.md"
 # sandbox was legitimately spending ~15s on bootstrap + ~25s on user
 # code, misclassifying a valid cold-sandbox run as sandbox_timeout).
 BOOTSTRAP_BUDGET_S: float = 20.0  # max wall for pip install step inside run_sandbox
-DEFAULT_TOTAL_BUDGET_S: float = 80.0
-REPAIR_DECISION_CUTOFF_S: float = 50.0  # past this, skip repair even on failure
-DEFAULT_ROUND1_LLM_BUDGET_S: float = 12.0
+# Budgets widened again post-live-demo 2026-04-19. At 12s LLM budget,
+# Zhipu's GLM-4.7 frequently blew the wall on heavier requests (ML
+# comparison with 4 classifiers + CV), returning "LLM timeout after 10s"
+# as a fake failure that actually wasted the repair round too. 25s is
+# the 95th-percentile observed latency in live rehearsal; 120s total
+# gives both rounds room to breathe with ~25s headroom.
+DEFAULT_TOTAL_BUDGET_S: float = 120.0
+REPAIR_DECISION_CUTOFF_S: float = 80.0  # past this, skip repair even on failure
+DEFAULT_ROUND1_LLM_BUDGET_S: float = 25.0
 DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0   # user code only; bootstrap is separate
-DEFAULT_ROUND2_LLM_BUDGET_S: float = 10.0
+DEFAULT_ROUND2_LLM_BUDGET_S: float = 25.0
 
-# Sampling (Plan A.6.2).
-SAMPLING = {"temperature": 0.2, "top_p": 0.95, "max_tokens": 4096}
+# Sampling (Plan A.6.2, tightened post-demo-rehearsal 2026-04-19).
+#
+# Originally temperature=0.2 to match the spike config. In live demo
+# rehearsal, 1-in-3 requests hit BLOCKED-module violations (notably
+# `import os`) because at 0.2 the model occasionally ignored the hard
+# constraints section of the prompt. Dropping to 0.0 (greedy decoding)
+# makes generation deterministic per prompt — the same profile +
+# question + system prompt produces the same code every time. We lose
+# creative-phrasing variance but that's a feature for a demo: the
+# operator can rehearse a specific query and trust it stays green.
+#
+# Trade-off noted: if a specific query happens to land on a bad
+# first-shot at temp=0.0, the repair round is the only recovery (no
+# second sample will help). Mitigated by the repair prompt's inline
+# cookbook + the asymmetric success policy we shipped earlier.
+SAMPLING = {"temperature": 0.0, "top_p": 0.95, "max_tokens": 4096}
 
 # Packages pre-installed in every agentic sandbox before user code runs.
 # Keep in sync with sandbox_runtime.EXTRA_SANDBOX_PACKAGES — the W1 probe

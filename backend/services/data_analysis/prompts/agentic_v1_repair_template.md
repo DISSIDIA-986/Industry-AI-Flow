@@ -21,6 +21,7 @@ Minimal fix. Preserve the intent and structure of your previous plan. Change onl
 
 ## Common failures and their fixes
 - `.apply`, `.eval`, `.query`, `.agg`, `.map`, `.pipe`, `.transform` → **completely forbidden**. Use the inline replacements below, do NOT just rename the method.
+- `import os`, `import sys`, `import subprocess`, `import pathlib` → **REMOVE these imports entirely**. The sandbox already mounts the CSV at `/workspace/{filename}`; you never need os.path, sys.path, or subprocess. If your previous code had `import os` for ANY reason (even unused), delete that line on round 2.
 - Disallowed imports → stay within pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels.
 - File I/O other than `pd.read_csv("/workspace/{filename}")` → remove it.
 - NaN crashes → guard with .isna() before arithmetic, or use .dropna() before modeling.
