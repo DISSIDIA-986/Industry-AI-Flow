@@ -423,9 +423,11 @@ export default function DataAnalysisPage() {
         ? "LLM Generated"
         : codeGenMode === "deterministic_planner"
           ? "Deterministic Planner"
-          : codeGenMode === "template_fallback"
-            ? "Template Fallback"
-            : codeGenMode || "";
+          : codeGenMode === "glm5_agent"
+            ? "GLM-4.7 Agent (2-pass)"
+            : codeGenMode === "template_fallback"
+              ? "Template Fallback"
+              : codeGenMode || "";
     return `${completedCount}/${STAGE_ORDER.length} stages · ${(totalMs / 1000).toFixed(1)}s${modeLabel ? ` · ${modeLabel}` : ""}`;
   }, [stages, codeGenMode]);
 
@@ -701,9 +703,11 @@ export default function DataAnalysisPage() {
                   ? "LLM"
                   : codeGenMode === "deterministic_planner"
                     ? "Deterministic"
-                    : codeGenMode === "template_fallback"
-                      ? "Fallback"
-                      : codeGenMode
+                    : codeGenMode === "glm5_agent"
+                      ? "GLM-4.7 Agent"
+                      : codeGenMode === "template_fallback"
+                        ? "Fallback"
+                        : codeGenMode
               })`}
             </div>
 
@@ -712,15 +716,19 @@ export default function DataAnalysisPage() {
               <div className="flex items-center gap-2 text-sm" data-testid="code-gen-mode-badge">
                 {(() => {
                   const isPreferred =
-                    codeGenMode === "llm" || codeGenMode === "deterministic_planner";
+                    codeGenMode === "llm" ||
+                    codeGenMode === "deterministic_planner" ||
+                    codeGenMode === "glm5_agent";
                   const label =
                     codeGenMode === "llm"
                       ? "LLM Generated"
                       : codeGenMode === "deterministic_planner"
                         ? "Deterministic Planner"
-                        : codeGenMode === "template_fallback"
-                          ? "Template Fallback"
-                          : codeGenMode;
+                        : codeGenMode === "glm5_agent"
+                          ? "GLM-4.7 Agent (2-pass)"
+                          : codeGenMode === "template_fallback"
+                            ? "Template Fallback"
+                            : codeGenMode;
                   return (
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${

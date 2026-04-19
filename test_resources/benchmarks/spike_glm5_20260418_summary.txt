@@ -1,0 +1,18 @@
+Spike summary  (generated 2026-04-18T20:56:18.741617+00:00)
+Source: /Users/niuyp/Documents/github.com/Industry-AI-Flow/test_resources/benchmarks/spike_glm5_20260418.jsonl
+
+Overall pass: 7/10 (70%)
+
+By task_family:
+  classification : 1/2
+  correlation    : 1/1
+  descriptive    : 2/3
+  forecast       : 0/1
+  regression     : 2/2
+  time-series    : 1/1
+
+Fail modes:
+  validator                : 2
+  sandbox                  : 1
+
+VERDICT: PARTIAL — Plan should evaluate V2 repair loop

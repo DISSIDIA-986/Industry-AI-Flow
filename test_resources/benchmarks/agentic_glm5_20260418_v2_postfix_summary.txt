@@ -1,0 +1,32 @@
+Agentic spike gate summary  (generated 2026-04-18T23:37:04.360881+00:00)
+Source: test_resources/benchmarks/agentic_glm5_20260418_v2_postfix.jsonl
+
+Overall pass: 6/10 (60%)
+Repair rounds triggered: 4/10
+Repair rounds recovered: 0/4
+
+By task_family:
+  classification : 1/2
+  correlation    : 1/1
+  descriptive    : 3/3
+  forecast       : 0/1
+  regression     : 1/2
+  time-series    : 0/1
+
+Fail modes:
+  Blacklisted import              : 1
+  Blocked method call             : 1
+  ---------------------------------------------------------------------------ModuleNotFoundError                       Traceback (most recent call last)Cell In[1], line 8
+      6 import pandas as pd
+      7 import matplotlib.pyplot as plt
+----> 8 from statsmodels.tsa.seasonal import seasonal_decompose
+      9 import json
+     11 # 1. Load the dataset
+ModuleNotFoundError: 1
+  ---------------------------------------------------------------------------ModuleNotFoundError                       Traceback (most recent call last)Cell In[1], line 25
+     20 df = df.asfreq('MS')
+     22 # 3. Modeling
+     23 # Fit Holt-Winters model (additive trend and multiplicative seasonality)
+     24 # Note: 1
+
+VERDICT: REGRESSION vs V1 single-shot — investigate repair loop

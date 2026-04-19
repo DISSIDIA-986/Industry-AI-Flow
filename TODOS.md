@@ -89,3 +89,105 @@
 2. Added "Presentation Materials" section to DESIGN.md documenting all showcase artifacts
 3. Added module color system (blue/amber/emerald/purple) to Color section
 4. Updated Dark Hero Section page list to all 7 demo pages
+
+### Validate PII redaction in agentic CRISP-DM path
+**Priority:** Medium — blocks Stage 3 flag flip to production
+**Added:** 2026-04-18 (plan-eng-review of Dynamic Analysis refactor spike)
+**Blocked by:** Stage 2 of Dynamic Analysis spike completes with green verdict
+
+**What:** The current `pii_detector.py` warns-only on column names (no redaction). The agentic refactor (Stage 3) will send column metadata to GLM-5 via a richer, less controlled prompt than the old deterministic path. Re-validate the privacy boundary before flipping `USE_GLM5_AGENT=true` in prod.
+
+**Why:** Privacy-by-design is a named demo-critical property. Attendees uploading arbitrary CSVs may include PII column names (SSN, DOB, credit_card_number). The agentic path must not leak these in generated code comments, analysis plans, or sandbox stdout.
+
+**How to implement:**
+1. Audit the V2 agentic prompt (`crispdm_plan_and_code.md`) for places where column names echo into `analysis_plan` / `assumptions` output fields.
+2. Decide: (a) redact PII-flagged column names before prompt, (b) instruct LLM to rename internally, or (c) scrub output before returning to user.
+3. Add a test case: upload a CSV with `ssn`, `dob`, `credit_card_number` columns and assert generated code/summary never echoes those strings.
+
+**Effort:** human: ~4 hours / CC: ~30 min
+
+### Align E2B sandbox image with validator whitelist
+**Priority:** High — blocks Plan-stage forecast capability, discovered in spike 2026-04-18
+**Added:** 2026-04-18 (spike GLM-5 run, airline-passengers-Q2 ModuleNotFoundError)
+**Blocked by:** Nothing
+
+**What:** Three library boundaries must stay in sync, not two: (1) the prompt's "allowed libraries" list, (2) `CodeValidator.WHITELISTED_IMPORTS` in `backend/services/code_executor/validator.py`, and (3) what's actually installed inside the E2B sandbox runtime. The spike exposed this gap: statsmodels was added to (1) and (2) but is not pre-installed in E2B's default `code-interpreter` image, so forecast code passes validation then crashes at import.
+
+**Why:** If we tell the LLM "you may use statsmodels" and the validator agrees but the sandbox doesn't have the package, every forecast/time-series task fails with a confusing sandbox traceback. Users (demo attendees uploading arbitrary CSVs) will see a cryptic `ModuleNotFoundError` instead of a working chart.
+
+**How to implement (pick one):**
+1. **Pre-install in sandbox:** Build a custom E2B template image that pip-installs statsmodels (and any other libraries we commit to supporting). Maintenance: rebuild when whitelist changes.
+2. **Runtime pip injection:** Before executing generated code, run `sbx.commands.run("pip install statsmodels")` in the sandbox. Slower (~5s per call) but zero image maintenance.
+3. **Constrain prompt to available libs only:** Regenerate the "allowed libraries" list from the actual E2B image contents at startup. The validator whitelist becomes derived, not authoritative.
+
+**Test:** After implementing, re-run airline-passengers-Q2 in the spike harness — it should pass with a valid forecast chart.
+
+**Effort:** human: ~2 hours / CC: ~20 min (option 2 is fastest)
+
+### Build custom E2B template image with full validator library set
+**Priority:** Medium — follow-up to W1 startup probe
+**Added:** 2026-04-18 (Plan Appendix E.7)
+**Blocked by:** W1 shipping, W1's probe showing any missing packages
+
+**What:** W1 uses a startup probe against E2B's default `code-interpreter` image. If the probe reveals missing packages (statsmodels was the known gap), the right fix is a custom E2B template image built once rather than runtime installs. This TODO tracks the image build.
+
+**Why:** Probe-only without image control means every library gap blocks the agentic path until a manual image update. Pre-baking the image eliminates that class of failure.
+
+**How to implement:**
+1. Write a Dockerfile extending E2B's base code-interpreter with pip-installed extras (statsmodels, plus any future adds)
+2. Build + push to E2B as a custom template
+3. Update `EXTRA_SANDBOX_PACKAGES` constant or point client to the custom template
+4. Rebuild pipeline documented in runbook
+
+**Effort:** human: ~4 hours / CC: ~1 hour
+
+### Retire deterministic chart_plan.py after showcase
+**Priority:** Low — post-showcase cleanup
+**Added:** 2026-04-18 (Plan Appendix E.7)
+**Blocked by:** Successful showcase demo with USE_GLM5_AGENT=true in production
+
+**What:** `chart_plan.py` exists as Day-of-demo rollback target per Plan E.5. After the April showcase confirms agentic path is stable, delete `chart_plan.py`, `chart_executor.py` (deterministic portions), and the `use_glm5_agent=false` branch in `analyze_query()`.
+
+**Why:** Single path is easier to maintain. Keeping both branches indefinitely creates "which path did this bug go through?" confusion.
+
+**How to implement:**
+1. Verify 2-3 weeks of showcase/post-showcase stability on agentic path
+2. Delete dead files
+3. Remove feature flag, make `analyze_query()` call `run_agentic_analysis()` directly
+4. Update tests that exercised the deterministic path
+
+**Effort:** human: ~3 hours / CC: ~20 min
+
+### Prompt A/B testing via prompt_manager integration
+**Priority:** Low — post-showcase enhancement
+**Added:** 2026-04-18 (Plan Appendix E.7, Open Question A.3.1)
+**Blocked by:** Agentic path stable in production
+
+**What:** Current prompt templates live in committed markdown files under `backend/services/data_analysis/prompts/`. Project already has `prompt_manager.py` for versioned prompts with performance scoring. Wire agentic prompts through prompt_manager to enable A/B tests and per-version latency/accuracy tracking.
+
+**Why:** Prompt is the lever for agentic quality. A/B testing lets us iterate empirically rather than by vibes.
+
+**How to implement:**
+1. Import the 3 markdown templates as prompt_manager seed data
+2. Route agentic_loop prompt loading through prompt_manager
+3. Add variant routing (hash-based user sharding)
+4. Log per-variant trial outcomes (already captured via Langfuse)
+
+**Effort:** human: ~1 day / CC: ~45 min
+
+### Surface GLM-5 token counts from Zhipu client
+**Priority:** Low — cost visibility for post-showcase
+**Added:** 2026-04-18 (Plan Appendix E.7)
+**Blocked by:** Nothing
+
+**What:** Zhipu's Anthropic-compatible endpoint returns token usage in the response body, but `backend/services/llm_integration/zhipu_client.py::generate()` currently discards it (returns only the text). Agentic path records `tokens_in/tokens_out/cost_usd = None` per trial as a result. Parse and surface the usage so we can attribute cost per request.
+
+**Why:** Once agentic is in prod, cost tracking matters for budgeting. Also required for any future multi-tenant cost attribution.
+
+**How to implement:**
+1. Change `generate()` to return a small dataclass `GenerationResult(text, tokens_in, tokens_out)`
+2. Update callers to extract .text where they previously used the return value
+3. agentic_loop records the full tuple
+4. llm_usage_logs table already exists — write records there
+
+**Effort:** human: ~3 hours / CC: ~30 min
