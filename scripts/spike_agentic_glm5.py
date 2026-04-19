@@ -92,6 +92,8 @@ async def run_case(
         "error_message": None,
         "total_elapsed_s": 0.0,
         "latency_ms": 0,
+        "tokens_in": None,
+        "tokens_out": None,
     }
 
     try:
@@ -115,6 +117,8 @@ async def run_case(
     rec["time_budget_exhausted"] = result.time_budget_exhausted
     rec["total_elapsed_s"] = round(result.total_elapsed_s, 2)
     rec["error_message"] = result.error_message
+    rec["tokens_in"] = result.total_tokens_in
+    rec["tokens_out"] = result.total_tokens_out
 
     if result.rounds:
         terminal = result.rounds[-1]

@@ -81,6 +81,8 @@ class RoundRecord:
     round_num: int
     llm_raw: str = ""
     llm_latency_ms: int = 0
+    llm_tokens_in: Optional[int] = None
+    llm_tokens_out: Optional[int] = None
     json_schema_valid: bool = False
     parsed: Optional[Dict[str, Any]] = None
     validator_pass: bool = False
@@ -149,6 +151,11 @@ class PlanExecutionResult:
     final_summary: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
     total_elapsed_s: float = 0.0
+    # Aggregated across all rounds; None when no rounds reported usage
+    # (e.g., tests with injected callers, or error paths that returned
+    # before the LLM call completed).
+    total_tokens_in: Optional[int] = None
+    total_tokens_out: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializable view. Omits large binary payload (chart_bytes)."""
@@ -450,6 +457,17 @@ async def _run_one_round(
 
     rec.llm_latency_ms = int((time.monotonic() - t0) * 1000)
 
+    # Token usage — populated only when the default Zhipu caller is in
+    # use (see _default_glm5_caller). Injected test callers leave the
+    # slot untouched, so tokens stay None in unit tests by design.
+    rec.llm_tokens_in = _last_call_usage.get("input")
+    rec.llm_tokens_out = _last_call_usage.get("output")
+    # Clear so a subsequent round in the same request can't accidentally
+    # inherit the prior round's counts if that round's caller bypasses
+    # the default (e.g., a future hybrid-caller path).
+    _last_call_usage["input"] = None
+    _last_call_usage["output"] = None
+
     # Parse
     parsed = parse_json_response(raw)
     if parsed is None:
@@ -601,18 +619,37 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
 
     The client's generate() is synchronous; we offload it to a thread so
     the event loop stays responsive and asyncio.wait_for can interrupt it.
+
+    Captures ZhipuClient.last_usage into the module-level
+    ``_last_call_usage`` slot so ``_run_one_round`` can attach token
+    counts to the RoundRecord without changing the caller signature
+    (keeping dependency injection for tests untouched).
     """
     from backend.services.llm_integration.llm_client import LLMClientFactory
 
     async def _call(prompt: str) -> str:
         client = LLMClientFactory.create_client("zhipu")
-        return await asyncio.to_thread(
+        text = await asyncio.to_thread(
             client.generate,
             prompt,
             **SAMPLING,
         )
+        # Snapshot usage into the shared slot — read by _run_one_round
+        # right after it awaits the caller. Safe under asyncio because
+        # a single round awaits exactly one caller call sequentially.
+        usage = getattr(client, "last_usage", {}) or {}
+        _last_call_usage["input"] = usage.get("input_tokens")
+        _last_call_usage["output"] = usage.get("output_tokens")
+        return text
 
     return _call
+
+
+# Module-level slot holding the most recent LLM call's token usage.
+# Populated only when the default Zhipu caller is used; stays empty
+# when tests inject a stub caller. _run_one_round reads this right
+# after the caller returns so there's no cross-call contamination.
+_last_call_usage: Dict[str, Optional[int]] = {"input": None, "output": None}
 
 
 # ---------------------------------------------------------------------------
@@ -800,6 +837,13 @@ def _finalize(
             or "Analysis failed"
         )
 
+    # Aggregate token usage across rounds. None if no round populated
+    # usage (injected-caller tests, or pre-LLM error paths).
+    tok_in_vals = [r.llm_tokens_in for r in rounds if r.llm_tokens_in is not None]
+    tok_out_vals = [r.llm_tokens_out for r in rounds if r.llm_tokens_out is not None]
+    total_tokens_in = sum(tok_in_vals) if tok_in_vals else None
+    total_tokens_out = sum(tok_out_vals) if tok_out_vals else None
+
     return PlanExecutionResult(
         success=success,
         status=status,
@@ -818,4 +862,6 @@ def _finalize(
         final_summary=terminal.summary_parsed,
         error_message=error_message,
         total_elapsed_s=total_elapsed_s,
+        total_tokens_in=total_tokens_in,
+        total_tokens_out=total_tokens_out,
     )
