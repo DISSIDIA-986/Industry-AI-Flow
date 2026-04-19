@@ -12,7 +12,34 @@ on:
 jobs:
   release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+
+    # Postgres 16 with pgvector preinstalled — matches the
+    # docker-compose-postgres.yml image used in local dev. Without this
+    # service, test-prompt-baseline-gate's asyncpg.connect() was failing
+    # with "Connect call failed ('127.0.0.1', 5432)" and red-ing CI on
+    # every push for the past week.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_workflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_workflow
 
     steps:
       - name: Checkout
@@ -27,6 +54,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements/release-gate.txt
+
+      - name: Initialize database schema
+        run: |
+          python backend/init_database.py
+
+      - name: Seed prompt baseline
+        run: |
+          python scripts/migration/seed_prompt_baseline.py --pretty
 
       - name: Run release gate
         run: |
