@@ -56,10 +56,17 @@ jobs:
           python -m pip install -r requirements/release-gate.txt
 
       - name: Initialize database schema
+        # `python -m` form ensures repo root is on sys.path so
+        # `from backend.config import settings` resolves. Running the
+        # file directly (`python backend/init_database.py`) doesn't
+        # add CWD to sys.path in Python 3.11+ and fails with
+        # ModuleNotFoundError: No module named 'backend'.
         run: |
-          python backend/init_database.py
+          python -m backend.init_database
 
       - name: Seed prompt baseline
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python scripts/migration/seed_prompt_baseline.py --pretty
 
