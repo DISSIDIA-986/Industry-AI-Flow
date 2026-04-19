@@ -9,7 +9,7 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 {question}
 
 ## Required Output (strict JSON)
-{{
+{
   "status": "ok" | "unanswerable",
   "business_goal": "<1 sentence, or null if unanswerable>",
   "analysis_plan": "<2-4 sentences, or null if unanswerable>",
@@ -18,7 +18,7 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
   "produces_chart": true | false,
   "reason": "<why unanswerable, required if status=unanswerable>",
   "suggestion": "<what the user could do instead, required if status=unanswerable>"
-}}
+}
 
 ## Hard Constraints
 - Libraries allowed: pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels. Nothing else.
@@ -27,21 +27,21 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 - Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}")` as the first step. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.
-- Print exactly one line: `ANALYSIS_SUMMARY_JSON={{"<key>": <val>, ...}}` (compact, one-line).
+- Print exactly one line: `ANALYSIS_SUMMARY_JSON={"<key>": <val>, ...}` (compact, one-line).
 - If the dataset cannot answer the question, set status="unanswerable", fill reason/suggestion, python_code=null.
 
 ## Substitution Cookbook (replacements for BLOCKED methods)
 
 ### Instead of .agg (use direct pandas methods or loops)
 ```python
-# BAD:   df.groupby('size').agg({{'tip': 'mean'}})
+# BAD:   df.groupby('size').agg({'tip': 'mean'})
 # GOOD:  df.groupby('size')['tip'].mean()
-# GOOD:  {{col: df[col].mean() for col in ['tip', 'total_bill']}}
+# GOOD:  {col: df[col].mean() for col in ['tip', 'total_bill']}
 # GOOD:  multi-stat: concat individual calls
-out = pd.DataFrame({{
+out = pd.DataFrame({
     'mean': df.groupby('size')['tip'].mean(),
     'std':  df.groupby('size')['tip'].std(),
-}})
+})
 ```
 
 ### Instead of .transform (broadcast via merge or explicit loop)
@@ -57,8 +57,8 @@ df['tip_demeaned'] = df['tip'] - df['size_mean']
 
 ### Instead of .map (use .replace for dicts, np.select for conditions, Categorical for encoding)
 ```python
-# BAD:   df['time_num'] = df['time'].map({{'Lunch': 0, 'Dinner': 1}})
-# GOOD:  df['time_num'] = df['time'].replace({{'Lunch': 0, 'Dinner': 1}}).astype(int)
+# BAD:   df['time_num'] = df['time'].map({'Lunch': 0, 'Dinner': 1})
+# GOOD:  df['time_num'] = df['time'].replace({'Lunch': 0, 'Dinner': 1}).astype(int)
 # GOOD:  df['time_num'] = np.where(df['time'] == 'Dinner', 1, 0)
 # GOOD (for multi-class): df['time_num'] = pd.Categorical(df['time']).codes
 ```
