@@ -21,11 +21,12 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 }
 
 ## Hard Constraints
-- Libraries allowed: pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels. Nothing else.
+- Libraries allowed: pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels, AND the Python stdlib modules `json` and `math` (needed for the summary serialization below).
 - BLOCKED DataFrame methods (any use rejects the code): .apply, .agg, .map, .pipe, .query, .eval, .transform.
 - BLOCKED modules and builtins: os, subprocess, pathlib, sys, socket, urllib, requests, open, eval, exec, __import__.
 - Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}")` as the first step. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
+- **Multi-aspect queries** (e.g. "do EDA AND model comparison", "plot distribution AND train classifiers") must pack every aspect into the ONE saved PNG via `plt.subplots(nrows, ncols, figsize=(W, H))`. Use a 2×2 or 2×3 grid with each subplot titled (e.g. "Survival by Sex", "Age distribution", "Model AUC comparison", "ROC curves"). Do NOT sacrifice EDA visuals just to show model results — if the user asked for both, both must be visible in the saved figure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.
 - Print exactly one line: `ANALYSIS_SUMMARY_JSON=<strict-json>` where `<strict-json>` is produced by `json.dumps(...)` (NOT `str(dict)` or `print(dict)` — those produce Python repr with single quotes that can't be parsed as JSON on the server). The line MUST include a top-level `"key_findings"` field that is a list of 2-5 short human-readable strings summarizing the result for the UI (AUC numbers, strongest correlations, notable class imbalance, etc.). If the task is a model comparison, each key finding should cite specific metric values. Example:
   ```python
