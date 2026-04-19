@@ -283,6 +283,20 @@ class CodeValidator:
         return ValidationResult(is_valid=True)
 
     def _validate_blocked_calls(self, tree: ast.AST) -> ValidationResult:
+        def _chain_has_call(expr: ast.AST, method_name: str) -> bool:
+            """Walk the receiver expression and return True if any Call
+            in it is an `.{method_name}(...)` call. Used to identify
+            pandas `.groupby(...).transform(...)` chains while letting
+            sklearn `.transform()` on scalers/encoders through.
+            """
+            target = method_name.lower()
+            for child in ast.walk(expr):
+                if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                    if child.func.attr.lower() == target:
+                        return True
+            return False
+
+
         """Validate dangerous function calls, including simple aliases and container indirection."""
         blocked_attr_calls = {
             (base.lower(), attr.lower()) for base, attr in self.BLOCKED_ATTRIBUTE_CALLS
@@ -523,6 +537,20 @@ class CodeValidator:
                     )
                 # Block dangerous method calls on any object (e.g., df.query(), df.eval())
                 if attr in blocked_methods:
+                    # Narrow exception: `.transform()` is ALSO sklearn's core
+                    # API (StandardScaler.transform, LabelEncoder.transform,
+                    # Pipeline.transform, ColumnTransformer.transform) — all
+                    # legitimate. The dangerous pandas pattern is specifically
+                    # `.groupby(...).transform(...)` which accepts arbitrary
+                    # callables. Allow the call unless its receiver chain
+                    # contains a groupby() call.
+                    # (Live demo 2026-04-19: blocking all .transform() caused
+                    # repeated ML-comparison failures on multi-class datasets
+                    # where sklearn scaling is the natural preprocessing step.)
+                    if attr == "transform" and not _chain_has_call(
+                        node.func.value, "groupby"
+                    ):
+                        continue
                     return ValidationResult(
                         is_valid=False,
                         error=f"Blocked method call: .{node.func.attr}()",
