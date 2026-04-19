@@ -72,6 +72,10 @@ def compose_agentic_response(
             "time_budget_exhausted": result.time_budget_exhausted,
             "rounds": len(result.rounds),
             "elapsed_s": round(result.total_elapsed_s, 2),
+            # Cost observability — null when no round reported usage
+            # (tests with stub callers, or pre-LLM error paths).
+            "tokens_in": result.total_tokens_in,
+            "tokens_out": result.total_tokens_out,
         },
         "dataset_info": dataset_metadata,
         "execution_time": round(result.total_elapsed_s, 2),

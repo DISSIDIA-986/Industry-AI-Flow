@@ -30,6 +30,16 @@ class ZhipuClient:
         if not self.api_key:
             raise RuntimeError("ZHIPU_API_KEY is not configured")
 
+        # Populated after each successful generate() call with the usage
+        # block Zhipu's Anthropic-compatible endpoint returns:
+        #   {"input_tokens": int, "output_tokens": int, ...}
+        # Callers can snapshot this for per-request cost tracking without
+        # changing the generate() signature (avoids rippling through
+        # Ollama/Groq siblings and the dispatch service). Empty dict when
+        # no call has been made, when the response omitted usage, or on
+        # error paths.
+        self.last_usage: Dict[str, Any] = {}
+
     def _messages_endpoint(self) -> str:
         if self.base_url.endswith("/v1/messages"):
             return self.base_url
@@ -70,6 +80,18 @@ class ZhipuClient:
             )
             response.raise_for_status()
             data = response.json()
+            # Capture usage before extracting content so partial parse
+            # failures below still leave the token count observable.
+            usage = data.get("usage")
+            if isinstance(usage, dict):
+                self.last_usage = dict(usage)
+                logger.debug(
+                    "Zhipu usage: in=%s out=%s",
+                    usage.get("input_tokens"),
+                    usage.get("output_tokens"),
+                )
+            else:
+                self.last_usage = {}
             content = data.get("content", [])
             if isinstance(content, list) and content:
                 first = content[0]

@@ -390,6 +390,73 @@ def test_load_once_rejects_oversized_files(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_token_usage_flows_into_plan_result_when_caller_populates_slot(
+    sample_csv, monkeypatch
+):
+    """Cost observability (post-Codex-review): the default Zhipu caller
+    writes per-call usage into `_last_call_usage`, `_run_one_round` reads
+    it into `RoundRecord.llm_tokens_in/out`, and `_finalize` aggregates
+    across rounds into `PlanExecutionResult.total_tokens_in/out`. Stub
+    the caller to simulate that write so test doesn't need a live API.
+    """
+    async def _fake_llm(prompt: str) -> str:
+        # Simulate what _default_glm5_caller does after client.generate.
+        agentic_loop._last_call_usage["input"] = 1500
+        agentic_loop._last_call_usage["output"] = 220
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        return _make_successful_sandbox_result()
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Q",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+
+    assert result.success is True
+    # Round-level fields populated.
+    r1 = result.rounds[0]
+    assert r1.llm_tokens_in == 1500
+    assert r1.llm_tokens_out == 220
+    # Aggregated at plan level (one round, so equal).
+    assert result.total_tokens_in == 1500
+    assert result.total_tokens_out == 220
+
+
+@pytest.mark.asyncio
+async def test_token_usage_absent_when_caller_does_not_populate_slot(
+    sample_csv, monkeypatch
+):
+    """Injected test callers that don't touch the usage slot leave tokens
+    as None — no accidental bleed from prior tests in the module."""
+    # Preemptively clear in case some earlier test in this module left residue.
+    agentic_loop._last_call_usage["input"] = None
+    agentic_loop._last_call_usage["output"] = None
+
+    async def _fake_llm(prompt: str) -> str:
+        return _make_valid_llm_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s):
+        return _make_successful_sandbox_result()
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Q",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+
+    assert result.rounds[0].llm_tokens_in is None
+    assert result.rounds[0].llm_tokens_out is None
+    assert result.total_tokens_in is None
+    assert result.total_tokens_out is None
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_packages_constant_includes_statsmodels():
     """Smoke test: BOOTSTRAP_PACKAGES stays in sync with the W1 probe's
     EXTRA_SANDBOX_PACKAGES. Any drift between the two lists breaks the
