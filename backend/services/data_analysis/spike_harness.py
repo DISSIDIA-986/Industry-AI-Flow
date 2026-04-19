@@ -275,16 +275,39 @@ _SUMMARY_LINE_RE = re.compile(r"^ANALYSIS_SUMMARY_JSON=(.+)$", re.MULTILINE)
 def extract_summary_json(stdout: str) -> Tuple[bool, bool, Optional[Dict[str, Any]]]:
     """Parse the ANALYSIS_SUMMARY_JSON= line out of sandbox stdout.
 
+    Tolerant to two common emission shapes:
+      1. Strict JSON (what the prompt asks for via json.dumps)
+      2. Python-repr dict with single quotes (what GLM-4.7 emits when it
+         does `print('ANALYSIS_SUMMARY_JSON=' + str(result))` by mistake).
+    Falling back to ast.literal_eval recovers the dict safely — it only
+    accepts literal Python values (dicts, lists, numbers, strings,
+    bools, None), so no arbitrary code execution risk.
+
     Returns (emitted, parse_success, parsed_dict | None).
     """
+    import ast
+
     match = _SUMMARY_LINE_RE.search(stdout or "")
     if not match:
         return False, False, None
     raw = match.group(1).strip()
+
+    # Attempt 1: strict JSON.
     try:
         obj = json.loads(raw)
         if isinstance(obj, dict):
             return True, True, obj
-        return True, False, None
     except json.JSONDecodeError:
-        return True, False, None
+        pass
+
+    # Attempt 2: Python literal (handles single-quoted dicts, True/False/None,
+    # and numpy scalars stringified as plain numbers). Safe per-docs: does
+    # not execute arbitrary code.
+    try:
+        obj = ast.literal_eval(raw)
+        if isinstance(obj, dict):
+            return True, True, obj
+    except (ValueError, SyntaxError):
+        pass
+
+    return True, False, None
