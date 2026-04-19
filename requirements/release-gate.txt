@@ -14,6 +14,12 @@ numpy==1.26.4
 # 2.2.3 ships py3.13 wheels.
 pandas==2.2.3
 asyncpg==0.30.0
+# Sync psycopg needed by backend/init_database.py via driver_compat shim;
+# asyncpg alone is insufficient for the CI schema-init step.
+psycopg[binary]==3.2.3
+# Uvicorn required by frontend-layout-nav-gate which launches a real
+# backend (python -m uvicorn backend.main:app) for live Playwright checks.
+uvicorn[standard]==0.27.1
 psutil==5.9.6
 python-multipart==0.0.6
 bleach==6.1.0
