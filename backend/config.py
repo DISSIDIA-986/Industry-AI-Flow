@@ -198,8 +198,13 @@ class Settings(BaseSettings):
     # Dynamic Data Analysis agentic path (Plan Appendix E, W4)
     # When true: analyze_query() routes to backend/services/data_analysis/agentic_loop.py
     # When false: existing deterministic chart_plan.py flow (unchanged).
-    # Defaults false. See Plan E.5 for rollout sequence.
-    use_glm5_agent: bool = os.getenv("USE_GLM5_AGENT", "false").lower() == "true"
+    # Default flipped to true after W6 gate cleared 10/10 on 2026-04-18
+    # (evidence: test_resources/benchmarks/agentic_glm5_20260418_v3_bootstrap.jsonl).
+    # Rollback at any time with USE_GLM5_AGENT=false. The W1 startup probe
+    # is the safety net: if the sandbox bootstrap ever fails, the runtime
+    # marks itself not-ready and every request falls back to the
+    # deterministic path silently — no 503, no crashed analysis.
+    use_glm5_agent: bool = os.getenv("USE_GLM5_AGENT", "true").lower() == "true"
     docker_image_name: str = os.getenv(
         "DOCKER_IMAGE_NAME", "luncheon/code-analysis:v1.0"
     )  # Docker image name
