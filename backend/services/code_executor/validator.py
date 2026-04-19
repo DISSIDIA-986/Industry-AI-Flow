@@ -74,6 +74,7 @@ class CodeValidator:
         "numpy",
         "scipy",
         "sklearn",
+        "statsmodels",
         "xgboost",
         "lightgbm",
         "matplotlib",

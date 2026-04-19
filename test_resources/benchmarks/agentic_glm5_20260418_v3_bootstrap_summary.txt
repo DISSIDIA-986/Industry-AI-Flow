@@ -1,0 +1,18 @@
+Agentic spike gate summary  (generated 2026-04-18T23:52:46.189716+00:00)
+Source: test_resources/benchmarks/agentic_glm5_20260418_v3_bootstrap.jsonl
+
+Overall pass: 10/10 (100%)
+Repair rounds triggered: 1/10
+Repair rounds recovered: 1/1
+
+By task_family:
+  classification : 2/2
+  correlation    : 1/1
+  descriptive    : 3/3
+  forecast       : 1/1
+  regression     : 2/2
+  time-series    : 1/1
+
+No failures.
+
+VERDICT: PROCEED — flip USE_GLM5_AGENT=true for demo

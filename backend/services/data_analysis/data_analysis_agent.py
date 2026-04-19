@@ -144,6 +144,29 @@ class DataAnalysisAgent:
                 f"{dataset_metadata.get('rows', '?')} rows × {dataset_metadata.get('columns', '?')} cols",
             )
 
+            # 2b. Agentic path branch (Plan Appendix E W4).
+            #
+            # Gated on BOTH the feature flag AND the startup readiness probe
+            # (set_agent_runtime_ready in main.py lifespan). The probe gates
+            # at startup; if it reported missing sandbox packages we stay on
+            # the deterministic path unconditionally — no per-request
+            # degradation logic, no 503s. When the agentic path owns the
+            # response it emits its own code_generation / security_check /
+            # sandbox_execution stages via the on_progress callback, so the
+            # 6-stage SSE contract stays intact.
+            if self._agentic_path_enabled():
+                agentic_response = self._run_agentic_path(
+                    question=question,
+                    data_file_path=data_file_path,
+                    dataset_metadata=dataset_metadata,
+                    on_progress=_progress,
+                )
+                if agentic_response is not None:
+                    return agentic_response
+                # None → transparent fallback to deterministic path. Only
+                # occurs on setup errors before the agentic loop emitted any
+                # stages, so no conflicting progress events are possible.
+
             # 3. Build deterministic EDA plan from metadata
             #
             # Replaces the former LLM code-gen path. The plan is a pure
@@ -321,6 +344,110 @@ class DataAnalysisAgent:
                 "error": str(e),
                 "answer": "Data analysis failed due to an internal error.",
             }
+
+    # ------------------------------------------------------------------
+    # Agentic path (Plan Appendix E W4)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _agentic_path_enabled() -> bool:
+        """Return True iff USE_GLM5_AGENT is set AND the startup probe
+        marked the runtime ready. Either condition false → deterministic."""
+        if not settings.use_glm5_agent:
+            return False
+        try:
+            from backend.services.code_executor.sandbox_runtime import (
+                is_agent_runtime_ready,
+            )
+
+            return bool(is_agent_runtime_ready())
+        except Exception as exc:  # noqa: BLE001 — never break analyze on import failure
+            logger.warning("agent_runtime_ready check failed: %s", exc)
+            return False
+
+    def _run_agentic_path(
+        self,
+        *,
+        question: str,
+        data_file_path: str,
+        dataset_metadata: Dict[str, Any],
+        on_progress: Any,
+    ) -> Optional[Dict[str, Any]]:
+        """Execute the bounded 2-pass agentic loop and compose an envelope.
+
+        Returns:
+            dict envelope (same shape as deterministic path) when the
+            agentic path owned the response — success or graceful failure.
+            None when a setup error occurred before the loop emitted any
+            progress events; in that case analyze_query falls through to
+            the deterministic path with no user-visible disruption.
+        """
+        import asyncio
+
+        try:
+            from backend.services.data_analysis.agentic_envelope import (
+                compose_agentic_response,
+            )
+            from backend.services.data_analysis.agentic_loop import (
+                run_agentic_analysis,
+            )
+        except Exception as exc:  # noqa: BLE001 — import failure → fall back
+            logger.warning("agentic imports failed, falling back: %s", exc)
+            return None
+
+        try:
+            # analyze_query is called from a worker thread (see
+            # _run_analysis_with_progress → run_in_executor), so asyncio.run
+            # is safe — no running loop to clash with. The sync /data/analyze
+            # endpoint also funnels through a tool chain that eventually runs
+            # in a thread. If we ever move to a coroutine call site this
+            # needs to be reworked, but the feature flag keeps that risk off.
+            result = asyncio.run(
+                run_agentic_analysis(
+                    question=question,
+                    data_file_path=data_file_path,
+                    dataset_metadata=dataset_metadata,
+                    on_progress=on_progress,
+                )
+            )
+        except RuntimeError as exc:
+            # Running inside an existing event loop. Treat as unavailable
+            # and fall back transparently rather than blowing up the request.
+            logger.warning(
+                "agentic path unavailable (event loop conflict: %s); "
+                "falling back to deterministic",
+                exc,
+            )
+            return None
+        except Exception as exc:  # noqa: BLE001 — any loop crash → graceful fallback
+            logger.warning(
+                "agentic loop raised unexpectedly: %s; falling back", exc
+            )
+            return None
+
+        envelope = compose_agentic_response(
+            result=result,
+            question=question,
+            dataset_metadata=dataset_metadata,
+            data_file_path=data_file_path,
+        )
+
+        # Emit the terminal SSE stage so the UI collapses the pipeline.
+        # agentic_loop handled code_generation / security_check /
+        # sandbox_execution already; result_render is ours to close out.
+        if on_progress is not None:
+            status = "completed" if envelope.get("success") else "failed"
+            detail = (
+                "Analysis complete"
+                if envelope.get("success")
+                else (envelope.get("stderr") or envelope.get("answer") or "Analysis failed")
+            )
+            try:
+                on_progress("result_render", status, 1.0, detail[:200])
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("agentic result_render progress emit failed: %s", exc)
+
+        return envelope
 
     @staticmethod
     def _parse_analysis_summary(stdout: str) -> Optional[Dict[str, Any]]:
