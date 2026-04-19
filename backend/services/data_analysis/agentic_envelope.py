@@ -140,10 +140,38 @@ def _persist_chart(
 def _extract_key_findings(
     summary: Dict[str, Any], plan: Dict[str, Any]
 ) -> List[str]:
-    """Pull key_findings from ANALYSIS_SUMMARY_JSON; fall back to plan text."""
+    """Pull key_findings from ANALYSIS_SUMMARY_JSON; synthesize when missing.
+
+    Priority order:
+      1. Explicit `key_findings` list from the summary (what the prompt asks for).
+      2. Synthesize from structured fields the model commonly emits when
+         it forgets key_findings — especially `model_comparison` (AUC-
+         style metric dicts). This avoids showing the user a blank
+         "Key Findings" panel while the real numbers sit in the raw JSON.
+      3. Fall back to plan business_goal / analysis_plan prose.
+    """
     findings = summary.get("key_findings")
     if isinstance(findings, list) and findings:
         return [str(f) for f in findings if f]
+
+    # Synthesis from model_comparison — common when the query asks for
+    # "AUC comparison", "ML comparison", etc. and GLM-4.7 puts results
+    # under that key without a human-readable bullet list.
+    mc = summary.get("model_comparison")
+    if isinstance(mc, dict) and mc:
+        bullets = _bullets_from_model_comparison(mc)
+        if bullets:
+            return bullets
+
+    # Generic fallback: flatten any top-level numeric-or-short fields
+    # into single-line bullets. Keeps the UI useful for
+    # free-form summaries (correlations, counts, percentages).
+    for key, value in summary.items():
+        if key in ("key_findings", "chart_type", "analysis_type"):
+            continue
+        bullet = _format_summary_field(key, value)
+        if bullet:
+            return [bullet]  # one-shot synthesis; good enough for display.
 
     business_goal = plan.get("business_goal")
     analysis_plan = plan.get("analysis_plan")
@@ -153,6 +181,63 @@ def _extract_key_findings(
     if analysis_plan:
         bullets.append(f"Approach: {analysis_plan}")
     return bullets
+
+
+def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
+    """Turn {ModelName: {mean_auc: X, std_auc: Y, ...}} into sorted bullets.
+
+    Expected shapes (any one of):
+      {"RF": {"mean_auc": 0.87, "std_auc": 0.02}, ...}
+      {"RF": {"auc": 0.87}, ...}
+      {"RF": 0.87, ...}
+    """
+    scored: List[tuple[str, float, str]] = []
+    for name, payload in mc.items():
+        if not isinstance(name, str):
+            continue
+        score: Optional[float] = None
+        detail = ""
+        if isinstance(payload, dict):
+            for score_key in ("mean_auc", "auc", "roc_auc", "score", "accuracy"):
+                if score_key in payload:
+                    try:
+                        score = float(payload[score_key])
+                        std = payload.get("std_auc") or payload.get("std")
+                        if std is not None:
+                            try:
+                                detail = f" ± {float(std):.3f}"
+                            except (TypeError, ValueError):
+                                pass
+                        break
+                    except (TypeError, ValueError):
+                        continue
+        else:
+            try:
+                score = float(payload)
+            except (TypeError, ValueError):
+                continue
+        if score is not None:
+            scored.append((name, score, detail))
+
+    if not scored:
+        return []
+
+    scored.sort(key=lambda t: t[1], reverse=True)
+    bullets = [f"{name}: AUC={score:.4f}{detail}" for name, score, detail in scored]
+    leader = scored[0]
+    bullets.insert(0, f"Best model: {leader[0]} (AUC={leader[1]:.4f}{leader[2]})")
+    return bullets
+
+
+def _format_summary_field(key: str, value: Any) -> Optional[str]:
+    """Render a single top-level summary field as a bullet. None if unusable."""
+    if isinstance(value, (int, float)):
+        return f"{key}: {value}"
+    if isinstance(value, str) and value and len(value) <= 200:
+        return f"{key}: {value}"
+    if isinstance(value, list) and value and all(isinstance(v, str) for v in value):
+        return f"{key}: {', '.join(value[:5])}"
+    return None
 
 
 def _build_rationale(plan: Dict[str, Any], result: PlanExecutionResult) -> str:
