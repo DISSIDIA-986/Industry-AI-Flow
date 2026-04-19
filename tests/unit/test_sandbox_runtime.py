@@ -86,8 +86,18 @@ async def test_verify_packages_logs_and_fails_gracefully():
 
 
 def test_module_level_readiness_flag_starts_false_and_updates():
-    """Sanity check the module-level flag that analyze_query() will read."""
-    # Default state on module import is false
+    """Sanity check the module-level flag that analyze_query() will read.
+
+    Defensive reset up-front so this test is order-independent even if
+    a prior test (e.g. a full-suite run that exercises a FastAPI lifespan)
+    left agent_runtime_ready=True. test_lifespan_e2b_prewarm's pollution
+    is already patched at its source, but belt-and-suspenders costs
+    nothing here.
+    """
+    # Reset residual state from prior tests in the broader suite.
+    set_agent_runtime_ready(False)
+
+    # Post-reset state is false.
     assert is_agent_runtime_ready() is False
 
     set_agent_runtime_ready(True)

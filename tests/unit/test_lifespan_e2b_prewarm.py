@@ -48,6 +48,16 @@ def _run_lifespan(manager_obj, provider_setting: str, *, enable_e2b: bool = Fals
             main_module.settings, "code_execution_provider", provider_setting
         ), patch.object(
             main_module.settings, "enable_e2b_code_execution", enable_e2b, create=True
+        ), patch.object(
+            # Skip the agentic-readiness probe block (main.py:710) during
+            # this unrelated E2B pre-warm test. When USE_GLM5_AGENT default
+            # flipped to true, lifespan started calling
+            # verify_sandbox_packages + set_agent_runtime_ready(True),
+            # which hit the real E2B API (~30s) and leaked module state
+            # into test_sandbox_runtime tests. This test file is about
+            # the E2B pre-warm, not agentic readiness — disabling the
+            # probe keeps its scope tight and avoids cross-test pollution.
+            main_module.settings, "use_glm5_agent", False
         ), patch(
             "backend.services.code_executor.get_code_execution_manager",
             return_value=manager_obj,
