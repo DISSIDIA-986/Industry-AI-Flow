@@ -151,3 +151,35 @@ def test_extract_summary_json_malformed():
     assert emitted is True  # line was emitted
     assert ok is False  # but JSON parse failed
     assert obj is None
+
+
+def test_extract_summary_json_accepts_python_repr_with_single_quotes():
+    """Regression: GLM-4.7 sometimes emits Python str(dict) output with
+    single quotes, which json.loads rejects. ast.literal_eval fallback
+    recovers the dict safely (no arbitrary code execution).
+    Observed live in a titanic ML-comparison request — the AUC dict was
+    parsed as None, blanking the Key Findings panel even though the
+    data was right there in stdout.
+    """
+    stdout = (
+        "ANALYSIS_SUMMARY_JSON={'model_comparison': "
+        "{'LogisticRegression': {'mean_auc': 0.8521, 'std_auc': 0.0218}, "
+        "'RandomForest': {'mean_auc': 0.8735, 'std_auc': 0.0236}}}"
+    )
+    emitted, ok, obj = extract_summary_json(stdout)
+    assert emitted is True
+    assert ok is True
+    assert isinstance(obj, dict)
+    mc = obj["model_comparison"]
+    assert mc["RandomForest"]["mean_auc"] == 0.8735
+    assert mc["LogisticRegression"]["std_auc"] == 0.0218
+
+
+def test_extract_summary_json_accepts_python_none_true_false():
+    """ast.literal_eval also handles None/True/False which json.loads
+    rejects (json requires null/true/false)."""
+    stdout = "ANALYSIS_SUMMARY_JSON={'flag': True, 'missing': None, 'count': 3}"
+    emitted, ok, obj = extract_summary_json(stdout)
+    assert emitted is True
+    assert ok is True
+    assert obj == {"flag": True, "missing": None, "count": 3}
