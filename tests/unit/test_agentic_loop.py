@@ -1,6 +1,6 @@
 """W2 unit tests for agentic_loop.py (Plan Appendix E W5, 4 tests).
 
-Each test uses dependency injection via `llm_caller=` to stub GLM-5, and
+Each test uses dependency injection via `llm_caller=` to stub GLM-4.7, and
 monkeypatches `run_sandbox` to avoid hitting E2B. Real-provider tests
 live in env-gated tests/integration/test_agentic_real_provider.py (W5).
 """
