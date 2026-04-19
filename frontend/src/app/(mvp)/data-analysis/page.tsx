@@ -424,7 +424,7 @@ export default function DataAnalysisPage() {
         : codeGenMode === "deterministic_planner"
           ? "Deterministic Planner"
           : codeGenMode === "glm5_agent"
-            ? "GLM-5 Agent (2-pass)"
+            ? "GLM-4.7 Agent (2-pass)"
             : codeGenMode === "template_fallback"
               ? "Template Fallback"
               : codeGenMode || "";
@@ -704,7 +704,7 @@ export default function DataAnalysisPage() {
                   : codeGenMode === "deterministic_planner"
                     ? "Deterministic"
                     : codeGenMode === "glm5_agent"
-                      ? "GLM-5 Agent"
+                      ? "GLM-4.7 Agent"
                       : codeGenMode === "template_fallback"
                         ? "Fallback"
                         : codeGenMode
@@ -725,7 +725,7 @@ export default function DataAnalysisPage() {
                       : codeGenMode === "deterministic_planner"
                         ? "Deterministic Planner"
                         : codeGenMode === "glm5_agent"
-                          ? "GLM-5 Agent (2-pass)"
+                          ? "GLM-4.7 Agent (2-pass)"
                           : codeGenMode === "template_fallback"
                             ? "Template Fallback"
                             : codeGenMode;

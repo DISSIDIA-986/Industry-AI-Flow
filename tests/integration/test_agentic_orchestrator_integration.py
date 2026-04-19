@@ -123,7 +123,7 @@ def _install_fake_agentic_loop(monkeypatch, fake_result: PlanExecutionResult):
     async def _fake(**kwargs):
         cb = kwargs.get("on_progress")
         if cb is not None:
-            cb("code_generation", "running", 0.22, "Analyzing with GLM-5...")
+            cb("code_generation", "running", 0.22, "Analyzing with GLM-4.7...")
             cb("code_generation", "completed", 0.40, "Plan generated")
             cb("security_check", "completed", 0.50, "Validated (agentic)")
             cb("sandbox_execution", "completed", 0.85, "Executed")
@@ -376,7 +376,7 @@ _REAL_ENABLED = (
     reason="LIVE_AGENTIC=1 and ZHIPU_API_KEY and E2B_API_KEY required",
 )
 def test_real_agentic_provider_end_to_end(agent, sample_csv, monkeypatch):
-    """Hits Zhipu GLM-5 and E2B for real. Verifies the full wired path
+    """Hits Zhipu GLM-4.7 and E2B for real. Verifies the full wired path
     produces a legal envelope. Latency budget: the loop's own 45s total
     cap, plus E2B cold-start slack."""
     _enable_agentic(monkeypatch, ready=True)

@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 
 # Stable marker so the frontend and debug UIs can identify agentic runs.
 # Matches the pattern of "deterministic_planner" in report_composer.
+#
+# NAMING HISTORY: Plan Appendix E originally codenamed this "GLM-5", but the
+# actual model (Zhipu's `glm-4.7`) was unchanged throughout. The literal
+# "glm5_agent" string is kept as the public envelope contract so existing
+# frontend conditionals, env-var configurations, and downstream consumers
+# don't break. User-visible display strings ("GLM-4.7 Agent") live at the
+# UI layer and reflect the real model.
 AGENTIC_MODE = "glm5_agent"
 
 

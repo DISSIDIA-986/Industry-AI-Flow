@@ -195,9 +195,17 @@ class Settings(BaseSettings):
     e2b_failure_threshold: int = int(os.getenv("E2B_FAILURE_THRESHOLD", "3"))
     e2b_cooldown_seconds: int = int(os.getenv("E2B_COOLDOWN_SECONDS", "30"))
 
-    # Dynamic Data Analysis agentic path (Plan Appendix E, W4)
+    # Dynamic Data Analysis agentic path (Plan Appendix E, W4).
+    #
     # When true: analyze_query() routes to backend/services/data_analysis/agentic_loop.py
     # When false: existing deterministic chart_plan.py flow (unchanged).
+    #
+    # NAMING: the `GLM5` in this env var / setting is a historical codename
+    # from Plan Appendix E; the actual model Zhipu serves is `glm-4.7` (set
+    # via ZHIPU_MODEL env var). Kept as-is to avoid breaking existing
+    # deployment configs and test fixtures. User-visible labels say
+    # "GLM-4.7 Agent" to match the real model.
+    #
     # Default flipped to true after W6 gate cleared 10/10 on 2026-04-18
     # (evidence: test_resources/benchmarks/agentic_glm5_20260418_v3_bootstrap.jsonl).
     # Rollback at any time with USE_GLM5_AGENT=false. The W1 startup probe

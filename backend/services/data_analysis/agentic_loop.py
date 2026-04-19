@@ -702,7 +702,7 @@ async def run_agentic_analysis(
     # was a latency + OOM risk on large CSVs (Codex review finding,
     # 2026-04-18). _load_once reads bytes once and uses BytesIO for
     # the dataframe, sharing the same buffer with the sandbox upload.
-    _emit("code_generation", "running", 0.22, "Analyzing with GLM-5...")
+    _emit("code_generation", "running", 0.22, "Analyzing with GLM-4.7...")
     try:
         df, csv_bytes = _load_once(data_file_path)
     except Exception as exc:  # noqa: BLE001

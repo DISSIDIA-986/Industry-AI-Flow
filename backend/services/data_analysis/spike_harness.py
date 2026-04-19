@@ -1,5 +1,10 @@
 """
-Spike harness for Dynamic Data Analysis GLM-5 benchmark.
+Spike harness for Dynamic Data Analysis GLM-4.7 agentic benchmark.
+
+(Historical note: Plan Appendix E originally called this "GLM-5" as an
+internal codename; the actual model was GLM-4.7 throughout. Code,
+commit messages, and benchmark filenames containing "glm5" reflect
+that codename. Display text / docs say GLM-4.7 to match reality.)
 
 Designed to be reusable: if Stage 2 verdict says "proceed to B", this module
 becomes the seed of `agentic_loop.py`. Keep it thin, well-tested, and decoupled
@@ -10,7 +15,7 @@ Public surface:
     - extract_profile(df, filename, total_rows) -> ProfileDict
     - render_prompt(template_path, **slots) -> str
     - parse_json_response(text) -> dict | None
-    - call_glm5(system, user, sampling_config) -> dict (raw GLM-5 text parsed)
+    - call_glm(system, user, sampling_config) -> dict (raw GLM-4.7 text parsed)
     - validate_code(code) -> (ok: bool, reason: str | None)
     - run_sandbox(code, csv_files) -> ExecutionResult (async)
 
@@ -191,7 +196,7 @@ _JSON_BLOCK_RE = re.compile(r"\{[\s\S]*\}")
 
 
 def parse_json_response(text: str) -> Optional[Dict[str, Any]]:
-    """Parse a GLM-5 response that should be a JSON object.
+    """Parse a GLM-4.7 response that should be a JSON object.
 
     Strategy:
       1. Try json.loads on the stripped text.
