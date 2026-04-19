@@ -27,7 +27,21 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 - Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}")` as the first step. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.
-- Print exactly one line: `ANALYSIS_SUMMARY_JSON={"<key>": <val>, ...}` (compact, one-line).
+- Print exactly one line: `ANALYSIS_SUMMARY_JSON=<strict-json>` where `<strict-json>` is produced by `json.dumps(...)` (NOT `str(dict)` or `print(dict)` — those produce Python repr with single quotes that can't be parsed as JSON on the server). The line MUST include a top-level `"key_findings"` field that is a list of 2-5 short human-readable strings summarizing the result for the UI (AUC numbers, strongest correlations, notable class imbalance, etc.). If the task is a model comparison, each key finding should cite specific metric values. Example:
+  ```python
+  import json
+  summary = {
+      "key_findings": [
+          "GradientBoosting leads with AUC=0.876 ± 0.020",
+          "RandomForest close second at AUC=0.874",
+          "SVM weakest at AUC=0.856, likely needs better scaling",
+      ],
+      "model_comparison": {"GradientBoosting": {"auc": 0.876}, ...},
+      "chart_type": "bar",
+      "analysis_type": "ml_comparison",
+  }
+  print("ANALYSIS_SUMMARY_JSON=" + json.dumps(summary))
+  ```
 - If the dataset cannot answer the question, set status="unanswerable", fill reason/suggestion, python_code=null.
 
 ## Substitution Cookbook (replacements for BLOCKED methods)
