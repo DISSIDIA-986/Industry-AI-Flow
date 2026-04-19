@@ -1,18 +1,24 @@
 """Startup-time sandbox readiness probe.
 
-Per Plan Appendix E W1 (v3.2 APPROVED):
-- Purpose: verify E2B's sandbox image has every library the validator whitelists
-  that is not already in E2B's default code-interpreter image.
+Per Plan Appendix E W1 (v3.2 APPROVED), expanded in W6 remediation:
+- Purpose: verify the agentic runtime can produce a working sandbox at
+  request time — that means running the same bootstrap pip install the
+  loop runs per-request, then import-checking every package the validator
+  whitelists. If the bootstrap step fails (pypi down, network blocked,
+  E2B image regression) or a package still won't import after install,
+  the probe returns ready=False.
 - Probe runs once at FastAPI lifespan start, only when use_glm5_agent=true.
-- On failure: log ERROR, set ready=False. The agentic route then falls back
-  silently to the deterministic path. No 503, no request-path pip install.
+- On failure: log ERROR, set ready=False. The agentic route then falls
+  back silently to the deterministic path. No 503, no broken request.
 
 Three library boundaries must stay in sync (spike finding, Appendix D):
     1. Prompt: what the LLM is told it may use
     2. Validator: CodeValidator.WHITELISTED_IMPORTS
-    3. Sandbox runtime: actually importable at runtime
+    3. Sandbox runtime: actually importable at runtime (after bootstrap)
 
-This module governs boundary (3).
+This module governs boundary (3). `agentic_loop.BOOTSTRAP_PACKAGES`
+handles boundary (3) at request time; this probe verifies that
+mechanism itself works before any real request arrives.
 """
 from __future__ import annotations
 
@@ -30,8 +36,9 @@ logger = logging.getLogger(__name__)
 EXTRA_SANDBOX_PACKAGES: List[str] = ["statsmodels"]
 
 # Probe timeout guard. The probe spins a real E2B sandbox; network + cold
-# start + import check must complete within this window.
-PROBE_TIMEOUT_S: int = 30
+# start + bootstrap pip install + import check must complete within this
+# window. Bumped 30s→90s in W6 remediation to absorb the pip-install step.
+PROBE_TIMEOUT_S: int = 90
 
 
 @dataclass
@@ -90,9 +97,32 @@ async def verify_sandbox_packages(
     sbx = None
     try:
         sbx = Sandbox.create(api_key=api_key)
-        # Build a single import-check script: one try/except per package.
-        # The probe reports each missing package distinctly so the operator
-        # knows exactly which entry in EXTRA_SANDBOX_PACKAGES is the gap.
+
+        # Step 1 (W6 remediation): run the same bootstrap pip install the
+        # agentic loop runs per-request. This validates BOTH the network
+        # path AND the E2B runtime's ability to install our deps, not
+        # just the image defaults. Packages already present make `-q` a
+        # no-op, so this is cheap when the image already has them.
+        bootstrap_lines = [
+            "import subprocess, sys",
+            (
+                "r = subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', "
+                + ", ".join(repr(p) for p in target)
+                + "], capture_output=True, text=True, timeout=60)"
+            ),
+            "print('BOOTSTRAP_RC=' + str(r.returncode))",
+            "if r.returncode != 0:",
+            "    print('BOOTSTRAP_STDERR=' + r.stderr[-300:])",
+        ]
+        bootstrap_code = "\n".join(bootstrap_lines)
+        try:
+            sbx.run_code(bootstrap_code, timeout=float(min(timeout_s, 90)))
+        except Exception as exc:  # noqa: BLE001 — fall through to import check
+            logger.warning("probe bootstrap step raised: %s", exc)
+
+        # Step 2: import-check each package. If bootstrap succeeded the
+        # imports pass; if bootstrap failed silently an import here is
+        # the guaranteed detector.
         lines = ["import json", "missing = []"]
         for pkg in target:
             lines.append(f"try:\n    import {pkg}\nexcept ImportError:\n    missing.append('{pkg}')")
