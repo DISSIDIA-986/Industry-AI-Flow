@@ -184,25 +184,56 @@ def _extract_key_findings(
 
 
 def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
-    """Turn {ModelName: {mean_auc: X, std_auc: Y, ...}} into sorted bullets.
+    """Turn {ModelName: {<metric>: X, <std>: Y, ...}} into sorted bullets.
 
     Expected shapes (any one of):
       {"RF": {"mean_auc": 0.87, "std_auc": 0.02}, ...}
       {"RF": {"auc": 0.87}, ...}
-      {"RF": 0.87, ...}
+      {"RF": {"accuracy": 0.92}, ...}
+      {"RF": 0.87, ...}    (bare float — metric label defaults to "score")
+
+    Uses the actual metric name detected per-entry so accuracy/R²/etc.
+    don't get mislabeled as AUC (Codex review finding, 2026-04-19).
+    The first-detected metric across the dict wins for the header
+    bullet — heterogeneous dicts (mixing auc + accuracy) are rare and
+    degrade gracefully to the first valid entry.
     """
-    scored: List[tuple[str, float, str]] = []
+    # Score-key → display label. Order matters: first match wins per entry.
+    _METRIC_LABELS: tuple[tuple[str, str], ...] = (
+        ("mean_auc", "AUC"),
+        ("auc", "AUC"),
+        ("roc_auc", "AUC"),
+        ("accuracy", "accuracy"),
+        ("f1", "F1"),
+        ("f1_score", "F1"),
+        ("r2", "R²"),
+        ("r_squared", "R²"),
+        ("mae", "MAE"),
+        ("rmse", "RMSE"),
+        ("score", "score"),
+    )
+
+    scored: List[tuple[str, float, str, str]] = []  # (name, score, std_detail, metric_label)
     for name, payload in mc.items():
         if not isinstance(name, str):
             continue
         score: Optional[float] = None
         detail = ""
+        label = "score"
         if isinstance(payload, dict):
-            for score_key in ("mean_auc", "auc", "roc_auc", "score", "accuracy"):
+            for score_key, display in _METRIC_LABELS:
                 if score_key in payload:
                     try:
                         score = float(payload[score_key])
-                        std = payload.get("std_auc") or payload.get("std")
+                        label = display
+                        # Try known std aliases in priority order. Live
+                        # GLM-4.7 emissions use "std_auc" for any auc-
+                        # family metric; some reports use plain "std".
+                        std = (
+                            payload.get("std_auc")
+                            or payload.get("std")
+                            or payload.get(f"std_{score_key}")
+                        )
                         if std is not None:
                             try:
                                 detail = f" ± {float(std):.3f}"
@@ -214,18 +245,31 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
         else:
             try:
                 score = float(payload)
+                label = "score"
             except (TypeError, ValueError):
                 continue
         if score is not None:
-            scored.append((name, score, detail))
+            scored.append((name, score, detail, label))
 
     if not scored:
         return []
 
-    scored.sort(key=lambda t: t[1], reverse=True)
-    bullets = [f"{name}: AUC={score:.4f}{detail}" for name, score, detail in scored]
+    # Higher-is-better for most metrics; MAE/RMSE are exceptions. When
+    # the detected metric is an error metric, rank ascending so the
+    # "best model" is the one with the lowest error.
+    header_label = scored[0][3]  # metric of the first entry drives sort direction
+    reverse = header_label not in ("MAE", "RMSE")
+    scored.sort(key=lambda t: t[1], reverse=reverse)
+
+    bullets = [
+        f"{name}: {label}={score:.4f}{detail}"
+        for name, score, detail, label in scored
+    ]
     leader = scored[0]
-    bullets.insert(0, f"Best model: {leader[0]} (AUC={leader[1]:.4f}{leader[2]})")
+    bullets.insert(
+        0,
+        f"Best model: {leader[0]} ({leader[3]}={leader[1]:.4f}{leader[2]})",
+    )
     return bullets
 
 
