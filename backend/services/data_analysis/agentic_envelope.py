@@ -12,6 +12,7 @@ envelope contract the UI depends on.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Dict, List, Optional
 
 from backend.services.data_analysis.agentic_loop import PlanExecutionResult
@@ -223,8 +224,15 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
         if isinstance(payload, dict):
             for score_key, display in _METRIC_LABELS:
                 if score_key in payload:
+                    raw = payload[score_key]
+                    # Reject bools (bool is a subclass of int — float(True)==1.0)
+                    if isinstance(raw, bool):
+                        continue
                     try:
-                        score = float(payload[score_key])
+                        score = float(raw)
+                        if not math.isfinite(score):
+                            score = None
+                            continue
                         label = display
                         # Try known std aliases in priority order. Live
                         # GLM-4.7 emissions use "std_auc" for any auc-
@@ -242,9 +250,13 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
                         break
                     except (TypeError, ValueError):
                         continue
+        elif isinstance(payload, bool):
+            continue
         else:
             try:
                 score = float(payload)
+                if not math.isfinite(score):
+                    continue
                 label = "score"
             except (TypeError, ValueError):
                 continue
@@ -254,6 +266,20 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
     if not scored:
         return []
 
+    # Heterogeneous metric guard (Codex M1): if entries report
+    # different metric families (AUC vs accuracy vs MAE), ranking them
+    # together is meaningless. Keep only the dominant metric and note
+    # the drop in a trailing bullet so the user knows entries were
+    # excluded.
+    labels = {s[3] for s in scored}
+    excluded = 0
+    if len(labels) > 1:
+        from collections import Counter
+        dominant = Counter(s[3] for s in scored).most_common(1)[0][0]
+        filtered = [s for s in scored if s[3] == dominant]
+        excluded = len(scored) - len(filtered)
+        scored = filtered
+
     # Higher-is-better for most metrics; MAE/RMSE are exceptions. When
     # the detected metric is an error metric, rank ascending so the
     # "best model" is the one with the lowest error.
@@ -261,15 +287,26 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
     reverse = header_label not in ("MAE", "RMSE")
     scored.sort(key=lambda t: t[1], reverse=reverse)
 
+    # M3: cap bullet count at 10 models (plus leader header = 11 total).
+    MAX_MODELS = 10
+    truncated = max(0, len(scored) - MAX_MODELS)
+    shown = scored[:MAX_MODELS]
+
     bullets = [
         f"{name}: {label}={score:.4f}{detail}"
-        for name, score, detail, label in scored
+        for name, score, detail, label in shown
     ]
     leader = scored[0]
     bullets.insert(
         0,
         f"Best model: {leader[0]} ({leader[3]}={leader[1]:.4f}{leader[2]})",
     )
+    if truncated:
+        bullets.append(f"...and {truncated} more model(s) not shown")
+    if excluded:
+        bullets.append(
+            f"Note: {excluded} entry(ies) with different metric excluded for fair ranking"
+        )
     return bullets
 
 

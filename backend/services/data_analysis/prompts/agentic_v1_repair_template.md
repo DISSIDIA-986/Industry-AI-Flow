@@ -20,7 +20,10 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 Minimal fix. Preserve the intent and structure of your previous plan. Change only what caused the failure. Output the same strict JSON schema as round 1. No prose outside the JSON.
 
 ## Common failures and their fixes
-- `.apply`, `.eval`, `.query`, `.agg`, `.map`, `.pipe`, `.transform` → **completely forbidden**. Use the inline replacements below, do NOT just rename the method.
+- `KeyError` on a column that IS in the profile → **wrong separator**. Change `pd.read_csv("/workspace/{filename}")` to `pd.read_csv("/workspace/{filename}", sep=None, engine="python")` so pandas auto-detects the delimiter. UCI-style `.csv` files often use `;` not `,`.
+- `KeyError` / `NameError` on a column NOT in the profile → **you hallucinated a column name**. The dataset profile above is the ground truth. Do NOT guess column names from the filename (e.g. don't assume `assignment_4_dataset.csv` is the wine quality dataset and has a `quality` column). **Re-read the column list above and use only those exact names.** If the target column is ambiguous, pick one from the profile based on dtype + cardinality (binary classification target: column with n_unique==2; regression target: numeric column the user question names).
+- `.apply`, `.eval`, `.query`, `.agg`, `.map`, `.pipe` → **completely forbidden**. Use the inline replacements below, do NOT just rename the method.
+- `.transform(lambda ...)` → forbidden (arbitrary callable). `.transform("mean")`, `.transform(np.sqrt)`, `scaler.transform(X)`, `pipe.transform(X)` are all fine.
 - `import os`, `import sys`, `import subprocess`, `import pathlib` → **REMOVE these imports entirely**. The sandbox already mounts the CSV at `/workspace/{filename}`; you never need os.path, sys.path, or subprocess. If your previous code had `import os` for ANY reason (even unused), delete that line on round 2.
 - Disallowed imports → stay within pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels.
 - File I/O other than `pd.read_csv("/workspace/{filename}")` → remove it.
