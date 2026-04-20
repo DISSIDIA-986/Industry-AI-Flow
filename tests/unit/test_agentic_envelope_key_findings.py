@@ -63,7 +63,13 @@ def test_synthesize_from_model_comparison_with_bare_scalars():
 
 
 def test_synthesize_from_alternate_score_keys():
-    """Model entries using `auc` / `roc_auc` / `accuracy` are all detected."""
+    """Model entries using `auc` / `roc_auc` / `accuracy` are all detected.
+
+    Codex M1 (2026-04-19): heterogeneous metrics can't be ranked together
+    (0.93 accuracy is not 'better than' 0.91 AUC — different scales).
+    When labels diverge, the envelope keeps the dominant metric group
+    and drops the outlier with a note.
+    """
     summary = {
         "model_comparison": {
             "A": {"auc": 0.91},
@@ -73,8 +79,11 @@ def test_synthesize_from_alternate_score_keys():
     }
     out = _extract_key_findings(summary, plan={})
     leader = out[0]
-    # Highest score (0.93, accuracy on C) should lead
-    assert leader.startswith("Best model: C")
+    # Dominant metric is AUC (A + B); C's accuracy is excluded.
+    assert leader.startswith("Best model: A")
+    assert "AUC=0.91" in leader
+    # Excluded entry is flagged in a trailing note.
+    assert any("excluded" in b.lower() for b in out)
 
 
 def test_metric_label_preserved_not_hardcoded_as_auc():
@@ -154,6 +163,46 @@ def test_plan_fallback_when_summary_is_empty():
     assert out[0].startswith("Goal:")
     assert "Classify passenger survival" in out[0]
     assert out[1].startswith("Approach:")
+
+
+def test_nan_and_inf_scores_skipped():
+    """Codex M2: NaN/Inf must not produce 'AUC=nan' bullets."""
+    summary = {
+        "model_comparison": {
+            "Broken": {"mean_auc": float("nan")},
+            "AlsoBroken": {"mean_auc": float("inf")},
+            "Good": {"mean_auc": 0.85},
+        },
+    }
+    out = _extract_key_findings(summary, plan={})
+    assert out[0].startswith("Best model: Good")
+    for b in out:
+        assert "nan" not in b.lower()
+        assert "inf" not in b.lower()
+
+
+def test_bool_scores_rejected():
+    """Codex M2: bool is a subclass of int — float(True)==1.0 would
+    mis-rank a broken entry as the best model."""
+    summary = {
+        "model_comparison": {
+            "Buggy": {"mean_auc": True},
+            "Real": {"mean_auc": 0.87},
+        },
+    }
+    out = _extract_key_findings(summary, plan={})
+    assert out[0].startswith("Best model: Real")
+    for b in out:
+        assert "Buggy" not in b
+
+
+def test_bullet_count_capped():
+    """Codex M3: don't flood the UI with 30+ model bullets."""
+    mc = {f"M{i:02d}": {"mean_auc": 0.5 + i * 0.01} for i in range(30)}
+    out = _extract_key_findings({"model_comparison": mc}, plan={})
+    # 1 leader + 10 models + 1 truncation note = 12
+    assert len(out) <= 12
+    assert any("more model" in b for b in out)
 
 
 def test_synthesis_does_not_mask_explicit_key_findings():

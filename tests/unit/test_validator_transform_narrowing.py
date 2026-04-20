@@ -1,17 +1,19 @@
 """Regression for validator `.transform()` narrowing.
 
-Live demo 2026-04-19 found: blocking all `.transform()` calls produced
-false positives on sklearn's core API (`StandardScaler().transform`,
-`LabelEncoder().transform`, `Pipeline.transform`). The pandas
-footgun we actually want to block is `df.groupby(...).transform(...)`,
-which accepts arbitrary callables — same risk profile as `.apply()`.
+Codex adversarial review 2026-04-19 proved the prior groupby-chain
+heuristic had two bypasses:
+  1. Alias: `g = df.groupby("a"); g.transform(lambda x: ...)` — allowed
+  2. Direct: `df["a"].transform(lambda x: ...)` — allowed
+
+The correct signal is the ACTUAL danger: a Lambda passed as an arg.
+sklearn `.transform(X)` passes data only; pandas `.transform("mean")`
+is a string aggregator lookup. Only `.transform(lambda ...)` runs
+arbitrary Python.
 
 These tests pin down the narrowed behavior:
-- groupby().transform() — BLOCKED (pandas footgun preserved)
-- scaler.transform() — ALLOWED (sklearn preprocessing)
-- LabelEncoder().transform() — ALLOWED
-- Pipeline.transform() — ALLOWED
-- ColumnTransformer.transform() — ALLOWED
+- .transform(lambda) — BLOCKED (pandas footgun + alias + direct Series)
+- .transform("mean") or .transform(np.sqrt) — ALLOWED
+- scaler.transform(X), Pipeline.transform(X) — ALLOWED
 """
 from __future__ import annotations
 
@@ -34,11 +36,49 @@ def test_groupby_transform_still_blocked():
     assert "transform" in (result.error or "").lower()
 
 
-def test_groupby_transform_chained_via_column_still_blocked():
+def test_groupby_transform_with_string_agg_now_allowed():
+    """String aggregators are safe (no arbitrary code). Narrowed rule
+    allows them. Rewrite of the prior block test that used 'mean'."""
     code = (
         "import pandas as pd\n"
         "df = pd.read_csv('/workspace/x.csv')\n"
         "result = df.groupby(['a', 'b']).transform('mean')\n"
+    )
+    result = validate_code(code, strict_mode=True)
+    assert result.is_valid is True, result.error
+
+
+def test_groupby_alias_with_lambda_blocked():
+    """Codex adversarial bypass #1: aliased groupby + lambda. Must block."""
+    code = (
+        "import pandas as pd\n"
+        "df = pd.read_csv('/workspace/x.csv')\n"
+        "g = df.groupby('size')\n"
+        "df['demeaned'] = g['tip'].transform(lambda x: x - x.mean())\n"
+    )
+    result = validate_code(code, strict_mode=True)
+    assert result.is_valid is False
+    assert "transform" in (result.error or "").lower()
+
+
+def test_series_transform_with_lambda_blocked():
+    """Codex adversarial bypass #2: direct Series.transform(lambda).
+    No groupby anywhere, but still runs arbitrary Python — must block."""
+    code = (
+        "import pandas as pd\n"
+        "df = pd.read_csv('/workspace/x.csv')\n"
+        "df['big'] = df['tip'].transform(lambda x: 1 if x > 5 else 0)\n"
+    )
+    result = validate_code(code, strict_mode=True)
+    assert result.is_valid is False
+
+
+def test_transform_with_lambda_kwarg_blocked():
+    """Lambda as a keyword argument is the same risk — must also block."""
+    code = (
+        "import pandas as pd\n"
+        "df = pd.read_csv('/workspace/x.csv')\n"
+        "df['x'] = df['tip'].transform(func=lambda x: x * 2)\n"
     )
     result = validate_code(code, strict_mode=True)
     assert result.is_valid is False

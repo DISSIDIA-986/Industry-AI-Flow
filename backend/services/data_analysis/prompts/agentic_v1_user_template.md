@@ -21,10 +21,12 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 }
 
 ## Hard Constraints
+- **Use ONLY the columns listed in the Dataset Profile above.** Do NOT infer columns from the filename (e.g. `assignment_4_dataset.csv` is NOT automatically the wine quality dataset — do not assume a `quality` column exists). If you need a target column for classification, pick one where `n_unique == 2` from the profile; for regression, pick a numeric column the user question names. KeyErrors from hallucinated columns are the most common failure mode.
 - Libraries allowed: pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels, AND the Python stdlib modules `json` and `math` (needed for the summary serialization below).
-- BLOCKED DataFrame methods (any use rejects the code): .apply, .agg, .map, .pipe, .query, .eval, .transform.
+- BLOCKED DataFrame methods (any use rejects the code): .apply, .agg, .map, .pipe, .query, .eval.
+- `.transform()` is ALLOWED only when NOT passed a lambda/callable — e.g. `.transform("mean")`, `.transform(np.sqrt)`, `scaler.transform(X)`, `pipeline.transform(X)`. Passing a lambda (e.g. `df.groupby(...).transform(lambda x: x - x.mean())`) is REJECTED — use the merge-based broadcast shown in the cookbook instead.
 - BLOCKED modules and builtins: os, subprocess, pathlib, sys, socket, urllib, requests, open, eval, exec, __import__.
-- Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}")` as the first step. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
+- Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}", sep=None, engine="python")` as the first step. The `sep=None, engine="python"` auto-detects the delimiter (comma, semicolon, tab, pipe) — the profile above was built with the same sniffer, so using default `,` will produce `KeyError` on non-comma files. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
 - **Multi-aspect queries** (e.g. "do EDA AND model comparison", "plot distribution AND train classifiers") must pack every aspect into the ONE saved PNG via `plt.subplots(nrows, ncols, figsize=(W, H))`. Use a 2×2 or 2×3 grid with each subplot titled (e.g. "Survival by Sex", "Age distribution", "Model AUC comparison", "ROC curves"). Do NOT sacrifice EDA visuals just to show model results — if the user asked for both, both must be visible in the saved figure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.
