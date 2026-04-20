@@ -283,17 +283,25 @@ class CodeValidator:
         return ValidationResult(is_valid=True)
 
     def _validate_blocked_calls(self, tree: ast.AST) -> ValidationResult:
-        def _chain_has_call(expr: ast.AST, method_name: str) -> bool:
-            """Walk the receiver expression and return True if any Call
-            in it is an `.{method_name}(...)` call. Used to identify
-            pandas `.groupby(...).transform(...)` chains while letting
-            sklearn `.transform()` on scalers/encoders through.
+        def _call_passes_callable_arg(node: ast.Call) -> bool:
+            """True iff this Call passes a Lambda (or callable-typed
+            expression) as a positional or keyword argument.
+
+            This is the ACTUAL danger signal for `.transform()` — a
+            pandas Series/DataFrame/GroupBy `.transform(lambda x: ...)`
+            runs arbitrary Python, while `.transform("mean")` (string
+            aggregator lookup) and `scaler.transform(X)` (sklearn data
+            arg) are safe. The prior heuristic ("receiver chain has
+            .groupby()") missed aliased groupby objects AND blocked
+            nothing for direct Series/DataFrame.transform(lambda) —
+            both confirmed bypasses per Codex adversarial review 2026-04-19.
             """
-            target = method_name.lower()
-            for child in ast.walk(expr):
-                if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                    if child.func.attr.lower() == target:
-                        return True
+            for arg in node.args:
+                if isinstance(arg, ast.Lambda):
+                    return True
+            for kw in node.keywords:
+                if isinstance(kw.value, ast.Lambda):
+                    return True
             return False
 
 
@@ -537,19 +545,15 @@ class CodeValidator:
                     )
                 # Block dangerous method calls on any object (e.g., df.query(), df.eval())
                 if attr in blocked_methods:
-                    # Narrow exception: `.transform()` is ALSO sklearn's core
-                    # API (StandardScaler.transform, LabelEncoder.transform,
-                    # Pipeline.transform, ColumnTransformer.transform) — all
-                    # legitimate. The dangerous pandas pattern is specifically
-                    # `.groupby(...).transform(...)` which accepts arbitrary
-                    # callables. Allow the call unless its receiver chain
-                    # contains a groupby() call.
-                    # (Live demo 2026-04-19: blocking all .transform() caused
-                    # repeated ML-comparison failures on multi-class datasets
-                    # where sklearn scaling is the natural preprocessing step.)
-                    if attr == "transform" and not _chain_has_call(
-                        node.func.value, "groupby"
-                    ):
+                    # Narrow exception: `.transform()` is overloaded across
+                    # pandas (dangerous when given a lambda) and sklearn
+                    # (always data-arg based — StandardScaler, LabelEncoder,
+                    # Pipeline, ColumnTransformer). The ACTUAL danger
+                    # signal is a callable (Lambda) argument, not the
+                    # receiver chain. The prior groupby-chain heuristic
+                    # missed aliased groupby AND direct Series.transform
+                    # (Codex adversarial review 2026-04-19).
+                    if attr == "transform" and not _call_passes_callable_arg(node):
                         continue
                     return ValidationResult(
                         is_valid=False,
