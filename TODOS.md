@@ -191,3 +191,50 @@
 4. llm_usage_logs table already exists — write records there
 
 **Effort:** human: ~3 hours / CC: ~30 min
+
+### Canonical `has_presentable_output` predicate across agentic loop/envelope/UI
+**Priority:** Medium
+**Added:** 2026-04-20 (plan-eng-review + Codex on fix-data-analysis-demo-eve-stability)
+
+**What:** Success is decided in 4 places: `RoundRecord.is_successful()`, `_classify_repair_trigger()`, `_finalize()`, and the frontend banner in `page.tsx`. Currently they compose multiplicatively; any missed update produces a silent user-visible regression.
+
+**Why:** Demo-eve fix loosened the predicate at each site independently. The correct long-term shape is one `has_presentable_output()` helper imported everywhere. Codex flagged this as a structural blind spot during plan-eng-review.
+
+**How to implement:**
+1. Add `backend/services/data_analysis/success_predicate.py` with `has_presentable_output(sandbox_success, chart_exists, summary_emitted, metrics_present) -> bool`
+2. Call from `is_successful()`, `_classify_repair_trigger()`, `_finalize()`
+3. Mirror in frontend `page.tsx` so banner logic reads from a single source
+4. Add a cross-module test that asserts the 4 sites agree on the same inputs
+
+**Effort:** human: ~3 hours / CC: ~20 min
+
+### Deterministic-planner fallback feature flag for agentic failure
+**Priority:** Medium
+**Added:** 2026-04-20 (plan-eng-review; Codex alternative recommendation)
+
+**What:** When the agentic (glm5_agent) path fails, fall back to `deterministic_planner` instead of surfacing the failure to the user. Behind a config flag so dev can still debug agentic.
+
+**Why:** Deterministic planner is stable for EDA + single-chart analyses. Agentic is needed for ML comparison but currently has no fallback. On demo-eve this was risky; long-term it's a feature-flagged resilience win.
+
+**How to implement:**
+1. Add `settings.agentic_auto_fallback_to_deterministic: bool = False`
+2. In `DataAnalysisAgent.analyze_query`, if agentic path returns `success=False` AND flag is True, re-run through `deterministic_planner` and compose an envelope with `code_generation.mode = "deterministic_fallback_from_agentic"`
+3. Frontend badge to show fallback was triggered
+
+**Effort:** human: ~4 hours / CC: ~25 min
+
+### Fix frontend TS test env (missing React imports / jest-dom types)
+**Priority:** Low
+**Added:** 2026-04-20 (discovered during /ship of fix-data-analysis-demo-eve-stability)
+
+**What:** `frontend/tests/unit/navbar.contract.spec.tsx` and `frontend/tests/unit/chart-lightbox.spec.tsx` currently fail to type-check: missing `import React from 'react'` (JSX in module context), and `toBeInTheDocument` / `toBeDisabled` matchers from `@testing-library/jest-dom` not augmented into the vitest matcher types.
+
+**Why:** Blocks writing new frontend unit tests. Had to defer the single-flight guard unit test for the data-analysis page because the env can't run frontend specs.
+
+**How to implement:**
+1. Add `"@testing-library/jest-dom"` to `tsconfig.json` compilerOptions.types
+2. Add `import '@testing-library/jest-dom';` to `vitest.setup.ts` (or create if missing)
+3. Ensure `jsx: "react-jsx"` in tsconfig so React auto-import works (or add explicit imports)
+4. Add frontend unit test: double-click Run Analysis fires exactly one `startDataAnalysisJob`
+
+**Effort:** human: ~1 hour / CC: ~10 min
