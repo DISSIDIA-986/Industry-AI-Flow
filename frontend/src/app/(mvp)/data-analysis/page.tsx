@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppConfig } from "@/components/app-config-context";
+import ChartLightbox, { LightboxChart } from "@/components/ChartLightbox";
 import CollapsibleCode from "@/components/CollapsibleCode";
 import DarkHeroWrapper from "@/components/DarkHeroWrapper";
 import {
@@ -74,6 +75,28 @@ interface ModelComparisonSection {
   target_column?: string;
   metrics?: Record<string, Record<string, number>>;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Preset instructions — dataset-agnostic, ordered simple → advanced */
+/*                                                                    */
+/*  Curated with Codex second opinion (plan-eng-review 2026-04-20).   */
+/*  Each preset exercises a different backend path:                   */
+/*    1. EDA → broad distributions + missingness                      */
+/*    2. Segments → groupby-style category splits                     */
+/*    3. Correlations → heatmap / ranked drivers                      */
+/*    4. ML models → full classification/regression comparison        */
+/*    5. Trends/anomalies → time-series path or outlier fallback      */
+/*                                                                    */
+/*  Keep <60 chars each. No column-specific references (use "the      */
+/*  target column", let the LLM infer).                               */
+/* ------------------------------------------------------------------ */
+const INSTRUCTION_PRESETS = [
+  "Run EDA and summarize the main patterns",
+  "Compare core metrics across the strongest segments",
+  "Find the strongest correlations and key drivers",
+  "Infer the target and compare suitable ML models",
+  "Analyze time trends if possible; otherwise flag anomalies",
+];
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline stage configuration (6-node)                              */
@@ -166,6 +189,18 @@ export default function DataAnalysisPage() {
   const [pipelineCollapsed, setPipelineCollapsed] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const gotResultRef = useRef(false);
+  // Single-flight guard + request-id token so a rapid double-click cannot
+  // launch two overlapping jobs. Without this, two EventSources race into
+  // the same React state and the user sees one of the two random outcomes
+  // ("two clicks, two results" per plan-eng-review 2026-04-20).
+  const inFlightRef = useRef(false);
+  const requestIdRef = useRef(0);
+
+  // Chart lightbox — zoom-to-fullscreen for demo clarity
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({
+    open: false,
+    index: 0,
+  });
 
   // Load preview for default dataset on mount
   useEffect(() => {
@@ -231,6 +266,16 @@ export default function DataAnalysisPage() {
       return;
     }
 
+    // Single-flight: if a previous run is still in flight, drop this click.
+    // The React button is also `disabled={loading}` but state updates are
+    // async and a fast double-click slips through the gap.
+    if (inFlightRef.current) {
+      return;
+    }
+    inFlightRef.current = true;
+    const myRequestId = ++requestIdRef.current;
+    const isStale = () => myRequestId !== requestIdRef.current;
+
     // Preserve previous result
     if (result) setPrevResult(result);
 
@@ -243,6 +288,13 @@ export default function DataAnalysisPage() {
     gotResultRef.current = false;
     eventSourceRef.current?.close();
 
+    const finish = () => {
+      if (isStale()) return;
+      inFlightRef.current = false;
+      setLoading(false);
+      setStreaming(false);
+    };
+
     try {
       const { job_id } = await startDataAnalysisJob(config, {
         data_file: uploadedPath,
@@ -250,11 +302,18 @@ export default function DataAnalysisPage() {
         generate_visualization: true,
       });
 
+      // If another click happened between dispatch and response, this job
+      // is orphaned — drop it so it doesn't overwrite the newer run.
+      if (isStale()) {
+        return;
+      }
+
       const url = dataAnalysisStreamUrl(config, job_id);
       const es = new EventSource(url);
       eventSourceRef.current = es;
 
       es.addEventListener("stage", (ev) => {
+        if (isStale()) return;
         try {
           const data = JSON.parse(ev.data) as StageEvent;
           setStages((prev) => ({ ...prev, [data.stage]: data }));
@@ -262,17 +321,18 @@ export default function DataAnalysisPage() {
       });
 
       es.addEventListener("result", (ev) => {
+        if (isStale()) { es.close(); return; }
         try {
           const payload = JSON.parse(ev.data) as Record<string, unknown>;
           setResult(payload);
         } catch { /* ignore */ }
         gotResultRef.current = true;
         es.close();
-        setLoading(false);
-        setStreaming(false);
+        finish();
       });
 
       es.addEventListener("error", (ev) => {
+        if (isStale()) { es.close(); return; }
         const me = ev as MessageEvent;
         if (me.data) {
           try {
@@ -283,23 +343,22 @@ export default function DataAnalysisPage() {
           }
         }
         es.close();
-        setLoading(false);
-        setStreaming(false);
+        finish();
       });
 
       es.onerror = () => {
+        if (isStale()) { es.close(); return; }
         if (es.readyState === EventSource.CLOSED) {
           if (!gotResultRef.current) {
             setError("Connection lost. Results may still be processing.");
           }
-          setLoading(false);
-          setStreaming(false);
+          finish();
         }
       };
     } catch (err) {
+      if (isStale()) return;
       setError(normalizeError(err));
-      setLoading(false);
-      setStreaming(false);
+      finish();
     }
   }, [config, uploadedPath, instruction, result]);
 
@@ -553,12 +612,36 @@ export default function DataAnalysisPage() {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Step 2: Ask & Analyze</h3>
 
+          {/* Preset instruction chips — simple → advanced. Click fills the
+              input (does not auto-run) so the operator can tweak before Run.
+              Ordering chosen to let a demo narrator stop early if the dataset
+              is weak for later scenarios (e.g. no numeric target for ML). */}
+          <div
+            className="flex flex-wrap gap-2 mb-2"
+            data-testid="instruction-presets"
+            aria-label="Preset analysis instructions"
+          >
+            {INSTRUCTION_PRESETS.map((preset, i) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setInstruction(preset)}
+                disabled={loading}
+                data-testid={`preset-chip-${i}`}
+                title={preset}
+                className="px-3 py-1 text-xs rounded-full border border-gray-300 bg-white text-gray-700 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+
           <label className="field-group" data-testid="instruction-input">
             Analysis Instruction
             <input
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
-              placeholder="Ask anything about your data..."
+              placeholder="Ask anything about your data... (or pick a preset above)"
               disabled={loading}
               className={loading ? "bg-gray-100" : ""}
               onKeyDown={(e) => {
@@ -811,13 +894,27 @@ export default function DataAnalysisPage() {
                     >
                       {chart.status === "ok" && chart.url ? (
                         <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            className="w-full rounded-lg border border-gray-200 shadow-sm"
-                            src={chart.url}
-                            alt={`${chart.type} chart`}
-                            style={{ maxWidth: "100%", aspectRatio: "10/6" }}
-                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Translate grid idx → ok-only idx (failed charts are skipped in lightbox)
+                              const okIdx = chartGrid
+                                .slice(0, idx + 1)
+                                .filter((c) => c.status === "ok" && c.url).length - 1;
+                              setLightbox({ open: true, index: Math.max(0, okIdx) });
+                            }}
+                            aria-label={`Enlarge ${chart.type} chart`}
+                            data-testid={`eda-chart-${idx}-trigger`}
+                            className="block w-full p-0 bg-transparent border-0 cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-lg"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              className="w-full rounded-lg border border-gray-200 shadow-sm"
+                              src={chart.url}
+                              alt={`${chart.type} chart`}
+                              style={{ maxWidth: "100%", aspectRatio: "10/6" }}
+                            />
+                          </button>
                           <p className="mt-2 text-xs uppercase tracking-wide text-gray-500">
                             {chart.type === "model_comparison"
                               ? "Model Comparison"
@@ -849,13 +946,21 @@ export default function DataAnalysisPage() {
                 visualizations list was too. Renders nothing new visually. */}
             {chartGrid.length === 0 && visualizationAsset && visualizationAsset.isImage && (
               <div className="artifact-card" data-testid="analysis-chart">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="w-full rounded-lg border border-gray-200 shadow-sm"
-                  src={visualizationAsset.url}
-                  alt="Analysis chart"
-                  style={{ maxWidth: "100%", aspectRatio: "10/6" }}
-                />
+                <button
+                  type="button"
+                  onClick={() => setLightbox({ open: true, index: 0 })}
+                  aria-label="Enlarge analysis chart"
+                  data-testid="analysis-chart-trigger"
+                  className="block w-full p-0 bg-transparent border-0 cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-lg"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="w-full rounded-lg border border-gray-200 shadow-sm"
+                    src={visualizationAsset.url}
+                    alt="Analysis chart"
+                    style={{ maxWidth: "100%", aspectRatio: "10/6" }}
+                  />
+                </button>
               </div>
             )}
 
@@ -958,6 +1063,31 @@ export default function DataAnalysisPage() {
           </details>
         )}
       </article>
+
+      <ChartLightbox
+        open={lightbox.open}
+        startIndex={lightbox.index}
+        onClose={() => setLightbox((l) => ({ ...l, open: false }))}
+        charts={
+          chartGrid.length > 0
+            ? (chartGrid
+                .filter((c) => c.status === "ok" && c.url)
+                .map((c) => ({
+                  url: c.url as string,
+                  type: c.type,
+                  summary: formatChartSummary(c.summary),
+                })) as LightboxChart[])
+            : visualizationAsset && visualizationAsset.isImage
+              ? [
+                  {
+                    url: visualizationAsset.url,
+                    type: "chart",
+                    summary: null,
+                  },
+                ]
+              : []
+        }
+      />
     </section>
   );
 }

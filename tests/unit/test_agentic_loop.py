@@ -18,6 +18,8 @@ from backend.services.code_executor.providers.base import ExecutionResult
 from backend.services.data_analysis import agentic_loop
 from backend.services.data_analysis.agentic_loop import (
     PlanExecutionResult,
+    RoundRecord,
+    _classify_repair_trigger,
     run_agentic_analysis,
 )
 
@@ -566,3 +568,74 @@ async def test_unanswerable_is_terminal_success_no_repair(sample_csv, monkeypatc
     assert result.repair_triggered is False
     assert len(result.rounds) == 1
     assert result.error_message == "No numeric columns suitable for this question."
+
+
+# ---------------------------------------------------------------------------
+# plan-eng-review 2026-04-20 — soft-success for chart-only runs
+# Previously: summary_emitted=False blanket-failed the round even with a
+# valid chart. Now: chart alone is presentable output; repair is only
+# triggered when there's nothing to show the user.
+# ---------------------------------------------------------------------------
+
+
+def _rec(
+    *,
+    validator_pass: bool = True,
+    sandbox_success: bool = True,
+    summary_emitted: bool = False,
+    chart_exists: bool = False,
+) -> RoundRecord:
+    return RoundRecord(
+        round_num=1,
+        parsed={"status": "ok", "python_code": "print('x')"},
+        json_schema_valid=True,
+        validator_pass=validator_pass,
+        sandbox_success=sandbox_success,
+        summary_emitted=summary_emitted,
+        chart_exists=chart_exists,
+    )
+
+
+def test_is_successful_chart_only_soft_pass():
+    """Sandbox clean + chart bytes exist but no ANALYSIS_SUMMARY_JSON →
+    soft success. Chart is the primary deliverable; missing JSON marker
+    is cosmetic.
+    """
+    rec = _rec(summary_emitted=False, chart_exists=True)
+    assert rec.is_successful() is True
+
+
+def test_is_successful_summary_only_pass():
+    """Summary JSON present, no chart (text-only analysis path) → success.
+    Summary carries the findings; no chart needed.
+    """
+    rec = _rec(summary_emitted=True, chart_exists=False)
+    assert rec.is_successful() is True
+
+
+def test_is_successful_no_output_fails():
+    """Sandbox clean but NEITHER summary NOR chart produced → repair-worthy.
+    This is the only remaining failure mode for the summary path."""
+    rec = _rec(summary_emitted=False, chart_exists=False)
+    assert rec.is_successful() is False
+
+
+def test_is_successful_sandbox_fail_regardless_of_artifacts():
+    """Sandbox failed → not successful regardless of what's left behind."""
+    rec = _rec(
+        sandbox_success=False, summary_emitted=True, chart_exists=True
+    )
+    assert rec.is_successful() is False
+
+
+def test_classify_repair_trigger_chart_only_skips_repair():
+    """The matching guard on the repair classifier: chart-only runs do NOT
+    trigger a repair round (would burn budget on a cosmetic issue)."""
+    rec = _rec(summary_emitted=False, chart_exists=True)
+    assert _classify_repair_trigger(rec) is None
+
+
+def test_classify_repair_trigger_no_output_still_repairs():
+    """No summary + no chart = nothing to show → fire repair."""
+    rec = _rec(summary_emitted=False, chart_exists=False)
+    assert _classify_repair_trigger(rec) == "summary_json_parse_error"

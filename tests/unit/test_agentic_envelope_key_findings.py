@@ -15,7 +15,17 @@ top-level scalars → plan prose.
 """
 from __future__ import annotations
 
-from backend.services.data_analysis.agentic_envelope import _extract_key_findings
+from unittest.mock import patch
+
+from backend.services.data_analysis.agentic_envelope import (
+    _extract_key_findings,
+    _normalize_model_comparison_block,
+    compose_agentic_response,
+)
+from backend.services.data_analysis.agentic_loop import (
+    PlanExecutionResult,
+    RoundRecord,
+)
 
 
 def test_explicit_key_findings_preserved():
@@ -215,3 +225,204 @@ def test_synthesis_does_not_mask_explicit_key_findings():
     }
     out = _extract_key_findings(summary, plan={"business_goal": "unused"})
     assert out == ["Custom bullet 1", "Custom bullet 2"]
+
+
+# ---------------------------------------------------------------------------
+# _normalize_model_comparison_block — plan-eng-review 2026-04-20
+# Previously hardcoded to {"enabled": False, "reason": "agentic path"}; now
+# passes through real per-model numeric metrics so the frontend table renders.
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_model_comparison_passes_through_clean_dict():
+    """Happy path: summary has well-formed {model: {metric: float}} dict →
+    envelope block reports enabled=True with identical normalized metrics."""
+    summary = {
+        "model_comparison": {
+            "RandomForest": {"auc": 0.87, "accuracy": 0.82},
+            "LogisticRegression": {"auc": 0.72, "accuracy": 0.75},
+        },
+    }
+    block = _normalize_model_comparison_block(summary)
+    assert block["enabled"] is True
+    assert block["metrics"] == {
+        "RandomForest": {"auc": 0.87, "accuracy": 0.82},
+        "LogisticRegression": {"auc": 0.72, "accuracy": 0.75},
+    }
+
+
+def test_normalize_model_comparison_filters_non_dict_entries():
+    """Codex M2 (plan-eng-review 2026-04-20): LLM often puts best_model
+    string / bare floats / explanation text into model_comparison alongside
+    real per-model dicts. Normalizer drops the noise so the frontend
+    table does not blow up on Record<str, Record<str, number>> type.
+    """
+    summary = {
+        "model_comparison": {
+            "RF": {"auc": 0.87},                    # kept
+            "best_model": "RF",                     # dropped (string)
+            "overall_score": 0.83,                  # dropped (bare float)
+            "LR": {"auc": "high", "notes": "ok"},   # dropped (no numeric metric)
+            "XGB": {"auc": 0.91, "reason": "fast"}, # partially kept: auc only
+        },
+    }
+    block = _normalize_model_comparison_block(summary)
+    assert block["enabled"] is True
+    assert set(block["metrics"].keys()) == {"RF", "XGB"}
+    assert block["metrics"]["RF"] == {"auc": 0.87}
+    assert block["metrics"]["XGB"] == {"auc": 0.91}
+
+
+def test_normalize_model_comparison_empty_returns_disabled():
+    """No model_comparison → enabled=False, reason=no_model_comparison."""
+    block = _normalize_model_comparison_block({})
+    assert block == {"enabled": False, "reason": "no_model_comparison"}
+
+
+def test_normalize_model_comparison_all_invalid_returns_disabled():
+    """Dict present but all entries drop during normalization → enabled=False
+    with a distinguishable reason so operators can tell 'no metrics present'
+    from 'LLM emitted garbage we couldn't use'."""
+    summary = {"model_comparison": {"best_model": "RF", "notes": "see chart"}}
+    block = _normalize_model_comparison_block(summary)
+    assert block["enabled"] is False
+    assert block["reason"] == "no_numeric_metrics"
+
+
+def test_normalize_model_comparison_rejects_bools_and_nan():
+    """Guard against bool (Python int subclass) and non-finite floats."""
+    summary = {
+        "model_comparison": {
+            "M1": {"auc": True, "acc": 0.9},           # True dropped, acc kept
+            "M2": {"auc": float("nan")},               # dropped (no numerics)
+            "M3": {"auc": float("inf")},               # dropped
+        },
+    }
+    block = _normalize_model_comparison_block(summary)
+    assert block["enabled"] is True
+    assert block["metrics"] == {"M1": {"acc": 0.9}}
+
+
+def test_normalize_model_comparison_threads_task_and_target():
+    """When the summary also declares task/target_column, thread them
+    through so the frontend can show "Classification · target=survived"."""
+    summary = {
+        "task": "classification",
+        "target_column": "survived",
+        "model_comparison": {"RF": {"auc": 0.9}},
+    }
+    block = _normalize_model_comparison_block(summary)
+    assert block["enabled"] is True
+    assert block["task"] == "classification"
+    assert block["target_column"] == "survived"
+
+
+# ---------------------------------------------------------------------------
+# compose_agentic_response — success decoupled from chart persist
+# plan-eng-review 2026-04-20 Bug #1: chart persist fail does NOT fail the run.
+# ---------------------------------------------------------------------------
+
+
+def _make_result(
+    *,
+    success: bool = True,
+    chart_bytes: bytes | None = b"fake-png",
+    summary: dict | None = None,
+    produces_chart: bool = True,
+) -> PlanExecutionResult:
+    rec = RoundRecord(
+        round_num=1,
+        validator_pass=True,
+        sandbox_success=True,
+        summary_emitted=bool(summary),
+        chart_exists=chart_bytes is not None,
+        chart_bytes=chart_bytes,
+    )
+    return PlanExecutionResult(
+        success=success,
+        status="ok" if success else "error",
+        rounds=[rec],
+        final_code="print('x')",
+        final_plan={"produces_chart": produces_chart, "business_goal": "test"},
+        final_chart_bytes=chart_bytes,
+        final_summary=summary or {},
+        total_elapsed_s=1.0,
+    )
+
+
+def test_envelope_success_when_chart_persist_fails():
+    """Regression lock (was: success=False when produces_chart=True and
+    chart_entry was None). Now: success flag follows PlanExecutionResult.success
+    unconditionally, chart persist failure becomes telemetry only."""
+    result = _make_result(chart_bytes=b"fake-png", summary={"key_findings": ["ok"]})
+
+    # Mock the persister (lazy-imported inside _persist_chart) to simulate
+    # a disk write failure. Patch at the source module so the inline import
+    # picks it up.
+    with patch(
+        "backend.tools.visualization._persist_visualization_artifacts",
+        side_effect=OSError("No space left on device"),
+    ):
+        envelope = compose_agentic_response(
+            result=result,
+            question="test",
+            dataset_metadata={"rows": 100},
+            data_file_path="/tmp/x.csv",
+        )
+
+    assert envelope["success"] is True, "analysis success must not hinge on disk I/O"
+    assert envelope["charts"] == []
+    assert envelope["visualizations"] == []
+    assert envelope["code_generation"]["chart_persist_failed"] is True
+    assert "OSError" in envelope["code_generation"]["chart_persist_error"]
+
+
+def test_envelope_model_comparison_passes_through_metrics():
+    """When summary carries real per-model metrics, envelope exposes them
+    to the frontend as a proper enabled=True block. Previously hardcoded
+    enabled=False hid them."""
+    summary = {
+        "key_findings": ["RF wins"],
+        "model_comparison": {
+            "RF": {"auc": 0.87},
+            "LR": {"auc": 0.72},
+        },
+    }
+    result = _make_result(summary=summary)
+    envelope = compose_agentic_response(
+        result=result,
+        question="compare ML models",
+        dataset_metadata={},
+        data_file_path="/tmp/x.csv",
+    )
+    mc = envelope["model_comparison"]
+    assert mc["enabled"] is True
+    assert mc["metrics"] == {"RF": {"auc": 0.87}, "LR": {"auc": 0.72}}
+
+
+def test_envelope_model_comparison_disabled_when_summary_missing():
+    """Graceful fallback: summary without model_comparison → enabled=False.
+    Frontend hides the metrics table cleanly."""
+    result = _make_result(summary={"key_findings": ["simple EDA"]})
+    envelope = compose_agentic_response(
+        result=result,
+        question="plot",
+        dataset_metadata={},
+        data_file_path="/tmp/x.csv",
+    )
+    mc = envelope["model_comparison"]
+    assert mc["enabled"] is False
+
+
+def test_envelope_success_follows_result_not_chart_when_no_chart_planned():
+    """produces_chart=False + no chart bytes → success comes purely from
+    PlanExecutionResult.success (no chart-persist coupling at all)."""
+    result = _make_result(
+        chart_bytes=None, produces_chart=False, summary={"key_findings": ["text answer"]}
+    )
+    envelope = compose_agentic_response(
+        result=result, question="q", dataset_metadata={}, data_file_path="/tmp/x.csv"
+    )
+    assert envelope["success"] is True
+    assert envelope["code_generation"]["chart_persist_failed"] is False
+    assert envelope["code_generation"]["chart_persist_error"] is None
