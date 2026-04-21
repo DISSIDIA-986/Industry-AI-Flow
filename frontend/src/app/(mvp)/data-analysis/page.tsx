@@ -77,6 +77,28 @@ interface ModelComparisonSection {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Preset instructions — dataset-agnostic, ordered simple → advanced */
+/*                                                                    */
+/*  Curated with Codex second opinion (plan-eng-review 2026-04-20).   */
+/*  Each preset exercises a different backend path:                   */
+/*    1. EDA → broad distributions + missingness                      */
+/*    2. Segments → groupby-style category splits                     */
+/*    3. Correlations → heatmap / ranked drivers                      */
+/*    4. ML models → full classification/regression comparison        */
+/*    5. Trends/anomalies → time-series path or outlier fallback      */
+/*                                                                    */
+/*  Keep <60 chars each. No column-specific references (use "the      */
+/*  target column", let the LLM infer).                               */
+/* ------------------------------------------------------------------ */
+const INSTRUCTION_PRESETS = [
+  "Run EDA and summarize the main patterns",
+  "Compare core metrics across the strongest segments",
+  "Find the strongest correlations and key drivers",
+  "Infer the target and compare suitable ML models",
+  "Analyze time trends if possible; otherwise flag anomalies",
+];
+
+/* ------------------------------------------------------------------ */
 /*  Pipeline stage configuration (6-node)                              */
 /* ------------------------------------------------------------------ */
 const STAGE_ORDER = [
@@ -590,12 +612,36 @@ export default function DataAnalysisPage() {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Step 2: Ask & Analyze</h3>
 
+          {/* Preset instruction chips — simple → advanced. Click fills the
+              input (does not auto-run) so the operator can tweak before Run.
+              Ordering chosen to let a demo narrator stop early if the dataset
+              is weak for later scenarios (e.g. no numeric target for ML). */}
+          <div
+            className="flex flex-wrap gap-2 mb-2"
+            data-testid="instruction-presets"
+            aria-label="Preset analysis instructions"
+          >
+            {INSTRUCTION_PRESETS.map((preset, i) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setInstruction(preset)}
+                disabled={loading}
+                data-testid={`preset-chip-${i}`}
+                title={preset}
+                className="px-3 py-1 text-xs rounded-full border border-gray-300 bg-white text-gray-700 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+
           <label className="field-group" data-testid="instruction-input">
             Analysis Instruction
             <input
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
-              placeholder="Ask anything about your data..."
+              placeholder="Ask anything about your data... (or pick a preset above)"
               disabled={loading}
               className={loading ? "bg-gray-100" : ""}
               onKeyDown={(e) => {
