@@ -119,26 +119,24 @@ class RoundRecord:
     elapsed_ms: int = 0
 
     def is_successful(self) -> bool:
-        """Round fully succeeded: code ran, sandbox clean, summary line present.
+        """Round succeeded if code ran clean and produced presentable output.
 
-        A sandbox-successful round that completely dropped the required
-        ANALYSIS_SUMMARY_JSON line is NOT a success — the frontend
-        would render empty key_findings and the repair loop never got
-        to re-request the line. Round classification is intentionally
-        asymmetric per finding severity:
+        Presentable output = summary JSON line OR a chart PNG. The chart
+        is the primary user-visible deliverable; the ANALYSIS_SUMMARY_JSON
+        line is secondary observability. Failing a run that produced a
+        valid chart just because the model forgot the JSON marker throws
+        away working output (Codex plan-review 2026-04-20).
 
-          summary_emitted=False  → fire repair (model forgot the line)
-          summary_emitted=True
-            + summary_parsed=None → soft success (model tried, JSON
-              malformed; degrade to empty key_findings but keep the
-              chart + analysis prose. Better UX than a "failed"
-              response over a JSON formatting nit).
+        Asymmetry table:
+          summary_emitted=T, chart_exists=T  → success
+          summary_emitted=T, chart_exists=F  → success (summary carries findings)
+          summary_emitted=F, chart_exists=T  → soft success (chart-only)
+          summary_emitted=F, chart_exists=F  → repair (nothing to show)
 
-        Codex review 2026-04-18 originally flagged both cases as bugs;
-        we adopt this middle ground after the v4 gate rerun showed two
-        cases where the model emitted a malformed JSON line but
-        produced a perfectly good chart — failing them would throw
-        away working output over a cosmetic parse issue.
+        Prior behavior (2026-04-18) treated `summary_emitted=False` as
+        blanket failure. That produced false "Analysis Error" banners
+        on runs where matplotlib saved a good chart but stdout was too
+        long and the JSON marker slipped past max_tokens.
         """
         if not self.parsed:
             return False
@@ -147,8 +145,8 @@ class RoundRecord:
             return True
         if not (self.validator_pass and self.sandbox_success):
             return False
-        if not self.summary_emitted:
-            # Model completely omitted the summary marker → repair-worthy.
+        if not self.summary_emitted and not self.chart_exists:
+            # Nothing presentable to show → repair-worthy.
             return False
         return True
 
@@ -433,11 +431,13 @@ def _classify_repair_trigger(record: RoundRecord) -> Optional[str]:
     if record.sandbox_timeout:
         return "sandbox_timeout"
     if record.sandbox_success and not record.summary_emitted:
-        # Sandbox ran clean but model completely forgot the required
-        # ANALYSIS_SUMMARY_JSON line. Fires summary_json_parse_error so
-        # round 2 gets a chance to re-emit the summary (Codex 2026-04-18).
-        # Malformed-but-emitted JSON is treated as soft success by
-        # is_successful — we keep the chart rather than fail over nits.
+        # Sandbox clean but no JSON marker. Only fire repair when there's
+        # also no chart — a chart-only run is accepted as soft success
+        # by is_successful() (plan-eng-review 2026-04-20). This keeps
+        # working charts instead of burning the repair budget on a
+        # cosmetic JSON nit.
+        if record.chart_exists:
+            return None
         return "summary_json_parse_error"
     if not record.sandbox_success:
         return "sandbox_runtime_error"
