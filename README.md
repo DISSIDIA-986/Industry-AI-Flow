@@ -1,5 +1,7 @@
 # 🤖 Industry AI Flow
 
+> 🌐 Language: [中文](./README.md) · **[English](./README.en.md)**
+
 **智能AI工作流平台** - 基于LangChain 1.0的企业级RAG系统，支持意图识别、智能路由和多种Agent协同工作。
 
 ## 🏗️ 系统架构

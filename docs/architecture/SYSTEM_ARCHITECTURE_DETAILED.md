@@ -1,5 +1,7 @@
 # Industry AI Flow - 详细系统架构图
 
+> 🌐 Language: **中文** · [English](./SYSTEM_ARCHITECTURE_DETAILED.en.md)
+
 ## 概述
 
 Industry AI Flow采用**多层容器化架构**，将系统划分为清晰的逻辑层次和物理容器，确保高可用性、可扩展性和安全性。本架构图特别强调**交易策略**和**AI角色引擎**在整个系统中的位置和交互方式。
