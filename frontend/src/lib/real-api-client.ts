@@ -1,6 +1,8 @@
 // real backendAPIclient
 // for integrating actualFastAPIBackend services
 
+import { AUTH_TOKEN_KEY, handleUnauthorized } from './auth-events'
+
 class RealApiError extends Error {
   constructor(
     public status: number,
@@ -46,34 +48,38 @@ const createRealApiClient = () => {
   const client = {
     async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
       const url = `${REAL_API_BASE_URL}${endpoint}`
-      const token = localStorage.getItem('token') || localStorage.getItem('industry-aiflow-token')
-      
+      const token =
+        typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null
+
       const headers = new Headers(options.headers)
       if (!headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json')
       }
-      
+
       if (token) {
         headers.set('Authorization', `Bearer ${token}`)
       }
-      
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), REAL_API_TIMEOUT)
-      
+
       try {
         const response = await fetch(url, {
           ...options,
           headers,
           signal: controller.signal,
         })
-        
+
         clearTimeout(timeoutId)
-        
+
         if (!response.ok) {
+          if (response.status === 401) {
+            handleUnauthorized(url)
+          }
           const errorData = await response.json().catch(() => ({}))
           throw new RealApiError(response.status, errorData.detail || response.statusText)
         }
-        
+
         return await response.json()
       } catch (error) {
         clearTimeout(timeoutId)
@@ -337,15 +343,21 @@ export const realApiService = {
         formData.append('metadata', JSON.stringify(metadata))
       }
       
-      const response = await fetch(`${REAL_API_BASE_URL}/documents/upload`, {
+      const uploadUrl = `${REAL_API_BASE_URL}/documents/upload`
+      const uploadToken =
+        typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) || '' : ''
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('industry-aiflow-token') || ''}`
-        }
+          Authorization: `Bearer ${uploadToken}`,
+        },
       })
-      
+
       if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorized(uploadUrl)
+        }
         throw new RealApiError(response.status, 'Document upload failed')
       }
       
