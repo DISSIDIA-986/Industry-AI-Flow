@@ -54,13 +54,17 @@ describe('Navbar contracts', () => {
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
   })
 
-  it('keeps logout workflow contract wired to auth and router', () => {
+  it('delegates logout to auth context (AuthContext owns the redirect)', () => {
+    // Navbar previously did router.push('/login') itself, racing with
+    // AuthContext.logout's own redirect. The redirect is now centralized
+    // in AuthContext, so Navbar must only call logout() and trust the
+    // context to navigate.
     render(<Navbar />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }))
 
     expect(logoutMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith('/login')
+    expect(pushMock).not.toHaveBeenCalled()
   })
 
   it('shows login control when user session is absent', () => {

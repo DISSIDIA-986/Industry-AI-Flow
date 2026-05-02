@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
   const { login, error: authError } = useAuth()
+  const searchParams = useSearchParams()
+  const reason = searchParams?.get('reason') ?? null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +20,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
-      router.push('/workflow-chat')
+      // AuthContext.login handles the post-login redirect.
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -30,6 +31,12 @@ export default function LoginPage() {
   // Show errors in authentication context
   const displayError = error || authError
 
+  // Honest banner: we know the prior session is invalid, but we don't
+  // know whether it was clock-expiry, server restart, secret rotation,
+  // or a backend bug. So the message is intentionally generic.
+  const sessionNotice =
+    reason === 'expired' ? 'Please log in again to continue.' : null
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
@@ -39,6 +46,15 @@ export default function LoginPage() {
           </h1>
           <p className="text-gray-600">Enterprise Level AI Workflow Platform</p>
         </div>
+
+        {sessionNotice && (
+          <div
+            data-testid="session-expired-banner"
+            className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm"
+          >
+            {sessionNotice}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -86,5 +102,14 @@ export default function LoginPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  // useSearchParams must be wrapped in Suspense for Next.js App Router CSR bailout.
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

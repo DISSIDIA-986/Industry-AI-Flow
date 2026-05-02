@@ -39,11 +39,24 @@ export class ApiError extends Error {
   }
 }
 
+import {
+  AUTH_TOKEN_KEY,
+  handleUnauthorized,
+} from './auth-events'
+
+export {
+  AUTH_TOKEN_KEY,
+  AUTH_USER_KEY,
+  AUTH_EXPIRED_EVENT,
+  handleUnauthorized,
+  isAuthCredentialEndpoint,
+} from './auth-events'
+
 function getStoredToken(): string {
   if (typeof window === 'undefined') {
     return ''
   }
-  return localStorage.getItem('token') || localStorage.getItem('industry-aiflow-token') || ''
+  return localStorage.getItem(AUTH_TOKEN_KEY) || ''
 }
 
 function buildRuntimeHeaders(config: RuntimeAppConfig = {}, extraHeaders?: HeadersInit): Headers {
@@ -128,6 +141,9 @@ async function requestBackend<T>(
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized(path)
+      }
       throw new ApiError(response.status, await parseError(response))
     }
 
