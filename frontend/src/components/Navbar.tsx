@@ -2,18 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuth()
-  const router = useRouter()
   const pathname = usePathname()
 
   const handleLogout = () => {
+    // AuthContext.logout owns the redirect to /login.
     logout()
-    router.push('/login')
   }
 
   const navItems = [
