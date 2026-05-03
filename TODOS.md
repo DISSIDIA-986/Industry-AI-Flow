@@ -2,7 +2,24 @@
 
 ## Deferred Tasks
 
-### Migrate E2E selectors from Tailwind classes to data-testid
+### Migrate JWT storage from localStorage to httpOnly cookie
+**Priority:** Low — defer until after Capstone showcase
+**Added:** 2026-05-02 (eng review of #33 auth-401 auto-logout fix)
+**Blocked by:** Backend cookie-auth middleware change + frontend fetch credentials mode
+
+**What:** Move the auth JWT from `localStorage.industry-aiflow-token` to an httpOnly, Secure, SameSite=Lax cookie set by `/auth/login`. Frontend stops reading the token directly; fetch calls use `credentials: "include"` and the browser attaches the cookie automatically. Backend reads the JWT from the cookie instead of `Authorization: Bearer`.
+
+**Why:** localStorage is readable by any JavaScript that runs in the page — a single XSS bug exfiltrates every active session. httpOnly cookies are not exposed to JS, so the same XSS vector cannot steal the token. The current 24h JWT lifetime makes a stolen token a 24-hour foothold. Codex flagged this during the #33 plan review as the right long-term hardening; deferred at the time because it requires backend + frontend changes simultaneously and the Capstone demo deadline is the priority.
+
+**How to implement:**
+1. Backend: `auth_routes.py` — set `access_token` cookie on `/auth/login` and `/auth/register` responses (httpOnly, secure in prod, SameSite=Lax, Max-Age=24h). Add a dependency that reads the JWT from the cookie OR the existing Bearer header (transitional dual-mode).
+2. Frontend: `api-client.ts` and `real-api-client.ts` — add `credentials: "include"` to every fetch call, stop reading/setting the Authorization header.
+3. Frontend: `AuthContext` — drop the localStorage read/write paths. The session state instead comes from a `/auth/me` call at boot (which the cookie satisfies automatically).
+4. CSRF: with SameSite=Lax this is not strictly required for state-changing requests in the same-origin demo, but if we ever cross origins a double-submit token or `X-Requested-With` header check should be added.
+5. Tunnel: confirm Cloudflare Tunnel passes the `Set-Cookie` header through to `localhost:3123` and back. Should be transparent but worth one curl test.
+6. Drop the `auth:expired` event + base64url JWT decoder — both become unnecessary because the frontend no longer touches the token. The 401 interceptor stays (it's the canonical signal).
+
+**Effort:** human: ~1 day / CC: ~30 min
 **Priority:** Medium — **PARTIAL (Intent Demo + Workflow Chat + Data Analysis done — 2 other pages remain: RAG Agent, Cost Estimation, Dashboard)**
 **Added:** 2026-03-19 (eng review of UI design system unification)
 **Blocked by:** Nothing — Intent Demo page has data-testid attributes as of Intent Debugger PR
