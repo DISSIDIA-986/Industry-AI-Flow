@@ -54,6 +54,7 @@ The AI Workflow pipeline is a core innovation with two stages: an **11-node inte
 - **Cloud LLM dual fallback** — Data Analysis must work with both Groq and Zhipu; auto-fallback if one fails
 - **Intent classification uses Zhipu cloud LLM** — local 4B model had misclassification issues (e.g. RAG queries routed to code_execution); heuristic shortcut (confidence >= 0.85) skips LLM for clear-cut queries
 - **Pre-warm before demo** — user will open system beforehand; first-query cold start ~49s is avoided
+- **Session expiry is self-healing** — any 401 from a non-login endpoint clears auth state and redirects to `/login?reason=expired` with a one-line banner. JWT `exp` is also validated (base64url-safe, 30s clock-skew grace) before AuthContext commits restored state, so protected pages never mount with a dead token. Multi-tab sync via `storage` event. Implemented in `frontend/src/lib/{auth-events,jwt}.ts` + `frontend/src/contexts/AuthContext.tsx`. Avoids the demo-day failure mode where a stale 24h JWT silently broke `/overview` with "service unavailable" and required the operator to know to log in again.
 
 ### Evaluation Criteria
 Evaluators care about: stable demo (no crashes), clear presentation, sound architecture, logical technical decisions. **Top priority: system stability during live demo.**
@@ -241,7 +242,7 @@ PostgreSQL 14+ with pgvector extension. Schema managed via `backend/init_databas
 
 Next.js App Router in `frontend/`. Backend API proxy at `src/app/api/backend/[...path]/route.ts`. Run with `make frontend-dev`.
 
-**Navigation**: Navbar uses flat layout — 6 items inline (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation, Intent Demo). System Overview is the post-login landing page at `/overview`, accessible via the logo link. Login page is a clean form (no auto-fill, no credential hints) — use 1Password or browser auto-fill for demo credentials. Registration page removed; Register link removed from navbar.
+**Navigation**: Navbar uses flat layout — 6 items inline (Dashboard, Workflow Chat, Documents, Dynamic Analytics, Cost Estimation, Intent Demo). System Overview is the post-login landing page at `/overview`, accessible via the logo link. Login page is a clean form (no auto-fill, no credential hints) — use 1Password or browser auto-fill for demo credentials. Renders an amber banner ("Please log in again to continue") when arrived at via `/login?reason=expired`. Registration page removed; Register link removed from navbar. Post-auth redirect is owned by `AuthContext` only — `Navbar.handleLogout` and `LoginPage.handleSubmit` no longer push routes themselves (eliminates a three-way race that previously dropped the `?reason=expired` query param).
 
 **Dashboard** (`/simple-dashboard`): Pipeline Flow visualization — 10-node dark hero section with per-node SVG icons, sequential animation using real `node_latency_ms` data from workflow metadata. "Live Demo" button (amber accent) auto-runs on page load, sends real RAG query, replays pipeline execution. 3 status cards (Knowledge Base doc count, LLM Engine model, System Health) from real health endpoints. Recent Pipeline Executions table. `PipelineFlowViz.tsx` component + `usePipelineAnimation()` hook. When queries go through `intent_workflow` (not the 10-node pipeline), node states are inferred from metadata timestamps and agent type.
 
