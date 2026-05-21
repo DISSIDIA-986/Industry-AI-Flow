@@ -1,3 +1,52 @@
+# Industry-AI-Flow — Enterprise RAG Platform on LangChain
+
+End-to-end agentic AI workflow for enterprise document Q&A. Built around LangChain 1.0 with **intent classification**, **hybrid retrieval (BM25 + pgvector)**, **multi-agent orchestration**, and **OCR-based document ingestion** — replaces manual document lookup workflows with single-query answers.
+
+## What it does
+
+- **Hybrid retrieval** — BM25 lexical + pgvector semantic over a multi-format corpus (PDF, DOCX, scanned via PaddleOCR), with re-ranking
+- **Intent classifier** — Routes each query to the right agent (knowledge retrieval / data analysis / document processing / code execution) with confidence scoring + clarification fallback
+- **Multi-agent orchestration** — Specialized agents collaborate on complex queries (RAG agent, analysis agent, code agent), with explicit context handoff
+- **Prompt versioning** — Enterprise-grade prompt management with audit trail
+- **Sandboxed code execution** — Safe runtime for agent-generated analysis code
+
+## Architecture
+
+![Industry-AI-Flow architecture](docs/ARCHITECTURE_DIAGRAM.drawio.png)
+
+Six-layer architecture: UI → API Gateway → Business Services → AI Engine → Data Stores → Security & Infrastructure. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design doc and [interactive diagram](docs/ARCHITECTURE_DIAGRAM.html).
+
+## Stack
+
+`LangChain 1.0` · `FastAPI` · `Python 3.12` · `Next.js` · `PostgreSQL + pgvector` · `Redis` · `PaddleOCR` · `Docker Compose` · `Pydantic` · `SQLAlchemy + Alembic`
+
+## Quickstart
+
+```bash
+git clone https://github.com/DISSIDIA-986/Industry-AI-Flow.git
+cd Industry-AI-Flow
+docker compose -f docker-compose-postgres.yml up -d
+pip install -r requirements.txt
+make migrate                    # alembic upgrade head
+make backend                    # FastAPI on :8000
+cd frontend && npm install && npm run dev    # Next.js on :3000
+```
+
+See `samples/` for example documents and queries.
+
+## Why this exists
+
+Built as the AI capstone for SAIT's Integrated AI program. The hardest design decision wasn't the retrieval itself — it was **knowing when to call which agent** without confusing the user. The intent classifier surfaces confidence and asks for clarification when below a threshold, instead of guessing.
+
+## Project status
+
+Active. Most documentation and inline comments are in Chinese (original capstone audience); pull requests adding English-language docs are welcome.
+
+---
+
+
+## 中文文档
+
 # 🤖 Industry AI Flow
 
 **智能AI工作流平台** - 基于LangChain 1.0的企业级RAG系统，支持意图识别、智能路由和多种Agent协同工作。
