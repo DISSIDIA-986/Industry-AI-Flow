@@ -135,7 +135,18 @@ def _summarize_samples(series: pd.Series, role: str) -> str:
             return f"range={lo}..{hi}"
         except (TypeError, ValueError):
             return "<numeric>"
-    # categorical, datetime — first 3 distinct values are useful signal
+    # datetime — first 3 distinct values ALWAYS preserved. Granularity
+    # hint is critical for time-series code-gen: '2024-01-01 00:00:00'
+    # tells the LLM 'daily', '2024-01-01T12:34:56' tells it 'high-res',
+    # '2024-01' tells it 'monthly'. The str repr is long so we MUST
+    # short-circuit BEFORE the freeform heuristic below; otherwise
+    # datetimes get redacted as PII and the LLM can't pick the right
+    # resample frequency / chart x-axis formatter.
+    if role == "datetime":
+        samples = s.head(3).tolist()
+        return ", ".join(repr(str(x)) for x in samples)
+
+    # categorical — first 3 distinct values are useful signal.
     # BUT _infer_role() classifies any low-cardinality column as categorical
     # (n_unique ≤ 20), so short PII columns like 'name' (3 rows, 3 distinct
     # full names) slip through. Guard with a free-form-text heuristic:
