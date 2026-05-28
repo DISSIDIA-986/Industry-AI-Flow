@@ -1,0 +1,199 @@
+{
+  "timestamp": 1779967011.2376902,
+  "base_url": "http://127.0.0.1:8000",
+  "total_test_cases": 6,
+  "mode_stability_rate": 1.0,
+  "code_stability_rate": 1.0,
+  "total_runs": 18,
+  "mode_distribution": {
+    "glm5_agent": 18
+  },
+  "per_case_results": {
+    "TC1-P1": {
+      "description": "Tips: histogram of tip distribution",
+      "dataset": "tips",
+      "instruction": "Show the distribution of tip amounts as a histogram",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "accc9c2a65b2f9fa52c1e5f1c4be6851beb570738261b4dc0a6ad915ee4f1935",
+          "duration_s": 15.11457109451294,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "accc9c2a65b2f9fa52c1e5f1c4be6851beb570738261b4dc0a6ad915ee4f1935",
+          "duration_s": 6.14677619934082,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "accc9c2a65b2f9fa52c1e5f1c4be6851beb570738261b4dc0a6ad915ee4f1935",
+          "duration_s": 5.9416399002075195,
+          "error": ""
+        }
+      }
+    },
+    "TC2-P1": {
+      "description": "Titanic: decision tree feature importance",
+      "dataset": "titanic",
+      "instruction": "Train a decision tree classifier to predict Survived and show feature importances as a bar chart",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "b8ed46845fc393acbf79f4cbdff8589684a85207c985fd73f9be01a904e202b3",
+          "duration_s": 23.742509126663208,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "b8ed46845fc393acbf79f4cbdff8589684a85207c985fd73f9be01a904e202b3",
+          "duration_s": 7.653224945068359,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "b8ed46845fc393acbf79f4cbdff8589684a85207c985fd73f9be01a904e202b3",
+          "duration_s": 7.542251110076904,
+          "error": ""
+        }
+      }
+    },
+    "TC3-P1": {
+      "description": "Penguins: K-means 3 clusters scatter",
+      "dataset": "penguins",
+      "instruction": "Run K-means clustering with 3 clusters on numeric features and visualize with a scatter plot",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "57deed223307478aa296a609f29160cad5163b2110ff7a7198591573a059f63a",
+          "duration_s": 21.266258001327515,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "57deed223307478aa296a609f29160cad5163b2110ff7a7198591573a059f63a",
+          "duration_s": 7.576747179031372,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "57deed223307478aa296a609f29160cad5163b2110ff7a7198591573a059f63a",
+          "duration_s": 8.020394086837769,
+          "error": ""
+        }
+      }
+    },
+    "TC4-P1": {
+      "description": "MPG: linear regression + residual plot",
+      "dataset": "mpg",
+      "instruction": "Predict mpg using linear regression. Show R-squared, RMSE, and a residual plot",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "ff8b1e0c0054ccd451664ca8967b96c5c36fb3e903c9aaf04a836309f0915a14",
+          "duration_s": 22.38225221633911,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "ff8b1e0c0054ccd451664ca8967b96c5c36fb3e903c9aaf04a836309f0915a14",
+          "duration_s": 7.4163219928741455,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "ff8b1e0c0054ccd451664ca8967b96c5c36fb3e903c9aaf04a836309f0915a14",
+          "duration_s": 9.023526906967163,
+          "error": ""
+        }
+      }
+    },
+    "TC4-P2": {
+      "description": "MPG: Ridge vs Decision Tree comparison",
+      "dataset": "mpg",
+      "instruction": "Compare Ridge regression vs Decision Tree regression performance for predicting mpg",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "5202f6571ca9fcc293fff9501b739a39b9a08752359878079e67413bcfae625a",
+          "duration_s": 33.10819673538208,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "5202f6571ca9fcc293fff9501b739a39b9a08752359878079e67413bcfae625a",
+          "duration_s": 9.978826999664307,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "5202f6571ca9fcc293fff9501b739a39b9a08752359878079e67413bcfae625a",
+          "duration_s": 10.21934700012207,
+          "error": ""
+        }
+      }
+    },
+    "TC5-P1": {
+      "description": "Airline: time series decomposition",
+      "dataset": "airline",
+      "instruction": "Plot the time series and decompose into trend, seasonal, and residual components",
+      "mode_stable": true,
+      "code_stable": true,
+      "first_diff_line": null,
+      "runs": {
+        "run_a": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "26ea5d5407cfb286e7a84dbe47e61fdb30422e0ea1f497f71fb9f1b0604c9f7c",
+          "duration_s": 19.159574031829834,
+          "error": ""
+        },
+        "run_b": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "26ea5d5407cfb286e7a84dbe47e61fdb30422e0ea1f497f71fb9f1b0604c9f7c",
+          "duration_s": 8.267544031143188,
+          "error": ""
+        },
+        "run_c": {
+          "status": "COMPLETED",
+          "mode": "glm5_agent",
+          "code_hash": "26ea5d5407cfb286e7a84dbe47e61fdb30422e0ea1f497f71fb9f1b0604c9f7c",
+          "duration_s": 8.868857860565186,
+          "error": ""
+        }
+      }
+    }
+  }
+}
