@@ -102,6 +102,17 @@ site/
 vector_db/
 embeddings/
 cache/
+# Negate the broad `cache/` rule for actual source code dirs that happen
+# to be named cache. Without these, backend/services/cache/ (QueryCache
+# module imported by main.py + rag_engine.py) and the matching test dirs
+# are silently excluded → CI can't import them. Pre-existing latent bug
+# surfaced 2026-05-28 after a CI gate started exercising the imports.
+!backend/services/cache/
+!backend/services/cache/**
+!tests/unit/cache/
+!tests/unit/cache/**
+!tests/integration/cache/
+!tests/integration/cache/**
 
 # ==========================================
 # Workspace generated artifacts
