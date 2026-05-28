@@ -1013,6 +1013,32 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
     providers = execution_health.get("providers", {})
     docker_state = providers.get("docker", {}) if isinstance(providers, dict) else {}
 
+    # Agentic data-analysis path readiness.
+    #
+    # The agentic path is gated by USE_GLM5_AGENT *AND* the startup probe
+    # (verify_sandbox_packages — see this file's lifespan). The probe runs
+    # once at startup; its result determines whether analyze_query()
+    # routes through the LLM agentic loop or falls back to the
+    # deterministic planner. Without surfacing it here, the operator has
+    # to grep uvicorn logs to know which path is live for the demo. That
+    # gap was hit in a 2026-05-28 SSE eval iteration where the probe was
+    # false and we couldn't tell from /health.
+    agentic_runtime = {
+        "feature_flag": bool(getattr(settings, "use_glm5_agent", False)),
+        "probe_ready": False,
+        "active": False,  # = flag AND probe — what analyze_query actually uses
+    }
+    try:
+        from backend.services.code_executor.sandbox_runtime import (
+            is_agent_runtime_ready,
+        )
+        agentic_runtime["probe_ready"] = bool(is_agent_runtime_ready())
+        agentic_runtime["active"] = (
+            agentic_runtime["feature_flag"] and agentic_runtime["probe_ready"]
+        )
+    except Exception as exc:
+        logger.warning("Unable to inspect agentic runtime readiness: %s", exc)
+
     return {
         "status": "ok",
         "memory_usage_mb": get_memory_usage(),
@@ -1020,6 +1046,7 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
         "code_execution_available": bool(execution_health.get("healthy", False)),
         "code_execution": execution_health,
         "embedding": embedding_health,
+        "agentic_runtime": agentic_runtime,
         "version": "1.0.0",
         "tenant": tenant.tenant_id if tenant else None,
     }
