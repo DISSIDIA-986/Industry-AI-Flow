@@ -262,28 +262,56 @@ def _build_combined_snippet(
 
 def _loader_block(ext: str) -> str:
     if ext == "csv":
-        # sep=None + engine="python" matches the metadata reader so
-        # semicolon/tab-delimited files (e.g. UCI wine-quality) parse
-        # into the same column shape the planner saw. Without this,
-        # the sandbox would see one giant string column and every
-        # chart template would fail on "column not found".
+        # Header-sniff (mirrors spike_harness._detect_csv_sep_from_header):
+        # peek at first line, count standard delimiters, use the most
+        # common one. Falls back to default comma for single-column files
+        # (sep=None+engine='python' corrupts those — splits 'value\n0.24'
+        # into ['Unnamed: 0', 'alue']).
         return (
-            "try:\n"
-            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
-            "except UnicodeDecodeError:\n"
-            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python', encoding='latin-1')\n"
-            "except Exception:\n"
-            "    # Sniff failure — fall back to comma default.\n"
-            "    _df = _pd.read_csv(_DATA_PATH)\n"
+            "def _sniff_sep(_path):\n"
+            "    for _enc in ('utf-8', 'utf-8-sig', 'latin-1'):\n"
+            "        try:\n"
+            "            with open(_path, 'r', encoding=_enc) as _fh:\n"
+            "                _hdr = _fh.readline()\n"
+            "            break\n"
+            "        except UnicodeDecodeError:\n"
+            "            continue\n"
+            "    else:\n"
+            "        return None, 'utf-8'\n"
+            "    _counts = {',':0, ';':0, '\\t':0, '|':0}\n"
+            "    for _c in _hdr:\n"
+            "        if _c in _counts:\n"
+            "            _counts[_c] += 1\n"
+            "    _best = max(_counts, key=_counts.get)\n"
+            "    return (_best if _counts[_best] > 0 else None), _enc\n"
+            "_sep, _enc = _sniff_sep(_DATA_PATH)\n"
+            "_df = _pd.read_csv(_DATA_PATH, encoding=_enc, sep=_sep) if _sep else _pd.read_csv(_DATA_PATH, encoding=_enc)\n"
         )
     if ext in {"xlsx", "xls"}:
         return "_df = _pd.read_excel(_DATA_PATH)\n"
     if ext == "json":
         return "_df = _pd.read_json(_DATA_PATH)\n"
-    # Default: try CSV — matches extract_dataset_info's treatment of
-    # unknown extensions (it errors out up there, so we should rarely
-    # hit this).
-    return "_df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
+    # Default: try CSV with same smart sniff.
+    return (
+        "def _sniff_sep(_path):\n"
+        "    for _enc in ('utf-8', 'utf-8-sig', 'latin-1'):\n"
+        "        try:\n"
+        "            with open(_path, 'r', encoding=_enc) as _fh:\n"
+        "                _hdr = _fh.readline()\n"
+        "            break\n"
+        "        except UnicodeDecodeError:\n"
+        "            continue\n"
+        "    else:\n"
+        "        return None, 'utf-8'\n"
+        "    _counts = {',':0, ';':0, '\\t':0, '|':0}\n"
+        "    for _c in _hdr:\n"
+        "        if _c in _counts:\n"
+        "            _counts[_c] += 1\n"
+        "    _best = max(_counts, key=_counts.get)\n"
+        "    return (_best if _counts[_best] > 0 else None), _enc\n"
+        "_sep, _enc = _sniff_sep(_DATA_PATH)\n"
+        "_df = _pd.read_csv(_DATA_PATH, encoding=_enc, sep=_sep) if _sep else _pd.read_csv(_DATA_PATH, encoding=_enc)\n"
+    )
 
 
 def _chart_block(idx: int, spec: Dict[str, Any]) -> List[str]:

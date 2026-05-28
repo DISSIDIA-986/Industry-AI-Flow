@@ -89,6 +89,12 @@ class CodeValidator:
         "collections",
         "itertools",
         "warnings",
+        # `random` is required by the random_state=42 mandate in the agentic
+        # user/repair prompts (PR #35). The prompt instructs LLM to seed
+        # `np.random.seed(42); random.seed(42)`; without `random` in the
+        # whitelist, every agentic round-1 with that header gets rejected
+        # ("Import not whitelisted: random"). Pure stdlib, no IO.
+        "random",
     }
 
     # Dangerous patterns

@@ -129,11 +129,22 @@ class TestChartExecutorLoaderSniff:
 
         code = _loader_block("csv")
 
-        assert "sep=None" in code, (
-            "csv loader must pass sep=None so csv.Sniffer runs in the sandbox"
+        # As of fix/csv-sniff-single-column, sep is detected by counting
+        # delimiters in the header line (sep=None+engine='python' over-
+        # sniffed single-column CSVs and corrupted column names). Loader
+        # must include the _sniff_sep helper that examines the header.
+        assert "_sniff_sep" in code, (
+            "csv loader must include the _sniff_sep header-based detector"
         )
-        assert "engine='python'" in code, (
-            "csv loader must use engine='python' for sep=None to work"
+        # Must consider all four standard delimiters
+        for delim_repr in ("','", "';'", "'\\t'", "'|'"):
+            assert delim_repr in code, (
+                f"csv loader must include delimiter candidate {delim_repr}"
+            )
+        # Must fall back to default comma when no delimiter found
+        assert "if _sep" in code, (
+            "csv loader must branch on sniff result (use sep when found, "
+            "default otherwise)"
         )
 
     def test_non_csv_loader_unaffected(self):
@@ -141,3 +152,76 @@ class TestChartExecutorLoaderSniff:
 
         assert "read_excel" in _loader_block("xlsx")
         assert "read_json" in _loader_block("json")
+
+
+class TestSingleColumnCsvRegression:
+    """Adversarial-review 2026-05-28 regression: pd.read_csv(sep=None,
+    engine='python') over-sniffs single-column CSVs and corrupts the
+    column name. E.g. 'value\\n0.24\\n1.35' was being read as
+    ['Unnamed: 0', 'alue'] with the second column 100% null, which
+    fooled the LLM into reporting 'no data to plot' on perfectly good
+    single-column data."""
+
+    def test_detect_sep_returns_none_for_single_column(self):
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("value") is None
+        assert _detect_csv_sep_from_header("price\n") is None
+        assert _detect_csv_sep_from_header("") is None
+
+    def test_detect_sep_picks_comma(self):
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("a,b,c") == ","
+
+    def test_detect_sep_picks_semicolon(self):
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("a;b;c") == ";"
+
+    def test_detect_sep_picks_tab(self):
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("a\tb\tc") == "\t"
+
+    def test_detect_sep_picks_pipe(self):
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("a|b|c") == "|"
+
+    def test_detect_sep_picks_most_frequent(self):
+        # 3 commas vs 1 semicolon — commas win even though header has both
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
+        assert _detect_csv_sep_from_header("a,b,c,d;extra") == ","
+
+    def test_load_single_column_csv_preserves_header(self, tmp_path):
+        from backend.services.data_analysis.spike_harness import load_dataframe
+        csv = tmp_path / "single.csv"
+        csv.write_text("value\n0.24\n1.35\n0.99\n")
+        df = load_dataframe(str(csv))
+        assert list(df.columns) == ["value"]
+        assert len(df) == 3
+        assert df["value"].notna().all()
+
+    def test_load_semicolon_csv_still_works(self, tmp_path):
+        from backend.services.data_analysis.spike_harness import load_dataframe
+        csv = tmp_path / "semi.csv"
+        csv.write_text("a;b;c\n1;2;3\n4;5;6\n")
+        df = load_dataframe(str(csv))
+        assert list(df.columns) == ["a", "b", "c"]
+        assert len(df) == 2
+
+    def test_load_standard_comma_csv(self, tmp_path):
+        from backend.services.data_analysis.spike_harness import load_dataframe
+        csv = tmp_path / "std.csv"
+        csv.write_text("name,age,score\nAlice,30,90\nBob,25,85\n")
+        df = load_dataframe(str(csv))
+        assert list(df.columns) == ["name", "age", "score"]
+        assert len(df) == 2
