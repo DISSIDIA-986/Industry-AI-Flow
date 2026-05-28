@@ -58,7 +58,11 @@ fixture needs to construct).
 
 from __future__ import annotations
 
+import logging
+import re
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
 
@@ -80,7 +84,7 @@ def eda_plan_from_metadata(
     dataset_metadata: Dict[str, Any],
     user_question: str = "",
 ) -> Dict[str, Any]:
-    """Produce a deterministic EDA plan from dataset metadata.
+    """Produce a deterministic EDA plan from dataset metadata + user question.
 
     Args:
         dataset_metadata: Output shape from
@@ -88,14 +92,18 @@ def eda_plan_from_metadata(
             ``rows``, ``columns``, ``columns_info`` (list of per-column
             dicts with ``role``, ``is_id_like``, ``unique_values``,
             ``std``, etc.), optional ``top_corr_pair``.
-        user_question: Preserved in the plan for traceability; not used
-            to drive chart selection in this heuristic version. LLM planner
-            uses it for routing, this planner does not need it.
+        user_question: Free-form question. Classified into one of 7
+            intent buckets via ``_classify_intent``; the intent drives
+            which subset of chart pickers fires. Empty / unrecognized
+            questions fall back to ``generic_eda`` (the historical
+            all-5-types behavior, preserved for backward compat).
 
     Returns:
         Plan dict with ``schema_version``, ``eda.charts`` (ordered list
         of chart specs in normalized schema), ``model_comparison``
-        (disabled for must-ship), and ``rationale``. JSON-serializable.
+        (intent-gated), and ``rationale``. JSON-serializable.
+        Includes ``intent`` field for observability — operators can grep
+        logs / inspect responses to see how their question was classified.
     """
     columns_info: List[Dict[str, Any]] = dataset_metadata.get("columns_info") or []
     rows = int(dataset_metadata.get("rows") or 0)
@@ -103,39 +111,62 @@ def eda_plan_from_metadata(
     numeric = _numeric_columns(columns_info)
     categorical = _categorical_columns(columns_info)
 
-    raw_charts: List[tuple[str, Dict[str, Any], List[str]]] = []
-    rationale_parts: List[str] = []
-
-    hist_items, hist_note = _pick_histograms(numeric)
-    raw_charts.extend(hist_items)
-    if hist_note:
-        rationale_parts.append(hist_note)
-
-    scatter_item, scatter_note = _pick_scatter(
-        numeric, dataset_metadata.get("top_corr_pair")
+    intent = _classify_intent(user_question, numeric, categorical)
+    logger.info(
+        "chart_plan: intent=%s (q=%r, numeric=%d, categorical=%d)",
+        intent, (user_question or "")[:80], len(numeric), len(categorical),
     )
-    if scatter_item:
-        raw_charts.append(scatter_item)
-    if scatter_note:
-        rationale_parts.append(scatter_note)
 
-    heatmap_item, heatmap_note = _pick_heatmap(numeric)
-    if heatmap_item:
-        raw_charts.append(heatmap_item)
-    if heatmap_note:
-        rationale_parts.append(heatmap_note)
+    raw_charts: List[tuple[str, Dict[str, Any], List[str]]] = []
+    rationale_parts: List[str] = [f"Intent: {intent}."]
 
-    bar_item, bar_note = _pick_bar(categorical)
-    if bar_item:
-        raw_charts.append(bar_item)
-    if bar_note:
-        rationale_parts.append(bar_note)
+    # Which pickers fire is intent-driven. The mapping is intentionally
+    # explicit (no clever lookup table) so a code reader can see at a
+    # glance which charts each intent gets. `generic_eda` reproduces the
+    # historical behavior — all 5 pickers in the original order.
+    want_hist = intent in {"distribution_univariate", "generic_eda"}
+    want_scatter = intent in {
+        "relationship_bivariate", "supervised_regression", "generic_eda",
+    }
+    want_heatmap = intent in {"correlation_matrix", "generic_eda"}
+    want_bar = intent in {"categorical_distribution", "generic_eda"}
+    want_box = intent in {"categorical_vs_numeric", "generic_eda"}
 
-    boxplot_item, box_note = _pick_boxplot(numeric, categorical)
-    if boxplot_item:
-        raw_charts.append(boxplot_item)
-    if box_note:
-        rationale_parts.append(box_note)
+    if want_hist:
+        hist_items, hist_note = _pick_histograms(numeric)
+        raw_charts.extend(hist_items)
+        if hist_note:
+            rationale_parts.append(hist_note)
+
+    if want_scatter:
+        scatter_item, scatter_note = _pick_scatter(
+            numeric, dataset_metadata.get("top_corr_pair")
+        )
+        if scatter_item:
+            raw_charts.append(scatter_item)
+        if scatter_note:
+            rationale_parts.append(scatter_note)
+
+    if want_heatmap:
+        heatmap_item, heatmap_note = _pick_heatmap(numeric)
+        if heatmap_item:
+            raw_charts.append(heatmap_item)
+        if heatmap_note:
+            rationale_parts.append(heatmap_note)
+
+    if want_bar:
+        bar_item, bar_note = _pick_bar(categorical)
+        if bar_item:
+            raw_charts.append(bar_item)
+        if bar_note:
+            rationale_parts.append(bar_note)
+
+    if want_box:
+        boxplot_item, box_note = _pick_boxplot(numeric, categorical)
+        if boxplot_item:
+            raw_charts.append(boxplot_item)
+        if box_note:
+            rationale_parts.append(box_note)
 
     # Normalize into the final chart schema. Stable IDs let the executor
     # correlate partial-failure markers back to the plan, and the explicit
@@ -168,9 +199,7 @@ def eda_plan_from_metadata(
         model_comparison = decide_model_comparison(dataset_metadata)
     except Exception as exc:
         # Never let the planner kill EDA. Log and fall back to disabled.
-        import logging
-
-        logging.getLogger(__name__).warning(
+        logger.warning(
             "model-comparison planner failed, falling back to disabled: %s",
             exc,
         )
@@ -182,6 +211,34 @@ def eda_plan_from_metadata(
             "reason": f"planner raised {type(exc).__name__}",
         }
 
+    # Intent gating for model comparison.
+    #
+    # Three regimes:
+    #  - generic_eda: preserve historical behavior — let decide_model_comparison's
+    #    own logic stand (auto-detect target, fire training if usable).
+    #  - supervised_*: also let it stand (intent agrees with the auto-detect).
+    #  - any other EDA-only intent (distribution_univariate, correlation_matrix,
+    #    categorical_*, relationship_bivariate): suppress training. User asked
+    #    for a specific chart; don't burn sandbox time on RandomForests they
+    #    didn't request.
+    _EDA_ONLY_INTENTS = {
+        "distribution_univariate",
+        "correlation_matrix",
+        "categorical_distribution",
+        "categorical_vs_numeric",
+        "relationship_bivariate",
+    }
+    if intent in _EDA_ONLY_INTENTS and model_comparison.get("enabled"):
+        model_comparison = {
+            **model_comparison,
+            "enabled": False,
+            "reason": (
+                f"intent={intent} does not request modeling; "
+                f"original gate would have enabled "
+                f"(target={model_comparison.get('target_column')!r})"
+            ),
+        }
+
     return {
         "schema_version": SCHEMA_VERSION,
         "eda": {"charts": charts},
@@ -189,7 +246,119 @@ def eda_plan_from_metadata(
         "rationale": " ".join(rationale_parts).strip()
         or "Deterministic plan from dataset metadata.",
         "user_question": user_question[:500] if user_question else "",
+        "intent": intent,
     }
+
+
+# --- intent classification ----------------------------------------------
+#
+# Heuristic, regex-keyword based — chosen over LLM for three reasons:
+#  1. Latency: planner is synchronous and must stay < 50ms. No cloud call.
+#  2. Determinism: agentic_loop.py's response cache keys on the rendered
+#     prompt; if the planner output drifts run-to-run the cache misses.
+#     Same question → same intent guaranteed.
+#  3. Maintainability: keyword list edited by a person, no model versioning
+#     concerns 6 months out.
+#
+# Priority order is INTENTIONAL — earlier intents shadow later ones. This
+# resolves ambiguity (e.g. "correlation heatmap" matches both
+# correlation_matrix and relationship_bivariate; we want heatmap).
+
+_INTENT_PATTERNS: List[tuple[str, re.Pattern]] = [
+    # Supervised regression FIRST so a query like "predict mpg using linear
+    # regression" matches regression on the word "regression" rather than
+    # falling into supervised_classification on "predict". Both gate
+    # model_comparison the same way so behavior is similar; the difference
+    # matters for the intent label / future task-type-specific chart picks.
+    (
+        "supervised_regression",
+        re.compile(
+            r"\b(regress(ion)?|forecast|estimate\s+the|r\s*[-_]?squared|rmse|"
+            r"linear\s+model)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "supervised_classification",
+        re.compile(
+            r"\b(predict|classif(y|ier|ication)|train\s+a?\s*(model|classifier)|"
+            r"confusion\s+matrix|roc\b|auc\b)",
+            re.IGNORECASE,
+        ),
+    ),
+    # Correlation matrix BEFORE bivariate so "correlation heatmap" → heatmap,
+    # not scatter.
+    (
+        "correlation_matrix",
+        re.compile(
+            r"\b(correlation\s+(matrix|heatmap)|heatmap|all\s+numeric|"
+            r"pairwise\s+correlation)",
+            re.IGNORECASE,
+        ),
+    ),
+    # "X by Y" pattern → boxplot of X grouped by Y. Checked BEFORE
+    # categorical_distribution so "price by region" doesn't get classified
+    # as just "show region counts".
+    (
+        "categorical_vs_numeric",
+        re.compile(
+            r"\b(\w+\s+by\s+\w+|compare\s+\w+\s+(across|by|between)|"
+            r"distribution\s+of\s+\w+\s+by\s+\w+|boxplot|box\s+plot)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "distribution_univariate",
+        re.compile(
+            r"\b(distribution|histogram|density|spread|frequenc(y|ies))",
+            re.IGNORECASE,
+        ),
+    ),
+    # Bivariate scatter — "X vs Y", "relate", "scatter". Avoid matching
+    # the word "correlation" alone (that goes to correlation_matrix above).
+    (
+        "relationship_bivariate",
+        re.compile(
+            r"\b(scatter|\w+\s+vs\.?\s+\w+|\w+\s+versus\s+\w+|"
+            r"relationship\s+between|relate(d|s)?\s+to)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "categorical_distribution",
+        re.compile(
+            r"\b(count\s+of|how\s+many|breakdown|value\s+counts|"
+            r"bar\s+chart\s+of|frequenc(y|ies)\s+of\s+\w+)",
+            re.IGNORECASE,
+        ),
+    ),
+]
+
+
+def _classify_intent(
+    question: str,
+    numeric: List[Dict[str, Any]],
+    categorical: List[Dict[str, Any]],
+) -> str:
+    """Classify a user question into one of 8 intent buckets.
+
+    Returns the FIRST matching intent (priority-ordered), or
+    ``generic_eda`` when nothing matches. ``generic_eda`` is the safe
+    default — it preserves the historical 5-chart behavior, so any
+    dataset that previously rendered will continue to render.
+
+    Note: ``numeric`` / ``categorical`` are passed in to support future
+    column-name extraction (PR #2). The current implementation only uses
+    them implicitly via the fallback chain.
+    """
+    if not question or len(question.strip()) < 3:
+        return "generic_eda"
+
+    for intent_name, pattern in _INTENT_PATTERNS:
+        if pattern.search(question):
+            return intent_name
+
+    return "generic_eda"
 
 
 # --- column classification helpers --------------------------------------
