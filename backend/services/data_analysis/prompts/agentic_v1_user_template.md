@@ -26,7 +26,21 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 - BLOCKED DataFrame methods (any use rejects the code): .apply, .agg, .map, .pipe, .query, .eval.
 - `.transform()` is ALLOWED only when NOT passed a lambda/callable — e.g. `.transform("mean")`, `.transform(np.sqrt)`, `scaler.transform(X)`, `pipeline.transform(X)`. Passing a lambda (e.g. `df.groupby(...).transform(lambda x: x - x.mean())`) is REJECTED — use the merge-based broadcast shown in the cookbook instead.
 - BLOCKED modules and builtins: os, subprocess, pathlib, sys, socket, urllib, requests, open, eval, exec, __import__.
-- Load the dataset yourself with `df = pd.read_csv("/workspace/{filename}", sep=None, engine="python")` as the first step. The `sep=None, engine="python"` auto-detects the delimiter (comma, semicolon, tab, pipe) — the profile above was built with the same sniffer, so using default `,` will produce `KeyError` on non-comma files. (pd.read_csv is allowed; only the BLOCKED list above is forbidden.)
+- Load the dataset with pandas-only delimiter detection, NOT `sep=None, engine="python"`. Use exactly this pattern:
+  ```python
+  _path = "/workspace/{filename}"
+  _df = None
+  for _try_sep in (",", ";", "\t", "|"):
+      try:
+          _hdr = pd.read_csv(_path, sep=_try_sep, nrows=0)
+          if len(_hdr.columns) > 1:
+              _df = pd.read_csv(_path, sep=_try_sep)
+              break
+      except Exception:
+          continue
+  df = _df if _df is not None else pd.read_csv(_path)
+  ```
+  Why this pattern instead of `sep=None, engine="python"`: the python sniffer treats digits/punctuation in numeric data as delimiters and corrupts SINGLE-COLUMN CSVs — e.g. `value\n0.24\n1.35` becomes `['Unnamed: 0', 'alue']` with the second column 100% null. The profile above was built with the same header-sniff detector, so column names will match. `open()` is BLOCKED — use only pandas as shown.
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
 - **Multi-aspect queries** (e.g. "do EDA AND model comparison", "plot distribution AND train classifiers") must pack every aspect into the ONE saved PNG via `plt.subplots(nrows, ncols, figsize=(W, H))`. Use a 2×2 or 2×3 grid with each subplot titled (e.g. "Survival by Sex", "Age distribution", "Model AUC comparison", "ROC curves"). Do NOT sacrifice EDA visuals just to show model results — if the user asked for both, both must be visible in the saved figure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.

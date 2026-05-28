@@ -393,9 +393,20 @@ def _load_once(data_file_path: str) -> Tuple[Any, bytes]:
     name_lower = data_file_path.lower()
 
     if name_lower.endswith(".csv"):
+        # Header-based delimiter detection (mirrors spike_harness._read_csv_smart).
+        # sep=None+engine='python' over-sniffs single-column files and
+        # corrupts the column name (e.g. 'value\n0.24' → ['Unnamed: 0', 'alue']).
+        from backend.services.data_analysis.spike_harness import (
+            _detect_csv_sep_from_header,
+        )
         for enc in ("utf-8", "utf-8-sig", "latin-1"):
             try:
-                df = pd.read_csv(BytesIO(raw), encoding=enc, sep=None, engine="python")
+                header_line = raw.split(b"\n", 1)[0].decode(enc, errors="replace")
+                detected_sep = _detect_csv_sep_from_header(header_line)
+                if detected_sep is None:
+                    df = pd.read_csv(BytesIO(raw), encoding=enc)
+                else:
+                    df = pd.read_csv(BytesIO(raw), encoding=enc, sep=detected_sep)
                 return df, raw
             except UnicodeDecodeError:
                 continue
