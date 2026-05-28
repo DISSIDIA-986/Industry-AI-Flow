@@ -1,0 +1,482 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 1020" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="crow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+      <path d="M0,6 L12,0 M0,6 L12,6 M0,6 L12,12" stroke="#475569" stroke-width="1.3" fill="none"/>
+    </marker>
+    <filter id="sh" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1420" height="1020" fill="#ffffff"/>
+  <text x="40" y="40" font-size="22" font-weight="700" fill="#0f172a">Industry AI Flow — Database ERD</text>
+  <text x="40" y="60" font-size="12" fill="#64748b">PostgreSQL 14+ with pgvector · 19 tables · 3 logical groups</text>
+  <rect x="20" y="70" width="580" height="880" fill="#eff6ff" stroke="#2563eb" stroke-width="1" stroke-dasharray="6,4" rx="8" opacity="0.55"/>
+  <text x="32" y="88" font-size="12" font-weight="700" fill="#2563eb" letter-spacing="1">Documents &amp; RAG</text>
+  <rect x="790" y="70" width="580" height="570" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1" stroke-dasharray="6,4" rx="8" opacity="0.55"/>
+  <text x="802" y="88" font-size="12" font-weight="700" fill="#7c3aed" letter-spacing="1">Prompt Management &amp; A/B Testing</text>
+  <rect x="310" y="670" width="1100" height="280" fill="#ecfdf5" stroke="#059669" stroke-width="1" stroke-dasharray="6,4" rx="8" opacity="0.55"/>
+  <text x="322" y="688" font-size="12" font-weight="700" fill="#059669" letter-spacing="1">LLM Ops · Feedback · Memory</text>
+  <rect x="40" y="80" width="240" height="194" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="40" y="80" width="240" height="32" rx="6" fill="#2563eb"/>
+  <rect x="40" y="106" width="240" height="6" fill="#2563eb"/>
+  <text x="52" y="100" font-size="13" font-weight="700" fill="#ffffff">documents</text>
+  <rect x="40" y="112" width="240" height="22" fill="#f8fafc"/>
+  <rect x="46" y="116" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="63" y="127" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="86" y="127" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="270" y="127" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="86" y="149" font-size="11" fill="#0f172a">filename</text>
+  <text x="270" y="149" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="40" y="156" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="171" font-size="11" fill="#0f172a">filepath</text>
+  <text x="270" y="171" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="86" y="193" font-size="11" fill="#0f172a">chunk_count</text>
+  <text x="270" y="193" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="40" y="200" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="215" font-size="11" fill="#0f172a">size_bytes</text>
+  <text x="270" y="215" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">BIGINT</text>
+  <text x="86" y="237" font-size="11" fill="#0f172a">created_at</text>
+  <text x="270" y="237" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TIMESTAMP</text>
+  <rect x="40" y="244" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="259" font-size="11" fill="#0f172a">updated_at</text>
+  <text x="270" y="259" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TIMESTAMP</text>
+  <rect x="330" y="40" width="260" height="172" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="330" y="40" width="260" height="32" rx="6" fill="#2563eb"/>
+  <rect x="330" y="66" width="260" height="6" fill="#2563eb"/>
+  <text x="342" y="60" font-size="13" font-weight="700" fill="#ffffff">document_chunks</text>
+  <rect x="330" y="72" width="260" height="22" fill="#f8fafc"/>
+  <rect x="336" y="76" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="353" y="87" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="376" y="87" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="580" y="87" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">SERIAL</text>
+  <rect x="336" y="98" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="353" y="109" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="376" y="109" font-size="11" fill="#0f172a">doc_id</text>
+  <text x="580" y="109" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="330" y="116" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="131" font-size="11" fill="#0f172a">chunk_id</text>
+  <text x="580" y="131" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <text x="376" y="153" font-size="11" fill="#0f172a">content</text>
+  <text x="580" y="153" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="330" y="160" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="175" font-size="11" fill="#0f172a">embedding</text>
+  <text x="580" y="175" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">vector(768)</text>
+  <text x="376" y="197" font-size="11" fill="#0f172a">created_at</text>
+  <text x="580" y="197" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TIMESTAMP</text>
+  <rect x="330" y="240" width="260" height="172" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="330" y="240" width="260" height="32" rx="6" fill="#2563eb"/>
+  <rect x="330" y="266" width="260" height="6" fill="#2563eb"/>
+  <text x="342" y="260" font-size="13" font-weight="700" fill="#ffffff">document_profiles</text>
+  <rect x="330" y="272" width="260" height="22" fill="#f8fafc"/>
+  <rect x="336" y="276" width="34" height="14" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="353" y="287" font-size="9" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="376" y="287" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">doc_id</text>
+  <text x="580" y="287" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="376" y="309" font-size="11" fill="#0f172a">filename</text>
+  <text x="580" y="309" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="330" y="316" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="331" font-size="11" fill="#0f172a">summary</text>
+  <text x="580" y="331" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="376" y="353" font-size="11" fill="#0f172a">outline</text>
+  <text x="580" y="353" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <rect x="330" y="360" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="375" font-size="11" fill="#0f172a">keywords</text>
+  <text x="580" y="375" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <text x="376" y="397" font-size="11" fill="#0f172a">chunk_count</text>
+  <text x="580" y="397" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="40" y="300" width="240" height="172" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="40" y="300" width="240" height="32" rx="6" fill="#2563eb"/>
+  <rect x="40" y="326" width="240" height="6" fill="#2563eb"/>
+  <text x="52" y="320" font-size="13" font-weight="700" fill="#ffffff">document_versions</text>
+  <rect x="40" y="332" width="240" height="22" fill="#f8fafc"/>
+  <rect x="46" y="336" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="63" y="347" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="86" y="347" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="270" y="347" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="46" y="358" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="63" y="369" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="86" y="369" font-size="11" fill="#0f172a">doc_id</text>
+  <text x="270" y="369" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="40" y="376" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="391" font-size="11" fill="#0f172a">version</text>
+  <text x="270" y="391" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <text x="86" y="413" font-size="11" fill="#0f172a">filename</text>
+  <text x="270" y="413" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="40" y="420" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="435" font-size="11" fill="#0f172a">operation</text>
+  <text x="270" y="435" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <text x="86" y="457" font-size="11" fill="#0f172a">is_active</text>
+  <text x="270" y="457" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">BOOLEAN</text>
+  <rect x="330" y="440" width="260" height="150" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="330" y="440" width="260" height="32" rx="6" fill="#2563eb"/>
+  <rect x="330" y="466" width="260" height="6" fill="#2563eb"/>
+  <text x="342" y="460" font-size="13" font-weight="700" fill="#ffffff">document_quality_scores</text>
+  <rect x="330" y="472" width="260" height="22" fill="#f8fafc"/>
+  <rect x="336" y="476" width="34" height="14" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="353" y="487" font-size="9" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="376" y="487" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">doc_id</text>
+  <text x="580" y="487" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="336" y="498" width="34" height="14" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="353" y="509" font-size="9" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="376" y="509" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">chunk_id</text>
+  <text x="580" y="509" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="330" y="516" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="531" font-size="11" fill="#0f172a">quality_score</text>
+  <text x="580" y="531" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">FLOAT</text>
+  <text x="376" y="553" font-size="11" fill="#0f172a">helpful_count</text>
+  <text x="580" y="553" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="330" y="560" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="575" font-size="11" fill="#0f172a">not_helpful_count</text>
+  <text x="580" y="575" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="40" y="500" width="240" height="172" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="40" y="500" width="240" height="32" rx="6" fill="#2563eb"/>
+  <rect x="40" y="526" width="240" height="6" fill="#2563eb"/>
+  <text x="52" y="520" font-size="13" font-weight="700" fill="#ffffff">document_operations_log</text>
+  <rect x="40" y="532" width="240" height="22" fill="#f8fafc"/>
+  <rect x="46" y="536" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="63" y="547" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="86" y="547" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="270" y="547" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <text x="86" y="569" font-size="11" fill="#0f172a">doc_id</text>
+  <text x="270" y="569" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="40" y="576" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="591" font-size="11" fill="#0f172a">operation</text>
+  <text x="270" y="591" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <text x="86" y="613" font-size="11" fill="#0f172a">filename</text>
+  <text x="270" y="613" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="40" y="620" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="635" font-size="11" fill="#0f172a">status</text>
+  <text x="270" y="635" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <text x="86" y="657" font-size="11" fill="#0f172a">error_message</text>
+  <text x="270" y="657" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="40" y="700" width="240" height="172" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="40" y="700" width="240" height="32" rx="6" fill="#2563eb"/>
+  <rect x="40" y="726" width="240" height="6" fill="#2563eb"/>
+  <text x="52" y="720" font-size="13" font-weight="700" fill="#ffffff">uploaded_documents_index</text>
+  <rect x="40" y="732" width="240" height="22" fill="#f8fafc"/>
+  <rect x="46" y="736" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="63" y="747" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="86" y="747" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="270" y="747" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(64)</text>
+  <text x="86" y="769" font-size="11" fill="#0f172a">tenant_id</text>
+  <text x="270" y="769" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <rect x="40" y="776" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="791" font-size="11" fill="#0f172a">original_filename</text>
+  <text x="270" y="791" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="86" y="813" font-size="11" fill="#0f172a">file_path</text>
+  <text x="270" y="813" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="40" y="820" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="835" font-size="11" fill="#0f172a">mime_type</text>
+  <text x="270" y="835" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="86" y="857" font-size="11" fill="#0f172a">status</text>
+  <text x="270" y="857" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(32)</text>
+  <rect x="810" y="80" width="240" height="216" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="810" y="80" width="240" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="810" y="106" width="240" height="6" fill="#7c3aed"/>
+  <text x="822" y="100" font-size="13" font-weight="700" fill="#ffffff">prompts</text>
+  <rect x="810" y="112" width="240" height="22" fill="#f8fafc"/>
+  <rect x="816" y="116" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="833" y="127" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="856" y="127" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1040" y="127" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="816" y="138" width="34" height="14" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="833" y="149" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="856" y="149" font-size="11" fill="#0f172a">name</text>
+  <text x="1040" y="149" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="810" y="156" width="240" height="22" fill="#f8fafc"/>
+  <rect x="816" y="160" width="34" height="14" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="833" y="171" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="856" y="171" font-size="11" fill="#0f172a">category</text>
+  <text x="1040" y="171" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(100)</text>
+  <text x="856" y="193" font-size="11" fill="#0f172a">version</text>
+  <text x="1040" y="193" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <rect x="810" y="200" width="240" height="22" fill="#f8fafc"/>
+  <text x="856" y="215" font-size="11" fill="#0f172a">content</text>
+  <text x="1040" y="215" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="856" y="237" font-size="11" fill="#0f172a">variables</text>
+  <text x="1040" y="237" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <rect x="810" y="244" width="240" height="22" fill="#f8fafc"/>
+  <text x="856" y="259" font-size="11" fill="#0f172a">is_active</text>
+  <text x="1040" y="259" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">BOOLEAN</text>
+  <text x="856" y="281" font-size="11" fill="#0f172a">performance_score</text>
+  <text x="1040" y="281" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <rect x="1100" y="40" width="250" height="150" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="1100" y="40" width="250" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="1100" y="66" width="250" height="6" fill="#7c3aed"/>
+  <text x="1112" y="60" font-size="13" font-weight="700" fill="#ffffff">prompt_versions</text>
+  <rect x="1100" y="72" width="250" height="22" fill="#f8fafc"/>
+  <rect x="1106" y="76" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="1123" y="87" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="1146" y="87" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1340" y="87" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1106" y="98" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="1123" y="109" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="1146" y="109" font-size="11" fill="#0f172a">prompt_id</text>
+  <text x="1340" y="109" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1100" y="116" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="131" font-size="11" fill="#0f172a">version</text>
+  <text x="1340" y="131" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <text x="1146" y="153" font-size="11" fill="#0f172a">content</text>
+  <text x="1340" y="153" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="1100" y="160" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="175" font-size="11" fill="#0f172a">performance_metrics</text>
+  <text x="1340" y="175" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <rect x="1100" y="210" width="250" height="172" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="1100" y="210" width="250" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="1100" y="236" width="250" height="6" fill="#7c3aed"/>
+  <text x="1112" y="230" font-size="13" font-weight="700" fill="#ffffff">prompt_usage_logs</text>
+  <rect x="1100" y="242" width="250" height="22" fill="#f8fafc"/>
+  <rect x="1106" y="246" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="1123" y="257" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="1146" y="257" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1340" y="257" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1106" y="268" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="1123" y="279" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="1146" y="279" font-size="11" fill="#0f172a">prompt_id</text>
+  <text x="1340" y="279" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1100" y="286" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="301" font-size="11" fill="#0f172a">session_id</text>
+  <text x="1340" y="301" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="1146" y="323" font-size="11" fill="#0f172a">execution_time_ms</text>
+  <text x="1340" y="323" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="1100" y="330" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="345" font-size="11" fill="#0f172a">success</text>
+  <text x="1340" y="345" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">BOOLEAN</text>
+  <text x="1146" y="367" font-size="11" fill="#0f172a">tokens_used</text>
+  <text x="1340" y="367" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <rect x="1100" y="380" width="250" height="106" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="1100" y="380" width="250" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="1100" y="406" width="250" height="6" fill="#7c3aed"/>
+  <text x="1112" y="400" font-size="13" font-weight="700" fill="#ffffff">prompt_tag_relations</text>
+  <rect x="1100" y="412" width="250" height="22" fill="#f8fafc"/>
+  <rect x="1106" y="416" width="34" height="14" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="1123" y="427" font-size="9" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="1146" y="427" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">prompt_id</text>
+  <text x="1340" y="427" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1106" y="438" width="34" height="14" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="1123" y="449" font-size="9" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="1146" y="449" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">tag_id</text>
+  <text x="1340" y="449" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1100" y="456" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="471" font-size="11" fill="#0f172a">created_at</text>
+  <text x="1340" y="471" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TIMESTAMP</text>
+  <rect x="1100" y="510" width="250" height="128" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="1100" y="510" width="250" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="1100" y="536" width="250" height="6" fill="#7c3aed"/>
+  <text x="1112" y="530" font-size="13" font-weight="700" fill="#ffffff">prompt_tags</text>
+  <rect x="1100" y="542" width="250" height="22" fill="#f8fafc"/>
+  <rect x="1106" y="546" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="1123" y="557" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="1146" y="557" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1340" y="557" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="1106" y="568" width="34" height="14" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="1123" y="579" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="1146" y="579" font-size="11" fill="#0f172a">name</text>
+  <text x="1340" y="579" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(100)</text>
+  <rect x="1100" y="586" width="250" height="22" fill="#f8fafc"/>
+  <text x="1146" y="601" font-size="11" fill="#0f172a">description</text>
+  <text x="1340" y="601" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="1146" y="623" font-size="11" fill="#0f172a">color</text>
+  <text x="1340" y="623" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(7)</text>
+  <rect x="810" y="380" width="240" height="194" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="810" y="380" width="240" height="32" rx="6" fill="#7c3aed"/>
+  <rect x="810" y="406" width="240" height="6" fill="#7c3aed"/>
+  <text x="822" y="400" font-size="13" font-weight="700" fill="#ffffff">prompt_experiments</text>
+  <rect x="810" y="412" width="240" height="22" fill="#f8fafc"/>
+  <rect x="816" y="416" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="833" y="427" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="856" y="427" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1040" y="427" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="816" y="438" width="34" height="14" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="833" y="449" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="856" y="449" font-size="11" fill="#0f172a">name</text>
+  <text x="1040" y="449" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="810" y="456" width="240" height="22" fill="#f8fafc"/>
+  <rect x="816" y="460" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="833" y="471" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="856" y="471" font-size="11" fill="#0f172a">prompt_a_id</text>
+  <text x="1040" y="471" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="816" y="482" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="833" y="493" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="856" y="493" font-size="11" fill="#0f172a">prompt_b_id</text>
+  <text x="1040" y="493" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="810" y="500" width="240" height="22" fill="#f8fafc"/>
+  <rect x="816" y="504" width="34" height="14" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="833" y="515" font-size="9" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="856" y="515" font-size="11" fill="#0f172a">winner_prompt_id</text>
+  <text x="1040" y="515" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <text x="856" y="537" font-size="11" fill="#0f172a">traffic_split</text>
+  <text x="1040" y="537" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <rect x="810" y="544" width="240" height="22" fill="#f8fafc"/>
+  <text x="856" y="559" font-size="11" fill="#0f172a">sample_size</text>
+  <text x="1040" y="559" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">BIGINT</text>
+  <rect x="620" y="700" width="250" height="194" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="620" y="700" width="250" height="32" rx="6" fill="#059669"/>
+  <rect x="620" y="726" width="250" height="6" fill="#059669"/>
+  <text x="632" y="720" font-size="13" font-weight="700" fill="#ffffff">llm_usage_logs</text>
+  <rect x="620" y="732" width="250" height="22" fill="#f8fafc"/>
+  <rect x="626" y="736" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="643" y="747" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="666" y="747" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="860" y="747" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <text x="666" y="769" font-size="11" fill="#0f172a">tenant_id</text>
+  <text x="860" y="769" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <rect x="620" y="776" width="250" height="22" fill="#f8fafc"/>
+  <text x="666" y="791" font-size="11" fill="#0f172a">provider</text>
+  <text x="860" y="791" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(64)</text>
+  <text x="666" y="813" font-size="11" fill="#0f172a">model</text>
+  <text x="860" y="813" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <rect x="620" y="820" width="250" height="22" fill="#f8fafc"/>
+  <text x="666" y="835" font-size="11" fill="#0f172a">total_tokens</text>
+  <text x="860" y="835" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">INTEGER</text>
+  <text x="666" y="857" font-size="11" fill="#0f172a">estimated_cost_usd</text>
+  <text x="860" y="857" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <rect x="620" y="864" width="250" height="22" fill="#f8fafc"/>
+  <text x="666" y="879" font-size="11" fill="#0f172a">trace_id</text>
+  <text x="860" y="879" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <rect x="900" y="700" width="240" height="150" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="900" y="700" width="240" height="32" rx="6" fill="#059669"/>
+  <rect x="900" y="726" width="240" height="6" fill="#059669"/>
+  <text x="912" y="720" font-size="13" font-weight="700" fill="#ffffff">llm_budget_policies</text>
+  <rect x="900" y="732" width="240" height="22" fill="#f8fafc"/>
+  <rect x="906" y="736" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="923" y="747" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="946" y="747" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">tenant_id</text>
+  <text x="1130" y="747" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <text x="946" y="769" font-size="11" fill="#0f172a">monthly_budget_usd</text>
+  <text x="1130" y="769" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <rect x="900" y="776" width="240" height="22" fill="#f8fafc"/>
+  <text x="946" y="791" font-size="11" fill="#0f172a">soft_limit_ratio</text>
+  <text x="1130" y="791" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <text x="946" y="813" font-size="11" fill="#0f172a">hard_limit_ratio</text>
+  <text x="1130" y="813" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">NUMERIC</text>
+  <rect x="900" y="820" width="240" height="22" fill="#f8fafc"/>
+  <text x="946" y="835" font-size="11" fill="#0f172a">policy_mode</text>
+  <text x="1130" y="835" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(32)</text>
+  <rect x="330" y="700" width="260" height="172" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="330" y="700" width="260" height="32" rx="6" fill="#059669"/>
+  <rect x="330" y="726" width="260" height="6" fill="#059669"/>
+  <text x="342" y="720" font-size="13" font-weight="700" fill="#ffffff">query_feedback</text>
+  <rect x="330" y="732" width="260" height="22" fill="#f8fafc"/>
+  <rect x="336" y="736" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="353" y="747" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="376" y="747" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="580" y="747" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <rect x="336" y="758" width="34" height="14" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="353" y="769" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="376" y="769" font-size="11" fill="#0f172a">query_id</text>
+  <text x="580" y="769" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="330" y="776" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="791" font-size="11" fill="#0f172a">question</text>
+  <text x="580" y="791" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="376" y="813" font-size="11" fill="#0f172a">answer</text>
+  <text x="580" y="813" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="330" y="820" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="835" font-size="11" fill="#0f172a">feedback_type</text>
+  <text x="580" y="835" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <text x="376" y="857" font-size="11" fill="#0f172a">retrieved_chunks</text>
+  <text x="580" y="857" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <rect x="330" y="880" width="260" height="150" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="330" y="880" width="260" height="32" rx="6" fill="#059669"/>
+  <rect x="330" y="906" width="260" height="6" fill="#059669"/>
+  <text x="342" y="900" font-size="13" font-weight="700" fill="#ffffff">query_optimization_log</text>
+  <rect x="330" y="912" width="260" height="22" fill="#f8fafc"/>
+  <rect x="336" y="916" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="353" y="927" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="376" y="927" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="580" y="927" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <text x="376" y="949" font-size="11" fill="#0f172a">query_id</text>
+  <text x="580" y="949" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="330" y="956" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="971" font-size="11" fill="#0f172a">original_query</text>
+  <text x="580" y="971" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <text x="376" y="993" font-size="11" fill="#0f172a">optimized_query</text>
+  <text x="580" y="993" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="330" y="1000" width="260" height="22" fill="#f8fafc"/>
+  <text x="376" y="1015" font-size="11" fill="#0f172a">improvement_score</text>
+  <text x="580" y="1015" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">FLOAT</text>
+  <rect x="1170" y="700" width="240" height="172" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="1170" y="700" width="240" height="32" rx="6" fill="#059669"/>
+  <rect x="1170" y="726" width="240" height="6" fill="#059669"/>
+  <text x="1182" y="720" font-size="13" font-weight="700" fill="#ffffff">conversation_memories</text>
+  <rect x="1170" y="732" width="240" height="22" fill="#f8fafc"/>
+  <rect x="1176" y="736" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="1193" y="747" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="1216" y="747" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">id</text>
+  <text x="1400" y="747" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">UUID</text>
+  <text x="1216" y="769" font-size="11" fill="#0f172a">session_id</text>
+  <text x="1400" y="769" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <rect x="1170" y="776" width="240" height="22" fill="#f8fafc"/>
+  <text x="1216" y="791" font-size="11" fill="#0f172a">user_id</text>
+  <text x="1400" y="791" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(255)</text>
+  <text x="1216" y="813" font-size="11" fill="#0f172a">memory_type</text>
+  <text x="1400" y="813" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(50)</text>
+  <rect x="1170" y="820" width="240" height="22" fill="#f8fafc"/>
+  <text x="1216" y="835" font-size="11" fill="#0f172a">content</text>
+  <text x="1400" y="835" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">JSONB</text>
+  <text x="1216" y="857" font-size="11" fill="#0f172a">embedding</text>
+  <text x="1400" y="857" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">vector(768)</text>
+  <rect x="40" y="880" width="240" height="106" rx="6" fill="#ffffff" stroke="#059669" stroke-width="1.2" filter="url(#sh)"/>
+  <rect x="40" y="880" width="240" height="32" rx="6" fill="#059669"/>
+  <rect x="40" y="906" width="240" height="6" fill="#059669"/>
+  <text x="52" y="900" font-size="13" font-weight="700" fill="#ffffff">schema_migrations</text>
+  <rect x="40" y="912" width="240" height="22" fill="#f8fafc"/>
+  <rect x="46" y="916" width="34" height="14" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="63" y="927" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="86" y="927" font-size="11" fill="#0f172a" font-weight="600" text-decoration="underline">version</text>
+  <text x="270" y="927" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">VARCHAR(128)</text>
+  <text x="86" y="949" font-size="11" fill="#0f172a">description</text>
+  <text x="270" y="949" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TEXT</text>
+  <rect x="40" y="956" width="240" height="22" fill="#f8fafc"/>
+  <text x="86" y="971" font-size="11" fill="#0f172a">applied_at</text>
+  <text x="270" y="971" font-size="10" fill="#64748b" text-anchor="end" font-family="ui-monospace,Menlo,monospace">TIMESTAMP</text>
+  <path d="M330,105.0 L305.0,105.0 L305.0,123.0 L280,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="291.0" y="98.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="305.0" y="108.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M330,283.0 L305.0,283.0 L305.0,123.0 L280,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="291.0" y="187.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="305.0" y="197.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">1:1</text>
+  <path d="M280,365.0 L160.0,365.0 L160.0,123.0 L40,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="146.0" y="228.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="160.0" y="238.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M460.0,440 L460.0,326.0 L460.0,326.0 L460.0,212" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="446.0" y="310.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="460.0" y="320.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">1:1</text>
+  <path d="M1100,105.0 L1075.0,105.0 L1075.0,123.0 L1050,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="1061.0" y="98.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="1075.0" y="108.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M1100,275.0 L1075.0,275.0 L1075.0,123.0 L1050,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="1061.0" y="183.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="1075.0" y="193.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M1100,423.0 L1075.0,423.0 L1075.0,123.0 L1050,123.0" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="1061.0" y="257.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="1075.0" y="267.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M1225.0,486 L1225.0,498.0 L1225.0,498.0 L1225.0,510" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="1211.0" y="482.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="1225.0" y="492.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M930.0,380 L930.0,338.0 L930.0,338.0 L930.0,296" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="916.0" y="322.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="930.0" y="332.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M930.0,380 L930.0,338.0 L930.0,338.0 L930.0,296" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="916.0" y="322.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="930.0" y="332.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <path d="M930.0,380 L930.0,338.0 L930.0,338.0 L930.0,296" fill="none" stroke="#475569" stroke-width="1.3" marker-start="url(#crow)" marker-end="url(#arrow)"/>
+  <rect x="916.0" y="322.0" width="28" height="14" rx="3" fill="#ffffff" opacity="0.95"/>
+  <text x="930.0" y="332.0" font-size="10" font-weight="600" fill="#475569" text-anchor="middle">N:1</text>
+  <rect x="810" y="956" width="580" height="36" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="822" y="966" width="34" height="16" rx="3" fill="#b45309" opacity="0.15"/>
+  <text x="839" y="978" font-size="10" font-weight="700" fill="#b45309" text-anchor="middle">PK</text>
+  <text x="862" y="978" font-size="10" fill="#475569">Primary Key</text>
+  <rect x="962" y="966" width="34" height="16" rx="3" fill="#2563eb" opacity="0.15"/>
+  <text x="979" y="978" font-size="10" font-weight="700" fill="#2563eb" text-anchor="middle">FK</text>
+  <text x="1002" y="978" font-size="10" fill="#475569">Foreign Key</text>
+  <rect x="1102" y="966" width="34" height="16" rx="3" fill="#7c3aed" opacity="0.15"/>
+  <text x="1119" y="978" font-size="10" font-weight="700" fill="#7c3aed" text-anchor="middle">PK/FK</text>
+  <text x="1142" y="978" font-size="10" fill="#475569">Composite / Shared</text>
+  <rect x="1242" y="966" width="34" height="16" rx="3" fill="#64748b" opacity="0.15"/>
+  <text x="1259" y="978" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">UK</text>
+  <text x="1282" y="978" font-size="10" fill="#475569">Unique Constraint</text>
+</svg>

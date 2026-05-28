@@ -46,6 +46,11 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
   print("ANALYSIS_SUMMARY_JSON=" + json.dumps(summary))
   ```
 - If the dataset cannot answer the question, set status="unanswerable", fill reason/suggestion, python_code=null.
+- **Reproducibility (mandatory):** Every source of randomness MUST be seeded so that running your code twice on the same dataset yields byte-identical results. This is non-negotiable — the system runs the same prompt + dataset multiple times and asserts deterministic output.
+  - As the SECOND line of your code (right after `import` statements), call `import numpy as np; np.random.seed(42); import random; random.seed(42)`.
+  - Every sklearn estimator that takes `random_state` MUST receive `random_state=42` (RandomForestClassifier, RandomForestRegressor, DecisionTreeClassifier, DecisionTreeRegressor, GradientBoostingClassifier, GradientBoostingRegressor, LogisticRegression with solver='liblinear'/'saga', KMeans, MiniBatchKMeans, TSNE, PCA with svd_solver='randomized', train_test_split, KFold, StratifiedKFold, cross_val_score).
+  - Any pandas sampling (`.sample(...)`) MUST pass `random_state=42`.
+  - Do NOT call `np.random.default_rng()` without a seed, and do NOT use `time.time()` or `os.urandom()` as a seed source.
 
 ## Substitution Cookbook (replacements for BLOCKED methods)
 
