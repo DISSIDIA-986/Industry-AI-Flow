@@ -262,28 +262,48 @@ def _build_combined_snippet(
 
 def _loader_block(ext: str) -> str:
     if ext == "csv":
-        # sep=None + engine="python" matches the metadata reader so
-        # semicolon/tab-delimited files (e.g. UCI wine-quality) parse
-        # into the same column shape the planner saw. Without this,
-        # the sandbox would see one giant string column and every
-        # chart template would fail on "column not found".
+        # Pandas-only delimiter sniff: try each candidate sep with nrows=0
+        # to read just the header, pick first sep yielding >1 column, fall
+        # back to default comma. open() is BLOCKED by the validator (strict
+        # mode), so we can't use a file-read helper here. This mirrors the
+        # agentic prompt's pattern so deterministic + agentic produce
+        # column-shape-compatible output. Falls back to comma for
+        # single-column files (sep=None+engine='python' would corrupt
+        # those — splits 'value\n0.24' into ['Unnamed: 0', 'alue']).
         return (
-            "try:\n"
-            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
-            "except UnicodeDecodeError:\n"
-            "    _df = _pd.read_csv(_DATA_PATH, sep=None, engine='python', encoding='latin-1')\n"
-            "except Exception:\n"
-            "    # Sniff failure — fall back to comma default.\n"
-            "    _df = _pd.read_csv(_DATA_PATH)\n"
+            "_df = None\n"
+            "for _try_sep in (',', ';', '\\t', '|'):\n"
+            "    try:\n"
+            "        _hdr = _pd.read_csv(_DATA_PATH, sep=_try_sep, nrows=0)\n"
+            "        if len(_hdr.columns) > 1:\n"
+            "            _df = _pd.read_csv(_DATA_PATH, sep=_try_sep)\n"
+            "            break\n"
+            "    except Exception:\n"
+            "        continue\n"
+            "if _df is None:\n"
+            "    try:\n"
+            "        _df = _pd.read_csv(_DATA_PATH)\n"
+            "    except UnicodeDecodeError:\n"
+            "        _df = _pd.read_csv(_DATA_PATH, encoding='latin-1')\n"
         )
     if ext in {"xlsx", "xls"}:
         return "_df = _pd.read_excel(_DATA_PATH)\n"
     if ext == "json":
         return "_df = _pd.read_json(_DATA_PATH)\n"
-    # Default: try CSV — matches extract_dataset_info's treatment of
-    # unknown extensions (it errors out up there, so we should rarely
-    # hit this).
-    return "_df = _pd.read_csv(_DATA_PATH, sep=None, engine='python')\n"
+    # Default: try CSV with same smart sniff.
+    return (
+        "_df = None\n"
+        "for _try_sep in (',', ';', '\\t', '|'):\n"
+        "    try:\n"
+        "        _hdr = _pd.read_csv(_DATA_PATH, sep=_try_sep, nrows=0)\n"
+        "        if len(_hdr.columns) > 1:\n"
+        "            _df = _pd.read_csv(_DATA_PATH, sep=_try_sep)\n"
+        "            break\n"
+        "    except Exception:\n"
+        "        continue\n"
+        "if _df is None:\n"
+        "    _df = _pd.read_csv(_DATA_PATH)\n"
+    )
 
 
 def _chart_block(idx: int, spec: Dict[str, Any]) -> List[str]:
