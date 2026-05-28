@@ -470,6 +470,57 @@ export default function SystemOverviewPage() {
             ]}
           />
         </div>
+
+        {/* System Architecture */}
+        <section className="mt-12" data-testid="system-architecture-section">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">System Architecture</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              C4 Container Diagram (Level 2) · Client → API Gateway → Orchestration → AI Runtime → Data &amp; Storage.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <img
+              src="/diagrams/system-architecture.svg"
+              alt="Industry AI Flow system architecture"
+              className="min-w-[1200px] w-full h-auto"
+            />
+          </div>
+        </section>
+
+        {/* Main Request Flow (Data Flow) */}
+        <section className="mt-12" data-testid="data-flow-section">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Main Request Flow</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              UML Activity Diagram · Frontend → Intent Classification → 10-Node Execution Pipeline → Response render.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <img
+              src="/diagrams/data-flow.svg"
+              alt="Industry AI Flow main request flow"
+              className="mx-auto max-w-[900px] w-full h-auto"
+            />
+          </div>
+        </section>
+
+        {/* Database ERD */}
+        <section className="mt-12" data-testid="database-erd-section">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Database Schema (ERD)</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              PostgreSQL 14+ with pgvector · 19 tables across Documents / RAG, Prompt Management, and LLM Ops.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <img
+              src="/diagrams/database-erd.svg"
+              alt="Industry AI Flow database ERD"
+              className="min-w-[1200px] w-full h-auto"
+            />
+          </div>
+        </section>
       </div>
     </div>
   )
