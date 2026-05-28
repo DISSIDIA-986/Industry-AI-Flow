@@ -49,6 +49,50 @@ _PROFILE_COL_ROW_TMPL = (
 )
 
 
+def _detect_csv_sep_from_header(header_line: str) -> Optional[str]:
+    """Pick a delimiter from the CSV header line, or None to default to comma.
+
+    Returns the most common candidate among `,`, `;`, `\\t`, `|`. If the
+    header has none of them (single-column file), returns None — caller
+    should default to `,` (engine='c'), NOT `sep=None, engine='python'`,
+    because the python sniffer aggressively treats digits/dots as
+    delimiters on single-column data and corrupts the column name
+    (e.g. `value\\n0.24...` is mis-parsed as 2 columns named
+    `['Unnamed: 0', 'alue']`). Demonstrated bug from 2026-05-28 eval.
+
+    Why a hand-rolled detector vs csv.Sniffer: csv.Sniffer in stdlib
+    also misfires on numeric-heavy single-column data. Header-based
+    delimiter counting is simpler and predictable.
+    """
+    if not header_line:
+        return None
+    counts = {",": 0, ";": 0, "\t": 0, "|": 0}
+    for ch in header_line:
+        if ch in counts:
+            counts[ch] += 1
+    best = max(counts, key=counts.get)
+    return best if counts[best] > 0 else None
+
+
+def _read_csv_smart(path: str, encoding: str) -> pd.DataFrame:
+    """Read a CSV by detecting the delimiter from the header line.
+
+    Replaces `pd.read_csv(path, sep=None, engine='python')` which over-
+    sniffs on single-column files. This function reads only the header
+    line first, counts standard delimiter candidates, then reads the
+    full file with an explicit sep — preserving PR #30's semicolon/tab
+    support while not corrupting single-column data.
+    """
+    with open(path, "r", encoding=encoding) as fh:
+        header_line = fh.readline()
+    sep = _detect_csv_sep_from_header(header_line)
+    if sep is None:
+        # Single-column file (no delimiter in header). Use default comma —
+        # works because there's nothing to split anyway.
+        return pd.read_csv(path, encoding=encoding)
+    return pd.read_csv(path, encoding=encoding, sep=sep)
+
+
 def load_dataframe(path: str) -> pd.DataFrame:
     """Load a CSV/XLSX into a pandas DataFrame.
 
@@ -63,10 +107,11 @@ def load_dataframe(path: str) -> pd.DataFrame:
     # _extract_dataset_info does not return the df itself; re-read it once more
     # for the caller. This is cheap (same file, cached OS page).
     if path.endswith(".csv"):
-        # same fallback strategy as the agent
+        # Header-based delimiter detection (was: sep=None, engine='python'
+        # which corrupts single-column files — see _detect_csv_sep_from_header).
         for enc in ("utf-8", "utf-8-sig", "latin-1"):
             try:
-                return pd.read_csv(path, encoding=enc, sep=None, engine="python")
+                return _read_csv_smart(path, encoding=enc)
             except UnicodeDecodeError:
                 continue
             except pd.errors.ParserError:
