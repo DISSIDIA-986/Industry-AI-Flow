@@ -1,5 +1,7 @@
 # 前端架构设计文档
 
+> 🌐 Language: **中文** · [English](./FRONTEND_ARCHITECTURE.en.md)
+
 ## 架构概述
 
 Industry AI Flow前端采用现代化的前后端分离架构，基于Next.js 14构建，提供高性能、可扩展的用户界面。
