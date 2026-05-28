@@ -461,6 +461,54 @@ def _read_grid_state() -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {"chart_count": 0, "raw": out}
 
 
+def _probe_chart_lightbox() -> dict[str, Any]:
+    """Verify fullscreen chart lightbox opens and ESC closes it.
+
+    Clicks the first available chart trigger, asserts the <dialog
+    data-testid="chart-lightbox"> is open, dispatches a cancel event
+    (simulates ESC on native dialog), and asserts it closes.
+    Returns {triggered, opened, closed_on_escape, counter}.
+    """
+    js = r"""
+(async () => {
+  const result = { triggered: false, opened: false, closed_on_escape: false, counter: "" };
+  const trigger =
+    document.querySelector('[data-testid="eda-chart-0-trigger"]') ||
+    document.querySelector('[data-testid="analysis-chart-trigger"]');
+  if (!trigger) return JSON.stringify({ ...result, error: "no_trigger_found" });
+  trigger.click();
+  result.triggered = true;
+
+  // wait up to 1s for dialog to enter :modal / have [open]
+  const start = Date.now();
+  let dlg = null;
+  while (Date.now() - start < 1000) {
+    dlg = document.querySelector('[data-testid="chart-lightbox"]');
+    if (dlg && dlg.hasAttribute('open')) break;
+    await new Promise(r => setTimeout(r, 50));
+  }
+  if (!dlg || !dlg.hasAttribute('open')) {
+    return JSON.stringify({ ...result, error: "dialog_did_not_open" });
+  }
+  result.opened = true;
+  const counter = document.querySelector('[data-testid="chart-lightbox-counter"]');
+  result.counter = counter ? (counter.textContent || "").trim() : "";
+
+  // simulate ESC via native cancel event on dialog
+  dlg.dispatchEvent(new Event('cancel', { bubbles: false, cancelable: true }));
+  await new Promise(r => setTimeout(r, 100));
+  const stillOpen = document.querySelector('[data-testid="chart-lightbox"][open]');
+  result.closed_on_escape = !stillOpen;
+  return JSON.stringify(result);
+})()
+"""
+    ok, out = _run_eval(js, timeout=15)
+    if not ok:
+        return {"triggered": False, "error": out}
+    parsed = _parse_agent_json_output(out)
+    return parsed if isinstance(parsed, dict) else {"triggered": False, "raw": out}
+
+
 def _read_viz_payload() -> dict[str, Any]:
     js = r"""
 (() => {
@@ -685,6 +733,21 @@ def _run_case(
                 f"only {result['eda_ok_count']} chart(s) rendered — "
                 "multi-chart EDA expected >= 3"
             )
+
+        # Fullscreen chart lightbox probe (click → open → ESC → close).
+        # Soft check: failures here surface as a warning, not a hard gate,
+        # because the legacy layouts don't have a trigger yet.
+        if grid_ok:
+            lb = _probe_chart_lightbox()
+            result["lightbox"] = lb
+            if not (lb.get("opened") and lb.get("closed_on_escape")):
+                result["lightbox_warning"] = (
+                    f"chart lightbox probe incomplete: "
+                    f"triggered={lb.get('triggered')} "
+                    f"opened={lb.get('opened')} "
+                    f"closed={lb.get('closed_on_escape')} "
+                    f"err={lb.get('error', '')}"
+                )
 
         if (
             done_ok
