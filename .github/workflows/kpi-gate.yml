@@ -40,6 +40,14 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_workflow
+      # Backend config asserts these are set (no fallback by design — see
+      # backend/config.py + CLAUDE.md). Without them, several tests fail at
+      # COLLECTION before any assertion runs. Values are CI-only dummies;
+      # the real demo uses a separate .env.
+      DEMO_USER_PASSWORD: ci-dummy-password-not-real
+      AUTH_JWT_SECRET: ci-dummy-jwt-secret-not-real-32-bytes-min
+      REQUIRE_USER_AUTH: "false"
+      REQUIRE_API_KEY: "false"
 
     steps:
       - name: Checkout
