@@ -411,3 +411,225 @@ def test_plan_is_json_serializable():
     ]
     plan = eda_plan_from_metadata(_metadata(cols))
     assert json.loads(json.dumps(plan)) == plan
+
+
+# --- intent classification (question-aware planner) ---------------------
+
+
+def _types_of(plan: Dict[str, Any]) -> set:
+    return {c["type"] for c in plan["eda"]["charts"]}
+
+
+def test_empty_question_classifies_generic_eda_with_all_charts():
+    cols = [
+        _numeric_col("a", std=2.0),
+        _numeric_col("b", std=1.0),
+        _numeric_col("c", std=3.0),
+        _categorical_col("d", unique=4),
+    ]
+    plan = eda_plan_from_metadata(_metadata(cols), user_question="")
+    assert plan["intent"] == "generic_eda"
+    # Full EDA suite: hist + scatter + heatmap + bar + boxplot all present
+    assert _types_of(plan) >= {"histogram", "scatter", "heatmap", "bar", "boxplot"}
+
+
+def test_distribution_intent_only_histogram():
+    cols = [
+        _numeric_col("price", std=2.0),
+        _numeric_col("sqft", std=3.0),
+        _categorical_col("region", unique=4),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="Show me the distribution of prices"
+    )
+    assert plan["intent"] == "distribution_univariate"
+    assert _types_of(plan) == {"histogram"}
+
+
+def test_correlation_intent_only_heatmap():
+    cols = [
+        _numeric_col("a", std=1.0),
+        _numeric_col("b", std=2.0),
+        _numeric_col("c", std=3.0),
+        _categorical_col("d", unique=3),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="Correlation heatmap for all numeric"
+    )
+    assert plan["intent"] == "correlation_matrix"
+    assert _types_of(plan) == {"heatmap"}
+
+
+def test_categorical_vs_numeric_intent_only_boxplot():
+    cols = [
+        _numeric_col("price", std=2.0),
+        _categorical_col("region", unique=4),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="Price by region"
+    )
+    assert plan["intent"] == "categorical_vs_numeric"
+    assert _types_of(plan) == {"boxplot"}
+
+
+def test_bivariate_intent_only_scatter():
+    cols = [
+        _numeric_col("price", std=2.0),
+        _numeric_col("sqft", std=3.0),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="price vs sqft"
+    )
+    assert plan["intent"] == "relationship_bivariate"
+    assert _types_of(plan) == {"scatter"}
+
+
+def test_supervised_classification_enables_model_comparison():
+    cols = [
+        _numeric_col("age", std=10.0),
+        _numeric_col("income", std=20.0),
+        _categorical_col("survived", unique=2),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols, rows=200),
+        user_question="Predict whether the passenger survived",
+    )
+    assert plan["intent"] == "supervised_classification"
+    # No EDA charts for pure supervised intent
+    assert plan["eda"]["charts"] == []
+
+
+def test_eda_only_intent_suppresses_model_comparison():
+    """When intent is histogram-only, even if a target column is detectable,
+    model_comparison must be suppressed (don't burn sandbox training)."""
+    cols = [
+        _numeric_col("feature_1", std=10.0),
+        _numeric_col("feature_2", std=20.0),
+        _categorical_col("target", unique=2),  # target-name pattern match
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols, rows=1000),
+        user_question="Show distribution of feature_1",
+    )
+    assert plan["intent"] == "distribution_univariate"
+    assert plan["model_comparison"]["enabled"] is False
+    assert "does not request modeling" in plan["model_comparison"]["reason"]
+
+
+def test_unrecognized_question_falls_back_to_generic_eda():
+    cols = [
+        _numeric_col("a", std=1.0),
+        _numeric_col("b", std=2.0),
+        _categorical_col("c", unique=3),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="tell me a joke about pandas"
+    )
+    assert plan["intent"] == "generic_eda"
+    # generic_eda preserves the full chart suite
+    assert "histogram" in _types_of(plan)
+
+
+def test_intent_classification_is_deterministic():
+    """Same question → same intent across calls. Critical for the LLM
+    response cache in agentic_loop.py (cache key includes plan output)."""
+    cols = [_numeric_col("x", std=1.0), _numeric_col("y", std=2.0)]
+    q = "Compare x vs y in a scatter"
+    p1 = eda_plan_from_metadata(_metadata(cols), user_question=q)
+    p2 = eda_plan_from_metadata(_metadata(cols), user_question=q)
+    assert p1["intent"] == p2["intent"]
+    assert p1["eda"]["charts"] == p2["eda"]["charts"]
+
+
+def test_correlation_keyword_shadows_bivariate():
+    """Priority: 'correlation heatmap' must classify as correlation_matrix,
+    not relationship_bivariate (heatmap, not scatter)."""
+    cols = [
+        _numeric_col("a", std=1.0),
+        _numeric_col("b", std=2.0),
+        _numeric_col("c", std=3.0),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="show correlation matrix"
+    )
+    assert plan["intent"] == "correlation_matrix"
+
+
+def test_regression_keyword_shadows_classification():
+    """Priority: 'predict mpg using linear regression' must classify as
+    supervised_regression, not supervised_classification."""
+    from backend.services.data_analysis.chart_plan import _classify_intent
+
+    assert (
+        _classify_intent("Predict mpg using linear regression", [], [])
+        == "supervised_regression"
+    )
+    assert (
+        _classify_intent("Forecast next month sales", [], [])
+        == "supervised_regression"
+    )
+    # No regression keywords → falls to classification
+    assert (
+        _classify_intent("Predict whether the passenger survived", [], [])
+        == "supervised_classification"
+    )
+
+
+def test_eda_intent_falls_back_to_generic_when_no_charts():
+    """Adversarial-review regression: 'show histogram' on a text-only
+    dataset previously matched distribution_univariate intent → 0 charts.
+    With fallback, plan must render at least 1 chart (from generic_eda's
+    bar picker on the categorical column)."""
+    cols = [
+        _categorical_col("city", unique=5),
+        _categorical_col("note_label", unique=15),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="Show me a histogram"
+    )
+    assert plan["intent"].startswith("generic_eda_fallback_from_")
+    assert "distribution_univariate" in plan["intent"]
+    assert len(plan["eda"]["charts"]) >= 1
+    # bar chart should be in there since categorical cols are available
+    assert "bar" in _types_of(plan)
+
+
+def test_supervised_intent_keeps_empty_eda_no_fallback():
+    """supervised_classification legitimately produces 0 EDA charts —
+    model_comparison stage carries the work. Must NOT trigger the empty
+    fallback (would add irrelevant charts to a model-comparison flow)."""
+    cols = [
+        _numeric_col("age", std=10.0),
+        _numeric_col("income", std=20.0),
+        _categorical_col("survived", unique=2),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols, rows=200),
+        user_question="Predict whether the passenger survived",
+    )
+    assert plan["intent"] == "supervised_classification"
+    assert plan["eda"]["charts"] == []
+    # The model_comparison gate is generic_eda's behavior — preserved
+    assert plan["model_comparison"]["enabled"] is True
+
+
+def test_generic_eda_with_no_usable_columns_does_not_loop():
+    """generic_eda with no usable cols must NOT recurse into itself as
+    a fallback. Empty plan is the correct outcome here."""
+    cols = [
+        # All columns are id-like → filtered out of both numeric + categorical
+        {
+            "name": "user_id",
+            "type": "int64",
+            "role": "numeric",
+            "non_null_count": 100,
+            "null_count": 0,
+            "unique_values": 100,
+            "is_id_like": True,
+            "std": 30.0,
+            "mean": 50.0, "min": 0, "max": 99,
+        },
+    ]
+    plan = eda_plan_from_metadata(_metadata(cols), user_question="")
+    assert plan["intent"] == "generic_eda"  # not the fallback string
+    assert plan["eda"]["charts"] == []
