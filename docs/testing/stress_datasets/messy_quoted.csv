@@ -1,0 +1,6 @@
+name,description,score,note
+"Smith, John","Senior dev, 10+ years",95,"line1
+line2"
+"O'Brien, Mary","Engineer (cloud)",88,empty
+"Wang, Wei","数据工程师",92,fine
+Plain Name,No quotes,77,plain
