@@ -129,12 +129,15 @@ class TestChartExecutorLoaderSniff:
 
         code = _loader_block("csv")
 
-        # As of fix/csv-sniff-single-column, sep is detected by counting
-        # delimiters in the header line (sep=None+engine='python' over-
-        # sniffed single-column CSVs and corrupted column names). Loader
-        # must include the _sniff_sep helper that examines the header.
-        assert "_sniff_sep" in code, (
-            "csv loader must include the _sniff_sep header-based detector"
+        # As of fix/csv-sniff-single-column, sep is detected by trying
+        # candidates with nrows=0 and picking the first that yields >1
+        # column (sep=None+engine='python' over-sniffed single-column
+        # CSVs and corrupted column names). The previous header-read
+        # approach was reverted because the validator BLOCKS open().
+        # Must include the multi-sep try loop with nrows=0:
+        assert "nrows=0" in code, (
+            "csv loader must use nrows=0 to peek the header without "
+            "reading the full file"
         )
         # Must consider all four standard delimiters
         for delim_repr in ("','", "';'", "'\\t'", "'|'"):
@@ -142,9 +145,14 @@ class TestChartExecutorLoaderSniff:
                 f"csv loader must include delimiter candidate {delim_repr}"
             )
         # Must fall back to default comma when no delimiter found
-        assert "if _sep" in code, (
-            "csv loader must branch on sniff result (use sep when found, "
-            "default otherwise)"
+        assert "_df is None" in code, (
+            "csv loader must fall back to default read_csv when no "
+            "multi-column sep is found"
+        )
+        # MUST NOT use open() — validator blocks it in strict mode
+        assert "open(" not in code, (
+            "csv loader must not use open() — validator blocks it; "
+            "use pandas-only sniff instead"
         )
 
     def test_non_csv_loader_unaffected(self):

@@ -262,30 +262,29 @@ def _build_combined_snippet(
 
 def _loader_block(ext: str) -> str:
     if ext == "csv":
-        # Header-sniff (mirrors spike_harness._detect_csv_sep_from_header):
-        # peek at first line, count standard delimiters, use the most
-        # common one. Falls back to default comma for single-column files
-        # (sep=None+engine='python' corrupts those — splits 'value\n0.24'
-        # into ['Unnamed: 0', 'alue']).
+        # Pandas-only delimiter sniff: try each candidate sep with nrows=0
+        # to read just the header, pick first sep yielding >1 column, fall
+        # back to default comma. open() is BLOCKED by the validator (strict
+        # mode), so we can't use a file-read helper here. This mirrors the
+        # agentic prompt's pattern so deterministic + agentic produce
+        # column-shape-compatible output. Falls back to comma for
+        # single-column files (sep=None+engine='python' would corrupt
+        # those — splits 'value\n0.24' into ['Unnamed: 0', 'alue']).
         return (
-            "def _sniff_sep(_path):\n"
-            "    for _enc in ('utf-8', 'utf-8-sig', 'latin-1'):\n"
-            "        try:\n"
-            "            with open(_path, 'r', encoding=_enc) as _fh:\n"
-            "                _hdr = _fh.readline()\n"
+            "_df = None\n"
+            "for _try_sep in (',', ';', '\\t', '|'):\n"
+            "    try:\n"
+            "        _hdr = _pd.read_csv(_DATA_PATH, sep=_try_sep, nrows=0)\n"
+            "        if len(_hdr.columns) > 1:\n"
+            "            _df = _pd.read_csv(_DATA_PATH, sep=_try_sep)\n"
             "            break\n"
-            "        except UnicodeDecodeError:\n"
-            "            continue\n"
-            "    else:\n"
-            "        return None, 'utf-8'\n"
-            "    _counts = {',':0, ';':0, '\\t':0, '|':0}\n"
-            "    for _c in _hdr:\n"
-            "        if _c in _counts:\n"
-            "            _counts[_c] += 1\n"
-            "    _best = max(_counts, key=_counts.get)\n"
-            "    return (_best if _counts[_best] > 0 else None), _enc\n"
-            "_sep, _enc = _sniff_sep(_DATA_PATH)\n"
-            "_df = _pd.read_csv(_DATA_PATH, encoding=_enc, sep=_sep) if _sep else _pd.read_csv(_DATA_PATH, encoding=_enc)\n"
+            "    except Exception:\n"
+            "        continue\n"
+            "if _df is None:\n"
+            "    try:\n"
+            "        _df = _pd.read_csv(_DATA_PATH)\n"
+            "    except UnicodeDecodeError:\n"
+            "        _df = _pd.read_csv(_DATA_PATH, encoding='latin-1')\n"
         )
     if ext in {"xlsx", "xls"}:
         return "_df = _pd.read_excel(_DATA_PATH)\n"
@@ -293,24 +292,17 @@ def _loader_block(ext: str) -> str:
         return "_df = _pd.read_json(_DATA_PATH)\n"
     # Default: try CSV with same smart sniff.
     return (
-        "def _sniff_sep(_path):\n"
-        "    for _enc in ('utf-8', 'utf-8-sig', 'latin-1'):\n"
-        "        try:\n"
-        "            with open(_path, 'r', encoding=_enc) as _fh:\n"
-        "                _hdr = _fh.readline()\n"
+        "_df = None\n"
+        "for _try_sep in (',', ';', '\\t', '|'):\n"
+        "    try:\n"
+        "        _hdr = _pd.read_csv(_DATA_PATH, sep=_try_sep, nrows=0)\n"
+        "        if len(_hdr.columns) > 1:\n"
+        "            _df = _pd.read_csv(_DATA_PATH, sep=_try_sep)\n"
         "            break\n"
-        "        except UnicodeDecodeError:\n"
-        "            continue\n"
-        "    else:\n"
-        "        return None, 'utf-8'\n"
-        "    _counts = {',':0, ';':0, '\\t':0, '|':0}\n"
-        "    for _c in _hdr:\n"
-        "        if _c in _counts:\n"
-        "            _counts[_c] += 1\n"
-        "    _best = max(_counts, key=_counts.get)\n"
-        "    return (_best if _counts[_best] > 0 else None), _enc\n"
-        "_sep, _enc = _sniff_sep(_DATA_PATH)\n"
-        "_df = _pd.read_csv(_DATA_PATH, encoding=_enc, sep=_sep) if _sep else _pd.read_csv(_DATA_PATH, encoding=_enc)\n"
+        "    except Exception:\n"
+        "        continue\n"
+        "if _df is None:\n"
+        "    _df = _pd.read_csv(_DATA_PATH)\n"
     )
 
 
