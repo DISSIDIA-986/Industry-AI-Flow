@@ -28,3 +28,13 @@ PyJWT==2.9.0
 cryptography==43.0.1
 prometheus-fastapi-instrumentator==6.1.0
 requests==2.31.0
+# LangChain + LangGraph: imported by backend/services/intent_classification/*
+# and backend/tools/data_analysis.py. Three test modules in test-release-gate
+# fail at collection without these:
+#   - tests/unit/test_intent_workflow_dispatch_runtime.py
+#     (needs langchain_core AND langgraph.checkpoint.memory)
+#   - tests/unit/test_langchain_compat_gateway.py
+#     (needs langchain_core.messages)
+# Pinned to match requirements/lock/py313-capstone.txt.
+langchain-core==0.3.83
+langgraph==0.2.76

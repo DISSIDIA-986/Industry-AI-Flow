@@ -140,20 +140,39 @@ async def test_documents_upload_then_list_returns_document_for_same_tenant():
         )
         assert upload.status_code == 200
 
-        tenant_a_docs = await client.get(
-            "/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_a}
-        )
+        # Upload returns immediately with status='processing' — vectorization
+        # runs in an executor (see backend/main.py:upload_document). Poll
+        # until terminal state to avoid CI flake; on a cold model cache the
+        # embed step can take 30+s. Both 'processed' (happy path) and
+        # 'failed' (terminal — assertion below catches that) end the wait.
+        import asyncio as _asyncio
+        tenant_a_docs = None
+        for _attempt in range(60):  # ~60s budget
+            tenant_a_docs = await client.get(
+                "/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_a}
+            )
+            payload = tenant_a_docs.json() if tenant_a_docs.status_code == 200 else []
+            if (
+                isinstance(payload, list)
+                and len(payload) == 1
+                and payload[0].get("status") in {"processed", "failed"}
+            ):
+                break
+            await _asyncio.sleep(1.0)
+
         tenant_b_docs = await client.get(
             "/api/v1/documents", headers={**_AUTH, "X-Tenant-ID": tenant_b}
         )
 
-    assert tenant_a_docs.status_code == 200
+    assert tenant_a_docs is not None and tenant_a_docs.status_code == 200
     docs_payload = tenant_a_docs.json()
     assert isinstance(docs_payload, list)
     assert len(docs_payload) == 1
     assert docs_payload[0]["name"] == "contract_note.txt"
     assert docs_payload[0]["type"] == "TXT"
-    assert docs_payload[0]["status"] == "processed"
+    assert docs_payload[0]["status"] == "processed", (
+        f"expected processed, got {docs_payload[0]['status']} after 60s poll"
+    )
     assert docs_payload[0]["size"] > 0
 
     assert tenant_b_docs.status_code == 200
