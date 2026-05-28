@@ -573,3 +573,63 @@ def test_regression_keyword_shadows_classification():
         _classify_intent("Predict whether the passenger survived", [], [])
         == "supervised_classification"
     )
+
+
+def test_eda_intent_falls_back_to_generic_when_no_charts():
+    """Adversarial-review regression: 'show histogram' on a text-only
+    dataset previously matched distribution_univariate intent → 0 charts.
+    With fallback, plan must render at least 1 chart (from generic_eda's
+    bar picker on the categorical column)."""
+    cols = [
+        _categorical_col("city", unique=5),
+        _categorical_col("note_label", unique=15),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols), user_question="Show me a histogram"
+    )
+    assert plan["intent"].startswith("generic_eda_fallback_from_")
+    assert "distribution_univariate" in plan["intent"]
+    assert len(plan["eda"]["charts"]) >= 1
+    # bar chart should be in there since categorical cols are available
+    assert "bar" in _types_of(plan)
+
+
+def test_supervised_intent_keeps_empty_eda_no_fallback():
+    """supervised_classification legitimately produces 0 EDA charts —
+    model_comparison stage carries the work. Must NOT trigger the empty
+    fallback (would add irrelevant charts to a model-comparison flow)."""
+    cols = [
+        _numeric_col("age", std=10.0),
+        _numeric_col("income", std=20.0),
+        _categorical_col("survived", unique=2),
+    ]
+    plan = eda_plan_from_metadata(
+        _metadata(cols, rows=200),
+        user_question="Predict whether the passenger survived",
+    )
+    assert plan["intent"] == "supervised_classification"
+    assert plan["eda"]["charts"] == []
+    # The model_comparison gate is generic_eda's behavior — preserved
+    assert plan["model_comparison"]["enabled"] is True
+
+
+def test_generic_eda_with_no_usable_columns_does_not_loop():
+    """generic_eda with no usable cols must NOT recurse into itself as
+    a fallback. Empty plan is the correct outcome here."""
+    cols = [
+        # All columns are id-like → filtered out of both numeric + categorical
+        {
+            "name": "user_id",
+            "type": "int64",
+            "role": "numeric",
+            "non_null_count": 100,
+            "null_count": 0,
+            "unique_values": 100,
+            "is_id_like": True,
+            "std": 30.0,
+            "mean": 50.0, "min": 0, "max": 99,
+        },
+    ]
+    plan = eda_plan_from_metadata(_metadata(cols), user_question="")
+    assert plan["intent"] == "generic_eda"  # not the fallback string
+    assert plan["eda"]["charts"] == []

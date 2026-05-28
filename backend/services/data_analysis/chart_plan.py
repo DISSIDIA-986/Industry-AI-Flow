@@ -111,62 +111,47 @@ def eda_plan_from_metadata(
     numeric = _numeric_columns(columns_info)
     categorical = _categorical_columns(columns_info)
 
-    intent = _classify_intent(user_question, numeric, categorical)
+    classified_intent = _classify_intent(user_question, numeric, categorical)
     logger.info(
         "chart_plan: intent=%s (q=%r, numeric=%d, categorical=%d)",
-        intent, (user_question or "")[:80], len(numeric), len(categorical),
+        classified_intent, (user_question or "")[:80],
+        len(numeric), len(categorical),
     )
 
-    raw_charts: List[tuple[str, Dict[str, Any], List[str]]] = []
-    rationale_parts: List[str] = [f"Intent: {intent}."]
+    # Intents that LEGITIMATELY produce zero EDA charts (the
+    # model_comparison stage carries the visualization). These must NOT
+    # trigger the empty-fallback below, otherwise we'd render irrelevant
+    # EDA charts on top of a model-comparison flow the user asked for.
+    _EXPECTED_EMPTY_EDA_INTENTS = {"supervised_classification"}
 
-    # Which pickers fire is intent-driven. The mapping is intentionally
-    # explicit (no clever lookup table) so a code reader can see at a
-    # glance which charts each intent gets. `generic_eda` reproduces the
-    # historical behavior — all 5 pickers in the original order.
-    want_hist = intent in {"distribution_univariate", "generic_eda"}
-    want_scatter = intent in {
-        "relationship_bivariate", "supervised_regression", "generic_eda",
-    }
-    want_heatmap = intent in {"correlation_matrix", "generic_eda"}
-    want_bar = intent in {"categorical_distribution", "generic_eda"}
-    want_box = intent in {"categorical_vs_numeric", "generic_eda"}
-
-    if want_hist:
-        hist_items, hist_note = _pick_histograms(numeric)
-        raw_charts.extend(hist_items)
-        if hist_note:
-            rationale_parts.append(hist_note)
-
-    if want_scatter:
-        scatter_item, scatter_note = _pick_scatter(
-            numeric, dataset_metadata.get("top_corr_pair")
+    # Try intent-specific selection first; fall back to generic_eda if an
+    # EDA intent yields zero charts. Without this fallback a question like
+    # "show histogram" on a text-only dataset (no numeric columns) would
+    # produce 0 charts — strictly worse than the pre-question-aware
+    # behavior, which would have rendered a bar chart from the categorical
+    # column. Adversarial review 2026-05-28 caught this regression.
+    intent, raw_charts, picker_notes = _select_charts_for_intent(
+        classified_intent, numeric, categorical, dataset_metadata,
+    )
+    if (
+        not raw_charts
+        and classified_intent != "generic_eda"
+        and classified_intent not in _EXPECTED_EMPTY_EDA_INTENTS
+    ):
+        logger.info(
+            "chart_plan: intent=%s yielded 0 charts on this dataset; "
+            "falling back to generic_eda",
+            classified_intent,
         )
-        if scatter_item:
-            raw_charts.append(scatter_item)
-        if scatter_note:
-            rationale_parts.append(scatter_note)
+        intent, raw_charts, picker_notes = _select_charts_for_intent(
+            "generic_eda", numeric, categorical, dataset_metadata,
+        )
+        # Tag the intent so observability can spot the fallback; downstream
+        # tests / logs see exactly what was tried.
+        intent = f"generic_eda_fallback_from_{classified_intent}"
 
-    if want_heatmap:
-        heatmap_item, heatmap_note = _pick_heatmap(numeric)
-        if heatmap_item:
-            raw_charts.append(heatmap_item)
-        if heatmap_note:
-            rationale_parts.append(heatmap_note)
-
-    if want_bar:
-        bar_item, bar_note = _pick_bar(categorical)
-        if bar_item:
-            raw_charts.append(bar_item)
-        if bar_note:
-            rationale_parts.append(bar_note)
-
-    if want_box:
-        boxplot_item, box_note = _pick_boxplot(numeric, categorical)
-        if boxplot_item:
-            raw_charts.append(boxplot_item)
-        if box_note:
-            rationale_parts.append(box_note)
+    rationale_parts: List[str] = [f"Intent: {intent}."]
+    rationale_parts.extend(picker_notes)
 
     # Normalize into the final chart schema. Stable IDs let the executor
     # correlate partial-failure markers back to the plan, and the explicit
@@ -333,6 +318,67 @@ _INTENT_PATTERNS: List[tuple[str, re.Pattern]] = [
         ),
     ),
 ]
+
+
+def _select_charts_for_intent(
+    intent: str,
+    numeric: List[Dict[str, Any]],
+    categorical: List[Dict[str, Any]],
+    dataset_metadata: Dict[str, Any],
+) -> tuple[str, List[tuple[str, Dict[str, Any], List[str]]], List[str]]:
+    """Run the picker subset for a given intent.
+
+    Returns (intent_used, raw_charts, picker_notes). Caller handles the
+    empty-fallback-to-generic_eda policy — this function is intent-pure
+    so the fallback logic doesn't accidentally invoke pickers for an
+    intent that wasn't asked for.
+    """
+    want_hist = intent in {"distribution_univariate", "generic_eda"}
+    want_scatter = intent in {
+        "relationship_bivariate", "supervised_regression", "generic_eda",
+    }
+    want_heatmap = intent in {"correlation_matrix", "generic_eda"}
+    want_bar = intent in {"categorical_distribution", "generic_eda"}
+    want_box = intent in {"categorical_vs_numeric", "generic_eda"}
+
+    raw_charts: List[tuple[str, Dict[str, Any], List[str]]] = []
+    notes: List[str] = []
+
+    if want_hist:
+        items, note = _pick_histograms(numeric)
+        raw_charts.extend(items)
+        if note:
+            notes.append(note)
+
+    if want_scatter:
+        item, note = _pick_scatter(numeric, dataset_metadata.get("top_corr_pair"))
+        if item:
+            raw_charts.append(item)
+        if note:
+            notes.append(note)
+
+    if want_heatmap:
+        item, note = _pick_heatmap(numeric)
+        if item:
+            raw_charts.append(item)
+        if note:
+            notes.append(note)
+
+    if want_bar:
+        item, note = _pick_bar(categorical)
+        if item:
+            raw_charts.append(item)
+        if note:
+            notes.append(note)
+
+    if want_box:
+        item, note = _pick_boxplot(numeric, categorical)
+        if item:
+            raw_charts.append(item)
+        if note:
+            notes.append(note)
+
+    return intent, raw_charts, notes
 
 
 def _classify_intent(
