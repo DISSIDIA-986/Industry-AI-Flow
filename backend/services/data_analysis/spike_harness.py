@@ -112,6 +112,55 @@ def _infer_role(series: pd.Series, name: str) -> str:
     return "text"
 
 
+def _summarize_samples(series: pd.Series, role: str) -> str:
+    """Build the `sample_3` slot value for one column.
+
+    Privacy: raw values are only emitted for `categorical` / `datetime`
+    columns (where the actual labels carry signal the LLM needs to
+    generate correct code — e.g. 'Male'/'Female' vs 'M'/'F'). For
+    `numeric` we emit a `min..max` range (more useful than 3 arbitrary
+    cells anyway). For `id` / `text` we redact entirely — these are the
+    highest-risk PII surfaces (names, emails, free-form notes) and they
+    don't help code generation.
+    """
+    s = series.dropna()
+    if s.empty:
+        return "<empty>"
+    if role in {"id", "text"}:
+        return "<redacted>"
+    if role == "numeric":
+        try:
+            lo = s.min()
+            hi = s.max()
+            return f"range={lo}..{hi}"
+        except (TypeError, ValueError):
+            return "<numeric>"
+    # datetime — first 3 distinct values ALWAYS preserved. Granularity
+    # hint is critical for time-series code-gen: '2024-01-01 00:00:00'
+    # tells the LLM 'daily', '2024-01-01T12:34:56' tells it 'high-res',
+    # '2024-01' tells it 'monthly'. The str repr is long so we MUST
+    # short-circuit BEFORE the freeform heuristic below; otherwise
+    # datetimes get redacted as PII and the LLM can't pick the right
+    # resample frequency / chart x-axis formatter.
+    if role == "datetime":
+        samples = s.head(3).tolist()
+        return ", ".join(repr(str(x)) for x in samples)
+
+    # categorical — first 3 distinct values are useful signal.
+    # BUT _infer_role() classifies any low-cardinality column as categorical
+    # (n_unique ≤ 20), so short PII columns like 'name' (3 rows, 3 distinct
+    # full names) slip through. Guard with a free-form-text heuristic:
+    # if a label looks like a sentence (has whitespace) or is long
+    # (avg > 25 chars), treat it as PII and redact.
+    samples = s.head(3).tolist()
+    str_samples = [str(x) for x in samples]
+    avg_len = sum(len(x) for x in str_samples) / max(len(str_samples), 1)
+    looks_freeform = any(" " in x for x in str_samples) or avg_len > 25
+    if looks_freeform:
+        return "<redacted:freeform>"
+    return ", ".join(repr(x) for x in samples)
+
+
 def extract_profile(df: pd.DataFrame, filename: str, total_rows: Optional[int] = None) -> Dict[str, Any]:
     """Build the structured profile passed to the LLM. Matches A.1 spec."""
     n_rows = total_rows if total_rows is not None else len(df)
@@ -124,8 +173,7 @@ def extract_profile(df: pd.DataFrame, filename: str, total_rows: Optional[int] =
         dtype = str(series.dtype)
         non_null_pct = (series.notna().mean() * 100) if len(series) else 0.0
         n_unique = int(series.nunique(dropna=True))
-        samples = series.dropna().head(3).tolist()
-        sample_str = ", ".join(repr(x) for x in samples)
+        sample_str = _summarize_samples(series, role)
         column_rows.append(
             _PROFILE_COL_ROW_TMPL.format(
                 name=col,

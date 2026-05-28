@@ -10,9 +10,12 @@ Reuses `llm_client`, `code_executor.validator`, and E2B provider unchanged.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
+import os
 import time
+from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
@@ -634,6 +637,69 @@ def _compose_full_prompt(system_text: str, user_text: str) -> str:
     return f"[SYSTEM]\n{system_text}\n\n[USER]\n{user_text}"
 
 
+# ---------------------------------------------------------------------------
+# LLM response cache (deterministic-by-content fix for non-reproducibility)
+# ---------------------------------------------------------------------------
+#
+# Empirical finding 2026-05-28: Zhipu temperature=0.0 does NOT actually
+# yield byte-identical code across runs (verified by SSE repro eval,
+# 6 cases × 3 runs, 0% byte-level code reproducibility). Provider's
+# greedy decoding is sufficient for "same shape" but not "same bytes" —
+# import order, intermediate variable names, etc. drift.
+#
+# Cache key is the full prompt + sampling params. Same input → same
+# cached response → byte-identical code → byte-identical chart (when
+# combined with the random_state=42 mandate in the prompt). Bounded
+# size with LRU eviction so a long-running demo session doesn't grow
+# memory unbounded.
+#
+# Disable via DATA_ANALYSIS_LLM_CACHE=false (e.g. for benchmarking the
+# raw provider behavior). Max size via DATA_ANALYSIS_LLM_CACHE_SIZE.
+
+_LLM_CACHE_ENABLED: bool = (
+    os.getenv("DATA_ANALYSIS_LLM_CACHE", "true").lower() == "true"
+)
+_LLM_CACHE_MAX_ENTRIES: int = int(
+    os.getenv("DATA_ANALYSIS_LLM_CACHE_SIZE", "256")
+)
+
+# Two values per key: response text, AND the captured token usage dict
+# at cache-store time — so a cache hit can replay the same token-count
+# metrics into _last_call_usage instead of leaving them empty. Stored
+# as a tuple (response_text, usage_dict) to keep one OrderedDict.
+_llm_response_cache: "OrderedDict[str, Tuple[str, Dict[str, Optional[int]]]]" = (
+    OrderedDict()
+)
+
+# Counters for observability — surfaced via cache_stats() and useful
+# in tests to assert "second identical call was a hit, not a miss".
+_cache_stats: Dict[str, int] = {"hits": 0, "misses": 0, "stores": 0}
+
+
+def _cache_key(prompt: str, sampling: Dict[str, Any]) -> str:
+    payload = prompt + "\x00" + json.dumps(sampling, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def cache_stats() -> Dict[str, Any]:
+    """Return current cache hit/miss/store counters + size. For ops + tests."""
+    return {
+        **_cache_stats,
+        "size": len(_llm_response_cache),
+        "max_size": _LLM_CACHE_MAX_ENTRIES,
+        "enabled": _LLM_CACHE_ENABLED,
+    }
+
+
+def reset_cache() -> None:
+    """Wipe cache + counters. Tests call this between cases; ops can call
+    via a debug endpoint if the user wants fresh LLM responses."""
+    _llm_response_cache.clear()
+    _cache_stats["hits"] = 0
+    _cache_stats["misses"] = 0
+    _cache_stats["stores"] = 0
+
+
 def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
     """Return an async wrapper around the Zhipu client.
 
@@ -644,10 +710,32 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
     ``_last_call_usage`` slot so ``_run_one_round`` can attach token
     counts to the RoundRecord without changing the caller signature
     (keeping dependency injection for tests untouched).
+
+    Wrapped with a content-addressed response cache (see _LLM_CACHE_ENABLED).
+    Same prompt → same cached response → byte-identical generated code.
     """
     from backend.services.llm_integration.llm_client import LLMClientFactory
 
     async def _call(prompt: str) -> str:
+        # Cache lookup (must mirror the cache-store path's usage handling).
+        if _LLM_CACHE_ENABLED:
+            key = _cache_key(prompt, SAMPLING)
+            cached = _llm_response_cache.get(key)
+            if cached is not None:
+                # LRU touch.
+                _llm_response_cache.move_to_end(key)
+                _cache_stats["hits"] += 1
+                text_cached, usage_cached = cached
+                _last_call_usage["input"] = usage_cached.get("input")
+                _last_call_usage["output"] = usage_cached.get("output")
+                logger.info(
+                    "LLM cache HIT (key=%s, size=%d/%d)",
+                    key[:12], len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+                )
+                return text_cached
+            _cache_stats["misses"] += 1
+
+        # Real call.
         client = LLMClientFactory.create_client("zhipu")
         text = await asyncio.to_thread(
             client.generate,
@@ -660,6 +748,23 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
         usage = getattr(client, "last_usage", {}) or {}
         _last_call_usage["input"] = usage.get("input_tokens")
         _last_call_usage["output"] = usage.get("output_tokens")
+
+        # Cache store with LRU eviction.
+        if _LLM_CACHE_ENABLED:
+            key = _cache_key(prompt, SAMPLING)
+            _llm_response_cache[key] = (
+                text,
+                {"input": _last_call_usage["input"], "output": _last_call_usage["output"]},
+            )
+            _cache_stats["stores"] += 1
+            while len(_llm_response_cache) > _LLM_CACHE_MAX_ENTRIES:
+                evicted_key, _ = _llm_response_cache.popitem(last=False)
+                logger.debug("LLM cache evicted oldest entry %s", evicted_key[:12])
+            logger.info(
+                "LLM cache STORE (key=%s, size=%d/%d)",
+                key[:12], len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+            )
+
         return text
 
     return _call
