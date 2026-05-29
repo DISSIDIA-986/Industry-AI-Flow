@@ -1764,9 +1764,22 @@ async def stream_analysis_progress(job_id: str):
                     yield ": keepalive\n\n"
                     continue
                 if event is None:
-                    final = _analysis_job_results.pop(job_id, None)
+                    # Do NOT pop — leave the result in place so it stays
+                    # fetchable by job_id (GET .../analyze/result/{job_id}) if
+                    # the SSE connection drops before/while the result is
+                    # delivered. TTL cleanup in start_analysis_job reclaims it.
+                    final = _analysis_job_results.get(job_id)
                     if final is not None:
                         yield f"event: result\ndata: {_json.dumps(final, default=str)}\n\n"
+                        # Flush guard: the result payload is large (~KBs). Keep the
+                        # connection open briefly so the browser EventSource (through
+                        # the Next.js SSE proxy) dispatches the result event before
+                        # the connection FIN arrives. Without this the final event
+                        # rides in the same chunk as the close and is dropped, and
+                        # the UI shows "Connection lost". curl is unaffected because
+                        # it reads the raw byte stream.
+                        yield ": flush\n\n"
+                        await _aio.sleep(0.25)
                     return
                 yield f"event: stage\ndata: {_json.dumps(event.to_dict())}\n\n"
         except _aio.CancelledError:
@@ -1783,6 +1796,27 @@ async def stream_analysis_progress(job_id: str):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/api/v1/data/analyze/result/{job_id}")
+async def get_analysis_result(job_id: str):
+    """Durable result fetch by job_id — recovers the final analysis payload when
+    the SSE stream dropped before delivering it (heavy jobs, flaky networks).
+
+    Auth-exempt for the same reason as the stream endpoint: EventSource can't
+    send headers, the UUID4 job_id is the capability token, and the result is
+    metadata-only (no raw PII by design). TTL cleanup reclaims it after
+    _ANALYSIS_JOB_TTL.
+
+    States: done (result present), running (tracker alive, no result yet),
+    not_found (unknown or expired).
+    """
+    final = _analysis_job_results.get(job_id)
+    if final is not None:
+        return {"status": "done", "result": final}
+    if PipelineProgressTracker.get(job_id) is not None:
+        return {"status": "running", "job_id": job_id}
+    raise HTTPException(status_code=404, detail="job not found or expired")
 
 
 class DataPreviewRequest(BaseModel):
