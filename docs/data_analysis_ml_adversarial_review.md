@@ -36,7 +36,13 @@ Phase 3 (governance guards), shipped + verified:
 
 Known non-regression: one capability E2E run had `04_unsupervised_kmeans` fail — root cause is an LLM matplotlib bug (5th subplot in a 2×2 grid, `sandbox_runtime_error`), not the new guards (the generated code is clean of any guard trigger). Pre-existing LLM flakiness.
 
-Deferred: hard request-level wall clock (cap per-fit cost / total CPU), reproducibility AST enforcement, and the latency-aware tier planner.
+Phase 4 (codegen robustness, from self-test), shipped + verified:
+
+- ✅ **NumPy-safe summary serialization**: "do EDA then advanced analysis" crashed in-sandbox with `TypeError: Object of type bool is not JSON serializable` — statistical analysis (e.g. `scipy.stats.chi2_contingency` → `p < 0.05` is a `numpy.bool_`) put NumPy scalars in the summary and the prompt told the model to use bare `json.dumps`. Root cause is the agentic prompt, NOT the validator/runtime changes (diff confirms those files were untouched) and NOT E2B (health probe green). Fix: both `agentic_v1_user_template.md` and the repair template now mandate `json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o))`. Verified: the exact failing instruction now succeeds in one round; serialization clean across titanic/mpg/penguins advanced-analysis variants. Guarded by `TestPromptNumpySafeSerialization`.
+
+Separate pre-existing LLM flake noted (not fixed here): one-hot encoding can reference a dummy column it didn't create (`KeyError: ['origin_europe'] not in index` on mpg) — a column-hallucination class already partly covered by the repair template, distinct from the serialization bug.
+
+Deferred: hard request-level wall clock (cap per-fit cost / total CPU), reproducibility AST enforcement, the latency-aware tier planner, and stronger one-hot/column-hallucination guards.
 
 ---
 
