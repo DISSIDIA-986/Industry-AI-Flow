@@ -459,7 +459,7 @@ export default function SystemOverviewPage() {
           <ModuleCard
             moduleKey="data"
             title="Dynamic Data Analysis"
-            subtitle="Cloud LLM Code Gen · Docker Sandbox"
+            subtitle="Cloud LLM Code Gen · Sandboxed Execution"
             health={dataHealth}
             heroLabel="Sandbox Status"
             heroValue={dataHealth.status === 'healthy' ? `${codeExecMode} ✓` : 'Offline'}

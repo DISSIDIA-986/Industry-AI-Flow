@@ -22,6 +22,74 @@ from backend.services.llm_integration.llm_client import LLMClientFactory
 
 logger = logging.getLogger(__name__)
 
+# --------------------------------------------------------------------------
+# Deterministic "unsupported analysis" guard.
+#
+# Some requests are a paradigm mismatch with a static tabular dataset and the
+# pipeline should refuse honestly UP FRONT (before burning an LLM call), rather
+# than letting the model prose-refuse while the envelope still reads success=true
+# (the RL failure mode from the 2026-05-29 adversarial review). The clearest
+# case is reinforcement learning, which needs an interactive environment with
+# states/actions/rewards — a frozen table has no episode structure.
+#
+# Detection is intentionally HIGH-PRECISION: only unambiguous RL terms trigger.
+# Single ambiguous words (reward, policy, agent, episode, environment) are
+# excluded because they appear as legitimate column names / questions.
+_RL_PHRASES = (
+    "reinforcement learning", "q-learning", "q learning", "deep q-network",
+    "deep q network", "policy gradient", "actor-critic", "actor critic",
+    "markov decision", "bellman equation", "bellman", "epsilon-greedy",
+    "epsilon greedy", "replay buffer", "temporal difference learning",
+    "reward per episode", "cumulative reward",
+)
+_RL_ACRONYMS = re.compile(r"\b(dqn|sarsa)\b", re.IGNORECASE)
+
+
+def detect_unsupported_analysis(question: str) -> Optional[str]:
+    """Return a reason key if the question asks for an analysis the static-tabular
+    pipeline cannot support, else None. Currently detects reinforcement learning.
+    """
+    q = (question or "").lower()
+    if any(p in q for p in _RL_PHRASES) or _RL_ACRONYMS.search(q):
+        return "reinforcement_learning"
+    return None
+
+
+def _unsupported_analysis_response(
+    reason: str, dataset_metadata: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Build an honest structured refusal envelope for an unsupported request."""
+    if reason == "reinforcement_learning":
+        answer = (
+            "This request asks for reinforcement learning (e.g. Q-learning or "
+            "policy optimization over episodes), which requires an interactive "
+            "environment with states, actions, and a reward signal observed over "
+            "time. The uploaded dataset is a static table with no episode or "
+            "state-transition structure, so an RL agent cannot be trained from it.\n\n"
+            "Supported alternatives on this data: predictive modeling "
+            "(classification / regression), what-if scenario analysis, clustering, "
+            "or anomaly detection."
+        )
+    else:  # pragma: no cover — single reason today; future-proofing
+        answer = "This analysis type is not supported for a static tabular dataset."
+    return {
+        "success": False,
+        "answer": answer,
+        "charts": [],
+        "visualizations": [],
+        "code": "",
+        "analysis_summary": {"key_findings": [], "rationale": answer},
+        "code_generation": {
+            "mode": "guard",
+            "fallback_reason": "unsupported_analysis_type",
+            "unsupported_reason": reason,
+            "repair_triggered": False,
+        },
+        "dataset_info": dataset_metadata or {},
+        "execution_time": 0.0,
+    }
+
+
 # Backward-compatibility hook for legacy tests/callers that monkeypatch
 # backend.services.data_analysis.data_analysis_agent.code_executor directly.
 code_executor: Any | None = None
@@ -143,6 +211,19 @@ class DataAnalysisAgent:
                 "metadata_extract", "completed", 0.20,
                 f"{dataset_metadata.get('rows', '?')} rows × {dataset_metadata.get('columns', '?')} cols",
             )
+
+            # 2a. Deterministic unsupported-analysis guard. Refuse paradigm
+            # mismatches (e.g. reinforcement learning on a static table) up front,
+            # honestly, without burning an LLM call — and as a structured refusal
+            # (success=False, fallback_reason) so the UI does not mislabel it as a
+            # successful analysis.
+            _unsupported = detect_unsupported_analysis(question)
+            if _unsupported:
+                _progress(
+                    "code_generation", "completed", 1.0,
+                    "Unsupported analysis type for a static dataset",
+                )
+                return _unsupported_analysis_response(_unsupported, dataset_metadata)
 
             # 2b. Agentic path branch (Plan Appendix E W4).
             #

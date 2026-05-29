@@ -61,8 +61,21 @@ def compose_agentic_response(
 
     fallback_reason = _fallback_reason(result)
 
+    # Success/chart logic. A chart the plan DECLARED but the code didn't actually
+    # save must not fail an otherwise-valid analysis that produced findings — e.g.
+    # pure statistical hypothesis tests legitimately yield p-values with no chart.
+    # Show the findings (the UI has a chartless-result path) instead of a hard
+    # "Analysis Error". Only a code failure, or an empty result with neither chart
+    # nor findings, is a real failure.
+    chart_ok = bool(chart_entry)
+    if _plan_produces_chart(plan):
+        success = result.success and (chart_ok or bool(key_findings))
+    else:
+        success = result.success
+    chart_missing = bool(success and _plan_produces_chart(plan) and not chart_ok)
+
     return {
-        "success": result.success and bool(chart_entry) if _plan_produces_chart(plan) else result.success,
+        "success": success,
         "answer": answer,
         "charts": charts,
         "visualizations": visualizations,
@@ -74,6 +87,7 @@ def compose_agentic_response(
         "code_generation": {
             "mode": AGENTIC_MODE,
             "fallback_reason": fallback_reason,
+            "chart_missing": chart_missing,
             "repair_triggered": result.repair_triggered,
             "repair_trigger_type": result.repair_trigger_type,
             "repair_recovered": result.repair_recovered,
@@ -347,8 +361,13 @@ def _build_answer(
         return reason
 
     if not result.success:
-        if result.time_budget_exhausted:
-            return "Analysis exceeded the time budget. Please retry with a simpler question."
+        em = (result.error_message or "").lower()
+        if result.time_budget_exhausted or "timeout" in em:
+            return (
+                "Analysis exceeded the time budget — this often happens with heavy "
+                "model tuning (large hyperparameter grids or many estimators). Try a "
+                "simpler model, a smaller grid, or a more specific question."
+            )
         return (
             result.error_message
             or "The analysis could not complete. Please retry."
@@ -369,7 +388,8 @@ def _build_answer(
 def _fallback_reason(result: PlanExecutionResult) -> Optional[str]:
     if result.success:
         return None
-    if result.time_budget_exhausted:
+    em = (result.error_message or "").lower()
+    if result.time_budget_exhausted or "timeout" in em:
         return "time_budget_exhausted"
     if result.status == "unanswerable":
         return "model_declared_unanswerable"

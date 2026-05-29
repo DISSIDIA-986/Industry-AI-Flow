@@ -44,11 +44,18 @@ DEFAULT_FRONTEND_URL = "http://127.0.0.1:3123"
 
 LOGIN_EMAIL_SELECTOR = 'input[type="email"]'
 LOGIN_PASSWORD_SELECTOR = 'input[type="password"]'
-LOGIN_BUTTON_SELECTOR = 'button:has-text("Log in")'
+LOGIN_BUTTON_SELECTOR = 'button[type="submit"]'
 RUN_ANALYSIS_BUTTON_SELECTOR = '[data-testid="run-analysis-btn"]'
-INCLUDE_VIZ_CHECKBOX_SELECTOR = '[data-testid="include-viz-toggle"]'
-UPLOAD_BUTTON_SELECTOR = 'button:has-text("1) Upload Data")'
-PROCESSING_BUTTON_SELECTOR = 'button:has-text("Analyzing...")'
+# Step-1 upload controls (current 2-step unified pipeline UI).
+FILE_INPUT_SELECTOR = '[data-testid="file-upload-zone"] input[type="file"]'
+UPLOAD_BUTTON_SELECTOR = '[data-testid="upload-btn"]'
+INSTRUCTION_INPUT_SELECTOR = '[data-testid="instruction-input"] input'
+# agent-browser's selector engine does not support the Playwright-style
+# ":has-text()" pseudo-class, so detect run state via the run-analysis button's
+# disabled attribute instead. The button is disabled (loading) while streaming
+# and re-enabled ("Run Analysis") once the analysis completes.
+RUN_READY_SELECTOR = '[data-testid="run-analysis-btn"]:not(:disabled)'
+PROCESSING_BUTTON_SELECTOR = '[data-testid="run-analysis-btn"]:disabled'
 PIPELINE_VIZ_SELECTOR = '[data-testid="analysis-pipeline-viz"]'
 ERROR_SELECTOR = "p.error-text"
 
@@ -75,6 +82,26 @@ DATASETS: dict[str, dict[str, str]] = {
     "airline": {
         "url": "https://raw.githubusercontent.com/jbrownlee/Datasets/master/airline-passengers.csv",
         "filename": "airline-passengers.csv",
+    },
+    # Construction-domain datasets (Capstone target) — staged from
+    # docs/testing/stress_datasets/ committed in PR #43.
+    "construction": {
+        "local_path": "docs/testing/stress_datasets/construction_projects.csv",
+        "filename": "construction_projects.csv",
+    },
+    "safety": {
+        "local_path": "docs/testing/stress_datasets/safety_incidents.csv",
+        "filename": "safety_incidents.csv",
+    },
+    # Single-column CSV edge case (PR #39 regression).
+    "single_col": {
+        "local_path": "docs/testing/stress_datasets/single_column.csv",
+        "filename": "single_column.csv",
+    },
+    # PII-looking columns (PR #35 privacy redaction surface).
+    "pii_demo": {
+        "local_path": "docs/testing/stress_datasets/pii_looking.csv",
+        "filename": "pii_looking.csv",
     },
 }
 
@@ -131,6 +158,61 @@ BROWSER_CASES: list[Case] = [
         chart_type="line",
         dataset_key="airline",
         description="Airline: time series rolling avg",
+    ),
+    # ----------------------------------------------------------------
+    # Construction-domain cases (Capstone evaluator scenarios).
+    # Added 2026-05-28 after 8-PR adversarial review. Each case
+    # targets a specific regression surface from a recent PR.
+    # ----------------------------------------------------------------
+    Case(
+        case_id="06_construction_overrun_by_type",
+        question=(
+            "What's the average cost overrun percentage by project type? "
+            "Show as a bar chart."
+        ),
+        analysis_type="eda",
+        chart_type="bar",
+        dataset_key="construction",
+        description="Construction: cost overrun by type (PR #38 intent + #43 domain)",
+    ),
+    Case(
+        case_id="07_construction_predict_cost",
+        question=(
+            "Predict actual_cost using sqft, floors, contractor_rating, "
+            "and risk_score as features. Report R-squared and MAE, "
+            "and show a scatter plot of predicted vs actual cost."
+        ),
+        analysis_type="regression",
+        chart_type="scatter",
+        dataset_key="construction",
+        description="Construction: ML cost prediction (PR #38 supervised intent)",
+    ),
+    Case(
+        case_id="08_safety_incidents_by_month",
+        question="Plot incident counts by month over the full date range.",
+        analysis_type="eda",
+        chart_type="line",
+        dataset_key="safety",
+        description="Safety: time-series resample (PR #43 datetime handling)",
+    ),
+    Case(
+        case_id="09_single_column_histogram",
+        question="Show the distribution of the value column as a histogram.",
+        analysis_type="eda",
+        chart_type="histogram",
+        dataset_key="single_col",
+        description="Edge case: single-column CSV (PR #39 sniff regression guard)",
+    ),
+    Case(
+        case_id="10_pii_redaction_privacy",
+        question=(
+            "Build a model to predict income from age and other numeric features. "
+            "Report R-squared, and show a scatter plot of predicted vs actual income."
+        ),
+        analysis_type="regression",
+        chart_type="scatter",
+        dataset_key="pii_demo",
+        description="Privacy: PII-looking columns must not leak in LLM prompt (PR #35)",
     ),
 ]
 
@@ -226,7 +308,17 @@ def download_and_stage_datasets() -> dict[str, str]:
     paths: dict[str, str] = {}
     for key, info in DATASETS.items():
         local_cache = DATASET_DIR / info["filename"]
-        if not local_cache.exists() or local_cache.stat().st_size == 0:
+        # Two source modes: URL download (public datasets) or local-path
+        # copy (construction-domain datasets committed under
+        # docs/testing/stress_datasets/ in PR #43).
+        if "local_path" in info:
+            src = PROJECT_ROOT / info["local_path"]
+            if not src.exists():
+                print(f"  [missing local] {key}: {src}")
+                continue
+            if not local_cache.exists() or local_cache.stat().st_size == 0:
+                shutil.copy2(src, local_cache)
+        elif not local_cache.exists() or local_cache.stat().st_size == 0:
             print(f"  [downloading] {key}: {info['url']}")
             try:
                 urllib.request.urlretrieve(info["url"], str(local_cache))
@@ -308,60 +400,62 @@ def _set_form_values(
     instruction: str,
     refs: dict[str, str],
 ) -> tuple[bool, str]:
-    # Uploaded Path field removed from UI — file path is pre-filled internally
-    instruction_target = (
-        refs.get("instruction") or 'label:has-text("Analysis Instruction") input'
-    )
-    analysis_target = (
-        refs.get("analysis_type") or 'label:has-text("Analysis Type") select'
-    )
-    chart_target = refs.get("chart_type") or 'label:has-text("Chart Type") select'
+    """Drive the current 2-step unified pipeline UI.
 
+    The page no longer has Analysis Type / Chart Type dropdowns (the LLM
+    auto-selects both) and visualization is always included (merged pipeline),
+    so ``analysis_type``/``chart_type`` are accepted for reporting parity but
+    not set in the UI. The flow is: upload the dataset file -> click Upload ->
+    wait for the run button to enable -> fill the natural-language instruction.
+    """
+    # 1. Upload the dataset file via the hidden file input, then click Upload.
+    up_ok, up_out = _run_agent_browser(
+        ["upload", FILE_INPUT_SELECTOR, data_file], timeout=30
+    )
+    if not up_ok:
+        return False, f"upload_failed: {up_out}"
+    click_ok, click_out = _run_agent_browser(
+        ["click", UPLOAD_BUTTON_SELECTOR], timeout=20
+    )
+    if not click_ok:
+        return False, f"upload_click_failed: {click_out}"
+
+    # 2. Wait for upload + preview to finish — the run button enables once the
+    #    backend returns the uploaded file path.
+    ready = False
+    deadline = time.time() + 25
+    while time.time() < deadline:
+        if _count(RUN_READY_SELECTOR) > 0:
+            ready = True
+            break
+        _run_agent_browser(["wait", "800"], timeout=10)
+    if not ready:
+        return False, "run_button_not_ready_after_upload"
+
+    # 3. Fill the instruction (snapshot ref if available, else CSS fallback).
+    instruction_target = refs.get("instruction") or INSTRUCTION_INPUT_SELECTOR
     ok, out = _run_agent_browser(
         ["fill", instruction_target, instruction], timeout=20
     )
     if not ok:
         return False, f"fill_instruction_failed: {out}"
 
-    ok, out = _run_agent_browser(
-        ["select", analysis_target, analysis_type], timeout=20
-    )
-    if not ok:
-        return False, f"select_analysis_type_failed: {out}"
-
-    ok, out = _run_agent_browser(["select", chart_target, chart_type], timeout=20)
-    if not ok:
-        return False, f"select_chart_type_failed: {out}"
-
-    # Verify form values (Uploaded Path field removed — only check analysis/chart type)
+    # 4. Verify the instruction value landed.
     verify_js = r"""
 (() => {
-  const labels = Array.from(document.querySelectorAll('label'));
-  let instrInput = null, analysisSelect = null, chartSelect = null;
-  for (const label of labels) {
-    const t = (label.textContent || '').trim();
-    if (!instrInput && t.includes('Analysis Instruction')) instrInput = label.querySelector('input');
-    if (!analysisSelect && t.includes('Analysis Type')) analysisSelect = label.querySelector('select');
-    if (!chartSelect && t.includes('Chart Type')) chartSelect = label.querySelector('select');
-  }
-  return JSON.stringify({
-    instruction: instrInput ? instrInput.value : null,
-    analysis_type: analysisSelect ? analysisSelect.value : null,
-    chart_type: chartSelect ? chartSelect.value : null,
-  });
+  const wrap = document.querySelector('[data-testid="instruction-input"]');
+  const input = wrap ? (wrap.querySelector('input') || wrap.querySelector('textarea')) : null;
+  return JSON.stringify({ instruction: input ? input.value : null });
 })()
 """
     vok, vout = _run_eval(verify_js, timeout=20)
     if not vok:
         return False, f"verify_failed: {vout}"
-
     parsed = _parse_agent_json_output(vout)
     if isinstance(parsed, dict):
-        if (
-            parsed.get("analysis_type") != analysis_type
-            or parsed.get("chart_type") != chart_type
-        ):
-            return False, f"form_mismatch: {parsed}"
+        got = (parsed.get("instruction") or "").strip()
+        if got != instruction.strip():
+            return False, f"instruction_mismatch: got={got!r}"
 
     return True, "form_set_ok"
 
@@ -377,7 +471,7 @@ def _wait_for_complete(max_wait: int = 180) -> tuple[bool, str]:
             last_state = "processing"
             _run_agent_browser(["wait", "1600"], timeout=10)
             continue
-        if _count(UPLOAD_BUTTON_SELECTOR) > 0:
+        if _count(RUN_READY_SELECTOR) > 0:
             return True, "idle"
         if _count(ERROR_SELECTOR) > 0:
             return True, "error_visible"
@@ -651,12 +745,8 @@ def _run_case(
             result["error"] = f"set_form_failed: {set_out}"
             return result
 
-        # Check "Include Visualization" toggle before running analysis
-        viz_toggle = refs.get("include_viz") or INCLUDE_VIZ_CHECKBOX_SELECTOR
-        _run_agent_browser(["click", viz_toggle], timeout=15)
-        _run_agent_browser(["wait", "500"], timeout=10)
-
-        # Click Run Analysis (now includes visualization)
+        # Visualization is always included by the merged pipeline — no toggle.
+        # Click Run Analysis (analysis + visualization in one call).
         run_target = refs.get("run_analysis") or RUN_ANALYSIS_BUTTON_SELECTOR
         ok, out = _run_agent_browser(["click", run_target], timeout=25)
         if not ok:
@@ -701,6 +791,74 @@ def _run_case(
                 else None
             )
             result["has_answer"] = bool(rj.get("answer"))
+
+            # 8-PR regression checks added 2026-05-28.
+            generated_code = str(rj.get("code") or "")
+            import hashlib as _hashlib
+            result["code_hash"] = _hashlib.sha256(
+                generated_code.encode()
+            ).hexdigest()[:12]
+            result["code_len_bytes"] = len(generated_code)
+
+            # PR #35 reproducibility mandate: random_state=42 must appear
+            # in any sklearn estimator that accepts it. We grep loosely;
+            # a stricter check would parse the AST. False here means
+            # either the LLM ignored the prompt or the code has no
+            # sklearn estimators at all (which is fine for pure EDA).
+            uses_sklearn = (
+                "sklearn" in generated_code or "RandomForest" in generated_code
+                or "LogisticRegression" in generated_code
+                or "LinearRegression" in generated_code
+                or "KMeans" in generated_code
+                or "train_test_split" in generated_code
+            )
+            result["uses_sklearn"] = uses_sklearn
+            result["code_has_random_state_42"] = "random_state=42" in generated_code
+            if uses_sklearn and not result["code_has_random_state_42"]:
+                result["random_state_warning"] = (
+                    "sklearn used but random_state=42 not pinned — "
+                    "PR #35 reproducibility contract at risk"
+                )
+
+            # Blocked imports scan (validator should already reject these
+            # but a belt-and-suspenders check catches LLM workarounds).
+            import re as _re
+            blocked_patterns = [
+                (r"\bos\.remove\b", "os.remove"),
+                (r"\bos\.unlink\b", "os.unlink"),
+                (r"\bshutil\.rmtree\b", "shutil.rmtree"),
+                (r"\bsubprocess\.", "subprocess.*"),
+                (r"\b__import__\b", "__import__"),
+                (r"\bopen\s*\(", "open()"),
+            ]
+            blocked_found = [
+                name for pat, name in blocked_patterns
+                if _re.search(pat, generated_code)
+            ]
+            result["blocked_imports_found"] = blocked_found
+            if blocked_found:
+                result["blocked_imports_warning"] = (
+                    f"generated code uses blocked patterns: {blocked_found} — "
+                    "validator should have rejected this"
+                )
+
+            # PR #35 PII redaction surface check: even though PRIVACY_OK
+            # flag comes from llm_input_policy, also verify the answer
+            # text doesn't contain email patterns (defensive).
+            answer_text = str(rj.get("answer") or "")
+            email_pattern = _re.compile(
+                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+            )
+            phone_pattern = _re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")
+            answer_emails = email_pattern.findall(answer_text)
+            answer_phones = phone_pattern.findall(answer_text)
+            result["answer_has_email_leak"] = bool(answer_emails)
+            result["answer_has_phone_leak"] = bool(answer_phones)
+            if answer_emails or answer_phones:
+                result["pii_leak_warning"] = (
+                    f"answer text contains PII patterns: "
+                    f"emails={len(answer_emails)} phones={len(answer_phones)}"
+                )
 
         # Extract visualization from combined response
         viz_payload = _read_viz_payload()
