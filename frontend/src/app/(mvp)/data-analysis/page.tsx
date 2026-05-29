@@ -14,6 +14,18 @@ import {
 } from "@/lib/api-client";
 import { normalizeError } from "@/lib/formatters";
 
+// Quick-pick instruction presets. Clicking one fills the (still-editable) free-text
+// field — convenience over the removed analysis-type/chart-type dropdowns, aligned
+// with the AI-auto-selects design. Users can edit or type their own.
+const INSTRUCTION_PRESETS: string[] = [
+  "Summarize this dataset",
+  "Show key distributions and correlations",
+  "Do EDA first, then advanced analysis",
+  "Find the main drivers of the target and report model metrics",
+  "Cluster the records into groups and describe them",
+  "Detect anomalies / outliers and visualize them",
+];
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -621,6 +633,22 @@ export default function DataAnalysisPage() {
               }}
             />
           </label>
+
+          {/* Quick-pick instruction presets — fill the editable field, don't lock it. */}
+          <div className="flex flex-wrap gap-1.5 mt-2" data-testid="instruction-presets">
+            {INSTRUCTION_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setInstruction(preset)}
+                disabled={loading}
+                className="text-xs px-2.5 py-1 rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50 transition disabled:opacity-50"
+                data-testid="instruction-preset"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
 
           <div className="action-row mt-3">
             <button
