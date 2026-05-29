@@ -787,6 +787,24 @@ export function dataAnalysisStreamUrl(_config: RuntimeAppConfig, jobId: string):
   return `/api/backend/api/v1/data/analyze/stream/${encodeURIComponent(jobId)}`
 }
 
+/**
+ * Durable result fetch by job_id — used when the SSE stream drops before
+ * delivering the result (heavy jobs, flaky networks). Returns the final
+ * payload when status is "done", null while still "running" or if expired.
+ */
+export async function fetchDataAnalysisResult(
+  jobId: string,
+): Promise<Record<string, unknown> | null> {
+  const res = await fetch(
+    `/api/backend/api/v1/data/analyze/result/${encodeURIComponent(jobId)}`,
+    { method: 'GET', headers: { Accept: 'application/json' } },
+  )
+  if (!res.ok) return null // 404 = unknown/expired
+  const body = (await res.json()) as { status?: string; result?: Record<string, unknown> }
+  if (body.status === 'done' && body.result) return body.result
+  return null // "running" — caller may retry
+}
+
 export async function generateVisualization(
   config: RuntimeAppConfig,
   payload: {

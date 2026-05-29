@@ -27,6 +27,7 @@ _PUBLIC_PATH_PREFIXES = (
     "/api/v1/health",
     "/api/v1/auth/",
     "/api/v1/data/analyze/stream/",  # SSE — EventSource can't send headers; UUID4 job_id is auth
+    "/api/v1/data/analyze/result/",  # durable result fetch by UUID4 job_id (SSE-drop recovery)
     "/api/v1/files/visualizations/",  # <img> tags can't send Authorization headers
     # Note: /api/v1/documents/{id}/content needs public access for <img>/<embed> tags.
     # But prefix matching is too broad here. Handled via path check in _is_public_path().
