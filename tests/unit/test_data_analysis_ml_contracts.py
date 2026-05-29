@@ -45,6 +45,13 @@ class TestPromptNumpySafeSerialization:
         text = (self.PROMPT_DIR / "agentic_v1_repair_template.md").read_text()
         assert "not JSON serializable" in text and "default=" in text
 
+    def test_templates_warn_against_dummy_column_hallucination(self):
+        # One-hot dummy-column hallucination guard (KeyError: ['origin_europe']).
+        user = (self.PROMPT_DIR / "agentic_v1_user_template.md").read_text()
+        repair = (self.PROMPT_DIR / "agentic_v1_repair_template.md").read_text()
+        assert "get_dummies" in user and "get_dummies" in repair
+        assert "not in index" in repair  # the exact KeyError shape
+
 
 class TestRlGuard:
     """Deterministic reinforcement-learning refusal must be high-precision:
@@ -237,6 +244,13 @@ class TestComputeBudget:
         ("big_randomized",
          "from sklearn.model_selection import RandomizedSearchCV\n"
          "rs = RandomizedSearchCV(est, param_distributions=grid, n_iter=100, cv=5)\n"),  # 500
+        # Small grid but huge per-fit cost — the observed demo hang the fit-count
+        # check alone missed (n_estimators up to 800).
+        ("big_trees_small_grid",
+         "from sklearn.model_selection import GridSearchCV\n"
+         "from sklearn.ensemble import RandomForestClassifier\n"
+         "gs = GridSearchCV(RandomForestClassifier(random_state=42), "
+         "param_grid={'n_estimators':[200,400,800], 'max_depth':[3,5,8,12,None]}, cv=5)\n"),  # 15x5x800=60000 trees
     ]
     ALLOW = [
         ("small_gridsearch",
@@ -245,6 +259,10 @@ class TestComputeBudget:
         ("modest_randomized",
          "from sklearn.model_selection import RandomizedSearchCV\n"
          "rs = RandomizedSearchCV(est, param_distributions=grid, n_iter=10, cv=5)\n"),  # 50
+        # Moderate grid + moderate n_estimators stays under the tree-fit ceiling.
+        ("moderate_trees",
+         "from sklearn.model_selection import GridSearchCV\n"
+         "gs = GridSearchCV(est, param_grid={'n_estimators':[100,200], 'max_depth':[3,5]}, cv=5)\n"),  # 4x5x200=4000
         ("normal_forest",
          "from sklearn.ensemble import RandomForestClassifier\n"
          "m = RandomForestClassifier(n_estimators=200, random_state=42)\n"),

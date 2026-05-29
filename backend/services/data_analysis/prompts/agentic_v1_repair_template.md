@@ -30,6 +30,7 @@ Minimal fix. Preserve the intent and structure of your previous plan. Change onl
 - Disallowed imports → stay within pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels.
 - File I/O other than `pd.read_csv("/workspace/{filename}")` → remove it.
 - `TypeError: Object of type bool/int64/float64/ndarray is not JSON serializable` → the summary dict holds **NumPy scalars** (e.g. `p < 0.05` → `numpy.bool_`, `.mean()` → `numpy.float64`, `value_counts().iloc[0]` → `numpy.int64`). Fix: dump with a converter — `json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o))`. Do NOT hand-cast each field; the `default=` handles all of them.
+- `KeyError: ['origin_europe'] not in index` (or any `*_<value>`) after `pd.get_dummies` → you **hardcoded a dummy column name** that wasn't created (category absent, or `drop_first=True` dropped it). Fix: build the feature matrix dynamically — `X = pd.get_dummies(df[feature_cols], drop_first=True).select_dtypes("number")` and pass ALL of `X` to the model; derive any specific dummy names from `X.columns` at runtime, never from literals.
 - NaN crashes → guard with .isna() before arithmetic, or use .dropna() before modeling.
 - Forecasting by row index → use the datetime column (parse with pd.to_datetime if needed).
 - Chart path → save to /workspace/analysis_chart.png if produces_chart=true.
