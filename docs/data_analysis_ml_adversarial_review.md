@@ -28,7 +28,15 @@ Phase 2 (reliability + honesty), shipped + verified:
 - ✅ **P1 repair/downgrade disclosure**: the response envelope already carried `repair_triggered`/`repair_trigger_type`/`repair_recovered`; the UI now renders a `repair-notice` ("results are from an automatically repaired attempt, which may use a different method/library than requested") — closes the silent xgboost→sklearn substitution. Reliably triggers (verified: xgboost probe → `repair_triggered=true`).
 - ◐ **P2 unanswerable surface (partial)**: when the model uses the structured `status="unanswerable"` path, the UI now shows a `unanswerable-banner` instead of green "Analysis Complete". **Known limitation**: for RL prompts the model often *prose-refuses* (`success=true`, `fallback_reason=None`, 0 charts) without the structured status, so that path is still shown as success. A deterministic RL guard (detect RL intent on the instruction + static-tabular data → structured refusal before the LLM call) is the robust fix — deferred.
 
-Deferred to a follow-up (architectural, higher regression risk — sequenced in §7): compute guard + hard wall clock, deterministic RL refusal guard, reproducibility AST enforcement, and the latency-aware tier planner.
+Phase 3 (governance guards), shipped + verified:
+
+- ✅ **P2 deterministic RL refusal guard** (`data_analysis_agent.detect_unsupported_analysis`): high-precision RL-term detection runs before the LLM call → structured refusal (`success=false`, `fallback_reason="unsupported_analysis_type"`, helpful alternatives) instead of a prose answer mislabeled as success. Verified live: RL prompt → refusal in **0.3s, no LLM call**; 15 unit cases (RL terms trigger; `reward`/`policy`/`agent`/`episode` columns do not). Frontend shows the "not supported" banner.
+- ◐ **P1 compute-budget guard (best-effort)** (`validator._validate_compute_budget`): rejects provably-oversized hyperparameter search (literal `param_grid` size × cv > 200, `cv` > 20, `n_estimators` > 2000) up front so it fails fast and the repair round can shrink it. **Limitation found**: the guard models fit *count*, not per-fit *cost* — a small grid with `n_estimators=800` still times out. The durable-result recovery + graceful timeout envelope is the real net for those (verified: GridSearch → graceful `time_budget_exhausted` envelope, fetchable by job_id).
+- ✅ **timeout message normalization** (`agentic_envelope`): a sandbox/asyncio timeout now yields a friendly "exceeded the time budget — try a simpler model / smaller grid" answer + a consistent `time_budget_exhausted` fallback_reason, instead of the raw "sandbox asyncio timeout".
+
+Known non-regression: one capability E2E run had `04_unsupervised_kmeans` fail — root cause is an LLM matplotlib bug (5th subplot in a 2×2 grid, `sandbox_runtime_error`), not the new guards (the generated code is clean of any guard trigger). Pre-existing LLM flakiness.
+
+Deferred: hard request-level wall clock (cap per-fit cost / total CPU), reproducibility AST enforcement, and the latency-aware tier planner.
 
 ---
 

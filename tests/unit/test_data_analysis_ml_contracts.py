@@ -16,8 +16,45 @@ need the running pipeline.
 import pytest
 
 from backend.services.code_executor.validator import validate_code
+from backend.services.data_analysis.data_analysis_agent import (
+    detect_unsupported_analysis,
+)
 
 pytestmark = pytest.mark.unit
+
+
+class TestRlGuard:
+    """Deterministic reinforcement-learning refusal must be high-precision:
+    unambiguous RL terms trigger; ambiguous column-ish words must NOT."""
+
+    RL_REQUESTS = [
+        "Train a Q-learning agent to optimize the policy over episodes",
+        "Use reinforcement learning to learn an optimal strategy",
+        "Build a DQN to maximize reward",
+        "Apply a policy gradient method and plot cumulative reward per episode",
+        "Implement SARSA on this dataset",
+        "Solve the Bellman equation for the optimal value function",
+        "Use epsilon-greedy exploration with a replay buffer",
+    ]
+
+    NOT_RL = [
+        "Analyze the distribution of the reward column",          # 'reward' as a column
+        "What is the average policy premium by region?",          # insurance 'policy'
+        "Group customers by their assigned agent",                # sales 'agent'
+        "Plot total sales per episode of the show",               # TV 'episode'
+        "Predict the environment impact score from features",     # 'environment'
+        "Cluster projects and report the most cost-effective policy direction",
+        "Train a random forest classifier and report accuracy",
+        "Show a histogram of tip amounts",
+    ]
+
+    @pytest.mark.parametrize("q", RL_REQUESTS)
+    def test_rl_requests_detected(self, q):
+        assert detect_unsupported_analysis(q) == "reinforcement_learning", q
+
+    @pytest.mark.parametrize("q", NOT_RL)
+    def test_non_rl_not_flagged(self, q):
+        assert detect_unsupported_analysis(q) is None, q
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +123,85 @@ class TestValidatorMlGadgets:
         # Baseline: the intended happy path must stay valid.
         code = "import pandas as pd\ndf = pd.read_csv('/workspace/x.csv')\nprint(df.mean())\n"
         assert validate_code(code, strict_mode=True).is_valid is True
+
+
+class TestTimeoutEnvelope:
+    """Heavy-job timeouts must surface a friendly, consistent message (not the
+    raw 'sandbox asyncio timeout') so the durable-result fetch shows something
+    actionable."""
+
+    @staticmethod
+    def _stub(**kw):
+        from types import SimpleNamespace
+        base = dict(success=False, error_message=None, time_budget_exhausted=False, status="ok")
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def test_sandbox_timeout_is_friendly(self):
+        from backend.services.data_analysis import agentic_envelope as E
+        r = self._stub(error_message="sandbox asyncio timeout")
+        assert "time budget" in E._build_answer(r, {}, {}).lower()
+        assert E._fallback_reason(r) == "time_budget_exhausted"
+
+    def test_explicit_budget_exhausted_is_friendly(self):
+        from backend.services.data_analysis import agentic_envelope as E
+        r = self._stub(time_budget_exhausted=True)
+        assert E._fallback_reason(r) == "time_budget_exhausted"
+
+    def test_real_error_passes_through(self):
+        from backend.services.data_analysis import agentic_envelope as E
+        r = self._stub(error_message="KeyError: 'quality'")
+        assert "KeyError" in E._build_answer(r, {}, {})
+        assert E._fallback_reason(r) == "KeyError: 'quality'"
+
+
+class TestComputeBudget:
+    """Reject provably-oversized hyperparameter search; allow normal modeling."""
+
+    REJECT = [
+        ("big_gridsearch",
+         "from sklearn.model_selection import GridSearchCV\n"
+         "from sklearn.ensemble import RandomForestClassifier\n"
+         "gs = GridSearchCV(RandomForestClassifier(random_state=42), "
+         "param_grid={'n_estimators':[100,200,400,800], 'max_depth':[3,5,8,12,None], "
+         "'min_samples_split':[2,5,10]}, cv=5)\n"),                 # 60 x 5 = 300
+        ("huge_cv",
+         "from sklearn.model_selection import cross_val_score\n"
+         "s = cross_val_score(est, X, y, cv=50)\n"),
+        ("huge_forest",
+         "from sklearn.ensemble import RandomForestClassifier\n"
+         "m = RandomForestClassifier(n_estimators=5000, random_state=42)\n"),
+        ("big_randomized",
+         "from sklearn.model_selection import RandomizedSearchCV\n"
+         "rs = RandomizedSearchCV(est, param_distributions=grid, n_iter=100, cv=5)\n"),  # 500
+    ]
+    ALLOW = [
+        ("small_gridsearch",
+         "from sklearn.model_selection import GridSearchCV\n"
+         "gs = GridSearchCV(est, param_grid={'max_depth':[3,5], 'C':[0.1,1.0]}, cv=5)\n"),  # 20
+        ("modest_randomized",
+         "from sklearn.model_selection import RandomizedSearchCV\n"
+         "rs = RandomizedSearchCV(est, param_distributions=grid, n_iter=10, cv=5)\n"),  # 50
+        ("normal_forest",
+         "from sklearn.ensemble import RandomForestClassifier\n"
+         "m = RandomForestClassifier(n_estimators=200, random_state=42)\n"),
+        ("plain_cv",
+         "from sklearn.model_selection import cross_val_score\n"
+         "s = cross_val_score(est, X, y, cv=5)\n"),
+        # Non-literal grid can't be sized statically — allow (runtime timeout net).
+        ("dynamic_grid",
+         "from sklearn.model_selection import GridSearchCV\n"
+         "gs = GridSearchCV(est, param_grid=my_grid, cv=5)\n"),
+    ]
+
+    @pytest.mark.parametrize("sid,code", REJECT, ids=[c[0] for c in REJECT])
+    def test_oversized_search_rejected(self, sid, code):
+        assert validate_code(code, strict_mode=True).is_valid is False, sid
+
+    @pytest.mark.parametrize("sid,code", ALLOW, ids=[c[0] for c in ALLOW])
+    def test_reasonable_modeling_allowed(self, sid, code):
+        r = validate_code(code, strict_mode=True)
+        assert r.is_valid is True, f"{sid} wrongly blocked: {r.error}"
 
 
 class TestValidatorAllowsLegitMl:
