@@ -29,6 +29,7 @@ Minimal fix. Preserve the intent and structure of your previous plan. Change onl
 - `import os`, `import sys`, `import subprocess`, `import pathlib` → **REMOVE these imports entirely**. The sandbox already mounts the CSV at `/workspace/{filename}`; you never need os.path, sys.path, or subprocess. If your previous code had `import os` for ANY reason (even unused), delete that line on round 2.
 - Disallowed imports → stay within pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels.
 - File I/O other than `pd.read_csv("/workspace/{filename}")` → remove it.
+- `TypeError: Object of type bool/int64/float64/ndarray is not JSON serializable` → the summary dict holds **NumPy scalars** (e.g. `p < 0.05` → `numpy.bool_`, `.mean()` → `numpy.float64`, `value_counts().iloc[0]` → `numpy.int64`). Fix: dump with a converter — `json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o))`. Do NOT hand-cast each field; the `default=` handles all of them.
 - NaN crashes → guard with .isna() before arithmetic, or use .dropna() before modeling.
 - Forecasting by row index → use the datetime column (parse with pd.to_datetime if needed).
 - Chart path → save to /workspace/analysis_chart.png if produces_chart=true.

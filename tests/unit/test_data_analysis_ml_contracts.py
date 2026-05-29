@@ -13,6 +13,8 @@ recovery) live in ``scripts/testing/run_data_analysis_ml_e2e.py`` because they
 need the running pipeline.
 """
 
+from pathlib import Path
+
 import pytest
 
 from backend.services.code_executor.validator import validate_code
@@ -21,6 +23,27 @@ from backend.services.data_analysis.data_analysis_agent import (
 )
 
 pytestmark = pytest.mark.unit
+
+
+class TestPromptNumpySafeSerialization:
+    """Statistical 'advanced analysis' produces NumPy scalars (e.g. p < 0.05 ->
+    numpy.bool_) that bare json.dumps cannot serialize, crashing the sandbox run.
+    The agentic prompts must mandate a numpy-safe default= converter. Guards
+    against a future edit silently dropping it."""
+
+    PROMPT_DIR = (
+        Path(__file__).resolve().parents[2]
+        / "backend" / "services" / "data_analysis" / "prompts"
+    )
+
+    def test_user_template_mandates_default_converter(self):
+        text = (self.PROMPT_DIR / "agentic_v1_user_template.md").read_text()
+        assert "default=" in text and "json.dumps" in text
+        assert ".item()" in text  # the numpy->native conversion
+
+    def test_repair_template_covers_serialization_failure(self):
+        text = (self.PROMPT_DIR / "agentic_v1_repair_template.md").read_text()
+        assert "not JSON serializable" in text and "default=" in text
 
 
 class TestRlGuard:

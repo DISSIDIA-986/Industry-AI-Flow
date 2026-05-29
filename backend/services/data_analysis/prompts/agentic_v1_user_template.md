@@ -44,7 +44,8 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 - If produces_chart=true, save exactly one PNG to /workspace/analysis_chart.png, overwriting any existing file. A blank file counts as failure.
 - **Multi-aspect queries** (e.g. "do EDA AND model comparison", "plot distribution AND train classifiers") must pack every aspect into the ONE saved PNG via `plt.subplots(nrows, ncols, figsize=(W, H))`. Use a 2×2 or 2×3 grid with each subplot titled (e.g. "Survival by Sex", "Age distribution", "Model AUC comparison", "ROC curves"). Do NOT sacrifice EDA visuals just to show model results — if the user asked for both, both must be visible in the saved figure.
 - If the task is pure modeling or forecasting with no natural chart, set produces_chart=false and skip the save.
-- Print exactly one line: `ANALYSIS_SUMMARY_JSON=<strict-json>` where `<strict-json>` is produced by `json.dumps(...)` (NOT `str(dict)` or `print(dict)` — those produce Python repr with single quotes that can't be parsed as JSON on the server). The line MUST include a top-level `"key_findings"` field that is a list of 2-5 short human-readable strings summarizing the result for the UI (AUC numbers, strongest correlations, notable class imbalance, etc.). If the task is a model comparison, each key finding should cite specific metric values. Example:
+- Print exactly one line: `ANALYSIS_SUMMARY_JSON=<strict-json>` where `<strict-json>` is produced by `json.dumps(...)` (NOT `str(dict)` or `print(dict)` — those produce Python repr with single quotes that can't be parsed as JSON on the server). The line MUST include a top-level `"key_findings"` field that is a list of 2-5 short human-readable strings summarizing the result for the UI (AUC numbers, strongest correlations, notable class imbalance, etc.). If the task is a model comparison, each key finding should cite specific metric values.
+- **NumPy-safe serialization (mandatory):** scipy/sklearn/pandas return NumPy scalars, not Python natives — e.g. `p < 0.05` is a `numpy.bool_`, `df['x'].mean()` is a `numpy.float64`, `value_counts().iloc[0]` is a `numpy.int64`. Bare `json.dumps` raises `TypeError: Object of type bool/int64/float64 is not JSON serializable` and crashes the whole analysis. You MUST always pass a converter: `json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o))`. NEVER call bare `json.dumps(summary)` when the summary contains any computed statistic. Example:
   ```python
   import json
   summary = {
@@ -57,7 +58,7 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
       "chart_type": "bar",
       "analysis_type": "ml_comparison",
   }
-  print("ANALYSIS_SUMMARY_JSON=" + json.dumps(summary))
+  print("ANALYSIS_SUMMARY_JSON=" + json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o)))
   ```
 - If the dataset cannot answer the question, set status="unanswerable", fill reason/suggestion, python_code=null.
 - **Reproducibility (mandatory):** Every source of randomness MUST be seeded so that running your code twice on the same dataset yields byte-identical results. This is non-negotiable — the system runs the same prompt + dataset multiple times and asserts deterministic output.
