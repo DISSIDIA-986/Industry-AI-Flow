@@ -7,6 +7,7 @@ import CollapsibleCode from "@/components/CollapsibleCode";
 import DarkHeroWrapper from "@/components/DarkHeroWrapper";
 import {
   dataAnalysisStreamUrl,
+  fetchDataAnalysisResult,
   previewDataFile,
   startDataAnalysisJob,
   uploadDataFile,
@@ -166,6 +167,7 @@ export default function DataAnalysisPage() {
   const [pipelineCollapsed, setPipelineCollapsed] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const gotResultRef = useRef(false);
+  const recoveringRef = useRef(false);
 
   // Load preview for default dataset on mount
   useEffect(() => {
@@ -241,6 +243,7 @@ export default function DataAnalysisPage() {
     setStages({});
     setPipelineCollapsed(false);
     gotResultRef.current = false;
+    recoveringRef.current = false;
     eventSourceRef.current?.close();
 
     try {
@@ -288,13 +291,43 @@ export default function DataAnalysisPage() {
       });
 
       es.onerror = () => {
-        if (es.readyState === EventSource.CLOSED) {
-          if (!gotResultRef.current) {
-            setError("Connection lost. Results may still be processing.");
-          }
+        if (es.readyState !== EventSource.CLOSED) return;
+        if (gotResultRef.current) {
           setLoading(false);
           setStreaming(false);
+          return;
         }
+        if (recoveringRef.current) return;
+        recoveringRef.current = true;
+        // SSE dropped before the result arrived (heavy job / flaky network).
+        // Recover via the durable result endpoint instead of failing: poll by
+        // job_id while the job may still be running (~120s, matches the agentic
+        // budget). Keep the in-progress UI until we have a result or give up.
+        void (async () => {
+          for (let attempt = 0; attempt < 30; attempt++) {
+            await new Promise((r) => setTimeout(r, 4000));
+            if (gotResultRef.current) return;
+            let payload: Record<string, unknown> | null = null;
+            try {
+              payload = await fetchDataAnalysisResult(job_id);
+            } catch { /* transient — retry */ }
+            if (payload) {
+              setResult(payload);
+              gotResultRef.current = true;
+              recoveringRef.current = false;
+              setLoading(false);
+              setStreaming(false);
+              return;
+            }
+          }
+          recoveringRef.current = false;
+          setError(
+            "Analysis is taking longer than expected — it may still be processing. " +
+            "Try a simpler question or re-run.",
+          );
+          setLoading(false);
+          setStreaming(false);
+        })();
       };
     } catch (err) {
       setError(normalizeError(err));
@@ -315,6 +348,22 @@ export default function DataAnalysisPage() {
   const analysisSummary = useMemo<AnalysisSummary | null>(() => {
     if (!result?.analysis_summary) return null;
     return result.analysis_summary as AnalysisSummary;
+  }, [result]);
+
+  // Honesty surfaces: disclose automatic repair/downgrade and "unanswerable"
+  // (e.g. RL on static data) instead of silently presenting them as success.
+  const repairInfo = useMemo(() => {
+    const cg = result?.code_generation as Record<string, unknown> | undefined;
+    if (!cg || cg.repair_triggered !== true) return null;
+    return {
+      trigger: (cg.repair_trigger_type as string) || "an error",
+      recovered: cg.repair_recovered !== false,
+    };
+  }, [result]);
+
+  const unanswerable = useMemo(() => {
+    const cg = result?.code_generation as Record<string, unknown> | undefined;
+    return cg?.fallback_reason === "model_declared_unanswerable";
   }, [result]);
 
   const visualizationAsset = useMemo(() => {
@@ -451,7 +500,7 @@ export default function DataAnalysisPage() {
           <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500">
             <span>Cloud LLM</span>
             <span className="text-gray-600">·</span>
-            <span>Docker Sandbox</span>
+            <span>Sandboxed Execution</span>
             <span className="text-gray-600">·</span>
             <span>AI Charts</span>
           </div>
@@ -690,26 +739,47 @@ export default function DataAnalysisPage() {
         {/* ============ Results ============ */}
         {result && (
           <div className="result-stack mt-4" data-testid="analysis-results">
-            {/* Status banner */}
-            <div
-              className={`status-banner ${
-                result.success === false ? "error" : "success"
-              }`}
-            >
-              {result.success === false ? "Analysis Error" : "Analysis Complete"}
-              {analysisSummary?.chart_type && ` — ${analysisSummary.chart_type}`}
-              {codeGenMode && ` (${
-                codeGenMode === "llm"
-                  ? "LLM"
-                  : codeGenMode === "deterministic_planner"
-                    ? "Deterministic"
-                    : codeGenMode === "glm5_agent"
-                      ? "GLM-4.7 Agent"
-                      : codeGenMode === "template_fallback"
-                        ? "Fallback"
-                        : codeGenMode
-              })`}
-            </div>
+            {/* Status banner — "unanswerable" (e.g. RL on static data) is an
+                honest non-result, not a success. */}
+            {unanswerable ? (
+              <div className="status-banner error" data-testid="unanswerable-banner">
+                Not supported for this dataset — see explanation below
+              </div>
+            ) : (
+              <div
+                className={`status-banner ${
+                  result.success === false ? "error" : "success"
+                }`}
+              >
+                {result.success === false ? "Analysis Error" : "Analysis Complete"}
+                {analysisSummary?.chart_type && ` — ${analysisSummary.chart_type}`}
+                {codeGenMode && ` (${
+                  codeGenMode === "llm"
+                    ? "LLM"
+                    : codeGenMode === "deterministic_planner"
+                      ? "Deterministic"
+                      : codeGenMode === "glm5_agent"
+                        ? "GLM-4.7 Agent"
+                        : codeGenMode === "template_fallback"
+                          ? "Fallback"
+                          : codeGenMode
+                })`}
+              </div>
+            )}
+
+            {/* Transparency: disclose automatic repair / capability downgrade
+                (e.g. a requested library was unavailable and the pipeline fell
+                back to an alternative) instead of presenting it silently. */}
+            {repairInfo && !unanswerable && (
+              <div
+                className="mt-2 text-xs rounded-md border border-amber-800 bg-amber-900/20 text-amber-300 px-3 py-2"
+                data-testid="repair-notice"
+              >
+                {repairInfo.recovered
+                  ? `Note: the first attempt hit an issue (${repairInfo.trigger}); these results are from an automatically repaired second attempt, which may use a different method or library than requested.`
+                  : `Note: the analysis was automatically retried after an issue (${repairInfo.trigger}).`}
+              </div>
+            )}
 
             {/* Code generation mode badge */}
             {codeGenMode && (
