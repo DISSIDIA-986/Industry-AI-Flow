@@ -179,7 +179,13 @@ class CodeValidator:
     # search up front so it fails fast (instant) and the repair round can shrink
     # it, instead of a 2-minute wall. Non-literal grids fall through to the
     # runtime timeout + durable-result safety net.
-    _MAX_MODEL_FITS = 200       # grid_size × cv ceiling
+    # Counting grid_size × cv alone missed the real demo hang: a SMALL grid with
+    # `n_estimators=800` still trains tens of thousands of trees and blows the
+    # ~120s budget. So also bound the per-fit cost via a tree-fit estimate
+    # (grid_size × cv × max n_estimators in the grid). 2026-05-29 panel (Codex +
+    # eng-risk + architect) ranked this the #1 stability fix.
+    _MAX_MODEL_FITS = 100        # grid_size × cv ceiling (tightened from 200)
+    _MAX_TREE_FITS = 30_000      # grid_size × cv × n_estimators ceiling
     _MAX_CV_FOLDS = 20
     _MAX_N_ESTIMATORS = 2000
     _SEARCH_FUNCS = {
@@ -771,6 +777,33 @@ class CodeValidator:
                 return None
         return total
 
+    @staticmethod
+    def _grid_param_max(node: Optional[ast.AST], suffix: str) -> Optional[int]:
+        """Max literal int among grid values whose key ends with `suffix`.
+
+        Handles pipeline-prefixed keys (e.g. 'clf__n_estimators'). Returns None
+        when not statically determinable.
+        """
+        if not isinstance(node, ast.Dict):
+            return None
+        best: Optional[int] = None
+        for key, value in zip(node.keys, node.values):
+            if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
+                continue
+            if not key.value.endswith(suffix):
+                continue
+            if isinstance(value, (ast.List, ast.Tuple)):
+                ints = [
+                    e.value for e in value.elts
+                    if isinstance(e, ast.Constant)
+                    and isinstance(e.value, int)
+                    and not isinstance(e.value, bool)
+                ]
+                if ints:
+                    m = max(ints)
+                    best = m if best is None else max(best, m)
+        return best
+
     def _validate_compute_budget(self, tree: ast.AST) -> ValidationResult:
         """Reject provably-oversized hyperparameter search / model sizing."""
         for node in ast.walk(tree):
@@ -805,13 +838,13 @@ class CodeValidator:
 
             if fname in self._SEARCH_FUNCS:
                 cv = cv_n if cv_n is not None else 5
+                pg = kw.get("param_grid") or kw.get("param_distributions")
+                if pg is None and len(node.args) >= 2:
+                    pg = node.args[1]
                 if "random" in fname:
                     n_iter = self._literal_int(kw.get("n_iter"))
                     grid = n_iter if n_iter is not None else 10
                 else:
-                    pg = kw.get("param_grid") or kw.get("param_distributions")
-                    if pg is None and len(node.args) >= 2:
-                        pg = node.args[1]
                     grid = self._grid_product(pg) if pg is not None else None
                 if grid is not None and grid * cv > self._MAX_MODEL_FITS:
                     fits = grid * cv
@@ -825,6 +858,22 @@ class CodeValidator:
                             "small n_iter."
                         ),
                     )
+                # Per-fit cost: ensemble trees dominate wall time. A small grid
+                # with a large n_estimators (e.g. 800) still times out, which the
+                # fit-count check above misses.
+                if grid is not None:
+                    n_est = self._grid_param_max(pg, "n_estimators") or 100
+                    tree_fits = grid * cv * n_est
+                    if tree_fits > self._MAX_TREE_FITS:
+                        return ValidationResult(
+                            is_valid=False,
+                            error=(
+                                f"compute budget: hyperparameter search would train ~{tree_fits} "
+                                f"trees ({grid} combinations x {cv} folds x up to {n_est} "
+                                f"estimators), exceeding the {self._MAX_TREE_FITS} tree-fit limit "
+                                "for live analysis. Lower n_estimators, shrink the grid, or reduce cv."
+                            ),
+                        )
         return ValidationResult(is_valid=True)
 
     def _validate_fstring_expressions(self, tree: ast.AST) -> ValidationResult:

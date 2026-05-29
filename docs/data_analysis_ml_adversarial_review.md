@@ -50,7 +50,14 @@ Phase 5 (rare-case sweep + UX), shipped + verified:
 
 Separate pre-existing flake reconfirmed (not fixed): mpg one-hot encoding can reference a dummy column it didn't create (`KeyError: ['origin_europe']`).
 
-Deferred: hard request-level wall clock (cap per-fit cost / total CPU), reproducibility AST enforcement, the latency-aware tier planner, and stronger one-hot/column-hallucination guards.
+Phase 6 (panel-prioritized: Codex + architect + eng-risk), shipped + verified:
+
+- ✅ **Compute cap now models per-fit cost** (`validator._validate_compute_budget`): the fit-count check missed the real hang — a small grid with `n_estimators=800` trains tens of thousands of trees. Added a tree-fit bound (`grid × cv × max n_estimators ≤ 30,000`) and tightened the fit ceiling 200→100. Oversized search now fails fast at validation (→ repair shrinks it) instead of a ~120s wall. Unit-guarded by `TestComputeBudget` (incl. `big_trees_small_grid`).
+- ✅ **One-hot / dummy-column hallucination guard** (prompts): the user + repair templates now forbid hardcoding `get_dummies` output names (`KeyError: ['origin_europe']`) and require building the feature matrix dynamically. Guarded by a prompt-content test.
+
+Panel consensus ranked these #1 and #2 by demo-stability ROI. The **latency-aware tier planner** (the user's original design) was ranked lower for *stability* (it degrades silently rather than crashing, and durable-result + compute guards already net the failure) — left as the next item pending the user's call. Reproducibility AST enforcement remains deferred (lowest live-demo payoff).
+
+Deferred: latency-aware analysis-tier planner (user's design; activate `decide_model_comparison`), reproducibility AST enforcement, hard wall-clock preemption (minor — sandbox timeout + durable result already bound it).
 
 ---
 
