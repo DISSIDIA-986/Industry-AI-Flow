@@ -173,6 +173,20 @@ class CodeValidator:
         "load",          # numpy.load (alias-resistant; see _validate_io_safety)
     }
 
+    # Compute-budget policy (enterprise reliability, 2026-05-29 review). Heavy
+    # hyperparameter search hangs the live demo (GridSearchCV with a large grid
+    # blew past the 120s budget and returned nothing). Reject provably-oversized
+    # search up front so it fails fast (instant) and the repair round can shrink
+    # it, instead of a 2-minute wall. Non-literal grids fall through to the
+    # runtime timeout + durable-result safety net.
+    _MAX_MODEL_FITS = 200       # grid_size × cv ceiling
+    _MAX_CV_FOLDS = 20
+    _MAX_N_ESTIMATORS = 2000
+    _SEARCH_FUNCS = {
+        "gridsearchcv", "randomizedsearchcv",
+        "halvinggridsearchcv", "halvingrandomsearchcv",
+    }
+
     # Attribute calls blocked on any object (e.g., df.query(), df.eval())
     BLOCKED_METHOD_NAMES = {
         "query",  # DataFrame.query() evaluates arbitrary expressions
@@ -246,6 +260,12 @@ class CodeValidator:
         io_result = self._validate_io_safety(tree)
         if not io_result.is_valid:
             return io_result
+
+        # Check compute budget: reject provably-oversized hyperparameter search
+        # so heavy jobs fail fast instead of hanging past the time budget.
+        compute_result = self._validate_compute_budget(tree)
+        if not compute_result.is_valid:
+            return compute_result
 
         # Check for dangerous dunder method definitions (metaclass/descriptor hooks
         # that execute at class definition time, not at call time).
@@ -724,6 +744,87 @@ class CodeValidator:
                                 is_valid=False,
                                 error=f"Blocked I/O path ({why}): {funcname}({val!r})",
                             )
+        return ValidationResult(is_valid=True)
+
+    @staticmethod
+    def _literal_int(node: Optional[ast.AST]) -> Optional[int]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(
+            node.value, bool
+        ):
+            return node.value
+        return None
+
+    @staticmethod
+    def _grid_product(node: Optional[ast.AST]) -> Optional[int]:
+        """Estimate the number of param combinations in a literal param_grid dict.
+
+        Returns None when the grid (or any value list) is not a literal we can
+        size statically — caller then leaves it to the runtime timeout.
+        """
+        if not isinstance(node, ast.Dict):
+            return None
+        total = 1
+        for value in node.values:
+            if isinstance(value, (ast.List, ast.Tuple)):
+                total *= max(1, len(value.elts))
+            else:
+                return None
+        return total
+
+    def _validate_compute_budget(self, tree: ast.AST) -> ValidationResult:
+        """Reject provably-oversized hyperparameter search / model sizing."""
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Attribute):
+                fname = node.func.attr.lower()
+            elif isinstance(node.func, ast.Name):
+                fname = node.func.id.lower()
+            else:
+                continue
+            kw = {k.arg: k.value for k in node.keywords if k.arg}
+
+            cv_n = self._literal_int(kw.get("cv"))
+            if cv_n is not None and cv_n > self._MAX_CV_FOLDS:
+                return ValidationResult(
+                    is_valid=False,
+                    error=(
+                        f"compute budget: cv={cv_n} exceeds the {self._MAX_CV_FOLDS}-fold "
+                        "limit for live analysis — use a smaller cv"
+                    ),
+                )
+            n_est = self._literal_int(kw.get("n_estimators"))
+            if n_est is not None and n_est > self._MAX_N_ESTIMATORS:
+                return ValidationResult(
+                    is_valid=False,
+                    error=(
+                        f"compute budget: n_estimators={n_est} exceeds the "
+                        f"{self._MAX_N_ESTIMATORS} limit — use fewer estimators"
+                    ),
+                )
+
+            if fname in self._SEARCH_FUNCS:
+                cv = cv_n if cv_n is not None else 5
+                if "random" in fname:
+                    n_iter = self._literal_int(kw.get("n_iter"))
+                    grid = n_iter if n_iter is not None else 10
+                else:
+                    pg = kw.get("param_grid") or kw.get("param_distributions")
+                    if pg is None and len(node.args) >= 2:
+                        pg = node.args[1]
+                    grid = self._grid_product(pg) if pg is not None else None
+                if grid is not None and grid * cv > self._MAX_MODEL_FITS:
+                    fits = grid * cv
+                    return ValidationResult(
+                        is_valid=False,
+                        error=(
+                            f"compute budget: hyperparameter search would train ~{fits} "
+                            f"models ({grid} param combinations x {cv} folds), exceeding "
+                            f"the {self._MAX_MODEL_FITS}-fit limit for live analysis. "
+                            "Shrink the grid, lower cv, or use RandomizedSearchCV with a "
+                            "small n_iter."
+                        ),
+                    )
         return ValidationResult(is_valid=True)
 
     def _validate_fstring_expressions(self, tree: ast.AST) -> ValidationResult:

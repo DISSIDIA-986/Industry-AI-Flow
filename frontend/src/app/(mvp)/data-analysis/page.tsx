@@ -363,7 +363,10 @@ export default function DataAnalysisPage() {
 
   const unanswerable = useMemo(() => {
     const cg = result?.code_generation as Record<string, unknown> | undefined;
-    return cg?.fallback_reason === "model_declared_unanswerable";
+    return (
+      cg?.fallback_reason === "model_declared_unanswerable" ||
+      cg?.fallback_reason === "unsupported_analysis_type"
+    );
   }, [result]);
 
   const visualizationAsset = useMemo(() => {
