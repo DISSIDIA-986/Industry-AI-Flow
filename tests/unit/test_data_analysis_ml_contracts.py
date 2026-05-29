@@ -148,6 +148,46 @@ class TestValidatorMlGadgets:
         assert validate_code(code, strict_mode=True).is_valid is True
 
 
+class TestChartMissingNotFailure:
+    """A chart the plan DECLARED but the code didn't save must not fail an
+    otherwise-valid analysis that produced findings (e.g. pure statistical
+    hypothesis tests). Found via the rare-case sweep (chi-square -> p-values,
+    no chart -> was wrongly success=False / 'Analysis Error')."""
+
+    @staticmethod
+    def _compose(success, produces_chart, findings):
+        from backend.services.data_analysis.agentic_loop import PlanExecutionResult
+        from backend.services.data_analysis.agentic_envelope import compose_agentic_response
+        result = PlanExecutionResult(
+            success=success, status="ok",
+            final_plan={"produces_chart": produces_chart},
+            final_summary={"key_findings": findings} if findings else {},
+            final_code="print('ok')",
+            final_chart_bytes=None,  # declared chart not actually produced
+        )
+        return compose_agentic_response(
+            result=result, question="q", dataset_metadata={}, data_file_path="/workspace/x.csv"
+        )
+
+    def test_valid_findings_no_chart_is_success(self):
+        env = self._compose(True, True, ["site: p=0.5960 (Not Significant)"])
+        assert env["success"] is True
+        assert env["charts"] == []
+        assert env["code_generation"]["chart_missing"] is True
+
+    def test_no_chart_no_findings_is_failure(self):
+        env = self._compose(True, True, [])
+        assert env["success"] is False
+
+    def test_code_failure_stays_failure(self):
+        env = self._compose(False, True, ["something"])
+        assert env["success"] is False
+
+    def test_no_chart_planned_uses_code_success(self):
+        env = self._compose(True, False, [])
+        assert env["success"] is True
+
+
 class TestTimeoutEnvelope:
     """Heavy-job timeouts must surface a friendly, consistent message (not the
     raw 'sandbox asyncio timeout') so the durable-result fetch shows something
