@@ -125,9 +125,12 @@ class TestSnippetAssembly:
 
     def test_snippet_uses_sep_sniff_for_csv(self):
         # Same sniff treatment as EDA loader — see csv-separator hotfix.
+        # The builder uses an explicit per-delimiter sniff loop (robust against
+        # single-column CSVs that `sep=None` corrupts, PR #39) rather than the
+        # python-engine sniffer.
         plan = _plan()
         snippet = _build_model_snippet(plan["model_comparison"], "/tmp/x.csv")
-        assert "sep=None" in snippet
+        assert "_try_sep" in snippet and "sep=_try_sep" in snippet
 
     def test_snippet_regression_uses_r2(self):
         plan = _plan(
