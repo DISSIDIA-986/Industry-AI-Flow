@@ -42,6 +42,14 @@ Phase 4 (codegen robustness, from self-test), shipped + verified:
 
 Separate pre-existing LLM flake noted (not fixed here): one-hot encoding can reference a dummy column it didn't create (`KeyError: ['origin_europe'] not in index` on mpg) — a column-hallucination class already partly covered by the repair template, distinct from the serialization bug.
 
+Phase 5 (rare-case sweep + UX), shipped + verified:
+
+- ✅ **`scripts/testing/run_data_analysis_rare_cases_e2e.py`**: a 15-case adversarial sweep over vague / sophisticated / multi-aspect / edge-data / non-English / nonexistent-column / RL instructions. Surfaced two issues below; the rest (vague, minimal, single-column, non-English, nonexistent-column, multi-aspect, time-series, clustering+PCA, imbalanced) all behaved correctly, and RL refuses in ~3s.
+- ✅ **chart-missing is not a failure** (`agentic_envelope`): a chart the plan DECLARED but the code didn't save (e.g. pure chi-square hypothesis tests → p-values, no chart) was wrongly `success=False` → "Analysis Error". Now a valid analysis with findings is `success=True` with a `chart_missing` flag (the UI has a chartless-result path). Code failures / empty results still fail. Unit-guarded by `TestChartMissingNotFailure`.
+- ✅ **quick-pick instruction presets** (`data-analysis/page.tsx`): restores the convenience the user missed (the old analysis-type/chart-type dropdowns were removed by the unified redesign; instruction was always free-text). Six editable chips fill the free-text field, aligned with the AI-auto-selects design. `data-testid="instruction-preset"`.
+
+Separate pre-existing flake reconfirmed (not fixed): mpg one-hot encoding can reference a dummy column it didn't create (`KeyError: ['origin_europe']`).
+
 Deferred: hard request-level wall clock (cap per-fit cost / total CPU), reproducibility AST enforcement, the latency-aware tier planner, and stronger one-hot/column-hallucination guards.
 
 ---
