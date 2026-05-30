@@ -570,7 +570,9 @@ async def _run_one_round(
     return rec
 
 
-def _build_user_prompt(filename: str, question: str, profile: Dict[str, Any]) -> str:
+def _build_user_prompt(
+    filename: str, question: str, profile: Dict[str, Any], tier_directive: str = ""
+) -> str:
     """Render the round-1 user prompt via .replace() substitution.
 
     Symmetric with `_build_repair_prompt`: avoids `str.format_map` so
@@ -587,6 +589,7 @@ def _build_user_prompt(filename: str, question: str, profile: Dict[str, Any]) ->
         "n_cols": str(profile["n_cols"]),
         "column_profile_table": str(profile["column_profile_table"]),
         "question": str(question),
+        "tier_directive": str(tier_directive or "ANALYSIS TIER = full (no constraint)."),
     }
     text = USER_TEMPLATE_PATH.read_text(encoding="utf-8")
     for name, value in slots.items():
@@ -800,6 +803,7 @@ async def run_agentic_analysis(
     on_progress: Optional[ProgressCallback] = None,
     total_budget_s: float = DEFAULT_TOTAL_BUDGET_S,
     llm_caller: Optional[Callable[[str], Awaitable[str]]] = None,
+    tier_directive: str = "",
 ) -> PlanExecutionResult:
     """Run the bounded 2-pass agentic loop.
 
@@ -852,7 +856,7 @@ async def run_agentic_analysis(
     system_text = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
 
     # ------- Round 1 -------
-    user_text_r1 = _build_user_prompt(filename, question, profile)
+    user_text_r1 = _build_user_prompt(filename, question, profile, tier_directive)
     full_prompt_r1 = _compose_full_prompt(system_text, user_text_r1)
 
     elapsed_before_r1 = time.monotonic() - loop_start

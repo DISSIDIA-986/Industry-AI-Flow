@@ -53,6 +53,58 @@ class TestPromptNumpySafeSerialization:
         assert "not in index" in repair  # the exact KeyError shape
 
 
+class TestTierPlanner:
+    """Latency-aware analysis-tier planner: EDA always; advanced is auto-only-when-cheap.
+    Metadata-driven (NOT the Intent Classifier), the user's original design ask."""
+
+    @staticmethod
+    def _md(columns, rows):
+        return {"rows": rows, "columns": len(columns), "columns_info": columns}
+
+    @staticmethod
+    def _num(name, unique=50):
+        return {"name": name, "role": "numeric", "type": "float64", "unique_values": unique}
+
+    def _plan(self, columns, rows, q=""):
+        from backend.services.data_analysis.analysis_planner import plan_analysis_tier
+        return plan_analysis_tier(self._md(columns, rows), q)
+
+    def test_too_large_skips(self):
+        cols = [self._num("a"), self._num("b"), {"name": "survived", "role": "boolean", "type": "int64", "unique_values": 2}]
+        assert self._plan(cols, 200_000, "predict survived")["tier"] == "skip"
+
+    def test_too_few_numeric_skips(self):
+        cols = [{"name": "x", "role": "unknown", "type": "str", "unique_values": 5}, {"name": "survived", "role": "boolean", "type": "int64", "unique_values": 2}]
+        assert self._plan(cols, 500, "predict survived")["tier"] == "skip"
+
+    def test_no_target_not_asked_skips(self):
+        cols = [self._num("a"), self._num("b"), self._num("c")]
+        assert self._plan(cols, 500, "show me the data")["tier"] == "skip"
+
+    def test_no_target_but_asked_light(self):
+        cols = [self._num("a"), self._num("b"), self._num("c")]
+        assert self._plan(cols, 500, "train a model to predict a")["tier"] == "light"
+
+    def test_feasible_target_asked_cheap_full(self):
+        cols = [self._num("age"), self._num("fare"), {"name": "survived", "role": "boolean", "type": "int64", "unique_values": 2}]
+        p = self._plan(cols, 800, "predict survival")
+        assert p["tier"] == "full" and p["target_column"] == "survived"
+
+    def test_feasible_target_not_asked_cheap_light(self):
+        cols = [self._num("age"), self._num("fare"), {"name": "survived", "role": "boolean", "type": "int64", "unique_values": 2}]
+        assert self._plan(cols, 800, "summarize the dataset")["tier"] == "light"
+
+    def test_too_many_classes_skips(self):
+        cols = [self._num("a"), self._num("b"), {"name": "label", "role": "categorical", "type": "str", "unique_values": 99}]
+        assert self._plan(cols, 500, "classify label")["tier"] == "skip"
+
+    def test_directive_text_matches_tier(self):
+        from backend.services.data_analysis.analysis_planner import tier_directive
+        assert "skip" in tier_directive({"tier": "skip", "reason": "r"}).lower()
+        assert "one" in tier_directive({"tier": "light", "reason": "r"}).lower()
+        assert "comparison" in tier_directive({"tier": "full", "reason": "r"}).lower()
+
+
 class TestRlGuard:
     """Deterministic reinforcement-learning refusal must be high-precision:
     unambiguous RL terms trigger; ambiguous column-ish words must NOT."""
