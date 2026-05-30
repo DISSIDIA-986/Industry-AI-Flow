@@ -143,6 +143,116 @@ def decide_model_comparison(
 # --------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------
+# Latency-aware analysis-tier planner (2026-05-29).
+#
+# EDA is always done (fast). ADVANCED analysis (model training) is the slow,
+# supplementary part — decided here from dataset metadata, "auto only when
+# cheap". The tier becomes a HARD constraint in the agentic prompt, overriding
+# the LLM's soft CRISP-DM skip choice (one source of truth, reproducible). NOT
+# the Intent Classifier — that's a query router with no dataset metadata.
+#
+#   skip  : EDA only, no model (infeasible, or not requested and not cheap)
+#   light : at most ONE simple model, small CV, no hyperparameter search
+#   full  : model comparison allowed (still bounded by the compute guard)
+# --------------------------------------------------------------------------
+
+# rows × features proxy below which a single model fit is "cheap" enough to run
+# automatically even when the user didn't explicitly ask to model.
+_LIGHT_COST_BUDGET = 2_000_000
+
+# Signals the user explicitly wants advanced/modeling (not just EDA).
+_MODEL_INTENT = re.compile(
+    r"\b(predict|classif\w*|regress\w*|forecast\w*|cluster\w*|model\w*|train\w*|"
+    r"svm|random[ _]?forest|xgboost|gradient[ _]?boost\w*|knn|logistic|"
+    r"decision[ _]?tree|feature[ _]?importance\w*|hyper[ _]?parameter\w*|"
+    r"cross[ -]?validat\w*|anomal\w*|outlier\w*|pca|dimensionality|"
+    r"advanced analysis)\b",
+    re.IGNORECASE,
+)
+
+
+def plan_analysis_tier(
+    dataset_metadata: Dict[str, Any], question: str = ""
+) -> Dict[str, Any]:
+    """Decide how much ADVANCED analysis to attempt, from metadata + the question.
+
+    Returns ``{tier, reason, model_requested, target_column, task, estimated_cost}``
+    where ``tier`` is ``skip`` | ``light`` | ``full``. EDA always runs regardless.
+    """
+    columns_info: List[Dict[str, Any]] = dataset_metadata.get("columns_info") or []
+    rows = int(dataset_metadata.get("rows") or 0)
+    n_numeric = sum(
+        1
+        for c in columns_info
+        if c.get("role") == "numeric"
+        or str(c.get("type", "")).startswith(("int", "float"))
+    )
+    n_features = max(0, len(columns_info) - 1)
+    cost = rows * max(1, n_features)
+    asked = bool(_MODEL_INTENT.search(question or ""))
+    # Name-match only (no last-column fallback): tiering is a hard latency gate,
+    # so it must NOT auto-pick a target the user never named. A false-positive
+    # target escalates an EDA-only request to model training and burns the time
+    # budget. decide_model_comparison keeps the permissive _pick_target_column
+    # fallback — that path is about feasibility, not auto-escalation policy.
+    target = _match_by_name(columns_info)
+    task = _classify_task(target) if target else None
+
+    def _tier(t: str, reason: str) -> Dict[str, Any]:
+        return {
+            "tier": t,
+            "reason": reason,
+            "model_requested": asked,
+            "target_column": target["name"] if target else None,
+            "task": task,
+            "estimated_cost": cost,
+        }
+
+    if rows > _ROW_CAP:
+        return _tier("skip", f"{rows} rows exceed the {_ROW_CAP} cap for live model training")
+    if n_numeric < 2 or rows < _ROW_FLOOR:
+        return _tier("skip", "not enough numeric data to train a meaningful model")
+    if target is None:
+        if asked:
+            return _tier("light", "no obvious target column; attempting one bounded model per request")
+        return _tier("skip", "no recognizable target column; EDA only")
+    if task == "classification":
+        unique = int(target.get("unique_values") or 0)
+        if unique > _CLASS_CARDINALITY_CAP:
+            return _tier("skip", f"target {target['name']!r} has {unique} classes — too many for quick training")
+    if asked:
+        t = "full" if cost <= _LIGHT_COST_BUDGET else "light"
+        return _tier(t, f"requested modeling; target={target['name']!r}, task={task}")
+    if cost <= _LIGHT_COST_BUDGET:
+        return _tier("light", f"cheap dataset — auto single model (target={target['name']!r}, task={task})")
+    return _tier("skip", "large dataset — advanced modeling skipped unless explicitly requested")
+
+
+def tier_directive(plan: Dict[str, Any]) -> str:
+    """Render the tier decision as a hard prompt constraint for the agentic round."""
+    t = plan.get("tier", "skip")
+    reason = plan.get("reason", "")
+    if t == "skip":
+        return (
+            f"ANALYSIS TIER = skip (reason: {reason}). Do EDA only. Do NOT train any "
+            "ML model. If the user explicitly asked for modeling that this tier "
+            'cannot support, explain why in the answer and set produces_chart per the EDA.'
+        )
+    if t == "light":
+        return (
+            f"ANALYSIS TIER = light (reason: {reason}). You MAY train at most ONE "
+            "simple model (e.g. a single RandomForest / LinearRegression / KMeans) "
+            "with at most 5-fold CV. Do NOT use GridSearchCV, RandomizedSearchCV, or "
+            "any hyperparameter search, and keep n_estimators <= 300."
+        )
+    return (
+        f"ANALYSIS TIER = full (reason: {reason}). Model comparison is allowed. Keep "
+        "any hyperparameter search small (well under 100 fits) and n_estimators <= 300 "
+        "so the analysis finishes within the time budget."
+    )
+
+
 def _pick_target_column(
     columns_info: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:

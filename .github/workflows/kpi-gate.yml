@@ -86,6 +86,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # The live-API half of this gate boots a real backend; backend/config.py
+    # asserts these are set (no fallback by design). Without them the backend
+    # crashes on startup ("DEMO_USER_PASSWORD ... required but not set") and the
+    # health probe times out. Mirrors the release-gate job's CI-only dummies.
+    # REQUIRE_USER_AUTH=false so the backend serves without a live auth DB.
+    env:
+      DEMO_USER_PASSWORD: ci-dummy-password-not-real
+      AUTH_JWT_SECRET: ci-dummy-jwt-secret-not-real-32-bytes-min
+      REQUIRE_USER_AUTH: "false"
+      REQUIRE_API_KEY: "false"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

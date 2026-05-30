@@ -8,6 +8,10 @@ Columns (name | dtype | role | non_null_pct | n_unique | sample_3):
 ## User Question
 {question}
 
+## Analysis Tier (hard constraint — overrides your own judgment)
+{tier_directive}
+EDA is always expected. The tier above governs ONLY the advanced/modeling part: respect it exactly, even if you would otherwise choose differently.
+
 ## Required Output (strict JSON)
 {
   "status": "ok" | "unanswerable",
