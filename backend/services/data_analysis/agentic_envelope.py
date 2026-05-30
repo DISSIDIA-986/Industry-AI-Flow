@@ -37,6 +37,7 @@ def compose_agentic_response(
     question: str,
     dataset_metadata: Dict[str, Any],
     data_file_path: str,
+    analysis_tier: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Map a ``PlanExecutionResult`` onto the legacy analyze_query envelope.
 
@@ -84,10 +85,12 @@ def compose_agentic_response(
             "key_findings": key_findings,
             "rationale": rationale,
         },
+        "analysis_tier": analysis_tier,
         "code_generation": {
             "mode": AGENTIC_MODE,
             "fallback_reason": fallback_reason,
             "chart_missing": chart_missing,
+            "analysis_tier": (analysis_tier or {}).get("tier"),
             "repair_triggered": result.repair_triggered,
             "repair_trigger_type": result.repair_trigger_type,
             "repair_recovered": result.repair_recovered,
