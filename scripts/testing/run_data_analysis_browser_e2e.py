@@ -747,6 +747,16 @@ def _run_case(
 
         # Visualization is always included by the merged pipeline — no toggle.
         # Click Run Analysis (analysis + visualization in one call).
+        #
+        # Scroll the button into view first: for short-preview datasets
+        # (single-column, 2-column time-series) the run button sits below the
+        # fold after the form renders, and agent-browser's bare `click` reports
+        # success without actually dispatching to an off-screen target — the
+        # analysis never starts and the case times out as a false "No result".
+        # scrollintoview makes the click land regardless of layout height.
+        _run_agent_browser(
+            ["scrollintoview", RUN_ANALYSIS_BUTTON_SELECTOR], timeout=10
+        )
         run_target = refs.get("run_analysis") or RUN_ANALYSIS_BUTTON_SELECTOR
         ok, out = _run_agent_browser(["click", run_target], timeout=25)
         if not ok:
