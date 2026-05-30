@@ -17,7 +17,7 @@
     "postinstall": "[ \"$(uname)\" = \"Darwin\" ] && find node_modules -name '*.node' -type f -exec codesign --force --sign - {} + 2>/dev/null || true"
   },
   "dependencies": {
-    "next": "16.2.4",
+    "next": "16.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

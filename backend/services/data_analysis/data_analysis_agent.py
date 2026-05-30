@@ -472,9 +472,23 @@ class DataAnalysisAgent:
             from backend.services.data_analysis.agentic_loop import (
                 run_agentic_analysis,
             )
+            from backend.services.data_analysis.analysis_planner import (
+                plan_analysis_tier,
+                tier_directive,
+            )
         except Exception as exc:  # noqa: BLE001 — import failure → fall back
             logger.warning("agentic imports failed, falling back: %s", exc)
             return None
+
+        # Latency-aware tier decision (metadata-driven, "auto only when cheap").
+        # Becomes a hard constraint in the agentic prompt, overriding the LLM's
+        # soft CRISP-DM skip choice. EDA always runs regardless of tier.
+        try:
+            tier_plan = plan_analysis_tier(dataset_metadata, question)
+            tier_constraint = tier_directive(tier_plan)
+        except Exception as exc:  # noqa: BLE001 — never block analysis on planner
+            logger.warning("tier planner failed (%s); proceeding tier-free", exc)
+            tier_plan, tier_constraint = None, ""
 
         try:
             # analyze_query is called from a worker thread (see
@@ -489,6 +503,7 @@ class DataAnalysisAgent:
                     data_file_path=data_file_path,
                     dataset_metadata=dataset_metadata,
                     on_progress=on_progress,
+                    tier_directive=tier_constraint,
                 )
             )
         except RuntimeError as exc:
@@ -511,6 +526,7 @@ class DataAnalysisAgent:
             question=question,
             dataset_metadata=dataset_metadata,
             data_file_path=data_file_path,
+            analysis_tier=tier_plan,
         )
 
         # Emit the terminal SSE stage so the UI collapses the pipeline.
@@ -567,31 +583,51 @@ class DataAnalysisAgent:
             # Load data file
             if file_path.endswith(".csv"):
                 df = None
-                # sep=None + engine="python" triggers csv.Sniffer so files that
-                # use ';' or '\t' as delimiter (e.g. UCI wine-quality) parse
-                # into proper columns instead of a single 500-char string.
-                # Falls back to sep="," on sniff failure so standard comma
-                # CSVs keep the faster C engine path where possible.
+                # Delimiter sniff: try each candidate sep reading only the
+                # header (nrows=0) and pick the first that yields >1 column, so
+                # ';'/'\t'/'|' files (e.g. UCI wine-quality) parse into proper
+                # columns. Falls back to plain comma for single-column files —
+                # sep=None+engine="python" over-sniffs those, picking a stray
+                # header letter as the delimiter and splitting 'value\n0.24'
+                # into ['Unnamed: 0', 'alue']. Mirrors chart_executor.
+                # _loader_block so metadata and generated code agree on shape.
                 for enc in ("utf-8", "utf-8-sig", "latin-1"):
                     try:
-                        df = pd.read_csv(
-                            file_path,
-                            encoding=enc,
-                            nrows=_NROWS_GUARD,
-                            sep=None,
-                            engine="python",
-                        )
+                        sep_used = ","
+                        for _try_sep in (",", ";", "\t", "|"):
+                            try:
+                                _hdr = pd.read_csv(
+                                    file_path, encoding=enc, sep=_try_sep, nrows=0
+                                )
+                            except pd.errors.ParserError:
+                                continue
+                            if len(_hdr.columns) > 1:
+                                sep_used = _try_sep
+                                break
+                        try:
+                            df = pd.read_csv(
+                                file_path,
+                                encoding=enc,
+                                nrows=_NROWS_GUARD,
+                                sep=sep_used,
+                            )
+                        except pd.errors.ParserError:
+                            # Header sniffed cleanly but a later row is ragged
+                            # for the C engine. Fall back to the lenient
+                            # sep=None+engine="python" sniffer (the old path),
+                            # which tolerates ragged rows. Single-column files
+                            # never reach here — they parse cleanly as comma —
+                            # so this fallback can't reintroduce the over-sniff.
+                            df = pd.read_csv(
+                                file_path,
+                                encoding=enc,
+                                nrows=_NROWS_GUARD,
+                                sep=None,
+                                engine="python",
+                            )
                         break
                     except UnicodeDecodeError:
                         continue
-                    except pd.errors.ParserError:
-                        try:
-                            df = pd.read_csv(
-                                file_path, encoding=enc, nrows=_NROWS_GUARD
-                            )
-                            break
-                        except UnicodeDecodeError:
-                            continue
                 if df is None:
                     return {
                         "error": "Unable to decode CSV with any supported encoding (utf-8, utf-8-sig, latin-1)."
