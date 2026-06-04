@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from typing import Any, Dict, List, Optional
 
 from backend.services.data_analysis.agentic_loop import PlanExecutionResult
@@ -90,6 +91,12 @@ def compose_agentic_response(
             "mode": AGENTIC_MODE,
             "fallback_reason": fallback_reason,
             "chart_missing": chart_missing,
+            # A2 (2026-06-04): honest degraded-success. True when a usable
+            # chart was salvaged but the run wasn't fully clean (summary
+            # emission failed after results were produced). The UI surfaces
+            # this so a salvaged result is never presented as flawless.
+            "degraded": bool(result.degraded),
+            "degraded_reason": result.degraded_reason,
             "analysis_tier": (analysis_tier or {}).get("tier"),
             "repair_triggered": result.repair_triggered,
             "repair_trigger_type": result.repair_trigger_type,
@@ -104,7 +111,10 @@ def compose_agentic_response(
         },
         "dataset_info": dataset_metadata,
         "execution_time": round(result.total_elapsed_s, 2),
-        "model_comparison": {"enabled": False, "reason": "agentic path"},
+        # B2 (2026-06-04): surface a structured model leaderboard so the UI's
+        # model-metrics-table renders (previously hardcoded disabled on the
+        # agentic path, so the metrics only ever appeared as text bullets).
+        "model_comparison": _structured_model_comparison(summary),
         "stdout": result.final_stdout or "",
         "stderr": _extract_stderr(result),
     }
@@ -112,6 +122,134 @@ def compose_agentic_response(
 
 def _plan_produces_chart(plan: Dict[str, Any]) -> bool:
     return bool(plan.get("produces_chart"))
+
+
+# Metric directionality for picking the winner. Lower-is-better for error
+# metrics; everything else higher-is-better.
+_LOWER_IS_BETTER = {"mae", "rmse", "mse", "logloss", "log_loss", "error"}
+
+# Substrings that mark a key as a METRIC name (not a model name). Used to
+# detect and correct a transposed model_comparison (metric-keyed outer).
+_METRIC_NAME_TOKENS = (
+    "f1", "accuracy", "auc", "roc", "precision", "recall",
+    "rmse", "mse", "r2", "rsquared", "mae", "silhouette", "logloss", "score",
+)
+
+
+def _looks_like_metric(key: str) -> bool:
+    k = re.sub(r"[^a-z0-9]", "", str(key).lower())
+    return any(tok in k for tok in _METRIC_NAME_TOKENS)
+
+
+def _normalize_mc_orientation(mc: Dict[str, Any]) -> Dict[str, Any]:
+    """GLM-4.7 emits model_comparison in EITHER orientation:
+    ``{Model: {metric: v}}`` (what we ask for) or the transposed
+    ``{metric: {Model: v}}``. The frontend table and our winner logic assume
+    model-outer; a transposed dict renders metrics as rows and mislabels the
+    "BEST" badge (caught in browser QA 2026-06-04). Detect the metric-keyed
+    orientation (outer keys look like metric names, inner keys do not) and
+    transpose back to model-outer."""
+    if not mc:
+        return mc
+    outer = list(mc.keys())
+    inner = [k for v in mc.values() if isinstance(v, dict) for k in v.keys()]
+    if not inner:
+        return mc
+    outer_metric = sum(_looks_like_metric(k) for k in outer)
+    inner_metric = sum(_looks_like_metric(k) for k in inner)
+    # Transpose only when the outer axis is clearly the metric axis and the
+    # inner axis clearly is not (avoids flipping a genuine model-outer dict).
+    if outer_metric >= max(1, (len(outer) + 1) // 2) and inner_metric == 0:
+        transposed: Dict[str, Dict[str, Any]] = {}
+        for metric, model_dict in mc.items():
+            if isinstance(model_dict, dict):
+                for model, val in model_dict.items():
+                    transposed.setdefault(str(model), {})[str(metric)] = val
+        if len(transposed) >= 2:
+            return transposed
+    return mc
+
+
+def _structured_model_comparison(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform ``summary.model_comparison`` into the envelope shape the
+    frontend ``model-metrics-table`` expects (B2).
+
+    Frontend contract (page.tsx): renders only when ``enabled is True``;
+    infers columns from the FIRST model's metric keys, then renders each row
+    via ``Object.values(scores)``. So every model row MUST carry the SAME
+    ordered metric keys or columns misalign. We collect the first-seen union
+    of numeric metric keys and normalize every model to that key order
+    (missing → omitted only if absent from all; present-everywhere stays
+    aligned). Requires >= 2 models — a single model is carried by the text
+    key_findings bullets, not a one-row "comparison" table.
+
+    Shape: ``{enabled, task, winner, metrics: {Model: {metric: number}}}``.
+    """
+    mc = summary.get("model_comparison")
+    if not isinstance(mc, dict) or not mc:
+        return {"enabled": False, "reason": "no model comparison"}
+    # Correct a transposed (metric-keyed) dict to model-outer BEFORE the
+    # >=2-models check, so a single-metric × 2-model comparison isn't dropped.
+    mc = _normalize_mc_orientation(mc)
+    if len(mc) < 2:
+        return {"enabled": False, "reason": "no multi-model comparison"}
+
+    metric_order: List[str] = []
+    per_model: Dict[str, Dict[str, float]] = {}
+    for name, payload in mc.items():
+        if not isinstance(name, str):
+            continue
+        row: Dict[str, float] = {}
+        if isinstance(payload, dict):
+            for k, v in payload.items():
+                if isinstance(v, bool):  # bool is an int subclass — skip flags
+                    continue
+                if isinstance(v, (int, float)) and math.isfinite(float(v)):
+                    row[str(k)] = float(v)
+                    if str(k) not in metric_order:
+                        metric_order.append(str(k))
+        elif isinstance(payload, (int, float)) and not isinstance(payload, bool):
+            if math.isfinite(float(payload)):
+                row["score"] = float(payload)
+                if "score" not in metric_order:
+                    metric_order.append("score")
+        if row:
+            per_model[name] = row
+
+    if len(per_model) < 2 or not metric_order:
+        return {"enabled": False, "reason": "no numeric metrics for >=2 models"}
+
+    # Column alignment (Codex final review 2026-06-04): the frontend infers
+    # table columns from the FIRST row's keys and renders every other row via
+    # ``Object.values(scores)`` positionally. If rows had different keys, a
+    # value would land under the wrong column. Keep only metrics present in
+    # EVERY model (intersection, preserving first-seen order) so every row is
+    # complete and positionally aligned. With the B1 prompt mandating the same
+    # metric keys per model, the intersection is normally the full set.
+    shared = [k for k in metric_order if all(k in row for row in per_model.values())]
+    if not shared:
+        return {"enabled": False, "reason": "models report no common metric"}
+    metrics: Dict[str, Dict[str, float]] = {}
+    for name, row in per_model.items():
+        metrics[name] = {k: row[k] for k in shared}
+
+    # Winner by the first (primary) shared metric; direction depends on it.
+    primary = shared[0]
+    ranked = [(n, r[primary]) for n, r in metrics.items() if primary in r]
+    winner: Optional[str] = None
+    if ranked:
+        reverse = primary.lower() not in _LOWER_IS_BETTER
+        ranked.sort(key=lambda t: t[1], reverse=reverse)
+        winner = ranked[0][0]
+
+    task = summary.get("analysis_type")
+    return {
+        "enabled": True,
+        "task": task if isinstance(task, str) else None,
+        "winner": winner,
+        "primary_metric": primary,
+        "metrics": metrics,
+    }
 
 
 def _persist_chart(

@@ -29,12 +29,13 @@ Minimal fix. Preserve the intent and structure of your previous plan. Change onl
 - `import os`, `import sys`, `import subprocess`, `import pathlib` → **REMOVE these imports entirely**. The sandbox already mounts the CSV at `/workspace/{filename}`; you never need os.path, sys.path, or subprocess. If your previous code had `import os` for ANY reason (even unused), delete that line on round 2.
 - Disallowed imports → stay within pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels.
 - File I/O other than `pd.read_csv("/workspace/{filename}")` → remove it.
-- `TypeError: Object of type bool/int64/float64/ndarray is not JSON serializable` → the summary dict holds **NumPy scalars** (e.g. `p < 0.05` → `numpy.bool_`, `.mean()` → `numpy.float64`, `value_counts().iloc[0]` → `numpy.int64`). Fix: dump with a converter — `json.dumps(summary, default=lambda o: o.item() if hasattr(o, "item") else str(o))`. Do NOT hand-cast each field; the `default=` handles all of them.
+- `TypeError: Object of type bool/int64/float64/ndarray is not JSON serializable` OR a missing summary line → emit the summary by calling the pre-defined helper **`emit_summary(summary)`** (already defined in your runtime; it is NumPy-safe and prints the `ANALYSIS_SUMMARY_JSON=` line for you). Do NOT `import json`, do NOT call `json.dumps`, and do NOT print the line yourself — replace any such code with a single `emit_summary(summary)` call.
 - `KeyError: ['origin_europe'] not in index` (or any `*_<value>`) after `pd.get_dummies` → you **hardcoded a dummy column name** that wasn't created (category absent, or `drop_first=True` dropped it). Fix: build the feature matrix dynamically — `X = pd.get_dummies(df[feature_cols], drop_first=True).select_dtypes("number")` and pass ALL of `X` to the model; derive any specific dummy names from `X.columns` at runtime, never from literals.
 - NaN crashes → guard with .isna() before arithmetic, or use .dropna() before modeling.
 - Forecasting by row index → use the datetime column (parse with pd.to_datetime if needed).
 - Chart path → save to /workspace/analysis_chart.png if produces_chart=true.
-- Module not found → the sandbox has pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels only.
+- Module not found → the sandbox has pandas, numpy, matplotlib, seaborn, sklearn, scipy, statsmodels only. xgboost/lightgbm are NOT installed — use sklearn's `GradientBoostingClassifier`/`HistGradientBoostingClassifier`/`RandomForestClassifier` instead.
+- **Timed out / exceeded time budget** → your previous code was too heavy. REMOVE any `GridSearchCV`/`RandomizedSearchCV`/`auto_arima`/hyperparameter sweep. Use fixed default hyperparameters, `n_estimators <= 300`, CV folds <= 5, a single explicit ARIMA order like `order=(1,1,1)`, and train each model exactly once on one train/test split. Returning a fast approximate result beats timing out.
 - JSON wrapping → emit raw JSON object only, no markdown fences, no prose before or after.
 
 ## Inline Replacement Cookbook (use these exact forms on the repair round)
