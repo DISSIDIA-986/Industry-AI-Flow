@@ -28,22 +28,44 @@ pytestmark = pytest.mark.unit
 class TestPromptNumpySafeSerialization:
     """Statistical 'advanced analysis' produces NumPy scalars (e.g. p < 0.05 ->
     numpy.bool_) that bare json.dumps cannot serialize, crashing the sandbox run.
-    The agentic prompts must mandate a numpy-safe default= converter. Guards
-    against a future edit silently dropping it."""
+
+    A3 (2026-06-04): rather than relying on the model obeying a `default=`
+    prompt directive (prompt-hope that empirically failed ~40% of the time),
+    the agentic loop now INJECTS a numpy-safe ``emit_summary()`` helper into
+    every code block and the prompts instruct the model to call it. These
+    tests lock the stronger contract: prompts mandate emit_summary AND the
+    injected helper is genuinely numpy-safe."""
 
     PROMPT_DIR = (
         Path(__file__).resolve().parents[2]
         / "backend" / "services" / "data_analysis" / "prompts"
     )
 
-    def test_user_template_mandates_default_converter(self):
+    def test_user_template_mandates_emit_summary(self):
         text = (self.PROMPT_DIR / "agentic_v1_user_template.md").read_text()
-        assert "default=" in text and "json.dumps" in text
-        assert ".item()" in text  # the numpy->native conversion
+        assert "emit_summary(" in text
+        # The model must NOT be told to hand-roll json.dumps for the summary.
+        assert "emit_summary(summary)" in text
 
     def test_repair_template_covers_serialization_failure(self):
         text = (self.PROMPT_DIR / "agentic_v1_repair_template.md").read_text()
-        assert "not JSON serializable" in text and "default=" in text
+        assert "not JSON serializable" in text and "emit_summary(" in text
+
+    def test_injected_helper_is_numpy_safe(self):
+        """The deterministic guarantee: the injected helper converts NumPy
+        scalars (the prompt-hope replacement)."""
+        from backend.services.data_analysis import agentic_loop
+
+        helper = agentic_loop._EMIT_SUMMARY_HELPER
+        assert "def emit_summary(" in helper
+        assert ".item()" in helper and "default=" in helper
+        # Executing it yields a callable that serializes numpy types.
+        import numpy as np
+
+        ns: dict = {}
+        exec(helper, ns)
+        # Should not raise on a numpy bool / float.
+        ns["emit_summary"]({"k": [np.bool_(True)], "m": np.float64(1.5)})
 
     def test_templates_warn_against_dummy_column_hallucination(self):
         # One-hot dummy-column hallucination guard (KeyError: ['origin_europe']).

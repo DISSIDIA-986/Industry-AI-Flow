@@ -215,3 +215,94 @@ def test_synthesis_does_not_mask_explicit_key_findings():
     }
     out = _extract_key_findings(summary, plan={"business_goal": "unused"})
     assert out == ["Custom bullet 1", "Custom bullet 2"]
+
+
+# ---------------------------------------------------------------------------
+# B2 (_structured_model_comparison) — 2026-06-04
+# ---------------------------------------------------------------------------
+
+from backend.services.data_analysis.agentic_envelope import (  # noqa: E402
+    _structured_model_comparison,
+)
+
+
+def test_structured_mc_disabled_for_single_model():
+    out = _structured_model_comparison({"model_comparison": {"RF": {"auc": 0.9}}})
+    assert out["enabled"] is False
+
+
+def test_structured_mc_aligns_columns_and_picks_winner():
+    summary = {
+        "analysis_type": "classification",
+        "model_comparison": {
+            "LogisticRegression": {"f1": 0.81, "accuracy": 0.84},
+            "RandomForest": {"f1": 0.88, "accuracy": 0.90},
+            "GradientBoosting": {"f1": 0.86, "accuracy": 0.89},
+        },
+    }
+    out = _structured_model_comparison(summary)
+    assert out["enabled"] is True
+    assert out["task"] == "classification"
+    # Winner by the primary (first-seen) metric f1 → RandomForest.
+    assert out["winner"] == "RandomForest"
+    assert out["primary_metric"] == "f1"
+    # Every row carries the same ordered keys → table columns align.
+    keys = [list(v.keys()) for v in out["metrics"].values()]
+    assert all(k == keys[0] for k in keys)
+    assert keys[0] == ["f1", "accuracy"]
+
+
+def test_structured_mc_winner_lower_is_better_for_rmse():
+    summary = {
+        "model_comparison": {
+            "Ridge": {"rmse": 3.2, "r2": 0.71},
+            "RandomForest": {"rmse": 2.1, "r2": 0.83},
+        }
+    }
+    out = _structured_model_comparison(summary)
+    assert out["winner"] == "RandomForest"  # lowest RMSE wins
+
+
+def test_structured_mc_skips_bool_flags():
+    summary = {
+        "model_comparison": {
+            "A": {"auc": 0.9, "converged": True},
+            "B": {"auc": 0.8, "converged": False},
+        }
+    }
+    out = _structured_model_comparison(summary)
+    # 'converged' bool must not become a metric column.
+    assert list(out["metrics"]["A"].keys()) == ["auc"]
+
+
+def test_structured_mc_normalizes_transposed_metric_keyed():
+    """B2 (browser QA 2026-06-04): GLM sometimes emits metric-keyed outer
+    {Accuracy:{LogReg,RF}, F1:{...}} — transpose to model-outer so rows are
+    models and the BEST badge lands on the winning model, not a metric."""
+    summary = {
+        "model_comparison": {
+            "Accuracy": {"Logistic Regression": 0.986, "Random Forest": 0.971},
+            "F1 Score": {"Logistic Regression": 0.980, "Random Forest": 0.972},
+        }
+    }
+    out = _structured_model_comparison(summary)
+    assert out["enabled"] is True
+    assert set(out["metrics"].keys()) == {"Logistic Regression", "Random Forest"}
+    # Winner by primary (first) metric column → Logistic Regression (higher).
+    assert out["winner"] == "Logistic Regression"
+    # Rows aligned: each model has the same metric keys.
+    keys = [list(v.keys()) for v in out["metrics"].values()]
+    assert keys[0] == keys[1]
+
+
+def test_structured_mc_leaves_model_outer_untouched():
+    """A genuine model-outer dict must NOT be transposed."""
+    summary = {
+        "model_comparison": {
+            "RandomForest": {"f1": 0.88, "accuracy": 0.90},
+            "GradientBoosting": {"f1": 0.86, "accuracy": 0.89},
+        }
+    }
+    out = _structured_model_comparison(summary)
+    assert set(out["metrics"].keys()) == {"RandomForest", "GradientBoosting"}
+    assert out["winner"] == "RandomForest"
