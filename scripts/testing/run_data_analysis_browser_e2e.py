@@ -348,11 +348,26 @@ def _open_data_page(frontend_url: str) -> None:
         _run_agent_browser(["wait", "1500"], timeout=10)
 
 
+def _wait_for_selector(selector: str, attempts: int = 8, delay: float = 1.5) -> bool:
+    """Poll until a selector appears. networkidle fires before React finishes
+    hydrating, so a bare _count right after it can read 0 for an element that
+    is about to render — that race made login spuriously abort. Retry."""
+    for _ in range(attempts):
+        if _count(selector) > 0:
+            return True
+        time.sleep(delay)
+    return _count(selector) > 0
+
+
 def _ensure_logged_in(frontend_url: str, email: str, password: str) -> None:
     _open_data_page(frontend_url)
+    # Wait for hydration: either the (logged-in) run button OR the login form.
+    _wait_for_selector(
+        f"{RUN_ANALYSIS_BUTTON_SELECTOR}, {LOGIN_EMAIL_SELECTOR}", attempts=8
+    )
     if _count(RUN_ANALYSIS_BUTTON_SELECTOR) > 0:
         return
-    if _count(LOGIN_EMAIL_SELECTOR) > 0 and _count(LOGIN_BUTTON_SELECTOR) > 0:
+    if _wait_for_selector(LOGIN_EMAIL_SELECTOR, attempts=6) and _count(LOGIN_BUTTON_SELECTOR) > 0:
         _run_agent_browser(["fill", LOGIN_EMAIL_SELECTOR, email], timeout=20)
         _run_agent_browser(["fill", LOGIN_PASSWORD_SELECTOR, password], timeout=20)
         ok, out = _run_agent_browser(["click", LOGIN_BUTTON_SELECTOR], timeout=25)
@@ -361,6 +376,7 @@ def _ensure_logged_in(frontend_url: str, email: str, password: str) -> None:
         _run_agent_browser(["wait", "--load", "networkidle"], timeout=45)
         _run_agent_browser(["wait", "1800"], timeout=10)
         _open_data_page(frontend_url)
+        _wait_for_selector(RUN_ANALYSIS_BUTTON_SELECTOR, attempts=8)
     if _count(RUN_ANALYSIS_BUTTON_SELECTOR) <= 0:
         raise RuntimeError("data_analysis_page_not_ready_after_login")
 
