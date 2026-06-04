@@ -509,10 +509,17 @@ def _build_answer(
                 "model tuning (large hyperparameter grids or many estimators). Try a "
                 "simpler model, a smaller grid, or a more specific question."
             )
-        return (
-            result.error_message
-            or "The analysis could not complete. Please retry."
+        # NEVER surface the raw sandbox traceback to the user (CLAUDE.md: no stack
+        # traces leaked, messages must be user-friendly). result.error_message is the
+        # sandbox stderr — a full multi-line Python traceback for runtime errors.
+        # Distill it to a single safe summary line; keep the full trace in `stderr`.
+        cause = _distill_error(result.error_message)
+        base = (
+            "The analysis couldn't complete on this dataset. This can happen with "
+            "very small, degenerate, or unusual data — try a simpler or more specific "
+            "question."
         )
+        return f"{base} (Reason: {cause})" if cause else base
 
     # Success path: prefer summary's stated findings if present.
     findings = summary.get("key_findings")
@@ -534,7 +541,33 @@ def _fallback_reason(result: PlanExecutionResult) -> Optional[str]:
         return "time_budget_exhausted"
     if result.status == "unanswerable":
         return "model_declared_unanswerable"
-    return result.error_message or "agentic_loop_failed"
+    # Surface the cause for observability, but NEVER the raw multi-line traceback
+    # (it would otherwise leak into the structured field the UI/analytics read).
+    # Distill to a single safe line; the clean enum lives in repair_trigger_type.
+    return _distill_error(result.error_message) or "agentic_loop_failed"
+
+
+def _distill_error(message: Optional[str]) -> str:
+    """Reduce a raw sandbox traceback to a single user-safe summary line.
+
+    Never returns a multi-line traceback. Prefers the final ``SomeError: detail``
+    line (the actual cause); otherwise the last non-empty line. Capped in length.
+    """
+    if not message:
+        return ""
+    text = str(message)
+    # Prefer a real exception line (`SomeError:` / `SomeException:`) over a trailing
+    # warning — a DeprecationWarning appended after the traceback is not the cause.
+    err_lines = re.findall(r"^[A-Za-z_][\w.]*(?:Error|Exception):.*$", text, re.MULTILINE)
+    if not err_lines:
+        err_lines = re.findall(r"^[A-Za-z_][\w.]*Warning:.*$", text, re.MULTILINE)
+    if err_lines:
+        line = err_lines[-1].strip()
+    else:
+        non_empty = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        line = non_empty[-1] if non_empty else ""
+    line = " ".join(line.split())  # collapse whitespace/newlines
+    return (line[:197] + "...") if len(line) > 200 else line
 
 
 def _extract_stderr(result: PlanExecutionResult) -> str:

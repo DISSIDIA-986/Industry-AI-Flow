@@ -1,0 +1,233 @@
+[
+  {
+    "file": "all_null_col.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 80,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "count,empty_metric,color"
+  },
+  {
+    "file": "ambiguous_dates.csv",
+    "stage": "ok",
+    "ncols": 2,
+    "nrows": 60,
+    "roles": {
+      "unknown": 1,
+      "numeric": 1
+    },
+    "detail": "date,value"
+  },
+  {
+    "file": "blank_headers.csv",
+    "stage": "ok",
+    "ncols": 4,
+    "nrows": 3,
+    "roles": {
+      "numeric": 2,
+      "unknown": 2
+    },
+    "detail": "id,Unnamed: 1,score,Unnamed: 3"
+  },
+  {
+    "file": "boolean_strings.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 80,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "i,flag,amt"
+  },
+  {
+    "file": "crlf_endings.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 50,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "i,v,state"
+  },
+  {
+    "file": "duplicate_headers.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 3,
+    "roles": {
+      "numeric": 3
+    },
+    "detail": "id,value,value.1"
+  },
+  {
+    "file": "euro_semicolon_decimal.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 3,
+    "roles": {
+      "unknown": 2,
+      "numeric": 1
+    },
+    "detail": "produkt,preis,menge"
+  },
+  {
+    "file": "high_cardinality.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 4000,
+    "roles": {
+      "unknown": 2,
+      "numeric": 1
+    },
+    "detail": "user_token,spend,plan"
+  },
+  {
+    "file": "inf_and_extremes.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 43,
+    "roles": {
+      "unknown": 1,
+      "numeric": 2
+    },
+    "detail": "kind,huge,small"
+  },
+  {
+    "file": "latin1_accents.csv",
+    "stage": "ok",
+    "ncols": 2,
+    "nrows": 3,
+    "roles": {
+      "unknown": 1,
+      "numeric": 1
+    },
+    "detail": "city,population"
+  },
+  {
+    "file": "mixed_dtype_col.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 100,
+    "roles": {
+      "numeric": 1,
+      "unknown": 2
+    },
+    "detail": "idx,messy_value,cat"
+  },
+  {
+    "file": "mostly_null.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 120,
+    "roles": {
+      "numeric": 3
+    },
+    "detail": "id,dense,sparse_95pct_null"
+  },
+  {
+    "file": "quoted_commas.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 3,
+    "roles": {
+      "unknown": 2,
+      "numeric": 1
+    },
+    "detail": "company,note,revenue"
+  },
+  {
+    "file": "single_row.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 1,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "x,y,label"
+  },
+  {
+    "file": "single_value_col.csv",
+    "stage": "ok",
+    "ncols": 1,
+    "nrows": 60,
+    "roles": {
+      "numeric": 1
+    },
+    "detail": "measurement"
+  },
+  {
+    "file": "two_rows.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 2,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "x,y,target"
+  },
+  {
+    "file": "utf16_le.csv",
+    "stage": "upload",
+    "ncols": null,
+    "detail": "__upload_err__:{\"detail\":\"File content does not match file extension signature.\"}"
+  },
+  {
+    "file": "utf8_bom.csv",
+    "stage": "ok",
+    "ncols": 2,
+    "nrows": 2,
+    "roles": {
+      "numeric": 2
+    },
+    "detail": "a,b"
+  },
+  {
+    "file": "whitespace_headers.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 3,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": " id , name ,  score  "
+  },
+  {
+    "file": "wide_120col.csv",
+    "stage": "ok",
+    "ncols": 120,
+    "nrows": 150,
+    "roles": {
+      "numeric": 120
+    },
+    "detail": "f000,f001,f002,f003,f004,f005"
+  },
+  {
+    "file": "zero_rows.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 0,
+    "roles": {
+      "categorical": 3
+    },
+    "detail": "a,b,c"
+  },
+  {
+    "file": "zero_variance.csv",
+    "stage": "ok",
+    "ncols": 3,
+    "nrows": 100,
+    "roles": {
+      "numeric": 2,
+      "unknown": 1
+    },
+    "detail": "constant,signal,grp"
+  }
+]

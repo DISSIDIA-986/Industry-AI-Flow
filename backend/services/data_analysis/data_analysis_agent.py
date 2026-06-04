@@ -534,10 +534,12 @@ class DataAnalysisAgent:
         # sandbox_execution already; result_render is ours to close out.
         if on_progress is not None:
             status = "completed" if envelope.get("success") else "failed"
+            # Never surface raw `stderr` here — it carries the full sandbox traceback.
+            # `answer` is the distilled, user-safe message (agentic_envelope._build_answer).
             detail = (
                 "Analysis complete"
                 if envelope.get("success")
-                else (envelope.get("stderr") or envelope.get("answer") or "Analysis failed")
+                else (envelope.get("answer") or "Analysis failed")
             )
             try:
                 on_progress("result_render", status, 1.0, detail[:200])

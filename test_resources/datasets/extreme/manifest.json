@@ -1,0 +1,146 @@
+[
+  {
+    "file": "wide_120col.csv",
+    "encoding": "utf-8",
+    "bytes": 126398,
+    "why": "120 numeric cols \u2014 heatmap/render/perf stress"
+  },
+  {
+    "file": "zero_rows.csv",
+    "encoding": "utf-8",
+    "bytes": 6,
+    "why": "header only, 0 data rows"
+  },
+  {
+    "file": "single_row.csv",
+    "encoding": "utf-8",
+    "bytes": 22,
+    "why": "exactly 1 data row"
+  },
+  {
+    "file": "two_rows.csv",
+    "encoding": "utf-8",
+    "bytes": 23,
+    "why": "2 rows; below model floor"
+  },
+  {
+    "file": "all_null_col.csv",
+    "encoding": "utf-8",
+    "bytes": 742,
+    "why": "one entirely-null numeric column"
+  },
+  {
+    "file": "mostly_null.csv",
+    "encoding": "utf-8",
+    "bytes": 1282,
+    "why": "column ~95% null"
+  },
+  {
+    "file": "zero_variance.csv",
+    "encoding": "utf-8",
+    "bytes": 1127,
+    "why": "constant column (zero variance)"
+  },
+  {
+    "file": "high_cardinality.csv",
+    "encoding": "utf-8",
+    "bytes": 89680,
+    "why": "categorical with ~4000 unique values"
+  },
+  {
+    "file": "mixed_dtype_col.csv",
+    "encoding": "utf-8",
+    "bytes": 831,
+    "why": "column mixes int/float/str/blank"
+  },
+  {
+    "file": "ambiguous_dates.csv",
+    "encoding": "utf-8",
+    "bytes": 1017,
+    "why": "ambiguous DD/MM vs MM/DD dates"
+  },
+  {
+    "file": "utf16_le.csv",
+    "encoding": "utf-16-le",
+    "bytes": 72,
+    "why": "UTF-16 LE \u2014 outside the 3-encoding fallback chain"
+  },
+  {
+    "file": "latin1_accents.csv",
+    "encoding": "latin-1",
+    "bytes": 69,
+    "why": "Latin-1 accented chars"
+  },
+  {
+    "file": "crlf_endings.csv",
+    "encoding": "utf-8",
+    "bytes": 619,
+    "why": "Windows CRLF line endings"
+  },
+  {
+    "file": "quoted_commas.csv",
+    "encoding": "utf-8",
+    "bytes": 139,
+    "why": "commas inside quoted fields"
+  },
+  {
+    "file": "euro_semicolon_decimal.csv",
+    "encoding": "utf-8",
+    "bytes": 65,
+    "why": "semicolon sep + decimal comma (European)"
+  },
+  {
+    "file": "duplicate_headers.csv",
+    "encoding": "utf-8",
+    "bytes": 39,
+    "why": "two columns share a name"
+  },
+  {
+    "file": "blank_headers.csv",
+    "encoding": "utf-8",
+    "bytes": 53,
+    "why": "empty header cells"
+  },
+  {
+    "file": "whitespace_headers.csv",
+    "encoding": "utf-8",
+    "bytes": 43,
+    "why": "headers padded with spaces"
+  },
+  {
+    "file": "utf8_bom.csv",
+    "encoding": "utf-8-sig",
+    "bytes": 15,
+    "why": "UTF-8 BOM prefix"
+  },
+  {
+    "file": "inf_and_extremes.csv",
+    "encoding": "utf-8",
+    "bytes": 889,
+    "why": "inf / 1e308 / extreme magnitudes"
+  },
+  {
+    "file": "single_value_col.csv",
+    "encoding": "utf-8",
+    "bytes": 339,
+    "why": "single column \u2014 sniffer footgun"
+  },
+  {
+    "file": "boolean_strings.csv",
+    "encoding": "utf-8",
+    "bytes": 933,
+    "why": "boolean expressed as mixed strings"
+  },
+  {
+    "file": "ragged_rows.csv",
+    "encoding": "utf-8",
+    "bytes": 48,
+    "why": "ragged rows after clean header \u2014 host/sandbox parse mismatch"
+  },
+  {
+    "file": "malicious_header.csv",
+    "encoding": "utf-8",
+    "bytes": 70,
+    "why": "injection payload as a column name"
+  }
+]

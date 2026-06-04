@@ -1,0 +1,4 @@
+# Extreme-coverage fixtures carry intentional byte-exact content (CRLF endings,
+# UTF-16, Latin-1, BOM, ragged rows). Treat as binary so git never normalizes
+# line endings or encoding — that would defeat the very edge cases under test.
+*.csv -text
