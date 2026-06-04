@@ -14,6 +14,8 @@ import hashlib
 import json
 import logging
 import os
+import re
+import threading
 import time
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
@@ -91,6 +93,103 @@ REPAIR_TRIGGERS = frozenset(
     }
 )
 
+# A3 (2026-06-04): prepended to every validated code block before sandbox
+# execution. Removes the #1 supervised-ML crash class. GLM-4.7 frequently
+# emits a bare `json.dumps(summary)` despite the prompt's numpy-safe mandate;
+# NumPy scalars (np.bool_ from `p < 0.05`, np.float64 from `.mean()`,
+# np.int64 from `value_counts().iloc[0]`) then raise TypeError *inside* the
+# sandbox — the ANALYSIS_SUMMARY_JSON line never prints, the chart is
+# orphaned, sandbox_success goes False, and is_successful() fails the round
+# (the live penguins/PCA "Analysis failed" with a chart attached). Injecting
+# a numpy-safe emit_summary() into the SAME execution namespace makes the
+# contract deterministic instead of prompt-hope. The prompt now instructs the
+# model to call emit_summary(summary); the marker line + parser are unchanged,
+# so a model that still prints the line manually also works (back-compat).
+_EMIT_SUMMARY_HELPER = (
+    "import json as _ds_json\n"
+    "def emit_summary(_summary):\n"
+    "    def _coerce(o):\n"
+    "        try:\n"
+    "            return o.item()\n"
+    "        except Exception:\n"
+    "            try:\n"
+    "                return o.tolist()\n"
+    "            except Exception:\n"
+    "                return str(o)\n"
+    "    try:\n"
+    "        _payload = _ds_json.dumps(_summary, default=_coerce)\n"
+    "    except Exception as _exc:\n"
+    "        _payload = _ds_json.dumps({\n"
+    "            'key_findings': ['(summary serialization fell back)'],\n"
+    "            '_emit_error': str(_exc),\n"
+    "        })\n"
+    "    print('ANALYSIS_SUMMARY_JSON=' + _payload)\n"
+    "\n"
+)
+
+
+def _needed_bootstrap(code: str) -> List[str]:
+    """Return the bootstrap packages the generated code actually needs.
+
+    statsmodels is the only bootstrap package and is absent from the E2B base
+    image, so installing it costs ~10-20s per sandbox. Only time-series / stats
+    analyses import it; everything else (classification, regression, clustering,
+    PCA, anomaly) pays the tax for nothing and risks a spurious timeout. Install
+    it only when the code references it. Returns ``[]`` (install nothing) when
+    not needed — distinct from ``None`` (use the default set)."""
+    return ["statsmodels"] if "statsmodels" in code else []
+
+
+_REFLEXIVE_BLOCKED_MODULES = ("os", "sys", "pathlib", "subprocess")
+
+
+def _strip_unused_blocked_imports(code: str) -> str:
+    """Drop standalone `import os|sys|pathlib|subprocess` lines that are never
+    actually used (A5a). The module is considered used only if it appears as
+    ``mod.`` or ``mod[`` somewhere in the code; a bare unused import is removed
+    so a reflexive `import os` doesn't fail validation over nothing. A used
+    module is left in place and the validator still rejects it (no bypass)."""
+    lines = code.split("\n")
+    kept: List[str] = []
+    for line in lines:
+        # Only MODULE-LEVEL (column-0) imports — never an indented `import os`
+        # inside a block, since dropping the sole statement of a block would
+        # leave an empty suite → IndentationError (Codex final review).
+        m = re.match(r"^import\s+(os|sys|pathlib|subprocess)\s*(#.*)?$", line)
+        if m:
+            mod = m.group(1)
+            if not re.search(rf"\b{mod}\s*[.\[]", code):
+                continue  # imported but unused → safe to drop
+        kept.append(line)
+    return "\n".join(kept)
+
+
+# MULTILINE so `.search(code)` finds a future import on ANY line (e.g. after a
+# module docstring), not just line 1 — `.match(line)` per-line still works.
+_FUTURE_IMPORT_RE = re.compile(r"^\s*from __future__ import", re.MULTILINE)
+
+
+def _inject_summary_helper(code: str) -> str:
+    """Prepend the numpy-safe emit_summary() helper to validated user code.
+
+    Done AFTER validation so the validator still scrutinizes only the model's
+    code (the helper is trusted). Any ``from __future__`` import must remain
+    the first statement of a module, so we lift ALL future-import lines to the
+    very top (ahead of the helper's own ``import``), wherever they appear —
+    even after a module docstring (Codex final review 2026-06-04). Future
+    imports are always single lines, so a line-level lift is exact. A docstring
+    that ends up after the future import is just a harmless string expression.
+    Generated analysis code essentially never uses future imports; this is
+    belt-and-suspenders so injection can never turn valid code into a
+    SyntaxError.
+    """
+    if not _FUTURE_IMPORT_RE.search(code):
+        return _EMIT_SUMMARY_HELPER + code
+    lines = code.split("\n")
+    future_lines = [ln for ln in lines if _FUTURE_IMPORT_RE.match(ln)]
+    body_lines = [ln for ln in lines if not _FUTURE_IMPORT_RE.match(ln)]
+    return "\n".join(future_lines) + "\n" + _EMIT_SUMMARY_HELPER + "\n".join(body_lines)
+
 
 # ---------------------------------------------------------------------------
 # Result types
@@ -167,6 +266,13 @@ class PlanExecutionResult:
     repair_trigger_type: Optional[str] = None
     repair_recovered: Optional[bool] = None
     time_budget_exhausted: bool = False
+    # A2 (2026-06-04): honest "degraded success". True when no round was
+    # fully clean but a round produced a validator-passed chart and the only
+    # failure was post-result (summary emission / serialization). We show the
+    # chart + synthesized findings instead of "Analysis Error", and surface
+    # degraded_reason so the result is never silently mislabeled as clean.
+    degraded: bool = False
+    degraded_reason: Optional[str] = None
     final_code: Optional[str] = None
     final_plan: Optional[Dict[str, Any]] = None
     final_stdout: str = ""
@@ -227,7 +333,10 @@ async def run_sandbox(
 
     from backend.config import settings
 
-    packages = list(bootstrap_packages or BOOTSTRAP_PACKAGES)
+    # None → default package set; an explicit [] → install nothing (the
+    # caller determined no bootstrap is needed). Must distinguish [] from None
+    # here, since `[] or BOOTSTRAP_PACKAGES` would wrongly re-add the default.
+    packages = list(BOOTSTRAP_PACKAGES if bootstrap_packages is None else bootstrap_packages)
 
     try:
         from e2b_code_interpreter import Sandbox
@@ -520,6 +629,15 @@ async def _run_one_round(
         rec.elapsed_ms = int((time.monotonic() - t0) * 1000)
         return rec
 
+    # A5a: drop reflexive, provably-unused blocked stdlib imports BEFORE
+    # validation. GLM-4.7 emits `import os` (etc.) out of habit even though the
+    # prompt forbids it and never actually uses os — the validator then rejects
+    # the whole analysis ("Blacklisted import: os", the live titanic failure)
+    # and burns a repair round. Removing an unused import is semantically inert;
+    # if the module IS referenced the line is kept and the validator still
+    # blocks it (no bypass).
+    code = _strip_unused_blocked_imports(code)
+
     # Validate
     outcome = validate_code(code)
     rec.validator_pass = outcome.ok
@@ -534,13 +652,29 @@ async def _run_one_round(
     # BOTH, plus a small slack for file upload and result download,
     # otherwise a cold-sandbox run spending most of its budget on real
     # work gets preempted and misclassified as sandbox_timeout.
-    outer_wait_s = BOOTSTRAP_BUDGET_S + sandbox_budget_s + 5
+    code_to_run = _inject_summary_helper(code)
+    # Latency fix (2026-06-04): statsmodels is the only bootstrap package and it
+    # is NOT in the E2B base image, so installing it costs ~10-20s of pip per
+    # sandbox — counted against the user-code budget. Classification, regression,
+    # clustering, PCA and anomaly analyses never import it, yet paid that tax on
+    # every (especially cold) run, which is what tipped them over the 30s
+    # sandbox budget into spurious timeouts. Only bootstrap when the generated
+    # code actually needs statsmodels (time-series / SARIMAX / decomposition).
+    bootstrap = _needed_bootstrap(code_to_run)
+    # Outer asyncio wall must cover sandbox create + file upload + user code +
+    # chart/file download, plus the pip bootstrap only when we actually run it.
+    # Even with no bootstrap, E2B sandbox creation + IO can take ~10s, so keep a
+    # 10s reserve (not 2s) so a legitimate full-budget run isn't preempted
+    # (Codex final review 2026-06-04).
+    sandbox_overhead_s = BOOTSTRAP_BUDGET_S if bootstrap else 10.0
+    outer_wait_s = sandbox_overhead_s + sandbox_budget_s + 5
     try:
         exec_result = await asyncio.wait_for(
             run_sandbox(
-                code=code,
+                code=code_to_run,
                 csv_files={csv_filename: csv_bytes},
                 timeout_s=int(sandbox_budget_s),
+                bootstrap_packages=bootstrap,
             ),
             timeout=outer_wait_s,
         )
@@ -681,13 +815,20 @@ _LLM_CACHE_MAX_ENTRIES: int = int(
 # at cache-store time — so a cache hit can replay the same token-count
 # metrics into _last_call_usage instead of leaving them empty. Stored
 # as a tuple (response_text, usage_dict) to keep one OrderedDict.
-_llm_response_cache: "OrderedDict[str, Tuple[str, Dict[str, Optional[int]]]]" = (
+_llm_response_cache: "OrderedDict[str, Tuple[str, Dict[str, Any]]]" = (
     OrderedDict()
 )
 
 # Counters for observability — surfaced via cache_stats() and useful
 # in tests to assert "second identical call was a hit, not a miss".
 _cache_stats: Dict[str, int] = {"hits": 0, "misses": 0, "stores": 0}
+
+# A4 (2026-06-04): guards the cache + counters. Under the current single-
+# process uvicorn deployment the event loop already serializes these (every
+# mutation runs on the loop thread; only the provider .generate() call is
+# offloaded via to_thread), so the lock is uncontended defense-in-depth that
+# keeps the cache correct if the app is ever run with threaded workers.
+_cache_lock = threading.Lock()
 
 
 def _cache_key(prompt: str, sampling: Dict[str, Any]) -> str:
@@ -730,53 +871,97 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
     """
     from backend.services.llm_integration.llm_client import LLMClientFactory
 
+    def _invoke(provider: str, prompt: str) -> Tuple[str, Dict[str, Any]]:
+        """Synchronous single-provider call. Runs inside to_thread."""
+        client = LLMClientFactory.create_client(provider)
+        text = client.generate(prompt, **SAMPLING)
+        usage = getattr(client, "last_usage", {}) or {}
+        return text, {
+            "input": usage.get("input_tokens"),
+            "output": usage.get("output_tokens"),
+            "provider": provider,
+        }
+
     async def _call(prompt: str) -> str:
         # Cache lookup (must mirror the cache-store path's usage handling).
         if _LLM_CACHE_ENABLED:
             key = _cache_key(prompt, SAMPLING)
-            cached = _llm_response_cache.get(key)
-            if cached is not None:
-                # LRU touch.
-                _llm_response_cache.move_to_end(key)
-                _cache_stats["hits"] += 1
-                text_cached, usage_cached = cached
-                _last_call_usage["input"] = usage_cached.get("input")
-                _last_call_usage["output"] = usage_cached.get("output")
-                logger.info(
-                    "LLM cache HIT (key=%s, size=%d/%d)",
-                    key[:12], len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
-                )
-                return text_cached
-            _cache_stats["misses"] += 1
+            with _cache_lock:
+                cached = _llm_response_cache.get(key)
+                if cached is not None:
+                    _llm_response_cache.move_to_end(key)  # LRU touch
+                    _cache_stats["hits"] += 1
+                    text_cached, usage_cached = cached
+                    _last_call_usage["input"] = usage_cached.get("input")
+                    _last_call_usage["output"] = usage_cached.get("output")
+                    _last_call_provider["provider"] = usage_cached.get("provider")
+                    logger.info(
+                        "LLM cache HIT (key=%s, provider=%s, size=%d/%d)",
+                        key[:12], usage_cached.get("provider"),
+                        len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+                    )
+                    return text_cached
+                _cache_stats["misses"] += 1
 
-        # Real call.
-        client = LLMClientFactory.create_client("zhipu")
-        text = await asyncio.to_thread(
-            client.generate,
-            prompt,
-            **SAMPLING,
-        )
-        # Snapshot usage into the shared slot — read by _run_one_round
-        # right after it awaits the caller. Safe under asyncio because
-        # a single round awaits exactly one caller call sequentially.
-        usage = getattr(client, "last_usage", {}) or {}
-        _last_call_usage["input"] = usage.get("input_tokens")
-        _last_call_usage["output"] = usage.get("output_tokens")
-
-        # Cache store with LRU eviction.
-        if _LLM_CACHE_ENABLED:
-            key = _cache_key(prompt, SAMPLING)
-            _llm_response_cache[key] = (
-                text,
-                {"input": _last_call_usage["input"], "output": _last_call_usage["output"]},
+        # A1 (2026-06-04): Zhipu (GLM-4.7) primary, Groq fallback. The agentic
+        # path previously hardwired Zhipu with NO fallback — a single Zhipu
+        # (China endpoint) error took the whole analysis down with it, while
+        # the legacy path already had zhipu->groq failover. We fall over on a
+        # hard provider error (HTTP 5xx/4xx, connection failure, rate limit —
+        # the dominant demo-day outage modes, which raise fast). A pure HANG
+        # is still bounded by the round's outer asyncio.wait_for budget; the
+        # repair round is the recovery there.
+        text: Optional[str] = None
+        usage: Dict[str, Any] = {"input": None, "output": None, "provider": None}
+        last_exc: Optional[Exception] = None
+        valid = False
+        for provider in ("zhipu", "groq"):
+            try:
+                cand_text, cand_usage = await asyncio.to_thread(_invoke, provider, prompt)
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                logger.warning("agentic LLM provider %s failed: %s", provider, exc)
+                continue
+            # Keep the response even if it's garbage (last-resort return), but
+            # only ACCEPT (and cache) one the round can actually parse. GLM-4.7
+            # intermittently returns non-JSON / truncated output (e.g. the
+            # single-column histogram edge); falling over to Groq on an
+            # unparseable response — not just on an exception — closes that
+            # gap and stops us caching garbage. parse_json_response is the
+            # exact check _run_one_round uses.
+            text, usage = cand_text, cand_usage
+            if parse_json_response(cand_text) is not None:
+                valid = True
+                if provider != "zhipu":
+                    logger.warning("agentic LLM fell back to %s (zhipu failed: %s)",
+                                   provider, last_exc)
+                break
+            last_exc = ValueError(f"{provider} returned unparseable response")
+            logger.warning("agentic LLM provider %s returned unparseable JSON; trying next",
+                           provider)
+        if text is None:
+            raise RuntimeError(
+                f"all LLM providers failed (zhipu, groq); last error: {last_exc}"
             )
-            _cache_stats["stores"] += 1
-            while len(_llm_response_cache) > _LLM_CACHE_MAX_ENTRIES:
-                evicted_key, _ = _llm_response_cache.popitem(last=False)
-                logger.debug("LLM cache evicted oldest entry %s", evicted_key[:12])
+
+        _last_call_usage["input"] = usage.get("input")
+        _last_call_usage["output"] = usage.get("output")
+        _last_call_provider["provider"] = usage.get("provider")
+
+        # Cache store with LRU eviction — only cache a PARSEABLE response so a
+        # one-off garbage emission isn't replayed deterministically on retry.
+        if _LLM_CACHE_ENABLED and valid:
+            key = _cache_key(prompt, SAMPLING)
+            with _cache_lock:
+                _llm_response_cache[key] = (text, dict(usage))
+                _cache_stats["stores"] += 1
+                while len(_llm_response_cache) > _LLM_CACHE_MAX_ENTRIES:
+                    evicted_key, _ = _llm_response_cache.popitem(last=False)
+                    logger.debug("LLM cache evicted oldest entry %s", evicted_key[:12])
             logger.info(
-                "LLM cache STORE (key=%s, size=%d/%d)",
-                key[:12], len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+                "LLM cache STORE (key=%s, provider=%s, size=%d/%d)",
+                key[:12], usage.get("provider"),
+                len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
             )
 
         return text
@@ -789,6 +974,10 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
 # when tests inject a stub caller. _run_one_round reads this right
 # after the caller returns so there's no cross-call contamination.
 _last_call_usage: Dict[str, Optional[int]] = {"input": None, "output": None}
+
+# Which provider answered the most recent real (non-cached) call, or the
+# provider recorded at cache-store time on a hit. Observability only (A1).
+_last_call_provider: Dict[str, Optional[str]] = {"provider": None}
 
 
 # ---------------------------------------------------------------------------
@@ -884,7 +1073,7 @@ async def run_agentic_analysis(
         _emit("code_generation", "completed", 0.40, "Plan generated")
         _emit("security_check", "completed", 0.50, "Validated (agentic)")
         _emit("sandbox_execution", "completed", 0.85, "Executed")
-        return _finalize(r1, [r1], time.monotonic() - loop_start)
+        return _finalize([r1], time.monotonic() - loop_start)
 
     # Decide: repair or not?
     trigger = _classify_repair_trigger(r1)
@@ -893,13 +1082,13 @@ async def run_agentic_analysis(
         # Either model declared unanswerable (handled above as success), or
         # failure mode is outside the predeclared trigger set. No repair.
         _emit("code_generation", "failed", 0.35, f"Generation failed: {r1.sandbox_exception_type or 'unknown'}")
-        return _finalize(r1, [r1], time.monotonic() - loop_start, repair_triggered=False)
+        return _finalize([r1], time.monotonic() - loop_start, repair_triggered=False)
 
     if elapsed_after_r1 >= REPAIR_DECISION_CUTOFF_S:
         # Too late to repair without risking total-budget blow
         _emit("code_generation", "failed", 0.35, "Time budget tight; skipping repair")
         return _finalize(
-            r1, [r1], time.monotonic() - loop_start,
+            [r1], time.monotonic() - loop_start,
             repair_triggered=False,
         )
 
@@ -930,42 +1119,92 @@ async def run_agentic_analysis(
         _emit("security_check", "completed", 0.50, "Validated (agentic)")
         _emit("sandbox_execution", "completed", 0.85, "Executed")
         return _finalize(
-            r2, [r1, r2], total_elapsed,
+            [r1, r2], total_elapsed,
             repair_triggered=True, repair_trigger_type=trigger,
-            repair_recovered=True,
         )
 
-    # Both rounds failed
+    # Repair round did not produce a clean result. _finalize still salvages
+    # the best round across [r1, r2] (degraded success if either produced a
+    # validator-passed chart); only a truly unsalvageable pair reports failure.
     _emit("sandbox_execution", "failed", 0.55, "Analysis could not complete")
     return _finalize(
-        r2, [r1, r2], total_elapsed,
+        [r1, r2], total_elapsed,
         repair_triggered=True, repair_trigger_type=trigger,
-        repair_recovered=False,
         time_budget_exhausted=budget_exhausted,
     )
 
 
+def _pick_best_round(rounds: List[RoundRecord]) -> Tuple[RoundRecord, str]:
+    """Select the most usable round across all attempts (A2).
+
+    Replaces terminal-round-wins, which threw away a good round-1 chart
+    when a round-2 repair failed (the live penguins/PCA failure: a
+    confusion-matrix heatmap rendered, then the summary line crashed,
+    and the whole analysis was reported as "Analysis Error").
+
+    Quality, in priority order:
+      "clean"    — a round fully succeeded (validator + sandbox + summary)
+      "degraded" — the sandbox ran CLEANLY (no runtime error) and produced a
+                   chart, but the round still wasn't "clean" — i.e. the model
+                   simply never printed the summary line. Honest salvage: the
+                   computation finished, only the summary text is missing.
+      "terminal" — nothing salvageable; fall back to the last round and
+                   report failure as before.
+
+    Honesty guard (Codex final review 2026-06-04): degraded REQUIRES
+    ``sandbox_success`` — we do NOT upgrade a round whose code RAISED, even if
+    it left a chart file behind, because a chart saved before a mid-run crash
+    (wrong metric, wrong column, incomplete modeling) does not mean the answer
+    is right. With the A3 emit_summary helper the json.dumps crash class is
+    gone, so the supervised cases this salvage was added for now land as fully
+    clean; degraded is reserved for the narrow "ran fine, forgot the summary"
+    case. validator_pass is also required (a security/syntax reject is never
+    upgraded).
+    """
+    for r in rounds:
+        if r.is_successful():
+            return r, "clean"
+    for r in rounds:
+        if r.validator_pass and r.sandbox_success and r.chart_exists and r.chart_bytes:
+            return r, "degraded"
+    return rounds[-1], "terminal"
+
+
 def _finalize(
-    terminal: RoundRecord,
     rounds: List[RoundRecord],
     total_elapsed_s: float,
     *,
     repair_triggered: bool = False,
     repair_trigger_type: Optional[str] = None,
-    repair_recovered: Optional[bool] = None,
     time_budget_exhausted: bool = False,
 ) -> PlanExecutionResult:
-    """Build the final PlanExecutionResult from the terminal round."""
+    """Build the final PlanExecutionResult from the best usable round (A2)."""
+    terminal, quality = _pick_best_round(rounds)
     parsed = terminal.parsed or {}
     status_raw = parsed.get("status")
+
+    degraded = False
+    degraded_reason: Optional[str] = None
 
     if status_raw == "unanswerable":
         status = "unanswerable"
         success = True  # graceful non-answer is still a successful flow
         error_message = parsed.get("reason")
-    elif terminal.is_successful():
+    elif quality == "clean":
         status = "ok"
         success = True
+        error_message = None
+    elif quality == "degraded":
+        # Honest salvage: usable chart produced, only post-result emission
+        # failed. Surface success WITH a degraded flag + the original error.
+        status = "ok"
+        success = True
+        degraded = True
+        degraded_reason = (
+            terminal.sandbox_exception_type
+            or (terminal.sandbox_stderr or "")[:300]
+            or "Results were produced but the summary line did not complete."
+        )
         error_message = None
     else:
         status = "error"
@@ -976,6 +1215,12 @@ def _finalize(
             or terminal.sandbox_stderr[:500]
             or "Analysis failed"
         )
+
+    # repair_recovered is derived from outcome, not asserted by callers:
+    # a clean repair fully recovered; a degraded salvage partially recovered.
+    repair_recovered: Optional[bool] = None
+    if repair_triggered:
+        repair_recovered = quality in ("clean", "degraded")
 
     # Aggregate token usage across rounds. None if no round populated
     # usage (injected-caller tests, or pre-LLM error paths).
@@ -992,6 +1237,8 @@ def _finalize(
         repair_trigger_type=repair_trigger_type,
         repair_recovered=repair_recovered,
         time_budget_exhausted=time_budget_exhausted,
+        degraded=degraded,
+        degraded_reason=degraded_reason,
         final_code=parsed.get("python_code"),
         final_plan={
             k: parsed.get(k)

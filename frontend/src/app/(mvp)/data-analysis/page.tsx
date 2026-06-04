@@ -86,6 +86,8 @@ interface ModelComparisonSection {
   task?: string;
   target_column?: string;
   metrics?: Record<string, Record<string, number>>;
+  winner?: string;
+  primary_metric?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -381,6 +383,16 @@ export default function DataAnalysisPage() {
     );
   }, [result]);
 
+  // A2 (2026-06-04): honest "degraded success" — a chart was produced but the
+  // run wasn't fully clean (e.g. the summary line failed after results were
+  // computed). We salvage the chart instead of showing "Analysis Error", and
+  // disclose it here so the result is never presented as flawless.
+  const degradedInfo = useMemo(() => {
+    const cg = result?.code_generation as Record<string, unknown> | undefined;
+    if (!cg || cg.degraded !== true) return null;
+    return { reason: (cg.degraded_reason as string) || "" };
+  }, [result]);
+
   const visualizationAsset = useMemo(() => {
     const raw = firstArtifactPath(result);
     if (!raw) return null;
@@ -473,6 +485,9 @@ export default function DataAnalysisPage() {
         row.metrics && typeof row.metrics === "object"
           ? (row.metrics as Record<string, Record<string, number>>)
           : undefined,
+      winner: typeof row.winner === "string" ? row.winner : undefined,
+      primary_metric:
+        typeof row.primary_metric === "string" ? row.primary_metric : undefined,
     };
   }, [result]);
 
@@ -657,6 +672,7 @@ export default function DataAnalysisPage() {
               onClick={handleRunAnalysis}
               disabled={loading || !uploadedPath}
               data-testid="run-analysis-btn"
+              aria-label="Run the analysis on the uploaded dataset"
               style={{
                 backgroundColor: loading ? undefined : "#f59e0b",
                 borderColor: loading ? undefined : "#f59e0b",
@@ -765,7 +781,7 @@ export default function DataAnalysisPage() {
         )}
 
         {/* Error */}
-        {error && <p className="error-text mt-3">{error}</p>}
+        {error && <p className="error-text mt-3" data-testid="error-text" role="alert">{error}</p>}
 
         {/* ============ Results ============ */}
         {result && (
@@ -809,6 +825,83 @@ export default function DataAnalysisPage() {
                 {repairInfo.recovered
                   ? `Note: the first attempt hit an issue (${repairInfo.trigger}); these results are from an automatically repaired second attempt, which may use a different method or library than requested.`
                   : `Note: the analysis was automatically retried after an issue (${repairInfo.trigger}).`}
+              </div>
+            )}
+
+            {/* A2: disclose a degraded (salvaged) result — the chart is real
+                but the run did not finish cleanly. */}
+            {degradedInfo && !unanswerable && (
+              <div
+                className="mt-2 text-xs rounded-md border border-amber-800 bg-amber-900/20 text-amber-300 px-3 py-2"
+                data-testid="degraded-notice"
+              >
+                {`Partial result: the chart below was produced, but the analysis didn't finish cleanly${
+                  degradedInfo.reason ? ` (${degradedInfo.reason})` : ""
+                }. Some summary details may be missing.`}
+              </div>
+            )}
+
+            {/* C1: result export toolbar — download the chart, copy the key
+                findings, or export a self-contained JSON report. */}
+            {!unanswerable && result.success !== false && (
+              <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="result-export">
+                {(() => {
+                  const chartUrl =
+                    visualizationAsset?.url ?? chartGrid.find((c) => c.url)?.url ?? null;
+                  return chartUrl ? (
+                    <a
+                      href={chartUrl}
+                      download
+                      data-testid="download-chart-btn"
+                      aria-label="Download the analysis chart as an image"
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      ⤓ Download chart
+                    </a>
+                  ) : null;
+                })()}
+                {analysisSummary?.key_findings && analysisSummary.key_findings.length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="copy-findings-btn"
+                    aria-label="Copy the key findings to the clipboard"
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      const text = (analysisSummary?.key_findings ?? []).join("\n");
+                      void navigator.clipboard?.writeText(text);
+                    }}
+                  >
+                    ⧉ Copy findings
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-testid="download-report-btn"
+                  aria-label="Download a JSON report of this analysis"
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => {
+                    const report = {
+                      dataset: uploadedPath,
+                      question: instruction,
+                      key_findings: analysisSummary?.key_findings ?? [],
+                      model_comparison: result.model_comparison ?? null,
+                      code: result.code ?? null,
+                      code_generation: result.code_generation ?? null,
+                      exported_at: new Date().toISOString(),
+                    };
+                    const blob = new Blob([JSON.stringify(report, null, 2)], {
+                      type: "application/json",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "analysis-report.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  ⤓ Download report (JSON)
+                </button>
               </div>
             )}
 
@@ -861,7 +954,7 @@ export default function DataAnalysisPage() {
             {analysisSummary?.key_findings && analysisSummary.key_findings.length > 0 && (
               <div className="artifact-card">
                 <p className="result-label">Key Findings</p>
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-2 space-y-1" data-testid="key-findings">
                   {analysisSummary.key_findings.map((finding, i) => (
                     <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
                       <span className="text-emerald-500 mt-0.5 flex-shrink-0">•</span>
@@ -1005,16 +1098,34 @@ export default function DataAnalysisPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(modelComparison.metrics).map(([model, scores]) => (
-                          <tr key={model} className="border-b border-gray-100">
-                            <td className="px-3 py-1.5 font-mono text-gray-900">{model}</td>
-                            {Object.values(scores).map((v, i) => (
-                              <td key={i} className="px-3 py-1.5 text-gray-600">
-                                {typeof v === "number" ? v.toFixed(3) : String(v)}
+                        {Object.entries(modelComparison.metrics).map(([model, scores]) => {
+                          const isWinner = model === modelComparison.winner;
+                          return (
+                            <tr
+                              key={model}
+                              data-testid={isWinner ? "model-winner-row" : undefined}
+                              className={
+                                isWinner
+                                  ? "border-b border-emerald-200 bg-emerald-50"
+                                  : "border-b border-gray-100"
+                              }
+                            >
+                              <td className="px-3 py-1.5 font-mono text-gray-900">
+                                {model}
+                                {isWinner && (
+                                  <span className="ml-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle">
+                                    BEST
+                                  </span>
+                                )}
                               </td>
-                            ))}
-                          </tr>
-                        ))}
+                              {Object.values(scores).map((v, i) => (
+                                <td key={i} className="px-3 py-1.5 text-gray-600">
+                                  {typeof v === "number" ? v.toFixed(3) : String(v)}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

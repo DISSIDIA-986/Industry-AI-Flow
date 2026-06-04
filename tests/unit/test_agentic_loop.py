@@ -99,7 +99,7 @@ async def test_round1_success_no_repair(sample_csv, monkeypatch):
         calls.append(prompt)
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -131,7 +131,7 @@ async def test_repair_triggers_on_validator_fail(sample_csv, monkeypatch):
             return _make_blocked_method_response()  # uses .agg → validator rejects
         return _make_valid_llm_response()  # repair uses allowed methods
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -162,7 +162,7 @@ async def test_time_budget_exhaustion_graceful(sample_csv, monkeypatch):
         await asyncio.sleep(0.05)
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -188,7 +188,7 @@ async def test_budget_exhausted_mid_round2(sample_csv, monkeypatch):
         # Slow first call to push elapsed past the repair cutoff (simulated via monkeypatch)
         return _make_blocked_method_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_failed_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -240,7 +240,7 @@ async def test_round1_user_prompt_accepts_brace_literals_in_sample_data(
         assert "{foo}" in prompt, "slot value should round-trip literal braces"
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -266,7 +266,7 @@ async def test_malformed_summary_json_is_soft_success_not_failure(
     async def _fake_llm(prompt: str) -> str:
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         # Emitted BUT the JSON payload is malformed (trailing garbage).
         return ExecutionResult(
             success=True,
@@ -322,10 +322,14 @@ async def test_completely_missing_summary_triggers_repair(
         # Round 2: now includes the summary line.
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         # First call: no summary marker in stdout.
         # Second call: summary present (matches _make_successful_sandbox_result default).
-        if "ANALYSIS_SUMMARY_JSON" in code:
+        # NB: agentic_loop injects the emit_summary() helper (which contains the
+        # literal "ANALYSIS_SUMMARY_JSON=' + _payload") into EVERY code block, so
+        # we key on the model's own literal marker print ("={") to tell the
+        # rounds apart — the injected helper never emits that exact substring.
+        if "ANALYSIS_SUMMARY_JSON={" in code:
             return _make_successful_sandbox_result()
         # Round 1 code prints len only, no summary.
         return ExecutionResult(
@@ -405,7 +409,7 @@ async def test_token_usage_flows_into_plan_result_when_caller_populates_slot(
         agentic_loop._last_call_usage["output"] = 220
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -439,7 +443,7 @@ async def test_token_usage_absent_when_caller_does_not_populate_slot(
     async def _fake_llm(prompt: str) -> str:
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -511,7 +515,7 @@ async def test_repair_prompt_handles_fstring_braces_in_previous_output(
         # Round 2: return a clean, validator-passing response.
         return _make_valid_llm_response()
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         return _make_successful_sandbox_result()
 
     monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
@@ -549,7 +553,7 @@ async def test_unanswerable_is_terminal_success_no_repair(sample_csv, monkeypatc
             }
         )
 
-    async def _fake_sandbox(code, csv_files, timeout_s):
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
         # Should never be called
         raise AssertionError("sandbox should not run for unanswerable")
 
@@ -566,3 +570,307 @@ async def test_unanswerable_is_terminal_success_no_repair(sample_csv, monkeypatc
     assert result.repair_triggered is False
     assert len(result.rounds) == 1
     assert result.error_message == "No numeric columns suitable for this question."
+
+
+# ---------------------------------------------------------------------------
+# A3 (emit_summary helper injection) + A2 (best/salvageable-round) — 2026-06-04
+# ---------------------------------------------------------------------------
+
+
+def test_inject_summary_helper_prepends_and_is_callable():
+    """A3: helper is prepended and defines emit_summary in the exec namespace."""
+    code = "df = pd.read_csv('/workspace/x.csv')\nemit_summary({'key_findings': ['ok']})\n"
+    injected = agentic_loop._inject_summary_helper(code)
+    assert injected.startswith("import json as _ds_json")
+    assert "def emit_summary(" in injected
+    assert injected.rstrip().endswith(code.rstrip())
+    # The helper itself must be valid Python and define emit_summary.
+    ns: Dict[str, Any] = {}
+    exec(agentic_loop._EMIT_SUMMARY_HELPER, ns)
+    assert callable(ns["emit_summary"])
+
+
+def test_inject_summary_helper_emits_numpy_safe(capsys):
+    """A3: emit_summary serializes NumPy scalars that bare json.dumps rejects."""
+    import numpy as np
+
+    ns: Dict[str, Any] = {}
+    exec(agentic_loop._EMIT_SUMMARY_HELPER, ns)
+    ns["emit_summary"](
+        {"key_findings": ["f1"], "p_sig": np.bool_(True), "mean": np.float64(3.14)}
+    )
+    out = capsys.readouterr().out
+    assert out.startswith("ANALYSIS_SUMMARY_JSON=")
+    payload = out.split("ANALYSIS_SUMMARY_JSON=", 1)[1].strip()
+    obj = json.loads(payload)
+    assert obj["p_sig"] is True
+    assert abs(obj["mean"] - 3.14) < 1e-9
+
+
+def test_inject_summary_helper_hoists_future_import():
+    """A3: a leading `from __future__` import must stay first after injection."""
+    code = "from __future__ import annotations\nimport pandas as pd\nprint(1)\n"
+    injected = agentic_loop._inject_summary_helper(code)
+    assert injected.startswith("from __future__ import annotations")
+    assert "import json as _ds_json" in injected
+    # Whole thing still parses.
+    import ast
+
+    ast.parse(injected)
+
+
+def _round(*, validator_pass, sandbox_success, chart, summary_emitted, parsed=True):
+    """Build a RoundRecord for _pick_best_round tests."""
+    rec = agentic_loop.RoundRecord(round_num=1)
+    rec.parsed = {"status": "ok", "python_code": "x=1"} if parsed else None
+    rec.json_schema_valid = parsed
+    rec.validator_pass = validator_pass
+    rec.sandbox_success = sandbox_success
+    rec.chart_exists = chart
+    rec.chart_bytes = b"PNGDATA" if chart else None
+    rec.summary_emitted = summary_emitted
+    return rec
+
+
+def test_pick_best_round_prefers_clean():
+    clean = _round(validator_pass=True, sandbox_success=True, chart=True, summary_emitted=True)
+    broken = _round(validator_pass=True, sandbox_success=False, chart=True, summary_emitted=False)
+    best, quality = agentic_loop._pick_best_round([broken, clean])
+    assert quality == "clean"
+    assert best is clean
+
+
+def test_pick_best_round_salvages_clean_chart_missing_summary_as_degraded():
+    """A2: a CLEAN sandbox run (no crash) that produced a chart but forgot the
+    summary line → degraded salvage."""
+    salvage = _round(validator_pass=True, sandbox_success=True, chart=True, summary_emitted=False)
+    worse = _round(validator_pass=True, sandbox_success=False, chart=False, summary_emitted=False)
+    best, quality = agentic_loop._pick_best_round([salvage, worse])
+    assert quality == "degraded"
+    assert best is salvage
+
+
+def test_pick_best_round_does_not_salvage_crashed_chart():
+    """A2 honesty guard (Codex final review): a round whose code RAISED is NOT
+    upgraded even if a chart file was written before the crash — the chart may
+    not reflect the real (failed) computation."""
+    crashed = _round(validator_pass=True, sandbox_success=False, chart=True, summary_emitted=False)
+    best, quality = agentic_loop._pick_best_round([crashed])
+    assert quality == "terminal"
+
+
+def test_pick_best_round_never_salvages_validator_reject():
+    """A2 honesty guard: a security/validator rejection is never upgraded."""
+    rejected = _round(validator_pass=False, sandbox_success=True, chart=True, summary_emitted=False)
+    best, quality = agentic_loop._pick_best_round([rejected])
+    assert quality == "terminal"
+
+
+@pytest.mark.asyncio
+async def test_degraded_success_when_clean_run_omits_summary(sample_csv, monkeypatch):
+    """A2 end-to-end (honest contract): the sandbox runs CLEANLY and produces a
+    chart, but the model never prints the ANALYSIS_SUMMARY_JSON line. Repair
+    also omits it → the loop returns success=True + degraded=True with the
+    chart preserved (instead of a hard 'Analysis failed' over a good chart).
+    """
+    def _make_valid_chart_response() -> str:
+        return json.dumps(
+            {
+                "status": "ok",
+                "business_goal": "Classify",
+                "analysis_plan": "Train + confusion matrix",
+                "assumptions": [],
+                "python_code": "df = pd.read_csv('/workspace/sample.csv')\nprint('done')\n",
+                "produces_chart": True,
+            }
+        )
+
+    async def _fake_llm(prompt: str) -> str:
+        return _make_valid_chart_response()
+
+    async def _fake_sandbox(code, csv_files, timeout_s, bootstrap_packages=None):
+        # Clean run, chart saved, but NO ANALYSIS_SUMMARY_JSON marker printed.
+        return ExecutionResult(
+            success=True,
+            stdout="training done\n",  # no marker line
+            stderr="",
+            error=None,
+            execution_time_s=2.0,
+            output_files={"analysis_chart.png": b"\x89PNG_realbytes"},
+        )
+
+    monkeypatch.setattr(agentic_loop, "run_sandbox", _fake_sandbox)
+
+    result = await run_agentic_analysis(
+        question="Classify species and show a confusion matrix.",
+        data_file_path=str(sample_csv),
+        llm_caller=_fake_llm,
+    )
+
+    assert result.success is True, "chart must be salvaged, not reported as failure"
+    assert result.degraded is True
+    assert result.degraded_reason
+    assert result.final_chart_bytes == b"\x89PNG_realbytes"
+    assert result.repair_triggered is True
+    assert result.repair_recovered is True
+
+
+# ---------------------------------------------------------------------------
+# A1 (Groq fallback in the default agentic caller) — 2026-06-04
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_default_caller_falls_back_to_groq_on_zhipu_error(monkeypatch):
+    """A1: when the Zhipu client errors, the caller transparently retries via
+    Groq and records the answering provider."""
+    import backend.services.llm_integration.llm_client as llm_mod
+
+    class _Boom:
+        def generate(self, *a, **k):
+            raise RuntimeError("zhipu 503")
+
+    class _Groq:
+        last_usage = {"input_tokens": 11, "output_tokens": 7}
+
+        def generate(self, *a, **k):
+            return "groq answer"
+
+    def _fake_factory(backend=None):
+        return _Boom() if backend == "zhipu" else _Groq()
+
+    monkeypatch.setattr(llm_mod.LLMClientFactory, "create_client", staticmethod(_fake_factory))
+    agentic_loop.reset_cache()
+
+    caller = agentic_loop._default_glm5_caller()
+    text = await caller("some prompt")
+
+    assert text == "groq answer"
+    assert agentic_loop._last_call_provider["provider"] == "groq"
+    assert agentic_loop._last_call_usage["input"] == 11
+
+
+@pytest.mark.asyncio
+async def test_default_caller_raises_when_all_providers_fail(monkeypatch):
+    """A1: if both providers fail the caller raises (the round records an LLM
+    error and the loop falls through to its failure/ salvage handling)."""
+    import backend.services.llm_integration.llm_client as llm_mod
+
+    class _Boom:
+        def generate(self, *a, **k):
+            raise RuntimeError("down")
+
+    monkeypatch.setattr(
+        llm_mod.LLMClientFactory, "create_client", staticmethod(lambda backend=None: _Boom())
+    )
+    agentic_loop.reset_cache()
+
+    caller = agentic_loop._default_glm5_caller()
+    with pytest.raises(RuntimeError, match="all LLM providers failed"):
+        await caller("p")
+
+
+# ---------------------------------------------------------------------------
+# A5a (strip reflexive unused blocked imports) — 2026-06-04
+# ---------------------------------------------------------------------------
+
+
+def test_strip_unused_import_os_is_removed():
+    code = "import os\nimport pandas as pd\ndf = pd.read_csv('/workspace/x.csv')\nprint(df.head())\n"
+    out = agentic_loop._strip_unused_blocked_imports(code)
+    assert "import os" not in out
+    assert "import pandas as pd" in out
+
+
+def test_strip_keeps_used_os_import():
+    """If os is actually referenced, keep the import so the validator still
+    blocks it (no security bypass)."""
+    code = "import os\np = os.environ.get('X')\nprint(p)\n"
+    out = agentic_loop._strip_unused_blocked_imports(code)
+    assert "import os" in out
+
+
+def test_strip_leaves_allowed_imports_untouched():
+    code = "import numpy as np\nimport pandas as pd\nimport json\nprint(1)\n"
+    out = agentic_loop._strip_unused_blocked_imports(code)
+    assert out == code
+
+
+# ---------------------------------------------------------------------------
+# Conditional bootstrap (latency fix) — 2026-06-04
+# ---------------------------------------------------------------------------
+
+
+def test_needed_bootstrap_only_for_statsmodels():
+    assert agentic_loop._needed_bootstrap("import pandas as pd\nfrom sklearn import svm\n") == []
+    assert agentic_loop._needed_bootstrap(
+        "import statsmodels.api as sm\nm = sm.tsa.ARIMA(y, order=(1,1,1))\n"
+    ) == ["statsmodels"]
+
+
+# ---------------------------------------------------------------------------
+# Codex final-review fixes — 2026-06-04
+# ---------------------------------------------------------------------------
+
+
+def test_inject_helper_hoists_future_after_docstring():
+    """Future import after a module docstring must still be lifted to the top
+    so the injected helper doesn't push it out of first position."""
+    import ast
+
+    code = '"""module doc"""\nfrom __future__ import annotations\nimport pandas as pd\nprint(1)\n'
+    injected = agentic_loop._inject_summary_helper(code)
+    assert injected.startswith("from __future__ import annotations")
+    ast.parse(injected)  # must compile
+
+
+def test_strip_leaves_indented_blocked_import():
+    """An indented `import os` is NOT stripped (removing the only statement of
+    a block would break indentation); validator handles it instead."""
+    code = "if True:\n    import os\n    print(os.getcwd())\n"
+    out = agentic_loop._strip_unused_blocked_imports(code)
+    assert "import os" in out  # untouched
+
+
+def test_strip_only_top_level_unused():
+    code = "import os\nimport pandas as pd\nprint(pd.__version__)\n"
+    out = agentic_loop._strip_unused_blocked_imports(code)
+    assert "import os" not in out
+    assert "import pandas as pd" in out
+
+
+@pytest.mark.asyncio
+async def test_default_caller_falls_back_to_groq_on_unparseable_zhipu(monkeypatch):
+    """A1+ (browser QA 2026-06-04): Zhipu returns non-JSON garbage (the
+    single-column edge) → caller falls over to Groq's parseable response and
+    does NOT cache the garbage."""
+    import backend.services.llm_integration.llm_client as llm_mod
+
+    valid_json = json.dumps({"status": "ok", "python_code": "print(1)", "produces_chart": False})
+
+    class _Garbage:
+        last_usage = {"input_tokens": 5, "output_tokens": 2}
+
+        def generate(self, *a, **k):
+            return "Sure! Here is the analysis: (no JSON at all)"
+
+    class _Groq:
+        last_usage = {"input_tokens": 9, "output_tokens": 4}
+
+        def generate(self, *a, **k):
+            return valid_json
+
+    monkeypatch.setattr(
+        llm_mod.LLMClientFactory, "create_client",
+        staticmethod(lambda backend=None: _Garbage() if backend == "zhipu" else _Groq()),
+    )
+    agentic_loop.reset_cache()
+
+    caller = agentic_loop._default_glm5_caller()
+    text = await caller("p")
+
+    assert text == valid_json
+    assert agentic_loop._last_call_provider["provider"] == "groq"
+    # Garbage must not have been cached; the parseable Groq response is cached.
+    stats = agentic_loop.cache_stats()
+    assert stats["stores"] == 1
