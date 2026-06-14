@@ -1,5 +1,7 @@
 # Industry AI Flow 安全与多租户改进说明
 
+> 🌐 Language: **中文** · [English](./security-and-tenant-guide.en.md)
+
 本轮优化主要针对 `temp/summary/to_be_improved.md` 中指出的以下薄弱点：
 
 - 缺乏统一的依赖注入与安全控制（架构 & 安全）
