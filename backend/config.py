@@ -234,6 +234,14 @@ class Settings(BaseSettings):
     documents_storage_dir: str = os.getenv(
         "DOCUMENTS_STORAGE_DIR", "workspace/uploads/documents"
     )
+    # External knowledge-base source directory, kept OUTSIDE the repo so seed
+    # documents survive git operations / workspace wipes (the prior failure mode
+    # where construction_seed sources got deleted and previews broke). The
+    # document-content endpoint allowlists this path in addition to the project
+    # root. `~` is expanded. Set to "" to disable the external allowlist.
+    kb_sources_dir: str = os.getenv(
+        "KB_SOURCES_DIR", "~/Documents/iai-kb-sources"
+    )
     documents_cleanup_enabled: bool = (
         os.getenv("DOCUMENTS_CLEANUP_ENABLED", "true").lower() == "true"
     )

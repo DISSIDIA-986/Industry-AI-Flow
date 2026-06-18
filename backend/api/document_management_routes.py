@@ -793,13 +793,23 @@ def get_document_content(
 
     file_path = Path(file_path_str).resolve()
 
-    # Path traversal prevention: file must be within the project directory
+    # Path traversal prevention: file must live under an allowlisted root —
+    # the project directory, or the external KB sources dir (seed documents are
+    # kept outside the repo so git ops / workspace wipes can't delete them).
     project_root = Path(__file__).resolve().parent.parent.parent
-    if not file_path.is_relative_to(project_root):
+    allowed_roots = [project_root]
+    if settings.kb_sources_dir:
+        try:
+            allowed_roots.append(
+                Path(settings.kb_sources_dir).expanduser().resolve()
+            )
+        except Exception:  # pragma: no cover - defensive path resolution
+            pass
+    if not any(file_path.is_relative_to(root) for root in allowed_roots):
         logger.warning(
             "Path traversal attempt blocked: %s not within %s",
             file_path,
-            project_root,
+            allowed_roots,
         )
         raise HTTPException(status_code=403, detail="Access denied")
 
