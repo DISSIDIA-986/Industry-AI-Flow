@@ -18,6 +18,10 @@ Industry AI Flow is a **SAIT Capstone project** (Integrated AI program) — a co
 ### 1. RAG Knowledge QA (Primary Feature)
 Users upload construction documents (PDF, images, CSV) → system vectorizes and stores in pgvector → users ask questions → system returns accurate, cited answers via hybrid retrieval (BM25 + vector + RRF + bge-reranker). Currently 16 construction documents loaded (16 processed, 41,017 chunks). Includes 6 Canadian codes (NBC 2020, Ontario Reg 213/91, Canada OHS, BC Building Code 2024, Quebec Safety Code, Canada Labour Code Part II) and 10 US federal documents (GSA, Caltrans, UFGS, OSHA, BIM).
 
+**Citation page-number deep-linking**: each chunk is stamped with its 1-based PDF `page_number` at ingest (`page_mapping.py`: `compute_page_starts` reproduces per-page char offsets in the `"\n\n"`-joined text, `map_chunks_to_pages` locates each chunk via forward-scan and resolves offset→page). `page_number` + `chunk_index` flow from the DB through `vectorstore`/`hybrid_search` into every source citation. Frontend citations are clickable (`workflow-chat`) → navigate to `/documents/<id>?page=N&chunk=M`, which jumps the PDF preview to the page and scrolls/highlights the cited chunk. Non-paged docs (TXT) keep `page_number` NULL and fall back to chunk-scroll. Backfill without re-embedding: `scripts/backfill_page_numbers.py` (dry-run default, `--apply`, 0.80 match threshold, repairs stale filepaths). The 5 large Canadian PDFs are paged; the 7 US-federal PDFs were re-downloaded into the external KB sources dir (page numbers stay NULL — re-downloaded versions don't match stored chunks above threshold). Browser E2E: `scripts/testing/run_citation_deeplink_browser_e2e.py`.
+
+**External KB sources dir**: seed source files live OUTSIDE the repo (default `~/Documents/iai-kb-sources`, `KB_SOURCES_DIR`) so git ops / workspace wipes can't delete them and break preview. The document-content endpoint allowlists `project_root` OR `kb_sources_dir` (`is_relative_to`, path-traversal-safe).
+
 ### 2. Construction Cost Estimation (ML Prediction + Explainability)
 Uses a partner-provided construction cost dataset (10,000 synthetic projects, remediated with Statistics Canada BCPI location multipliers) with **CatBoost + Ridge dual model**: CatBoost for overrun % prediction with SHAP explainability, Ridge for actual cost prediction. Features: project_type, sqft, floors, location, contractor_rating, risk_score, etc. (14 numeric + 2 categorical; `risk_score_original` dropped post-remediation). **SHAP TreeExplainer** provides per-prediction Top-5 factor contributions. **What-if scenario analysis** with 5 adjustable parameters (contractor_rating, num_change_orders, weather_risk_factor, material_volatility, budget_pressure). **Similar project lookup** finds 5 most comparable projects from the training dataset. **Data transparency panel** shows model performance, dataset limitations, and remediation log.
 
@@ -188,6 +192,7 @@ Client → FastAPI (main.py)
 | Analysis Tier Planner | `backend/services/data_analysis/analysis_planner.py` | Latency-aware skip/light/full advanced-ML gating + `decide_model_comparison` feasibility |
 | PII Detector | `backend/services/data_analysis/pii_detector.py` | Warning-only PII column name detection (privacy by design) |
 | Core Embedder | `backend/services/core/embedder.py` | fastembed/sentence-transformers backend |
+| Page Mapping | `backend/services/core/page_mapping.py` | Map chunk char-offsets → 1-based PDF page for citation deep-linking (ingest + backfill) |
 | Safety | `backend/services/safety/groundedness_checker.py` | RAG output quality checking |
 | Security | `backend/security/` | Auth, rate limiting, sanitizer, secret manager |
 | Observability | `backend/observability/metrics.py` | Prometheus metrics |
@@ -272,6 +277,9 @@ CHUNK_SIZE=512                      # Character-based chunking
 CHUNK_OVERLAP=128
 TOP_K=8                             # Retrieval count
 OCR_LANG=en                         # en | ch | en+ch
+KB_SOURCES_DIR=~/Documents/iai-kb-sources  # External seed-source dir, allowlisted by the content endpoint ("" disables)
+RAG_PREWARM_ON_STARTUP=true         # Warm embedder+BM25+reranker+dispatch at startup (auto-off under pytest)
+OLLAMA_KEEP_ALIVE=30m               # Keep local model resident (no-op for cloud_only demo); "-1"=forever, "0"=unload
 REQUIRE_API_KEY=false
 ENABLE_PROMETHEUS_METRICS=true
 CODE_EXECUTION_PROVIDER=e2b          # docker | e2b | auto | ppio
