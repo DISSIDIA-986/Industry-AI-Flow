@@ -371,19 +371,22 @@ class IntentClassificationWorkflow:
             )
             state["intent_result"] = intent_result
 
-            # Record the classification interaction (for tracking and analytics)
-            await self._record_interaction(
-                session_id=state["session_id"],
-                user_query=state["current_query"],
-                classified_intent=(
-                    intent_result.intent.value
-                    if hasattr(intent_result.intent, "value")
-                    else str(intent_result.intent)
-                ),
-                agent_response="",  # Agent response not available yet at classification stage
-                confidence=intent_result.confidence,
-                processing_time_ms=intent_result.processing_time_ms,
-                success=True,
+            # Record the classification interaction (for tracking and analytics).
+            # Fire-and-forget: this memory write must not block the response path.
+            self._spawn_background(
+                self._record_interaction(
+                    session_id=state["session_id"],
+                    user_query=state["current_query"],
+                    classified_intent=(
+                        intent_result.intent.value
+                        if hasattr(intent_result.intent, "value")
+                        else str(intent_result.intent)
+                    ),
+                    agent_response="",  # not available yet at classification stage
+                    confidence=intent_result.confidence,
+                    processing_time_ms=intent_result.processing_time_ms,
+                    success=True,
+                )
             )
 
             # Record classification metadata
@@ -789,20 +792,23 @@ class IntentClassificationWorkflow:
             state["metadata"]["agent_execution_status"] = "ok"
             state["metadata"]["agent_execution"] = dispatch_result.get("metadata", {})
 
-            # Record the agent interaction (for session history and analytics)
+            # Record the agent interaction (for session history and analytics).
+            # Fire-and-forget: best-effort memory write off the response path.
             intent_result = state["intent_result"]
-            await self._record_interaction(
-                session_id=state["session_id"],
-                user_query=state["current_query"],
-                classified_intent=(
-                    intent_result.intent.value
-                    if hasattr(intent_result.intent, "value")
-                    else str(intent_result.intent)
-                ),
-                agent_response=agent_response,
-                confidence=intent_result.confidence,
-                processing_time_ms=intent_result.processing_time_ms,
-                success=True,
+            self._spawn_background(
+                self._record_interaction(
+                    session_id=state["session_id"],
+                    user_query=state["current_query"],
+                    classified_intent=(
+                        intent_result.intent.value
+                        if hasattr(intent_result.intent, "value")
+                        else str(intent_result.intent)
+                    ),
+                    agent_response=agent_response,
+                    confidence=intent_result.confidence,
+                    processing_time_ms=intent_result.processing_time_ms,
+                    success=True,
+                )
             )
 
             logger.info(f"Agent dispatch complete: {agent_type.value}")
@@ -904,6 +910,27 @@ class IntentClassificationWorkflow:
                 session_id,
                 exc,
             )
+
+    def _spawn_background(self, coro) -> None:
+        """Fire-and-forget a best-effort coroutine off the request critical path.
+
+        Interaction recording was blocking the pipeline for up to 5s at BOTH the
+        classification and dispatch stages (memory write). It is best-effort, so
+        we run it in the background instead of awaiting it. A strong ref is kept
+        in a set (asyncio only weak-refs tasks → GC hazard) and cleared on done.
+        Trade-off: a very fast multi-turn follow-up may race the history write;
+        acceptable for this best-effort path.
+        """
+        try:
+            task = asyncio.get_running_loop().create_task(coro)
+        except RuntimeError:  # pragma: no cover - no running loop
+            if hasattr(coro, "close"):
+                coro.close()
+            return
+        if not hasattr(self, "_bg_tasks"):
+            self._bg_tasks: set = set()
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
 
     def _route_based_on_confidence(self, state: WorkflowState) -> str:
         """P0: Route based on confidence, with escape hatch after max clarification rounds.
@@ -1578,6 +1605,11 @@ class IntentClassificationWorkflow:
         except Exception:
             top_k = int(settings.top_k)
 
+        import time as _time
+
+        _t0 = _time.monotonic()
+        _marks: Dict[str, float] = {}
+
         rag = self._get_rag_service()
         retrieval_queries = await self._build_retrieval_queries(
             query=query,
@@ -1585,6 +1617,8 @@ class IntentClassificationWorkflow:
             parameters=parameters,
             rag=rag,
         )
+        _marks["rewrite"] = _time.monotonic() - _t0
+        _marks["n_queries"] = float(len(retrieval_queries))
         retrieval_runs: List[Dict[str, Any]] = []
         retrieval_depth = max(top_k * 2, top_k)
         for retrieval_query in retrieval_queries:
@@ -1599,6 +1633,7 @@ class IntentClassificationWorkflow:
                     "chunks": chunks_for_query,
                 }
             )
+        _marks["retrieval"] = _time.monotonic() - _t0
 
         chunks = self._fuse_retrieval_chunks(
             retrieval_runs=retrieval_runs,
@@ -1611,6 +1646,7 @@ class IntentClassificationWorkflow:
                 documents=chunks,
                 top_k=max(top_k, 1),
             )
+        _marks["rerank"] = _time.monotonic() - _t0
         document_profiles: List[Dict[str, Any]] = []
         if chunks:
             chunks, document_profiles = await self._boost_chunks_with_profiles(
@@ -1619,6 +1655,7 @@ class IntentClassificationWorkflow:
                 chunks=chunks,
                 top_k=max(top_k, 1),
             )
+        _marks["profile_boost"] = _time.monotonic() - _t0
 
         if not chunks:
             raise RuntimeError("RAG retrieval returned empty context")
@@ -1676,6 +1713,22 @@ class IntentClassificationWorkflow:
             relevance = max(0.0, min(1.0, relevance))
 
             content = str(chunk.get("content") or "").strip()
+            # page_number / chunk_index enable citation deep-linking into the
+            # document preview (jump to page or scroll to the cited chunk).
+            page_number = chunk.get("page_number")
+            if page_number is None and isinstance(metadata, dict):
+                page_number = metadata.get("page_number")
+            try:
+                page_number = int(page_number) if page_number is not None else None
+            except (TypeError, ValueError):
+                page_number = None
+            chunk_index = chunk.get("chunk_index")
+            if chunk_index is None and isinstance(metadata, dict):
+                chunk_index = metadata.get("chunk_index")
+            try:
+                chunk_index = int(chunk_index) if chunk_index is not None else None
+            except (TypeError, ValueError):
+                chunk_index = None
             source_items.append(
                 {
                     "document_id": doc_id or doc_name,
@@ -1684,6 +1737,8 @@ class IntentClassificationWorkflow:
                     "relevance_raw": round(relevance_raw, 6),
                     "profile_score": float(chunk.get("profile_score") or 0.0),
                     "content": content[:400],
+                    "page_number": page_number,
+                    "chunk_index": chunk_index,
                 }
             )
 
@@ -1726,6 +1781,7 @@ class IntentClassificationWorkflow:
             source_items=source_items,
             profiles=document_profiles,
         )
+        _marks["suggested_q"] = _time.monotonic() - _t0
 
         prompt = (
             "You are a construction-domain RAG assistant.\n"
@@ -1765,6 +1821,20 @@ class IntentClassificationWorkflow:
             logger.warning(
                 "RAG generation failed, falling back to extractive answer: %s", exc
             )
+        _marks["generation"] = _time.monotonic() - _t0
+        logger.info(
+            "RAG_TIMING rewrite=%.2fs retrieval=%.2fs rerank=%.2fs "
+            "profile_boost=%.2fs suggested_q=%.2fs generation=%.2fs "
+            "n_queries=%d total=%.2fs",
+            _marks.get("rewrite", 0),
+            _marks.get("retrieval", 0) - _marks.get("rewrite", 0),
+            _marks.get("rerank", 0) - _marks.get("retrieval", 0),
+            _marks.get("profile_boost", 0) - _marks.get("rerank", 0),
+            _marks.get("suggested_q", 0) - _marks.get("profile_boost", 0),
+            _marks.get("generation", 0) - _marks.get("suggested_q", 0),
+            int(_marks.get("n_queries", 1)),
+            _marks.get("generation", 0),
+        )
 
         cited_answer = str(llm_answer or "").strip()
         if not cited_answer:
