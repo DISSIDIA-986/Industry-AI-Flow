@@ -104,19 +104,24 @@ export default function PipelineFlowDashboard() {
       })
     }
 
-    // LLM Engine
+    // LLM Engine — driven by real backend (/health.llm), not a hardcoded label.
     if (healthResult.status === 'fulfilled') {
       const health = healthResult.value
-      const modelName = typeof health.model === 'string' ? health.model : 'Qwen3.5:4b'
+      const llm = (health.llm ?? {}) as {
+        model?: string; provider?: string; compute?: string; hybrid_mode?: string
+      }
+      const modelName =
+        llm.model || (typeof health.model === 'string' ? health.model : '—')
+      const detailParts = [llm.provider, llm.compute, llm.hybrid_mode].filter(Boolean)
       setLlmEngine({
         loading: false, error: null,
         value: modelName,
-        detail: 'Ollama · Metal GPU · ~28 TPS',
+        detail: detailParts.length ? detailParts.join(' · ') : '',
         healthy: health.status === 'ok' || health.status === 'healthy',
       })
     } else {
       setLlmEngine({
-        loading: false, error: 'Ollama unreachable',
+        loading: false, error: 'LLM backend unreachable',
         value: '—', detail: '', healthy: false,
       })
     }
@@ -252,7 +257,7 @@ export default function PipelineFlowDashboard() {
         ...prev.slice(0, 4),
       ])
     } catch (err) {
-      setDemoError('Pipeline query failed — check if Ollama is running.')
+      setDemoError('Pipeline query failed — check the LLM backend and API.')
     } finally {
       demoRunningRef.current = false
       setDemoRunning(false)

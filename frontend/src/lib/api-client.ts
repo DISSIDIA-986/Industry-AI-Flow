@@ -709,6 +709,13 @@ export interface HealthResponse {
   version?: string
   memory_usage_mb?: number
   model?: unknown
+  llm?: {
+    backend?: string
+    model?: string
+    provider?: string
+    compute?: string
+    hybrid_mode?: string
+  }
 }
 
 async function getBackendHealth(path: string, config: RuntimeAppConfig): Promise<HealthResponse> {

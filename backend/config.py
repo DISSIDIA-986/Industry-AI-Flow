@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     ollama_request_timeout_seconds: int = int(
         os.getenv("OLLAMA_REQUEST_TIMEOUT_SECONDS", "180")
     )
+    # Keep the model resident in VRAM between requests to avoid per-query reload
+    # cold starts. Only affects the local Ollama path (demo runs LLM_BACKEND=zhipu
+    # / HYBRID_MODE=cloud_only, where this is a no-op), but protects the local
+    # fallback. "-1" = keep loaded indefinitely, "0" = unload immediately.
+    ollama_keep_alive: str = os.getenv("OLLAMA_KEEP_ALIVE", "30m")
+
+    # Pre-warm the full RAG pipeline (embedder + BM25 index + reranker + cloud
+    # dispatch) at server startup so the first real user query is warm. Replaces
+    # the manual scripts/demo/prewarm.sh dependency. Auto-disabled under pytest.
+    rag_prewarm_on_startup: bool = (
+        os.getenv("RAG_PREWARM_ON_STARTUP", "true").lower() == "true"
+    )
 
     # llama.cpp (DEPRECATED — kept for config compatibility with dispatch_service.py)
     llama_model_path: str = os.getenv(

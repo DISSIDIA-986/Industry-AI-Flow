@@ -12,10 +12,10 @@ import psutil
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from starlette.responses import StreamingResponse as _StreamingResponse
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+from starlette.responses import StreamingResponse as _StreamingResponse
 
 # API route imports
 from backend.api.auth_routes import router as auth_router
@@ -24,12 +24,12 @@ from backend.api.demo_mode_routes import router as demo_mode_router
 from backend.api.document_management_routes import router as document_management_router
 from backend.api.enhanced_query_routes import router as enhanced_query_router
 from backend.api.feedback_routes import router as feedback_router
+from backend.api.intent_classification_routes import router as intent_router
 from backend.api.llm_cost_routes import router as llm_cost_router
 from backend.api.llm_dispatch_routes import router as llm_dispatch_router
 from backend.api.prompt_routes import (
     router as prompt_router,  # P0: Prompt management routes
 )
-from backend.api.intent_classification_routes import router as intent_router
 from backend.api.workflow_query_routes import (
     router as workflow_query_router,  # Phase 2 scaffold
 )
@@ -69,6 +69,8 @@ TEMP_DATA_ROOT = settings.temp_data_dir if settings else "/tmp/luncheon_data"
 rag_engine = None
 unified_orchestrator = None
 code_executor = None
+# RAG startup pre-warm status: disabled | warming | warm | failed
+rag_prewarm_status = "disabled"
 _rag_lock = threading.Lock()
 _unified_lock = threading.Lock()
 _executor_lock = threading.Lock()
@@ -737,7 +739,82 @@ async def lifespan(_: FastAPI):
                 e,
             )
 
+    # Pre-warm the full RAG pipeline so the FIRST real user query is warm.
+    # Cold start (~49-63s) is dominated by lazy loads NOT covered above:
+    #   - embedder (nomic-embed-text-v1.5 -> MPS): ~10-15s
+    #   - reranker (bge-reranker-base cross-encoder -> MPS): ~8-12s
+    #   - BM25 index build over ~41k chunks: ~5-8s
+    # We warm the EXACT singleton the demo route uses (get_workflow_runner) by
+    # running one real query end-to-end. The embedder (shared module global) is
+    # loaded off the event loop first; the rest runs as a background task so it
+    # never blocks startup or /health. Auto-disabled under pytest so unit/CI
+    # runs never load real models. Mirrors scripts/demo/prewarm.sh in-process.
+    # _prewarm_task is held at lifespan scope so asyncio (which only keeps weak
+    # refs to tasks) cannot GC it mid-run, and so shutdown can cancel it cleanly.
+    _prewarm_task = None
+    if settings.rag_prewarm_on_startup and not os.environ.get("PYTEST_CURRENT_TEST"):
+        import asyncio as _asyncio
+
+        async def _prewarm_rag() -> None:
+            global rag_prewarm_status
+            try:
+                # Load the shared embedder model off the event loop (biggest cost).
+                from backend.services.core.embedder import embed_query_text
+
+                await _asyncio.to_thread(
+                    embed_query_text, "construction safety warmup query"
+                )
+
+                # Warm the real demo runner end-to-end: builds its BM25 index +
+                # reranker and exercises the cloud dispatch + prompt + cache path.
+                from backend.api.workflow_query_routes import get_workflow_runner
+                from backend.services.demo_mode_service import get_demo_mode_service
+
+                # Resolve route mode exactly as the real /workflow/query route
+                # does, so a cloud_only demo never triggers a stray local model
+                # load during warm-up.
+                effective_route_mode = get_demo_mode_service().resolve_route_mode(
+                    None
+                )
+                runner = await get_workflow_runner()
+                await runner.run_workflow(
+                    query="What is the minimum concrete cover for reinforced concrete?",
+                    session_id="__prewarm__",
+                    user_id="__prewarm__",
+                    thread_id="__prewarm__",
+                    route_mode=effective_route_mode,
+                )
+                rag_prewarm_status = "warm"
+                logger.info(
+                    "RAG pipeline pre-warmed (embedder + BM25 + reranker + dispatch)"
+                )
+            except Exception as exc:  # noqa: BLE001 — warm-up must never break startup
+                rag_prewarm_status = "failed"
+                logger.warning(
+                    "RAG pre-warm failed (non-critical, first query pays cold "
+                    "start): %s",
+                    exc,
+                )
+
+        try:
+            _prewarm_task = _asyncio.get_running_loop().create_task(_prewarm_rag())
+            rag_prewarm_status = "warming"
+            logger.info("RAG pre-warm started in background")
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Could not schedule RAG pre-warm: %s", exc)
+
     yield
+
+    # Cancel an in-flight pre-warm so shutdown does not orphan the background
+    # task (the warm-up can run ~60s; a shutdown mid-warm would leak it).
+    if _prewarm_task is not None and not _prewarm_task.done():
+        import asyncio as _asyncio_sd
+
+        _prewarm_task.cancel()
+        try:
+            await _prewarm_task
+        except (_asyncio_sd.CancelledError, Exception):  # noqa: BLE001
+            logger.debug("RAG pre-warm cancelled on shutdown")
 
     # Flush pending Langfuse traces on shutdown so nothing gets dropped
     try:
@@ -1039,6 +1116,22 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
     except Exception as exc:
         logger.warning("Unable to inspect agentic runtime readiness: %s", exc)
 
+    # Effective LLM backend/model for honest UI display (the dashboard card
+    # previously hardcoded "Qwen3.5:4b / Ollama" regardless of actual config).
+    _llm_backend = (settings.llm_backend or "ollama").strip().lower()
+    if _llm_backend == "zhipu":
+        _llm_model = settings.zhipu_model
+        _llm_provider = "Zhipu AI"
+        _llm_compute = "Cloud"
+    elif _llm_backend == "groq":
+        _llm_model = getattr(settings, "groq_model", "groq")
+        _llm_provider = "Groq"
+        _llm_compute = "Cloud"
+    else:
+        _llm_model = settings.ollama_model
+        _llm_provider = "Ollama"
+        _llm_compute = "Local · Metal GPU"
+
     return {
         "status": "ok",
         "memory_usage_mb": get_memory_usage(),
@@ -1047,6 +1140,14 @@ async def health(tenant: TenantContext = Depends(get_current_tenant)):
         "code_execution": execution_health,
         "embedding": embedding_health,
         "agentic_runtime": agentic_runtime,
+        "model": _llm_model,
+        "llm": {
+            "backend": _llm_backend,
+            "model": _llm_model,
+            "provider": _llm_provider,
+            "compute": _llm_compute,
+            "hybrid_mode": settings.resolved_hybrid_mode,
+        },
         "version": "1.0.0",
         "tenant": tenant.tenant_id if tenant else None,
     }

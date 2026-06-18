@@ -78,6 +78,9 @@ class OllamaClient:
             "prompt": prompt,
             "stream": stream,
             "think": kwargs.pop("think", self.default_think),
+            # Top-level field (NOT inside options) — Ollama keeps the model
+            # resident in VRAM for this duration, eliminating per-query reload.
+            "keep_alive": kwargs.pop("keep_alive", settings.ollama_keep_alive),
             "options": {
                 "temperature": temperature
                 if temperature is not None
@@ -152,6 +155,7 @@ class OllamaClient:
             "messages": messages,
             "stream": False,
             "think": self.default_think,
+            "keep_alive": settings.ollama_keep_alive,
             "options": {
                 "temperature": temperature
                 if temperature is not None
