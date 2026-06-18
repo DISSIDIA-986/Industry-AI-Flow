@@ -149,6 +149,8 @@ export interface RealWorkflowQueryResponse {
     document_name: string
     relevance: number
     content: string
+    page_number?: number | null
+    chunk_index?: number | null
     metadata?: Record<string, any>
   }>
   timestamp: string
@@ -235,6 +237,7 @@ export interface DocumentChunksResponse {
     chunk_id: number
     content: string
     char_count: number
+    page_number?: number | null
   }>
   total: number
   offset: number

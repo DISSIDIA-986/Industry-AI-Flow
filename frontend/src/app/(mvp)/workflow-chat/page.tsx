@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { workflowApi, realApiService } from "@/lib/api-client";
 import {
@@ -27,6 +28,8 @@ interface Message {
     document_name: string;
     relevance: number;
     content: string;
+    page_number?: number | null;
+    chunk_index?: number | null;
   }>;
   suggestedQuestions?: string[];
   metadata?: Record<string, unknown>;
@@ -107,6 +110,23 @@ export default function WorkflowChatPage() {
   const pendingQueryRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const router = useRouter();
+
+  // Open the document preview deep-linked to a citation's page / chunk.
+  const openSourceInDocument = (source: {
+    document_id?: string;
+    page_number?: number | null;
+    chunk_index?: number | null;
+  }) => {
+    if (!source.document_id) return;
+    const params = new URLSearchParams();
+    if (source.page_number != null) params.set("page", String(source.page_number));
+    if (source.chunk_index != null) params.set("chunk", String(source.chunk_index));
+    const qs = params.toString();
+    router.push(
+      `/documents/${encodeURIComponent(source.document_id)}${qs ? `?${qs}` : ""}`
+    );
+  };
 
   // Check API connection status
   useEffect(() => {
@@ -407,19 +427,71 @@ export default function WorkflowChatPage() {
                           <div className="text-xs font-medium text-gray-500 mb-1">
                             Sources
                           </div>
-                          {message.sources.map((source, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 text-[11px] py-0.5"
-                            >
-                              <span className="text-gray-700 font-medium truncate flex-1">
-                                {source.document_name}
-                              </span>
-                              <span className="text-gray-400 flex-shrink-0">
-                                {(source.relevance * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          ))}
+                          {message.sources.map((source, index) => {
+                            const canOpen = Boolean(source.document_id);
+                            const pageLabel =
+                              source.page_number != null
+                                ? `p.${source.page_number}`
+                                : null;
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                disabled={!canOpen}
+                                onClick={() => openSourceInDocument(source)}
+                                title={
+                                  canOpen
+                                    ? `Open ${source.document_name}${
+                                        pageLabel ? ` at ${pageLabel}` : ""
+                                      }`
+                                    : undefined
+                                }
+                                className={`group flex w-full items-center gap-2 text-[11px] py-0.5 rounded px-1 -mx-1 text-left ${
+                                  canOpen
+                                    ? "hover:bg-blue-50 cursor-pointer"
+                                    : "cursor-default"
+                                }`}
+                                data-testid={`source-citation-${index}`}
+                                data-page={source.page_number ?? ""}
+                                data-chunk={source.chunk_index ?? ""}
+                              >
+                                <span
+                                  className={`font-medium truncate flex-1 ${
+                                    canOpen
+                                      ? "text-blue-700 group-hover:underline"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  {source.document_name}
+                                </span>
+                                {pageLabel && (
+                                  <span
+                                    className="flex-shrink-0 text-blue-600 bg-blue-50 border border-blue-100 rounded px-1 font-mono"
+                                    data-testid={`source-page-badge-${index}`}
+                                  >
+                                    {pageLabel}
+                                  </span>
+                                )}
+                                <span className="text-gray-400 flex-shrink-0">
+                                  {(source.relevance * 100).toFixed(0)}%
+                                </span>
+                                {canOpen && (
+                                  <svg
+                                    width="11"
+                                    height="11"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="flex-shrink-0 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    aria-hidden="true"
+                                  >
+                                    <path d="M6 4l4 4-4 4" />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
 

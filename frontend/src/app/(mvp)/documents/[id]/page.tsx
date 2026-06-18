@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import DarkHeroWrapper from "@/components/DarkHeroWrapper";
 import { realApiService } from "@/lib/real-api-client";
@@ -90,7 +90,18 @@ function SearchIcon() {
 export default function DocumentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const docId = params?.id as string;
+
+  // Deep-link targets from a citation: ?page=N&chunk=M
+  const pageParam = searchParams?.get("page");
+  const chunkParam = searchParams?.get("chunk");
+  const targetPage = pageParam != null && pageParam !== "" ? Number(pageParam) : null;
+  const targetChunk =
+    chunkParam != null && chunkParam !== "" ? Number(chunkParam) : null;
+
+  // Ref to the cited chunk element so we can scroll it into view + highlight.
+  const targetChunkRef = useRef<HTMLDivElement | null>(null);
 
   const [detail, setDetail] = useState<DocumentDetailResponse | null>(null);
   const [summary, setSummary] = useState<DocumentSummaryResponse | null>(null);
@@ -99,9 +110,15 @@ export default function DocumentDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
 
-  // PDF state
+  // PDF state — initial page honours the ?page deep-link target.
   const [numPages, setNumPages] = useState(0);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [pageNumber, setPageNumber] = useState(
+    targetPage && targetPage > 0 ? targetPage : 1
+  );
+  // Controlled value for the "jump to page" input box.
+  const [pageInput, setPageInput] = useState(
+    String(targetPage && targetPage > 0 ? targetPage : 1)
+  );
 
   // Chunk search
   const [chunkSearch, setChunkSearch] = useState("");
@@ -118,8 +135,15 @@ export default function DocumentDetailPage() {
     setChunks(null);
     setChunkSearch("");
     setImageError(false);
-    setPageNumber(1);
+    const initialPage = targetPage && targetPage > 0 ? targetPage : 1;
+    setPageNumber(initialPage);
+    setPageInput(String(initialPage));
     setNumPages(0);
+
+    // When a citation deep-links to a chunk, fetch a window around it so the
+    // cited chunk is in the loaded set (chunk_id is contiguous from 0).
+    const chunkOffset =
+      targetChunk != null && targetChunk > 4 ? targetChunk - 4 : 0;
 
     const fetchData = async () => {
       setLoading(true);
@@ -128,7 +152,7 @@ export default function DocumentDetailPage() {
         const [detailRes, summaryRes, chunksRes] = await Promise.allSettled([
           realApiService.getDocumentDetail(docId),
           realApiService.getDocumentSummary(docId),
-          realApiService.getDocumentChunks(docId, 0, 50),
+          realApiService.getDocumentChunks(docId, chunkOffset, 50),
         ]);
 
         if (cancelled) return;
@@ -155,7 +179,40 @@ export default function DocumentDetailPage() {
 
     fetchData();
     return () => { cancelled = true; };
-  }, [docId]);
+  }, [docId, targetPage, targetChunk]);
+
+  // Clamp the deep-linked page once the PDF reports its real page count.
+  useEffect(() => {
+    if (numPages > 0 && pageNumber > numPages) {
+      setPageNumber(numPages);
+      setPageInput(String(numPages));
+    }
+  }, [numPages, pageNumber]);
+
+  // Scroll the cited chunk into view once chunks have loaded.
+  useEffect(() => {
+    if (targetChunk == null || !chunks?.chunks?.length) return;
+    const t = setTimeout(() => {
+      targetChunkRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [targetChunk, chunks]);
+
+  // Commit the page-jump input (clamp to [1, numPages]).
+  const commitPageInput = useCallback(() => {
+    const parsed = parseInt(pageInput, 10);
+    if (Number.isNaN(parsed)) {
+      setPageInput(String(pageNumber));
+      return;
+    }
+    const max = numPages > 0 ? numPages : parsed;
+    const clamped = Math.min(Math.max(1, parsed), max);
+    setPageNumber(clamped);
+    setPageInput(String(clamped));
+  }, [pageInput, pageNumber, numPages]);
 
   // Filtered chunks
   const filteredChunks = useMemo(() => {
@@ -353,7 +410,11 @@ export default function DocumentDetailPage() {
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                    onClick={() => {
+                      const n = Math.max(1, pageNumber - 1);
+                      setPageNumber(n);
+                      setPageInput(String(n));
+                    }}
                     disabled={pageNumber <= 1}
                     className="px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-40 transition-colors"
                     data-testid="pdf-prev-btn"
@@ -361,21 +422,45 @@ export default function DocumentDetailPage() {
                     ‹ Prev
                   </button>
                   <button
-                    onClick={() =>
-                      setPageNumber((p) => Math.min(numPages, p + 1))
-                    }
+                    onClick={() => {
+                      const n = Math.min(numPages || pageNumber + 1, pageNumber + 1);
+                      setPageNumber(n);
+                      setPageInput(String(n));
+                    }}
                     disabled={pageNumber >= numPages}
                     className="px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-40 transition-colors"
                     data-testid="pdf-next-btn"
                   >
                     Next ›
                   </button>
-                  <span
-                    className="text-sm text-gray-500 font-mono"
-                    data-testid="pdf-page-info"
-                  >
-                    Page {pageNumber} of {numPages}
-                  </span>
+                  {/* Jump to an arbitrary page */}
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <span className="font-mono">Page</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={numPages || undefined}
+                      value={pageInput}
+                      onChange={(e) => setPageInput(e.target.value)}
+                      onBlur={commitPageInput}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          commitPageInput();
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
+                      aria-label="Jump to page"
+                      className="w-14 px-2 py-1 text-sm text-center border border-gray-200 rounded-md bg-white font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                      data-testid="pdf-page-input"
+                    />
+                    <span
+                      className="font-mono text-gray-400 whitespace-nowrap"
+                      data-testid="pdf-page-info"
+                    >
+                      of {numPages || "…"}
+                    </span>
+                  </div>
                 </div>
                 <a
                   href={contentUrl}
@@ -606,20 +691,41 @@ export default function DocumentDetailPage() {
                 {/* Chunk list */}
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {filteredChunks.length > 0 ? (
-                    filteredChunks.slice(0, 10).map((chunk) => (
-                      <div
-                        key={chunk.chunk_id}
-                        className="p-2.5 bg-gray-50 rounded-lg border-l-[3px] border-blue-600"
-                        data-testid={`chunk-${chunk.chunk_id}`}
-                      >
-                        <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
-                          {highlightText(chunk.content)}
-                        </p>
-                        <p className="text-[11px] text-gray-400 font-mono mt-1">
-                          Chunk #{chunk.chunk_id} · {chunk.char_count} chars
-                        </p>
-                      </div>
-                    ))
+                    filteredChunks.slice(0, 12).map((chunk) => {
+                      const isTarget = targetChunk === chunk.chunk_id;
+                      const hasPage = chunk.page_number != null;
+                      return (
+                        <div
+                          key={chunk.chunk_id}
+                          ref={isTarget ? targetChunkRef : undefined}
+                          onClick={
+                            hasPage
+                              ? () => {
+                                  setPageNumber(chunk.page_number as number);
+                                  setPageInput(String(chunk.page_number));
+                                }
+                              : undefined
+                          }
+                          className={`p-2.5 rounded-lg border-l-[3px] transition-colors ${
+                            isTarget
+                              ? "bg-amber-50 border-amber-500 ring-2 ring-amber-300"
+                              : "bg-gray-50 border-blue-600"
+                          } ${hasPage ? "cursor-pointer hover:bg-blue-50" : ""}`}
+                          data-testid={`chunk-${chunk.chunk_id}`}
+                          data-target={isTarget ? "true" : undefined}
+                        >
+                          <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                            {highlightText(chunk.content)}
+                          </p>
+                          <p className="text-[11px] text-gray-400 font-mono mt-1">
+                            Chunk #{chunk.chunk_id}
+                            {hasPage ? ` · Page ${chunk.page_number}` : ""} ·{" "}
+                            {chunk.char_count} chars
+                            {isTarget ? " · cited" : ""}
+                          </p>
+                        </div>
+                      );
+                    })
                   ) : (
                     <p className="text-sm text-gray-400 text-center py-4">
                       {chunkSearch

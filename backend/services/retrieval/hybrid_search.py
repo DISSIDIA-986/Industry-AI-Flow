@@ -161,7 +161,9 @@ class HybridRetriever:
                     dc.id,
                     dc.doc_id,
                     dc.content,
-                    d.filename
+                    d.filename,
+                    dc.chunk_id,
+                    dc.page_number
                 FROM document_chunks dc
                 JOIN documents d ON dc.doc_id = d.id
                 ORDER BY dc.doc_id, dc.chunk_id
@@ -185,6 +187,8 @@ class HybridRetriever:
                     "doc_id": row[1],
                     "content": row[2],
                     "filename": row[3],
+                    "chunk_index": row[4],
+                    "page_number": row[5],
                 }
                 self.doc_chunks.append(chunk_info)
 
@@ -333,6 +337,8 @@ class HybridRetriever:
                         "doc_id": vector_info.get("doc_id"),
                         "content": vector_info.get("content", ""),
                         "filename": vector_info.get("filename", ""),
+                        "chunk_index": vector_info.get("chunk_index"),
+                        "page_number": vector_info.get("page_number"),
                     }
             if chunk_info:
                 final_results.append(
@@ -341,6 +347,8 @@ class HybridRetriever:
                         "doc_id": chunk_info["doc_id"],
                         "content": chunk_info["content"],
                         "filename": chunk_info["filename"],
+                        "chunk_index": chunk_info.get("chunk_index"),
+                        "page_number": chunk_info.get("page_number"),
                         "score": fusion_score,
                     }
                 )

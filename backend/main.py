@@ -1186,6 +1186,28 @@ async def upload_document(
                 chunk_contents = [c["content"] for c in chunks]
                 t_chunk = _time.time() - t0
 
+                # Compute per-chunk page numbers for citation deep-linking.
+                # page_texts is aligned to the joined `text` (extractor joins
+                # pages with the same "\n\n" separator as page_mapping).
+                page_numbers = None
+                try:
+                    from backend.services.core.page_mapping import (
+                        compute_page_starts,
+                        map_chunks_to_pages,
+                    )
+
+                    _page_texts = doc_content.metadata.get("page_texts")
+                    if isinstance(_page_texts, list) and _page_texts:
+                        _starts = compute_page_starts(_page_texts)
+                        page_numbers = map_chunks_to_pages(
+                            text, chunk_contents, _starts
+                        )
+                except Exception as _pmap_err:  # pragma: no cover - best effort
+                    logger.warning(
+                        "Page-number mapping failed for %s: %s", _safe_name, _pmap_err
+                    )
+                    page_numbers = None
+
                 if not chunk_contents:
                     _tracker.update("chunk", "completed", 1.0, "No chunks generated")
                     _tracker.update("embed", "skipped", 0.0, "No chunks to embed")
@@ -1224,6 +1246,7 @@ async def upload_document(
                     chunks=chunk_contents,
                     embeddings=embeddings,
                     size_bytes=_content_len,
+                    page_numbers=page_numbers,
                 )
                 _tracker.update(
                     "store", "completed", 1.0,

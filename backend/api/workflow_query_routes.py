@@ -140,6 +140,8 @@ def _normalize_source_item(raw: Any) -> Optional[Dict[str, Any]]:
             "document_name": value,
             "relevance": 0.0,
             "content": "",
+            "page_number": None,
+            "chunk_index": None,
         }
 
     if not isinstance(raw, dict):
@@ -168,11 +170,27 @@ def _normalize_source_item(raw: Any) -> Optional[Dict[str, Any]]:
         relevance = 0.0
 
     content = str(raw.get("content") or raw.get("text") or "").strip()
+
+    def _opt_int(value: Any) -> Optional[int]:
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
     return {
         "document_id": document_id or document_name,
         "document_name": document_name or document_id,
         "relevance": relevance,
         "content": content,
+        # Deep-linking metadata: jump preview to page / scroll to chunk.
+        "page_number": _opt_int(raw.get("page_number")),
+        "chunk_index": _opt_int(
+            raw.get("chunk_index")
+            if raw.get("chunk_index") is not None
+            else raw.get("chunk_id")
+        ),
     }
 
 

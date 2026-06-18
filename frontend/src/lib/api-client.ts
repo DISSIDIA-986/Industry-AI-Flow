@@ -528,6 +528,8 @@ export interface WorkflowQueryResponse {
     document_name: string
     relevance: number
     content: string
+    page_number?: number | null
+    chunk_index?: number | null
   }>
   timestamp: string
   confidence: number
@@ -569,11 +571,19 @@ function normalizeWorkflowSources(
           return null
         }
 
+        const toOptInt = (value: unknown): number | null => {
+          if (value === null || value === undefined || value === '') return null
+          const n = Number(value)
+          return Number.isFinite(n) ? Math.trunc(n) : null
+        }
+
         return {
           document_id: documentId || documentName,
           document_name: documentName || documentId,
           relevance: Number(source.relevance ?? source.score ?? 0),
           content: String(source.content ?? source.text ?? ''),
+          page_number: toOptInt(source.page_number),
+          chunk_index: toOptInt(source.chunk_index ?? source.chunk_id),
         }
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)

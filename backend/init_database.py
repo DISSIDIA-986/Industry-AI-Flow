@@ -87,6 +87,7 @@ def init_database():
                     chunk_id INTEGER NOT NULL,
                     content TEXT NOT NULL,
                     embedding vector(768),
+                    page_number INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                     UNIQUE (doc_id, chunk_id)
@@ -103,12 +104,19 @@ def init_database():
                     chunk_id INTEGER NOT NULL,
                     content TEXT NOT NULL,
                     embedding TEXT,
+                    page_number INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE,
                     UNIQUE (doc_id, chunk_id)
                 )
             """
             )
+
+        # Idempotent migration for pre-existing tables (CREATE TABLE IF NOT
+        # EXISTS will not add the column to an already-created table).
+        cur.execute(
+            "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS page_number INTEGER"
+        )
 
         # 文档画像表（轻量级文档摘要/大纲/关键词，用于检索路由增强）
         cur.execute(

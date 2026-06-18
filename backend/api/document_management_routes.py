@@ -892,7 +892,7 @@ def get_document_chunks(
         # Get chunks with pagination
         cur.execute(
             """
-            SELECT chunk_id, content
+            SELECT chunk_id, content, page_number
             FROM document_chunks
             WHERE doc_id = %s
             ORDER BY chunk_id ASC
@@ -907,6 +907,11 @@ def get_document_chunks(
                 "chunk_id": int(row.get("chunk_id") or 0),
                 "content": str(row.get("content") or ""),
                 "char_count": len(str(row.get("content") or "")),
+                "page_number": (
+                    int(row.get("page_number"))
+                    if row.get("page_number") is not None
+                    else None
+                ),
             }
             for row in chunk_rows
         ]

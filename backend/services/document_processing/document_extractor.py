@@ -119,16 +119,18 @@ class DocumentExtractor:
 
             doc = fitz.open(file_path)
             total_pages = len(doc)
-            text_parts = []
+            # One entry per page (aligned to page index) so that page_number
+            # metadata for chunks can be computed downstream. Empty/failed
+            # pages keep a "" placeholder to preserve 1:1 page alignment.
+            page_texts: list[str] = []
             ocr_pages = []
 
             for page_num in range(total_pages):
                 page = doc[page_num]
                 page_text = page.get_text().strip()
+                resolved = page_text
 
-                if page_text:
-                    text_parts.append(page_text)
-                elif self.use_ocr and self.ocr_processor:
+                if not page_text and self.use_ocr and self.ocr_processor:
                     # Scanned page — render to image and OCR
                     logger.info(
                         f"PDF page {page_num + 1} has no extractable text, "
@@ -150,13 +152,15 @@ class DocumentExtractor:
                             pix.save(tmp.name)
                             ocr_result = self.ocr_processor.process(tmp.name)
                             if ocr_result.text.strip():
-                                text_parts.append(ocr_result.text)
+                                resolved = ocr_result.text
                                 ocr_pages.append(page_num + 1)
                             Path(tmp.name).unlink(missing_ok=True)
                     except Exception as ocr_err:
                         logger.warning(
                             f"OCR fallback failed for page {page_num + 1}: {ocr_err}"
                         )
+
+                page_texts.append(resolved)
 
                 # Report extraction progress
                 if progress_callback:
@@ -166,13 +170,14 @@ class DocumentExtractor:
                         f"Extracting text: {page_num + 1}/{total_pages} pages",
                     )
 
-            full_text = "\n\n".join(text_parts)
+            full_text = "\n\n".join(page_texts)
 
             pdf_metadata = doc.metadata or {}
             metadata = {
                 "num_pages": total_pages,
                 "author": pdf_metadata.get("author", "Unknown"),
                 "title": pdf_metadata.get("title", "Unknown"),
+                "page_texts": page_texts,
             }
             if ocr_pages:
                 metadata["ocr_pages"] = ocr_pages

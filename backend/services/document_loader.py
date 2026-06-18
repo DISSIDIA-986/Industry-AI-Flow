@@ -91,53 +91,83 @@ class EnhancedDocumentLoader:
         else:
             raise ValueError(f"Unsupported file format: {ext}")
 
+    def load_pages(self, file_path: Union[str, Path]) -> list[str]:
+        """Load a document and return its text split per page.
+
+        For PDFs each list element is one page's text (the same text that
+        ``load_document`` would join with ``"\n\n"``).  TXT/MD/image files are
+        single-"page" documents, so a one-element list is returned.  This lets
+        callers compute page-number metadata for chunks while keeping
+        ``load_document`` (which returns the joined string) unchanged.
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        ext = file_path.suffix.lower()
+        if ext == ".pdf":
+            return self._load_pdf_pages(file_path)
+        elif ext in (".txt", ".md"):
+            return [self._load_txt(file_path)]
+        elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
+            return [self._load_image(file_path)]
+        else:
+            raise ValueError(f"Unsupported file format: {ext}")
+
     def _load_txt(self, file_path: Path) -> str:
         """Load a TXT file and return its text content."""
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
 
-    def _load_pdf(self, file_path: Path) -> str:
-        """
-        Load a PDF file and extract text content.
+    def _load_pdf_pages(self, file_path: Path) -> list[str]:
+        """Extract a PDF's text as a per-page list (OCR fallback per page).
 
-        Strategy:
+        Strategy per page:
         1. First attempt direct text extraction.
         2. If text content is sparse and OCR is enabled, use OCR as fallback.
         """
         fitz = _get_fitz()
         doc = fitz.open(file_path)
-        text_content = []
+        text_content: list[str] = []
 
-        for page_num in range(len(doc)):
-            page = doc[page_num]
+        try:
+            for page_num in range(len(doc)):
+                page = doc[page_num]
 
-            # Extract text directly
-            page_text = page.get_text()
+                # Extract text directly
+                page_text = page.get_text()
 
-            # If text is too short (likely scanned), fall back to OCR
-            if self.use_ocr and len(page_text.strip()) < 50:
-                logger.debug(
-                    "Page %s: sparse text detected, using OCR fallback", page_num + 1
-                )
-                page_image = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x resolution
-                img_bytes = page_image.tobytes("png")
+                # If text is too short (likely scanned), fall back to OCR
+                if self.use_ocr and len(page_text.strip()) < 50:
+                    logger.debug(
+                        "Page %s: sparse text detected, using OCR fallback",
+                        page_num + 1,
+                    )
+                    page_image = page.get_pixmap(
+                        matrix=fitz.Matrix(2, 2)
+                    )  # 2x resolution
+                    img_bytes = page_image.tobytes("png")
 
-                # Save temporary image for OCR
-                temp_img = f"/tmp/page_{page_num}.png"
-                with open(temp_img, "wb") as f:
-                    f.write(img_bytes)
+                    # Save temporary image for OCR
+                    temp_img = f"/tmp/page_{page_num}.png"
+                    with open(temp_img, "wb") as f:
+                        f.write(img_bytes)
 
-                # Run OCR on the image
-                ocr_result = self._ocr_image(temp_img)
-                text_content.append(ocr_result)
+                    # Run OCR on the image
+                    ocr_result = self._ocr_image(temp_img)
+                    text_content.append(ocr_result)
 
-                # Clean up temporary image
-                os.remove(temp_img)
-            else:
-                text_content.append(page_text)
+                    # Clean up temporary image
+                    os.remove(temp_img)
+                else:
+                    text_content.append(page_text)
+        finally:
+            doc.close()
+        return text_content
 
-        doc.close()
-        return "\n\n".join(text_content)
+    def _load_pdf(self, file_path: Path) -> str:
+        """Load a PDF file and extract text content (pages joined with blank line)."""
+        return "\n\n".join(self._load_pdf_pages(file_path))
 
     def _load_image(self, file_path: Path) -> str:
         """Load an image file using OCR to extract text."""

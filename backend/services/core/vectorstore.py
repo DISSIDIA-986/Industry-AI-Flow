@@ -36,12 +36,22 @@ class VectorStore:
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_document_chunks_docid ON document_chunks(doc_id);"
             )
+            # Idempotent migration: ensure page_number exists for citation
+            # deep-linking (added 2026-06; pre-existing tables lack the column).
+            cur.execute(
+                "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS page_number INTEGER;"
+            )
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_document_chunks_content_fts ON document_chunks USING gin (to_tsvector('simple', content));"
             )
             try:
+                # Canonical name shared with init_database.py (idx_chunks_embedding)
+                # so the two code paths converge on ONE index instead of creating
+                # two redundant IVFFlat indexes on the same column. Legacy DBs may
+                # still carry idx_document_chunks_embedding — drop it manually with:
+                #   DROP INDEX CONCURRENTLY IF EXISTS idx_document_chunks_embedding;
                 cur.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops);"
+                    "CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops);"
                 )
             except Exception:
                 # pgvector not available, skip ivfflat index
@@ -69,8 +79,13 @@ class VectorStore:
         chunks: list[str],
         embeddings: list[list[float]],
         size_bytes: int = 0,
+        page_numbers: list[int] | None = None,
     ) -> str:
-        """Store a document and its chunks with embeddings."""
+        """Store a document and its chunks with embeddings.
+
+        ``page_numbers`` (optional) is a per-chunk 1-based page number used for
+        citation deep-linking. When omitted, page_number is stored as NULL.
+        """
         conn = self.get_connection()
         cur = conn.cursor()
         start_time = time.monotonic()
@@ -89,11 +104,18 @@ class VectorStore:
 
             # 2. Batch insert chunk records with embeddings
             insert_sql = """
-                INSERT INTO document_chunks (doc_id, chunk_id, content, embedding)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO document_chunks
+                    (doc_id, chunk_id, content, embedding, page_number)
+                VALUES (%s, %s, %s, %s, %s)
             """
+
+            def _page_at(i: int) -> int | None:
+                if page_numbers is not None and i < len(page_numbers):
+                    return page_numbers[i]
+                return None
+
             chunk_values = [
-                (doc_id, i, chunk, embedding)
+                (doc_id, i, chunk, embedding, _page_at(i))
                 for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
             ]
             if chunk_values:
@@ -159,7 +181,9 @@ class VectorStore:
                         dc.doc_id,
                         dc.content,
                         dc.embedding <=> %s::vector AS distance,
-                        d.filename
+                        d.filename,
+                        dc.chunk_id,
+                        dc.page_number
                     FROM document_chunks dc
                     JOIN documents d ON dc.doc_id = d.id
                     ORDER BY distance
@@ -176,7 +200,9 @@ class VectorStore:
                         dc.doc_id,
                         dc.content,
                         dc.embedding,
-                        d.filename
+                        d.filename,
+                        dc.chunk_id,
+                        dc.page_number
                     FROM document_chunks dc
                     JOIN documents d ON dc.doc_id = d.id
                     WHERE dc.embedding IS NOT NULL
@@ -210,6 +236,8 @@ class VectorStore:
                             "content": row[2],
                             "distance": distance,
                             "filename": row[4],
+                            "chunk_index": row[5],
+                            "page_number": row[6],
                         }
                     )
 
@@ -226,6 +254,8 @@ class VectorStore:
                         "content": row[2],
                         "distance": float(row[3]),
                         "filename": row[4],
+                        "chunk_index": row[5],
+                        "page_number": row[6],
                     }
                 )
 
