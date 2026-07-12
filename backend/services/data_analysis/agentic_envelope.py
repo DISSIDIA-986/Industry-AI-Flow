@@ -9,6 +9,7 @@ Kept separate from ``agentic_loop.py`` so the loop stays pure (no disk
 I/O, no settings coupling) and can be replaced without touching the
 envelope contract the UI depends on.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,6 +40,7 @@ def compose_agentic_response(
     dataset_metadata: Dict[str, Any],
     data_file_path: str,
     analysis_tier: Optional[Dict[str, Any]] = None,
+    analysis_methods: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Map a ``PlanExecutionResult`` onto the legacy analyze_query envelope.
 
@@ -87,6 +89,13 @@ def compose_agentic_response(
             "rationale": rationale,
         },
         "analysis_tier": analysis_tier,
+        # Advanced-analysis methods the planner routed to (stat tests, forecast,
+        # feature importance). Empty list when the request was EDA-only. Lets the
+        # UI show "Statistical tests run: Welch t-test, ..." and gives tests a
+        # deterministic assertion surface.
+        "analysis_methods": [
+            m.get("kind") for m in (analysis_methods or {}).get("methods", [])
+        ],
         "code_generation": {
             "mode": AGENTIC_MODE,
             "fallback_reason": fallback_reason,
@@ -131,8 +140,20 @@ _LOWER_IS_BETTER = {"mae", "rmse", "mse", "logloss", "log_loss", "error"}
 # Substrings that mark a key as a METRIC name (not a model name). Used to
 # detect and correct a transposed model_comparison (metric-keyed outer).
 _METRIC_NAME_TOKENS = (
-    "f1", "accuracy", "auc", "roc", "precision", "recall",
-    "rmse", "mse", "r2", "rsquared", "mae", "silhouette", "logloss", "score",
+    "f1",
+    "accuracy",
+    "auc",
+    "roc",
+    "precision",
+    "recall",
+    "rmse",
+    "mse",
+    "r2",
+    "rsquared",
+    "mae",
+    "silhouette",
+    "logloss",
+    "score",
 )
 
 
@@ -293,9 +314,7 @@ def _persist_chart(
     return [{"filename": entry["filename"], "path": entry["path"]}], chart
 
 
-def _extract_key_findings(
-    summary: Dict[str, Any], plan: Dict[str, Any]
-) -> List[str]:
+def _extract_key_findings(summary: Dict[str, Any], plan: Dict[str, Any]) -> List[str]:
     """Pull key_findings from ANALYSIS_SUMMARY_JSON; synthesize when missing.
 
     Priority order:
@@ -369,7 +388,9 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
         ("score", "score"),
     )
 
-    scored: List[tuple[str, float, str, str]] = []  # (name, score, std_detail, metric_label)
+    scored: List[tuple[str, float, str, str]] = (
+        []
+    )  # (name, score, std_detail, metric_label)
     for name, payload in mc.items():
         if not isinstance(name, str):
             continue
@@ -430,6 +451,7 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
     excluded = 0
     if len(labels) > 1:
         from collections import Counter
+
         dominant = Counter(s[3] for s in scored).most_common(1)[0][0]
         filtered = [s for s in scored if s[3] == dominant]
         excluded = len(scored) - len(filtered)
@@ -448,8 +470,7 @@ def _bullets_from_model_comparison(mc: Dict[str, Any]) -> List[str]:
     shown = scored[:MAX_MODELS]
 
     bullets = [
-        f"{name}: {label}={score:.4f}{detail}"
-        for name, score, detail, label in shown
+        f"{name}: {label}={score:.4f}{detail}" for name, score, detail, label in shown
     ]
     leader = scored[0]
     bullets.insert(
@@ -495,7 +516,9 @@ def _build_answer(
     summary: Dict[str, Any],
 ) -> str:
     if result.status == "unanswerable":
-        reason = result.error_message or "The question cannot be answered from this dataset."
+        reason = (
+            result.error_message or "The question cannot be answered from this dataset."
+        )
         suggestion = plan.get("suggestion")
         if suggestion:
             return f"{reason} {suggestion}"
@@ -558,7 +581,9 @@ def _distill_error(message: Optional[str]) -> str:
     text = str(message)
     # Prefer a real exception line (`SomeError:` / `SomeException:`) over a trailing
     # warning — a DeprecationWarning appended after the traceback is not the cause.
-    err_lines = re.findall(r"^[A-Za-z_][\w.]*(?:Error|Exception):.*$", text, re.MULTILINE)
+    err_lines = re.findall(
+        r"^[A-Za-z_][\w.]*(?:Error|Exception):.*$", text, re.MULTILINE
+    )
     if not err_lines:
         err_lines = re.findall(r"^[A-Za-z_][\w.]*Warning:.*$", text, re.MULTILINE)
     if err_lines:

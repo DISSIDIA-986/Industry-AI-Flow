@@ -36,11 +36,23 @@ logger = logging.getLogger(__name__)
 # Single ambiguous words (reward, policy, agent, episode, environment) are
 # excluded because they appear as legitimate column names / questions.
 _RL_PHRASES = (
-    "reinforcement learning", "q-learning", "q learning", "deep q-network",
-    "deep q network", "policy gradient", "actor-critic", "actor critic",
-    "markov decision", "bellman equation", "bellman", "epsilon-greedy",
-    "epsilon greedy", "replay buffer", "temporal difference learning",
-    "reward per episode", "cumulative reward",
+    "reinforcement learning",
+    "q-learning",
+    "q learning",
+    "deep q-network",
+    "deep q network",
+    "policy gradient",
+    "actor-critic",
+    "actor critic",
+    "markov decision",
+    "bellman equation",
+    "bellman",
+    "epsilon-greedy",
+    "epsilon greedy",
+    "replay buffer",
+    "temporal difference learning",
+    "reward per episode",
+    "cumulative reward",
 )
 _RL_ACRONYMS = re.compile(r"\b(dqn|sarsa)\b", re.IGNORECASE)
 
@@ -192,10 +204,20 @@ class DataAnalysisAgent:
                     "error": f"Data file not found: {data_file_path}",
                     "answer": "The dataset could not be located. Please verify the file path and retry.",
                 }
-            _progress("file_parse", "completed", 0.10, f"File: {os.path.basename(data_file_path)}")
+            _progress(
+                "file_parse",
+                "completed",
+                0.10,
+                f"File: {os.path.basename(data_file_path)}",
+            )
 
             # 2. Extract dataset metadata
-            _progress("metadata_extract", "running", 0.12, "Extracting column info and statistics...")
+            _progress(
+                "metadata_extract",
+                "running",
+                0.12,
+                "Extracting column info and statistics...",
+            )
             if not dataset_metadata:
                 dataset_metadata = self._extract_dataset_info(data_file_path)
             if isinstance(dataset_metadata, dict) and dataset_metadata.get("error"):
@@ -208,7 +230,9 @@ class DataAnalysisAgent:
                     ),
                 }
             _progress(
-                "metadata_extract", "completed", 0.20,
+                "metadata_extract",
+                "completed",
+                0.20,
                 f"{dataset_metadata.get('rows', '?')} rows × {dataset_metadata.get('columns', '?')} cols",
             )
 
@@ -220,7 +244,9 @@ class DataAnalysisAgent:
             _unsupported = detect_unsupported_analysis(question)
             if _unsupported:
                 _progress(
-                    "code_generation", "completed", 1.0,
+                    "code_generation",
+                    "completed",
+                    1.0,
                     "Unsupported analysis type for a static dataset",
                 )
                 return _unsupported_analysis_response(_unsupported, dataset_metadata)
@@ -254,10 +280,13 @@ class DataAnalysisAgent:
             # function of dataset metadata (chart_plan.py), so this stage
             # cannot hit a cloud API failure, JSON parse retry, or
             # prompt-regression flake. Critical for demo stability.
-            _progress("code_generation", "running", 0.25, "Planning charts from dataset shape...")
-            from backend.services.data_analysis.chart_plan import (
-                eda_plan_from_metadata,
+            _progress(
+                "code_generation",
+                "running",
+                0.25,
+                "Planning charts from dataset shape...",
             )
+            from backend.services.data_analysis.chart_plan import eda_plan_from_metadata
 
             plan = eda_plan_from_metadata(dataset_metadata, user_question=question)
             chart_count = len((plan.get("eda") or {}).get("charts") or [])
@@ -309,7 +338,9 @@ class DataAnalysisAgent:
                             "fallback_reason": validation.error,
                         },
                     }
-            _progress("security_check", "completed", 0.50, f"Validated ({code_gen_mode})")
+            _progress(
+                "security_check", "completed", 0.50, f"Validated ({code_gen_mode})"
+            )
 
             # 5. Execute combined snippet in a SINGLE sandbox invocation.
             #
@@ -317,7 +348,9 @@ class DataAnalysisAgent:
             # old path would spin one Sandbox.create() per chart. Now all
             # N charts share one sandbox; partial failures are isolated
             # via CHART_OK_JSON / CHART_FAILED_JSON stdout markers.
-            _progress("sandbox_execution", "running", 0.55, "Rendering charts in sandbox...")
+            _progress(
+                "sandbox_execution", "running", 0.55, "Rendering charts in sandbox..."
+            )
             execution_runner = self.code_execution_manager
             if execution_runner is None and self.code_executor is not None:
                 # Legacy executor path: older deployments/tests inject
@@ -392,7 +425,9 @@ class DataAnalysisAgent:
                     }
 
             # 6. Compose the legacy-shaped response envelope.
-            _progress("result_render", "running", 0.85, "Composing charts and findings...")
+            _progress(
+                "result_render", "running", 0.85, "Composing charts and findings..."
+            )
             from backend.services.data_analysis.report_composer import (
                 compose_eda_response,
             )
@@ -469,10 +504,10 @@ class DataAnalysisAgent:
             from backend.services.data_analysis.agentic_envelope import (
                 compose_agentic_response,
             )
-            from backend.services.data_analysis.agentic_loop import (
-                run_agentic_analysis,
-            )
+            from backend.services.data_analysis.agentic_loop import run_agentic_analysis
             from backend.services.data_analysis.analysis_planner import (
+                method_directive,
+                plan_analysis_methods,
                 plan_analysis_tier,
                 tier_directive,
             )
@@ -489,6 +524,25 @@ class DataAnalysisAgent:
         except Exception as exc:  # noqa: BLE001 — never block analysis on planner
             logger.warning("tier planner failed (%s); proceeding tier-free", exc)
             tier_plan, tier_constraint = None, ""
+
+        # Deterministic advanced-analysis method routing (stats / time-series /
+        # explainability). Rendered as a hard directive appended to the tier
+        # constraint so it flows through the SAME {tier_directive} prompt slot —
+        # no template or repair-prompt change. Default-off: empty directive when
+        # no inferential intent is detected, so EDA-only requests are unchanged.
+        methods_plan: Optional[Dict[str, Any]] = None
+        try:
+            methods_plan = plan_analysis_methods(dataset_metadata, question)
+            method_constraint = method_directive(methods_plan)
+            if method_constraint:
+                tier_constraint = (
+                    f"{tier_constraint}\n\n{method_constraint}"
+                    if tier_constraint
+                    else method_constraint
+                )
+        except Exception as exc:  # noqa: BLE001 — never block analysis on planner
+            logger.warning("method planner failed (%s); proceeding method-free", exc)
+            methods_plan = None
 
         try:
             # analyze_query is called from a worker thread (see
@@ -516,9 +570,7 @@ class DataAnalysisAgent:
             )
             return None
         except Exception as exc:  # noqa: BLE001 — any loop crash → graceful fallback
-            logger.warning(
-                "agentic loop raised unexpectedly: %s; falling back", exc
-            )
+            logger.warning("agentic loop raised unexpectedly: %s; falling back", exc)
             return None
 
         envelope = compose_agentic_response(
@@ -527,6 +579,7 @@ class DataAnalysisAgent:
             dataset_metadata=dataset_metadata,
             data_file_path=data_file_path,
             analysis_tier=tier_plan,
+            analysis_methods=methods_plan,
         )
 
         # Emit the terminal SSE stage so the UI collapses the pipeline.
@@ -699,13 +752,19 @@ class DataAnalysisAgent:
                 # Role classification — use pandas helpers so nullable / uint /
                 # extension types are handled correctly.
                 is_bool = pd.api.types.is_bool_dtype(series)
-                is_numeric = (
-                    pd.api.types.is_numeric_dtype(series) and not is_bool
-                )
+                is_numeric = pd.api.types.is_numeric_dtype(series) and not is_bool
                 is_datetime = pd.api.types.is_datetime64_any_dtype(series)
-                is_categorical = isinstance(
-                    series.dtype, pd.CategoricalDtype
-                ) or series.dtype == object
+                # pandas 3.0 infers text columns as the new ``str``/StringDtype,
+                # NOT ``object`` — so ``dtype == object`` alone misses every
+                # string column and mislabels it ``unknown`` (breaks bar charts,
+                # group detection, and the method planner). is_string_dtype
+                # covers object AND the new string dtype; numeric/bool/datetime
+                # are already handled above so this only catches genuine text.
+                is_categorical = (
+                    isinstance(series.dtype, pd.CategoricalDtype)
+                    or series.dtype == object
+                    or pd.api.types.is_string_dtype(series)
+                )
 
                 if is_bool:
                     role = "boolean"
@@ -757,9 +816,7 @@ class DataAnalysisAgent:
                     unique_count = col_info.get("unique_values", 0)
                     if unique_count <= 20:
                         value_counts = series.value_counts().to_dict()
-                        col_info["top_values"] = dict(
-                            list(value_counts.items())[:5]
-                        )
+                        col_info["top_values"] = dict(list(value_counts.items())[:5])
 
                 columns_info.append(col_info)
 
@@ -873,15 +930,15 @@ class DataAnalysisAgent:
                     prompt, temperature=0.1, max_tokens=1000
                 )
                 code = self._extract_code_from_response(llm_response)
-                logger.info("Code generation succeeded with fallback: %s", fallback_backend)
+                logger.info(
+                    "Code generation succeeded with fallback: %s", fallback_backend
+                )
                 return code
             except Exception as exc:
                 logger.warning("Fallback %s also failed: %s", fallback_backend, exc)
 
         # Final fallback: template-based code generation
-        return self._generate_template_code(
-            question, data_file_path, dataset_metadata
-        )
+        return self._generate_template_code(question, data_file_path, dataset_metadata)
 
     @staticmethod
     def _blocked_methods_list() -> str:

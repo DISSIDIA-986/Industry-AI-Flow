@@ -7,6 +7,7 @@ No more. Hard total budget of 45s prevents runaway cost/latency.
 Seeds from `spike_harness` which was built for this reuse (design B.6).
 Reuses `llm_client`, `code_executor.validator`, and E2B provider unchanged.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -56,7 +57,7 @@ BOOTSTRAP_BUDGET_S: float = 20.0  # max wall for pip install step inside run_san
 DEFAULT_TOTAL_BUDGET_S: float = 120.0
 REPAIR_DECISION_CUTOFF_S: float = 80.0  # past this, skip repair even on failure
 DEFAULT_ROUND1_LLM_BUDGET_S: float = 25.0
-DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0   # user code only; bootstrap is separate
+DEFAULT_ROUND1_SANDBOX_BUDGET_S: float = 30.0  # user code only; bootstrap is separate
 DEFAULT_ROUND2_LLM_BUDGET_S: float = 25.0
 
 # Sampling (Plan A.6.2, tightened post-demo-rehearsal 2026-04-19).
@@ -352,7 +353,9 @@ async def run_sandbox(
     # None → default package set; an explicit [] → install nothing (the
     # caller determined no bootstrap is needed). Must distinguish [] from None
     # here, since `[] or BOOTSTRAP_PACKAGES` would wrongly re-add the default.
-    packages = list(BOOTSTRAP_PACKAGES if bootstrap_packages is None else bootstrap_packages)
+    packages = list(
+        BOOTSTRAP_PACKAGES if bootstrap_packages is None else bootstrap_packages
+    )
 
     try:
         from e2b_code_interpreter import Sandbox
@@ -503,8 +506,9 @@ def _load_once(data_file_path: str) -> Tuple[Any, bytes]:
     Raises ValueError for files larger than MAX_DATASET_BYTES so the
     API worker doesn't try to hold a 500MB buffer in memory.
     """
-    import pandas as pd  # local import to keep module import cheap
     from io import BytesIO
+
+    import pandas as pd  # local import to keep module import cheap
 
     path = Path(data_file_path)
     size = path.stat().st_size
@@ -524,6 +528,7 @@ def _load_once(data_file_path: str) -> Tuple[Any, bytes]:
         from backend.services.data_analysis.spike_harness import (
             _detect_csv_sep_from_header,
         )
+
         for enc in ("utf-8", "utf-8-sig", "latin-1"):
             try:
                 header_line = raw.split(b"\n", 1)[0].decode(enc, errors="replace")
@@ -739,7 +744,9 @@ def _build_user_prompt(
         "n_cols": str(profile["n_cols"]),
         "column_profile_table": str(profile["column_profile_table"]),
         "question": str(question),
-        "tier_directive": str(tier_directive or "ANALYSIS TIER = full (no constraint)."),
+        "tier_directive": str(
+            tier_directive or "ANALYSIS TIER = full (no constraint)."
+        ),
     }
     text = USER_TEMPLATE_PATH.read_text(encoding="utf-8")
     for name, value in slots.items():
@@ -753,6 +760,7 @@ def _build_repair_prompt(
     profile: Dict[str, Any],
     previous: RoundRecord,
     trigger: str,
+    tier_directive: str = "",
 ) -> str:
     """Render the repair prompt without going through str.format_map.
 
@@ -784,6 +792,9 @@ def _build_repair_prompt(
         "repair_trigger_type": str(trigger),
         "failure_detail": str(failure_detail),
         "question": str(question),
+        "tier_directive": str(
+            tier_directive or "ANALYSIS TIER = full (no constraint)."
+        ),
         "previous_json": json.dumps(previous_json, ensure_ascii=False, indent=2),
         "filename": str(filename),
         "n_rows": str(profile["n_rows"]),
@@ -823,17 +834,13 @@ def _compose_full_prompt(system_text: str, user_text: str) -> str:
 _LLM_CACHE_ENABLED: bool = (
     os.getenv("DATA_ANALYSIS_LLM_CACHE", "true").lower() == "true"
 )
-_LLM_CACHE_MAX_ENTRIES: int = int(
-    os.getenv("DATA_ANALYSIS_LLM_CACHE_SIZE", "256")
-)
+_LLM_CACHE_MAX_ENTRIES: int = int(os.getenv("DATA_ANALYSIS_LLM_CACHE_SIZE", "256"))
 
 # Two values per key: response text, AND the captured token usage dict
 # at cache-store time — so a cache hit can replay the same token-count
 # metrics into _last_call_usage instead of leaving them empty. Stored
 # as a tuple (response_text, usage_dict) to keep one OrderedDict.
-_llm_response_cache: "OrderedDict[str, Tuple[str, Dict[str, Any]]]" = (
-    OrderedDict()
-)
+_llm_response_cache: "OrderedDict[str, Tuple[str, Dict[str, Any]]]" = OrderedDict()
 
 # Counters for observability — surfaced via cache_stats() and useful
 # in tests to assert "second identical call was a hit, not a miss".
@@ -913,8 +920,10 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
                     _last_call_provider["provider"] = usage_cached.get("provider")
                     logger.info(
                         "LLM cache HIT (key=%s, provider=%s, size=%d/%d)",
-                        key[:12], usage_cached.get("provider"),
-                        len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+                        key[:12],
+                        usage_cached.get("provider"),
+                        len(_llm_response_cache),
+                        _LLM_CACHE_MAX_ENTRIES,
                     )
                     return text_cached
                 _cache_stats["misses"] += 1
@@ -933,7 +942,9 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
         valid = False
         for provider in ("zhipu", "groq"):
             try:
-                cand_text, cand_usage = await asyncio.to_thread(_invoke, provider, prompt)
+                cand_text, cand_usage = await asyncio.to_thread(
+                    _invoke, provider, prompt
+                )
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
                 logger.warning("agentic LLM provider %s failed: %s", provider, exc)
@@ -949,12 +960,17 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
             if parse_json_response(cand_text) is not None:
                 valid = True
                 if provider != "zhipu":
-                    logger.warning("agentic LLM fell back to %s (zhipu failed: %s)",
-                                   provider, last_exc)
+                    logger.warning(
+                        "agentic LLM fell back to %s (zhipu failed: %s)",
+                        provider,
+                        last_exc,
+                    )
                 break
             last_exc = ValueError(f"{provider} returned unparseable response")
-            logger.warning("agentic LLM provider %s returned unparseable JSON; trying next",
-                           provider)
+            logger.warning(
+                "agentic LLM provider %s returned unparseable JSON; trying next",
+                provider,
+            )
         if text is None:
             raise RuntimeError(
                 f"all LLM providers failed (zhipu, groq); last error: {last_exc}"
@@ -976,8 +992,10 @@ def _default_glm5_caller() -> Callable[[str], Awaitable[str]]:
                     logger.debug("LLM cache evicted oldest entry %s", evicted_key[:12])
             logger.info(
                 "LLM cache STORE (key=%s, provider=%s, size=%d/%d)",
-                key[:12], usage.get("provider"),
-                len(_llm_response_cache), _LLM_CACHE_MAX_ENTRIES,
+                key[:12],
+                usage.get("provider"),
+                len(_llm_response_cache),
+                _LLM_CACHE_MAX_ENTRIES,
             )
 
         return text
@@ -1097,14 +1115,20 @@ async def run_agentic_analysis(
     if trigger is None or trigger not in REPAIR_TRIGGERS:
         # Either model declared unanswerable (handled above as success), or
         # failure mode is outside the predeclared trigger set. No repair.
-        _emit("code_generation", "failed", 0.35, f"Generation failed: {r1.sandbox_exception_type or 'unknown'}")
+        _emit(
+            "code_generation",
+            "failed",
+            0.35,
+            f"Generation failed: {r1.sandbox_exception_type or 'unknown'}",
+        )
         return _finalize([r1], time.monotonic() - loop_start, repair_triggered=False)
 
     if elapsed_after_r1 >= REPAIR_DECISION_CUTOFF_S:
         # Too late to repair without risking total-budget blow
         _emit("code_generation", "failed", 0.35, "Time budget tight; skipping repair")
         return _finalize(
-            [r1], time.monotonic() - loop_start,
+            [r1],
+            time.monotonic() - loop_start,
             repair_triggered=False,
         )
 
@@ -1114,7 +1138,9 @@ async def run_agentic_analysis(
     r2_llm_budget = min(DEFAULT_ROUND2_LLM_BUDGET_S, max(1.0, remaining - 3.0))
     r2_sandbox_budget = max(1.0, remaining - r2_llm_budget - 1.0)
 
-    user_text_r2 = _build_repair_prompt(filename, question, profile, r1, trigger)
+    user_text_r2 = _build_repair_prompt(
+        filename, question, profile, r1, trigger, tier_directive
+    )
     full_prompt_r2 = _compose_full_prompt(system_text, user_text_r2)
 
     r2 = await _run_one_round(
@@ -1135,8 +1161,10 @@ async def run_agentic_analysis(
         _emit("security_check", "completed", 0.50, "Validated (agentic)")
         _emit("sandbox_execution", "completed", 0.85, "Executed")
         return _finalize(
-            [r1, r2], total_elapsed,
-            repair_triggered=True, repair_trigger_type=trigger,
+            [r1, r2],
+            total_elapsed,
+            repair_triggered=True,
+            repair_trigger_type=trigger,
         )
 
     # Repair round did not produce a clean result. _finalize still salvages
@@ -1144,8 +1172,10 @@ async def run_agentic_analysis(
     # validator-passed chart); only a truly unsalvageable pair reports failure.
     _emit("sandbox_execution", "failed", 0.55, "Analysis could not complete")
     return _finalize(
-        [r1, r2], total_elapsed,
-        repair_triggered=True, repair_trigger_type=trigger,
+        [r1, r2],
+        total_elapsed,
+        repair_triggered=True,
+        repair_trigger_type=trigger,
         time_budget_exhausted=budget_exhausted,
     )
 
@@ -1256,10 +1286,21 @@ def _finalize(
         degraded=degraded,
         degraded_reason=degraded_reason,
         final_code=parsed.get("python_code"),
-        final_plan={
-            k: parsed.get(k)
-            for k in ("business_goal", "analysis_plan", "assumptions", "produces_chart", "reason", "suggestion")
-        } if parsed else None,
+        final_plan=(
+            {
+                k: parsed.get(k)
+                for k in (
+                    "business_goal",
+                    "analysis_plan",
+                    "assumptions",
+                    "produces_chart",
+                    "reason",
+                    "suggestion",
+                )
+            }
+            if parsed
+            else None
+        ),
         final_stdout=terminal.sandbox_stdout,
         final_chart_bytes=terminal.chart_bytes,
         final_summary=terminal.summary_parsed,
