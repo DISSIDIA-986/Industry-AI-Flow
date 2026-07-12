@@ -110,6 +110,10 @@ describe('workflowApi request contracts', () => {
         document_name: 'guide.pdf',
         relevance: 0.83,
         content: 'Guideline',
+        // Citation deep-linking normalizes every source with page/chunk
+        // coordinates; absent in this mock, so they default to null.
+        page_number: null,
+        chunk_index: null,
       },
     ])
   })
