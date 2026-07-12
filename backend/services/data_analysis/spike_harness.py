@@ -21,6 +21,7 @@ Public surface:
 
 The orchestration script in scripts/spike_data_analysis_glm5.py composes these.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -135,14 +136,22 @@ def _infer_role(series: pd.Series, name: str) -> str:
     small integers (ages, counts) as epoch timestamps.
     """
     name_lower = name.lower()
-    if name_lower in {"id", "index", "passengerid", "ticket", "row_id"} or name_lower.endswith("_id"):
+    if name_lower in {
+        "id",
+        "index",
+        "passengerid",
+        "ticket",
+        "row_id",
+    } or name_lower.endswith("_id"):
         return "id"
     if pd.api.types.is_numeric_dtype(series):
         return "numeric"
     if pd.api.types.is_datetime64_any_dtype(series):
         return "datetime"
-    # Try parsing as datetime only for object/string columns
-    if series.dtype == object:
+    # Try parsing as datetime only for object/string columns. pandas 3.0 infers
+    # text as the new str/StringDtype (not object), so check is_string_dtype too
+    # or date-string columns (e.g. airline "Month") never get the datetime role.
+    if series.dtype == object or pd.api.types.is_string_dtype(series):
         try:
             parsed = pd.to_datetime(series.dropna().head(20), errors="raise")
             # Require the parsed range to span > 1 day, else it's likely misparsed
@@ -206,7 +215,9 @@ def _summarize_samples(series: pd.Series, role: str) -> str:
     return ", ".join(repr(x) for x in samples)
 
 
-def extract_profile(df: pd.DataFrame, filename: str, total_rows: Optional[int] = None) -> Dict[str, Any]:
+def extract_profile(
+    df: pd.DataFrame, filename: str, total_rows: Optional[int] = None
+) -> Dict[str, Any]:
     """Build the structured profile passed to the LLM. Matches A.1 spec."""
     n_rows = total_rows if total_rows is not None else len(df)
     n_cols = len(df.columns)
@@ -346,7 +357,9 @@ async def run_sandbox(
     Sandbox.create() handles the cold start.
     """
     from backend.config import settings
-    from backend.services.code_executor.providers.e2b_provider import E2BExecutionProvider
+    from backend.services.code_executor.providers.e2b_provider import (
+        E2BExecutionProvider,
+    )
 
     provider = E2BExecutionProvider(
         enabled=True,

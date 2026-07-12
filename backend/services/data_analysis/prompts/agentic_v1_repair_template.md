@@ -6,6 +6,13 @@ failure_detail:
 ## User Question (unchanged)
 {question}
 
+## Analysis Tier & Required Methods (unchanged — still binding on the repair)
+{tier_directive}
+These constraints still apply. When you fix the failure, KEEP every required
+statistical test / forecast / model the round-1 directive asked for — do not
+drop an analysis to "minimally fix"; a repaired answer that silently omits a
+required test is a failure, not a fix.
+
 ## Your Previous Plan and Code
 {previous_json}
 
