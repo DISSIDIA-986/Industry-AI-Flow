@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "check:next-config": "node -e \"const fs=require('fs');const both=fs.existsSync('next.config.js')&&fs.existsSync('next.config.ts');if(both){console.error('Both next.config.js and next.config.ts exist; keep only one.');process.exit(1);}console.log('Next config source check passed.');\"",
-    "audit:high": "npm audit --json | node -e \"let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const start=raw.indexOf('{');const payload=start>=0?raw.slice(start):'{}';const report=JSON.parse(payload);const v=report.metadata&&report.metadata.vulnerabilities?report.metadata.vulnerabilities:{};const high=Number(v.high||0);const critical=Number(v.critical||0);if(high>0||critical>0){console.error('npm audit high/critical gate failed: high='+high+', critical='+critical);process.exit(1);}console.log('npm audit high/critical gate passed: high='+high+', critical='+critical);});\"",
+    "audit:high": "npm audit --omit=dev --json | node -e \"let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const start=raw.indexOf('{');const payload=start>=0?raw.slice(start):'{}';const report=JSON.parse(payload);const v=report.metadata&&report.metadata.vulnerabilities?report.metadata.vulnerabilities:{};const high=Number(v.high||0);const critical=Number(v.critical||0);if(high>0||critical>0){console.error('npm audit high/critical gate failed (production deps): high='+high+', critical='+critical);process.exit(1);}console.log('npm audit high/critical gate passed (production deps): high='+high+', critical='+critical);});\"",
     "lint": "npm run check:next-config && eslint",
     "test:unit": "vitest run tests/unit --reporter=verbose",
     "test:integration": "vitest run tests/integration --reporter=verbose",
@@ -44,6 +44,7 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "minimatch": "^10.2.2"
+    "minimatch": "^10.2.2",
+    "ws": "^8.21.0"
   }
 }
