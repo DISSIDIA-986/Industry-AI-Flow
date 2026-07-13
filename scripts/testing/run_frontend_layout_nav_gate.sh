@@ -45,6 +45,27 @@ echo "[INFO] Running frontend unit/integration contract suites"
   npm run test:integration
 )
 
+# The live-api Playwright suite exercises a real cost prediction, which needs
+# the CatBoost cost model. That artifact lives under workspace/models/ and is
+# gitignored, so a fresh CI checkout has no model — predict then raises
+# CostEstimationError and the endpoint returns HTTP 400 ("Prediction request
+# invalid"), failing the live predict test for an environment reason, not a
+# product bug. Train it from the in-repo dataset (only when missing, so local
+# reruns are fast) so the live test validates the real prediction flow.
+COST_MODEL_PATH="${ROOT_DIR}/workspace/models/cost_estimation/latest.json"
+COST_DATASET_PATH="${ROOT_DIR}/datasets/unified_construction_projects_remediated.csv"
+if [ ! -f "${COST_MODEL_PATH}" ]; then
+  echo "[INFO] Cost model missing — training from ${COST_DATASET_PATH}"
+  (
+    cd "${ROOT_DIR}"
+    "${PYTHON_BIN}" scripts/utilities/train_cost_estimation_model.py \
+      --dataset-path "${COST_DATASET_PATH}" \
+      --output-model-path "${COST_MODEL_PATH}"
+  ) || { echo "[ERROR] Cost model training failed"; exit 1; }
+else
+  echo "[INFO] Cost model present: ${COST_MODEL_PATH}"
+fi
+
 echo "[INFO] Starting backend for live Playwright regression: ${BACKEND_BASE_URL}"
 (
   cd "${ROOT_DIR}"
