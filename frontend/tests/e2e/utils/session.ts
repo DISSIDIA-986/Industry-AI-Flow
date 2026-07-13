@@ -7,15 +7,40 @@ const E2E_USER = {
   roles: ['user'],
 };
 
+// A structurally-valid, never-expiring JWT for the seeded session.
+//
+// AuthContext.readStoredAuth() now runs isJwtExpired() on the stored token
+// (session-expiry self-healing feature). A plain string like 'e2e-token' has
+// no '.' segments, so decodeJwtPayload() returns null and isJwtExpired()
+// treats it as EXPIRED — which silently redirected every seeded page to
+// /login and made the top navbar invisible (the whole layout-nav Playwright
+// suite failed once the audit gate stopped short-circuiting it). The token is
+// never verified server-side in these tests (REQUIRE_USER_AUTH=false, and the
+// frontend only DECODES the payload, never checks the signature), so a fixed
+// far-future exp keeps the suite deterministic and non-flaky.
+function base64url(obj: unknown): string {
+  return Buffer.from(JSON.stringify(obj)).toString('base64url');
+}
+
+// exp = 2100-01-01 (fixed, far future) so the token never expires and the
+// seed stays deterministic across runs (no Date.now() flakiness).
+const E2E_JWT = [
+  base64url({ alg: 'HS256', typ: 'JWT' }),
+  base64url({ sub: E2E_USER.id, email: E2E_USER.email, exp: 4102444800 }),
+  'e2e-signature-not-verified-client-side',
+].join('.');
+
 export async function seedAuthenticatedSession(page: Page): Promise<void> {
-  await page.addInitScript((user) => {
-    const token = 'e2e-token';
-    localStorage.setItem('industry-aiflow-token', token);
-    localStorage.setItem('industry-aiflow-user', JSON.stringify(user));
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('userId', user.id);
-  }, E2E_USER);
+  await page.addInitScript(
+    ({ user, token }) => {
+      localStorage.setItem('industry-aiflow-token', token);
+      localStorage.setItem('industry-aiflow-user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('userId', user.id);
+    },
+    { user: E2E_USER, token: E2E_JWT },
+  );
 }
 
 export async function mockCoreApiEndpoints(page: Page): Promise<void> {

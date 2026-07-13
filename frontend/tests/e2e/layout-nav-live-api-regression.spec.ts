@@ -101,11 +101,13 @@ test.describe('Live API layout width and navbar persistence regressions', () => 
     await expect(topNavbar(page)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
 
+    // Labels must match the current flat navbar (src/components/Navbar.tsx);
+    // the old pre-redesign labels no longer resolve.
     const navFlow = [
-      { label: 'Document management', url: /\/documents-integrated$/ },
+      { label: 'Documents', url: /\/documents-integrated$/ },
       { label: 'Intent Demo', url: /\/intent-demo$/ },
-      { label: 'cost estimate', url: /\/cost-estimation$/ },
-      { label: 'Workflow chat', url: /\/workflow-chat$/ },
+      { label: 'Cost Estimation', url: /\/cost-estimation$/ },
+      { label: 'Workflow Chat', url: /\/workflow-chat$/ },
     ] as const;
 
     for (const step of navFlow) {
