@@ -15,7 +15,6 @@ interface ShellMetrics {
   viewportWidth: number;
   shellMainWidth: number;
   shellMainLeft: number;
-  shellRootColumns: string;
 }
 
 function topNavbar(page: Page) {
@@ -24,24 +23,20 @@ function topNavbar(page: Page) {
 
 async function readShellMetrics(page: Page): Promise<ShellMetrics> {
   return page.evaluate(() => {
-    const shellMain = document.querySelector('.shell-main-simple, .shell-main');
+    // The (mvp) layout was simplified to a full-width <main> — the old
+    // .shell-root/.shell-main grid + sidebar was removed — so measure <main>
+    // to assert the content area stays wide. No sidebar grid remains to collapse.
+    const shellMain = document.querySelector('main');
     if (!(shellMain instanceof HTMLElement)) {
-      throw new Error('shell-main or shell-main-simple not found');
-    }
-
-    const shellRoot = document.querySelector('.shell-root-simple, .shell-root');
-    if (!(shellRoot instanceof HTMLElement)) {
-      throw new Error('shell-root or shell-root-simple not found');
+      throw new Error('main content element not found');
     }
 
     const rect = shellMain.getBoundingClientRect();
-    const columns = getComputedStyle(shellRoot).gridTemplateColumns;
 
     return {
       viewportWidth: window.innerWidth,
       shellMainWidth: rect.width,
       shellMainLeft: rect.left,
-      shellRootColumns: columns,
     };
   });
 }
@@ -66,7 +61,11 @@ test.describe('Live API layout width and navbar persistence regressions', () => 
 
     await expect(topNavbar(page)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
-    await expect(page.getByText('APIConnected')).toBeVisible({ timeout: 15000 });
+    // The header status indicator is a colored dot + the bare status word
+    // (no "API" label prefix anymore), so match the exact "Connected" text.
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test('desktop layout keeps main content wide across live routes', async ({ page }) => {
@@ -85,13 +84,9 @@ test.describe('Live API layout width and navbar persistence regressions', () => 
         ).toBeGreaterThan(0.6);
         expect(
           metrics.shellMainWidth,
-          `${route} shell-main width should not collapse to narrow column`,
+          `${route} main width should not collapse to narrow column`,
         ).toBeGreaterThan(860);
-        expect(
-          metrics.shellRootColumns,
-          `${route} shell-root should not reserve a fixed 280px sidebar track`,
-        ).not.toContain('280px');
-        expect(metrics.shellMainLeft, `${route} shell-main should stay onscreen`).toBeGreaterThanOrEqual(0);
+        expect(metrics.shellMainLeft, `${route} main should stay onscreen`).toBeGreaterThanOrEqual(0);
       });
     }
   });
@@ -113,7 +108,11 @@ test.describe('Live API layout width and navbar persistence regressions', () => 
     for (const step of navFlow) {
       await test.step(`navigate via navbar (live): ${step.label}`, async () => {
         await page.getByRole('link', { name: step.label }).click();
-        await expect(page).toHaveURL(step.url);
+        // Live routes hit the real backend and dev-mode compiles the target
+        // page on first visit, so a client-side transition can exceed the 5s
+        // default. Give the URL assertion the same 15s budget the other live
+        // assertions use.
+        await expect(page).toHaveURL(step.url, { timeout: 15000 });
         await expect(topNavbar(page)).toBeVisible();
         await expect(page.getByRole('link', { name: 'Industry AI Flow' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
